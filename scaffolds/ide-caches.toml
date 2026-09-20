@@ -1,0 +1,70 @@
+id          = "ide-caches"
+name        = "IDE 缓存 VSCode / Cursor / IntelliJ"
+homepage    = "https://code.visualstudio.com/"
+risk        = "low"
+disclaimer  = """\
+清理 IDE 的本地缓存：VSCode / Cursor（Electron 系）的 Cache、Code Cache、
+GPUCache、CachedData 与 workspace storage，IntelliJ 系（IDEA / PyCharm /
+WebStorm / CLion 等）的 caches 与 index 目录。\
+这些文件由 IDE 自动生成，删除后会自动重建，不影响已安装的扩展、设置、
+主题、快捷键、打开的项目与代码。\
+绝不触碰：扩展本体（extensions）、用户设置（settings.json）、项目源码、
+node_modules、IntelliJ 的项目 .idea 目录。\
+注意：清理前请先完全退出对应 IDE，否则正在被占用的文件会被自动跳过。\
+清理走系统回收站，可还原。"""
+
+detect = [
+  "%APPDATA%/Code/Cache",
+  "%APPDATA%/Code/CachedData",
+  "%APPDATA%/Cursor/Cache",
+  "%APPDATA%/Cursor/CachedData",
+  "%USERPROFILE%/AppData/Local/JetBrains",
+  "${HOME}/.cache/Code",
+  "${HOME}/.config/Code/Cache",
+  "${HOME}/.cache/cursor",
+  "${HOME}/.cache/JetBrains",
+]
+
+[match]
+name_contains    = ["Code", "Cursor", "JetBrains"]
+must_have_child  = ["Cache", "CachedData"]
+
+# 严格锚定 IDE 自己的缓存目录。must_have_child 确保只在真实 IDE 配置根
+# 下命中（存在 Cache/CachedData 子目录才算），防止误命中用户文档/项目里
+# 手动创建的 Code 目录。
+
+[[scope]]
+id                  = "vscode-cache"
+label               = "VSCode 缓存"
+glob                = "%APPDATA%/Code/{Cache,Code Cache,GPUCache,CachedData,logs}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "cursor-cache"
+label               = "Cursor 缓存"
+glob                = "%APPDATA%/Cursor/{Cache,Code Cache,GPUCache,CachedData,logs}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "intellij-caches"
+label               = "IntelliJ 系缓存"
+glob                = "%USERPROFILE%/AppData/Local/JetBrains/*/caches/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "intellij-index"
+label               = "IntelliJ 系索引"
+glob                = "%USERPROFILE%/AppData/Local/JetBrains/*/index/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

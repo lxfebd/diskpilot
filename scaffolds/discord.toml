@@ -1,0 +1,69 @@
+id          = "discord"
+name        = "Discord"
+homepage    = "https://discord.com/"
+risk        = "low"
+disclaimer  = """\
+清理 Discord（Electron 版）的 Chromium 缓存、GPU 缓存与崩溃报告。这些由\
+Discord 自动生成，删除后重启应用即可重建，不影响账号与聊天记录。\
+绝不触碰：登录态与设置（Local Storage / Session Storage / IndexedDB /\
+Network / Preferences）、凭据（Cookies / Login Data / Local State）、\
+已被你下载到安装目录之外的文件。\
+清理走系统回收站，可还原。\
+注意：清掉 Cache 后，下次打开聊天时图片 / 附件会重新加载。"""
+
+# Discord keeps ALL user data under %APPDATA%/discord (Roaming);
+# %LOCALAPPDATA%/discord only holds the updater binary — no user data, and
+# cleaning it risks breaking the install. Detect both so a relocated edge
+# case still shows the card, but scopes only target Roaming.
+detect = [
+  "%APPDATA%/discord",
+  "**/discord",
+]
+
+# No `name_contains` on purpose: bare "discord" could match user-named
+# folders. The concrete %APPDATA% path is authoritative.
+[match]
+
+# ============================================================================
+# L1 可重生缓存（默认勾选，全量清）
+# ============================================================================
+
+[[scope]]
+id       = "cache"
+label    = "Chromium 缓存"
+glob     = "%APPDATA%/discord/Cache/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "code-cache"
+label    = "代码缓存"
+glob     = "%APPDATA%/discord/Code Cache/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "gpu-cache"
+label    = "GPU / WebGPU 缓存"
+glob     = "%APPDATA%/discord/{GPUCache,DawnGraphiteCache,DawnWebGPUCache}/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "blob-storage"
+label    = "Blob 临时存储"
+glob     = "%APPDATA%/discord/blob_storage/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "crashpad"
+label    = "崩溃报告"
+glob     = "%APPDATA%/discord/Crashpad/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }

@@ -1,0 +1,47 @@
+id          = "docker-buildx"
+name        = "Docker Buildx 构建缓存"
+homepage    = "https://docs.docker.com/build/cache/"
+risk        = "low"
+disclaimer  = """\
+清理 Docker Buildx / BuildKit 的构建缓存（buildkitd 的本地缓存：中间层
+blobs、metadata 与缓存记录）。这些文件是 docker build 的加速缓存，删除后
+下次构建会自动重建，不影响已构建的镜像、容器、卷、网络与配置。\
+绝不触碰：Docker 镜像（images）、容器（containers）、卷（volumes）、
+compose 项目文件、Dockerfile 与任何项目源码。\
+注意：清理时若 Docker 引擎正在运行，部分被占用文件会被自动跳过，建议先\
+停止 Docker 再清理。清理走系统回收站，可还原。"""
+
+detect = [
+  "%USERPROFILE%/.docker/buildx",
+  "%USERPROFILE%/.cache/buildkit",
+  "${HOME}/.docker/buildx",
+  "${HOME}/.cache/buildkit",
+  "${XDG_CACHE_HOME}/buildkit",
+]
+
+[match]
+name_contains    = ["buildkit", "buildx"]
+must_have_child  = []
+
+# 严格锚定 BuildKit 自己的缓存目录：Linux 的 ~/.cache/buildkit（buildkitd
+# 默认缓存根）与 ~/.docker/buildx（builder 实例元数据）。绝不使用裸
+# `**/docker/` 前缀，防止误命中 /var/lib/docker（镜像/容器/卷所在）或
+# 用户文档里手动创建的 Docker 目录。
+
+[[scope]]
+id                  = "buildkit-cache"
+label               = "BuildKit 构建缓存"
+glob                = "{%USERPROFILE%,${HOME}}/.cache/buildkit/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "docker-buildx-metadata"
+label               = "Docker Buildx 实例元数据"
+glob                = "{%USERPROFILE%,${HOME}}/.docker/buildx/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

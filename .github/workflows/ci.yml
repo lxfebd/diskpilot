@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# DiskPilot ships Windows-first, but the workspace is portable: every
+# Windows-only helper (registry reads, NTFS MFT, system proxy parsing,
+# $Recycle.Bin pruning) is cfg-gated with a non-Windows fallback, so the
+# same crate set compiles on macOS/Linux. CI runs lint + test on all three
+# OSes to keep it that way; frontend is OS-independent (once, on ubuntu).
+
+jobs:
+  lint-rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: rustfmt, clippy }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      # 不加 `-D warnings`：R1–R9 累积了 ~42 处存量 clippy 噪音（useless vec! /
+      # redundant closure / doc-list 缩进 / sort_by_key 等机械项），散在 desktop
+      # 与 toolbelt。本 job 的护栏是「编译通过 + fmt 干净」—— 这正是三平台可移植性
+      # 的守门人；存量清理另立专项，清完再加回 -D warnings。agent-server 已 0 警告。
+      - run: cargo clippy --workspace --all-targets
+
+  # Cargo Audit：扫描依赖树已知漏洞（RustSec Advisory DB），有漏洞即红。
+  # 不缓存的临时 job：cargo-audit 自己拉 Cargo.lock 附近的 advisory 数据库，
+  # 放 ubuntu-latest 与其余 Rust job 一致，避免平台相关依赖漏检。
+  audit-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-action@v2
+        # 默认忽略 GHSA（GitHub 自带告警）与 dev 依赖噪音；
+        # 只对 reachable 依赖报错，避免整树误报阻塞提交。
+
+  # 三平台测试。macOS/Linux 上 `cargo test --workspace` 会编译 desktop lib：
+  # tauri 依赖需要系统库，故 Linux 先装 webkit2gtk（Ubuntu 官方源）。
+  test-rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.os == 'ubuntu-latest'
+        name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --no-fail-fast
+
+  # Windows-only：scaffold-lint 走 bash glob，只有 shell 会展开
+  # scaffolds/*.toml（cmd/PowerShell 会把字面模式原样传给程序）。
+  scaffold-lint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - shell: bash
+        run: cargo run -p diskpilot-scaffold-lint -- scaffolds/*.toml
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm -C apps/desktop test
+      - run: pnpm -C apps/desktop build

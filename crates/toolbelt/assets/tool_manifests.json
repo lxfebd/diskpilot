@@ -1,0 +1,1702 @@
+{
+  "version": 1,
+  "comment": "图吧工具箱 CLI 工具能力说明书（Tool Manifest）。每个工具 5 段：purpose/when_to_use/when_not_to_use、invocation（mode=cli|gui、launchable、args_template、params、timeout_secs）、output（format/parser/schema）、risk/permission_level/side_effects、examples。AI 路由、权限门、结构化解析都以此为准。参数表与示例出自 cli_tools_doc.md（2026-08-12）。",
+  "tools": [
+    {
+      "name": "Prime95",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/Prime95/prime95.exe",
+      "purpose": "CPU 稳定性/散热烤机测试（Mersenne 素数搜索程序，圈内最常用）",
+      "when_to_use": "用户怀疑 CPU 不稳定/散热不足、装机验机、超频后稳定性验证",
+      "when_not_to_use": "笔记本电池供电时、散热或电源余量不足时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-t",
+        "params": [
+          {
+            "name": "torture",
+            "flag": "-t",
+            "type": "boolean",
+            "required": false,
+            "desc": "启动 Torture Test 压力测试模式，直接开始烤机（阻塞式，超时自动终止）"
+          }
+        ],
+        "timeout_secs": 1800
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "原始控制台输出；退出码 0 = 正常结束（超时强杀时 timed_out=true）"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载烤机（阻塞式运行直到超时/手动停止），产生大量热量与功耗",
+      "examples": [
+        {
+          "args": "-t",
+          "desc": "单烤 CPU",
+          "expect": "prime95 启动烤机直到超时被终止"
+        }
+      ],
+      "publisher": "GIMPS",
+      "tags": [
+        "CPU",
+        "烤机",
+        "稳定性测试"
+      ],
+      "tutorial_url": "https://www.mersenne.org/download/",
+      "download_hint": "https://www.mersenne.org/download/"
+    },
+    {
+      "name": "FurMark",
+      "category": "显卡工具",
+      "exe_rel": "烤鸡工具/FurMark_win64/furmark.exe",
+      "purpose": "GPU 烤机/基准测试（Geeks3D，命令行参数完整）",
+      "when_to_use": "显卡稳定性验证、超频验证、GPU 基准跑分、显存压力测试",
+      "when_not_to_use": "未指定 max-time 的无限压力测试；对显卡温度没把握时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "--demo {demo} {preset} --max-time {max_time}",
+        "params": [
+          {
+            "name": "demo",
+            "flag": "--demo",
+            "type": "string",
+            "required": false,
+            "default": "furmark-gl",
+            "desc": "demo 名（--demolist 查看）"
+          },
+          {
+            "name": "preset",
+            "flag": "",
+            "type": "enum",
+            "required": false,
+            "default": "--p1080",
+            "desc": "预设：--p1080/--p1440/--p2160 或 --width/--height"
+          },
+          {
+            "name": "max_time",
+            "flag": "--max-time",
+            "type": "number",
+            "required": false,
+            "default": "600",
+            "desc": "最长运行秒数（压力测试建议必填）"
+          },
+          {
+            "name": "benchmark",
+            "flag": "--benchmark",
+            "type": "boolean",
+            "required": false,
+            "desc": "基准模式，结束时显示分数框"
+          },
+          {
+            "name": "gpu_index",
+            "flag": "--gpu-index",
+            "type": "number",
+            "required": false,
+            "desc": "指定 GPU（0 起）"
+          }
+        ],
+        "timeout_secs": 1800
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "原始控制台输出；分数写入 _scores.csv（同目录）"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "GPU 高负载（阻塞式），温度飙升；建议先用 --max-time 限时长",
+      "examples": [
+        {
+          "args": "--demo furmark-gl --p1080 --no-score-box",
+          "desc": "1080p 预设基准（结果在 _scores.csv）",
+          "expect": "跑完返回退出码"
+        },
+        {
+          "args": "--demo furmark-gl --benchmark --width 1920 --height 1080 --max-time 600",
+          "desc": "1920x1080 烤机 10 分钟",
+          "expect": "10 分钟后超时终止"
+        },
+        {
+          "args": "--gpuinfo",
+          "desc": "只打印 GPU 信息",
+          "expect": "stdout 含 GPU 型号/显存信息"
+        }
+      ],
+      "publisher": "Geeks3D",
+      "tags": [
+        "GPU",
+        "烤机",
+        "基准测试"
+      ],
+      "tutorial_url": "https://geeks3d.com/furmark/",
+      "download_hint": "https://geeks3d.com/furmark/"
+    },
+    {
+      "name": "FPT64",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/FPT64/fptw64.exe",
+      "purpose": "Intel 平台主板 BIOS 备份/刷写（Intel Flash Programming Tool 64 位版）",
+      "when_to_use": "备份当前 BIOS（-d）、在确认镜像匹配后刷写 BIOS（-f）",
+      "when_not_to_use": "未确认镜像与主板型号匹配时；电池电量不足/未接电源时——刷写失败可致主板变砖",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "{action} {file} -bios",
+        "params": [
+          {
+            "name": "action",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "-d 备份到文件 / -f 刷写镜像"
+          },
+          {
+            "name": "file",
+            "flag": "",
+            "type": "path",
+            "required": true,
+            "desc": "备份目标文件（-d）或 BIOS 镜像（-f）"
+          },
+          {
+            "name": "bios",
+            "flag": "-bios",
+            "type": "boolean",
+            "required": false,
+            "desc": "操作对象为 BIOS 区域（配合 -d/-f）"
+          },
+          {
+            "name": "force",
+            "flag": "-y",
+            "type": "boolean",
+            "required": false,
+            "desc": "跳过确认提示全自动"
+          }
+        ],
+        "timeout_secs": 300
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "FPT 控制台输出；0 = 成功"
+      },
+      "risk": "high",
+      "permission_level": "L3",
+      "side_effects": "刷写（-f）可直接改 BIOS 区，失败变砖——L3 永久禁止自动执行，仅允许备份（-d）在 L2 确认后执行",
+      "examples": [
+        {
+          "args": "-d bios_bak.bin -bios",
+          "desc": "备份当前 BIOS（安全，L2 确认后放行）",
+          "expect": "生成 bios_bak.bin"
+        },
+        {
+          "args": "-f bios_f.bin -bios",
+          "desc": "刷写 BIOS（永久禁止自动执行）",
+          "expect": "拒绝：L3 永禁"
+        }
+      ],
+      "publisher": "Intel",
+      "tags": [
+        "BIOS",
+        "刷写",
+        "主板"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "nvidiaInspector",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/nvidiaInspector/nvidiaInspector.exe",
+      "purpose": "NVIDIA 显卡超频/监控命令行接口（核心/显存频率偏移、功耗墙、风扇、电压）",
+      "when_to_use": "用户明确要求调整 N 卡频率/功耗/风扇；恢复默认设置（-restore）",
+      "when_not_to_use": "未获明确授权时——超频写驱动注册表、重启后仍生效，可能损坏硬件/蓝屏",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-{opt} 0,{value}",
+        "params": [
+          {
+            "name": "opt",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "-setBaseClockOffset/-setMemoryClockOffset/-setPowerTarget/-setTempTarget/-setFanSpeed/-restore/-dump 等"
+          },
+          {
+            "name": "value",
+            "flag": "",
+            "type": "number",
+            "required": true,
+            "desc": "数值（核心/显存 MHz、功耗 %、温度 ℃、风扇 %）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "-dump 输出当前显卡详细状态；-restore 恢复默认"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "写入驱动注册表（重启后仍生效）；-restore 可恢复默认",
+      "examples": [
+        {
+          "args": "-restore 0",
+          "desc": "恢复默认频率/电压",
+          "expect": "stdout 确认已恢复"
+        },
+        {
+          "args": "-dump 0",
+          "desc": "输出当前显卡状态",
+          "expect": "stdout 含频率/温度/风扇"
+        }
+      ],
+      "publisher": "Orbmu2k",
+      "tags": [
+        "NVIDIA",
+        "超频",
+        "监控"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "nvidiaProfileInspector",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/nvidiaProfileInspector/nvidiaProfileInspector.exe",
+      "purpose": "NVIDIA 驱动配置档（Profile）管理：导入/导出/应用/删除",
+      "when_to_use": "批量部署游戏优化配置档、导出当前配置档备份、切换配置档",
+      "when_not_to_use": "对配置档影响不清楚时（修改驱动级配置）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-{action} {target}",
+        "params": [
+          {
+            "name": "action",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "-ExportProfile <文件> / -ImportProfile <文件> / -SetProfile <名称> / -GetProfile <名称> / -DeleteProfile <名称> / -Apply"
+          },
+          {
+            "name": "target",
+            "flag": "",
+            "type": "string",
+            "required": true,
+            "desc": "文件路径或配置档名称"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "stdout；-GetProfile 显示配置档内容"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "修改驱动配置档（可导入回滚）",
+      "examples": [
+        {
+          "args": "-ExportProfile myprofile.nip",
+          "desc": "导出当前配置档",
+          "expect": "生成 myprofile.nip"
+        },
+        {
+          "args": "-ImportProfile myprofile.nip -Apply",
+          "desc": "导入并应用",
+          "expect": "stdout 确认"
+        }
+      ],
+      "publisher": "Orbmu2k",
+      "tags": [
+        "NVIDIA",
+        "驱动配置"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "CrystalDiskInfo",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/CrystalDiskInfo/DiskInfo64S.exe",
+      "purpose": "硬盘 SMART 健康信息（读写/温度/通电时间）",
+      "when_to_use": "检查硬盘健康度、SMART 属性、配合 hw_disk_health 交叉验证",
+      "when_not_to_use": "无需生成 DiskInfo.txt 时（直接读 L0 hw_disk_health 更快）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/CopyExit",
+        "params": [
+          {
+            "name": "mode",
+            "flag": "",
+            "type": "enum",
+            "required": false,
+            "default": "/CopyExit",
+            "desc": "/CopyExit 输出 DiskInfo.txt 后退出（最常用）；/Exit 刷新后退出；/Copy 只输出不退出"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "file",
+        "parser": "kv_lines",
+        "schema": "DiskInfo.txt 生成在 exe 同目录（硬盘工具/CrystalDiskInfo/），内容为 SMART 属性表"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读；生成 DiskInfo.txt 到 exe 目录",
+      "examples": [
+        {
+          "args": "/CopyExit",
+          "desc": "生成 SMART 报告并退出",
+          "expect": "exe 目录出现 DiskInfo.txt"
+        }
+      ],
+      "publisher": "Crystal Dew World",
+      "tags": [
+        "硬盘",
+        "SMART",
+        "健康检测"
+      ],
+      "tutorial_url": "https://crystalmark.info/en/software/crystaldiskinfo/",
+      "download_hint": "https://crystalmark.info/en/"
+    },
+    {
+      "name": "Defraggler",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/Defraggler/df.exe",
+      "purpose": "磁盘碎片整理（命令行版 df.exe，Piriform）",
+      "when_to_use": "机械硬盘（HDD）整理碎片、分析碎片率",
+      "when_not_to_use": "SSD——无需碎片整理，执行反而损寿命",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/{action} {drive}",
+        "params": [
+          {
+            "name": "action",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "/A 只分析 /D 整理 /E 整理可用空间"
+          },
+          {
+            "name": "drive",
+            "flag": "",
+            "type": "string",
+            "required": true,
+            "desc": "盘符如 C:"
+          },
+          {
+            "name": "low",
+            "flag": "/L",
+            "type": "boolean",
+            "required": false,
+            "desc": "低优先级后台整理"
+          },
+          {
+            "name": "time",
+            "flag": "/T",
+            "type": "number",
+            "required": false,
+            "desc": "限时秒数"
+          }
+        ],
+        "timeout_secs": 1800
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "控制台进度输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "重写磁盘数据布局（HDD 整理；对 SSD 有害）",
+      "examples": [
+        {
+          "args": "/A C:",
+          "desc": "只分析 C 盘碎片率",
+          "expect": "stdout 报告碎片率"
+        },
+        {
+          "args": "/D D: /L /T 600",
+          "desc": "低优先级整理 D 盘限时 10 分钟",
+          "expect": "后台整理直到超时"
+        }
+      ],
+      "publisher": "Piriform",
+      "tags": [
+        "硬盘",
+        "碎片整理"
+      ],
+      "tutorial_url": "https://www.ccleaner.com/defraggler",
+      "download_hint": "https://www.ccleaner.com/defraggler"
+    },
+    {
+      "name": "DiskGenius",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/DiskGenius/DiskGenius.exe",
+      "purpose": "专业分区管理/数据恢复（/cmd 脚本模式，无人值守分区操作）",
+      "when_to_use": "用户明确要求脚本化分区操作（复制/克隆/格式化/重建分区表）",
+      "when_not_to_use": "任何未确认的格式化/删除分区——数据不可逆；脚本命令请先仔细核对盘符",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/cmd {script} /LANG zh-CN /AUTOEXIT /LOG",
+        "params": [
+          {
+            "name": "script",
+            "flag": "/cmd",
+            "type": "path",
+            "required": true,
+            "desc": "脚本文件（每行一条命令：FORMAT/DELETE/CLONE/IMAGE 等）"
+          },
+          {
+            "name": "autoexit",
+            "flag": "/AUTOEXIT",
+            "type": "boolean",
+            "required": false,
+            "desc": "执行完自动退出"
+          }
+        ],
+        "timeout_secs": 1800
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "控制台日志；/LOG 写日志文件"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "可格式化/删除分区、重建分区表（数据不可逆）",
+      "examples": [
+        {
+          "args": "/cmd list.txt /LANG zh-CN /AUTOEXIT /LOG",
+          "desc": "执行脚本（脚本内 LIST DISK 仅列信息）",
+          "expect": "stdout 列出磁盘/分区"
+        }
+      ],
+      "publisher": "Eassos",
+      "tags": [
+        "硬盘",
+        "分区",
+        "数据恢复"
+      ],
+      "tutorial_url": "https://www.diskgenius.cn/",
+      "download_hint": "https://www.diskgenius.cn/"
+    },
+    {
+      "name": "urwtest",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/URWTEST/urwtest_v18.exe",
+      "purpose": "U 盘/SSD 读写可靠性测试——检测扩容盘（虚标容量）、坏块",
+      "when_to_use": "验证新买的 U 盘/SSD 是否扩容、检测坏块",
+      "when_not_to_use": "目标盘有未备份重要数据时——测试会写入与容量等量的数据",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "{drive}:",
+        "params": [
+          {
+            "name": "drive",
+            "flag": "",
+            "type": "string",
+            "required": true,
+            "desc": "待测盘符（冒号必带，如 E:）"
+          },
+          {
+            "name": "verify",
+            "flag": "",
+            "type": "string",
+            "required": false,
+            "default": "（省略=立即校验）",
+            "desc": "Y/N 是否写满后校验；省略 = 校验"
+          }
+        ],
+        "timeout_secs": 1800
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "中文进度输出；校验阶段报错 = 扩容盘"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "向盘内写入与容量等量的数据（测试完自动删除，仍建议先备份）",
+      "examples": [
+        {
+          "args": "E:",
+          "desc": "测试 E 盘并立即校验",
+          "expect": "stdout 写满→校验→结果"
+        }
+      ],
+      "publisher": "risujin",
+      "tags": [
+        "U盘",
+        "SSD",
+        "可靠性测试"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "WizTree",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/WizTree/WizTree.exe",
+      "purpose": "基于 MFT 的极速磁盘空间分析——CSV 导出、树图导出、MFT 导出",
+      "when_to_use": "分析磁盘空间占用大户、导出文件列表、生成树图",
+      "when_not_to_use": "非 NTFS 卷（MFT 快扫不可用，fallback 慢扫）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "\"{target}\" /export=\"{outfile}\" /admin={admin}",
+        "params": [
+          {
+            "name": "target",
+            "flag": "",
+            "type": "path",
+            "required": true,
+            "desc": "要扫描的盘或目录（如 C: 或 C:\\Users）"
+          },
+          {
+            "name": "outfile",
+            "flag": "/export",
+            "type": "path",
+            "required": true,
+            "desc": "导出 CSV 路径（%d/%t 自动替换为日期/时间）"
+          },
+          {
+            "name": "admin",
+            "flag": "/admin",
+            "type": "boolean",
+            "required": false,
+            "default": "1",
+            "desc": "1 = 管理员模式 MFT 快速扫描"
+          },
+          {
+            "name": "filter",
+            "flag": "/filter",
+            "type": "string",
+            "required": false,
+            "desc": "只导出匹配文件（*.mp3|*.wav）"
+          },
+          {
+            "name": "sortby",
+            "flag": "/sortby",
+            "type": "enum",
+            "required": false,
+            "desc": "0 文件名 / 1 大小 / 2 分配 / 3 修改日期"
+          },
+          {
+            "name": "treemap",
+            "flag": "/treemapimagefile",
+            "type": "path",
+            "required": false,
+            "desc": "导出树图 PNG"
+          }
+        ],
+        "timeout_secs": 300
+      },
+      "output": {
+        "format": "file",
+        "parser": "smart_csv",
+        "schema": "CSV 表头：Path,Size,Folder,AllocationSize,FileSize,Attributes(可按 /sortby 变)"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读扫描；生成 CSV/PNG 到指定路径",
+      "examples": [
+        {
+          "args": "\"C:\" /export=\"c:\\temp\\cdrive%d_%t.csv\" /admin=1",
+          "desc": "全盘扫描导出 CSV（管理员模式）",
+          "expect": "CSV 含每文件路径/大小"
+        },
+        {
+          "args": "\"C:\" /export=\"c:\\temp\\media.csv\" /filter=\"*.mp3|*.wav|*.flac|*.mp4\" /admin=0 /exportfolders=0",
+          "desc": "只导出音视频文件",
+          "expect": "CSV 仅匹配文件"
+        }
+      ],
+      "publisher": "Antibody Software",
+      "tags": [
+        "硬盘",
+        "空间分析",
+        "MFT"
+      ],
+      "tutorial_url": "https://www.diskanalyzer.com/",
+      "download_hint": "https://www.diskanalyzer.com/"
+    },
+    {
+      "name": "AIDA64",
+      "category": "综合检测",
+      "exe_rel": "综合检测/AIDA64/aida64.exe",
+      "purpose": "权威硬件检测——无人值守生成硬件报告（TEXT/HTML/CSV/XML）",
+      "when_to_use": "生成硬件配置报告（装机/审计/导出）、验证超频后系统",
+      "when_not_to_use": "只需实时读取硬件信息时（用 L0 get_hardware_info 更快）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/R \"{outfile}\" /{format} /{scope} /SILENT",
+        "params": [
+          {
+            "name": "outfile",
+            "flag": "/R",
+            "type": "path",
+            "required": true,
+            "desc": "报告输出路径（支持 $HOSTNAME/$DATE 变量）"
+          },
+          {
+            "name": "format",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "/HTML /MHTML /TEXT /XML /CSV（互斥）"
+          },
+          {
+            "name": "scope",
+            "flag": "",
+            "type": "enum",
+            "required": false,
+            "default": "/SUM",
+            "desc": "/ALL /SUM /HW /SW /BENCH /AUDIT（互斥）"
+          },
+          {
+            "name": "silent",
+            "flag": "/SILENT",
+            "type": "boolean",
+            "required": false,
+            "desc": "静默模式"
+          }
+        ],
+        "timeout_secs": 300
+      },
+      "output": {
+        "format": "file",
+        "parser": "stdout",
+        "schema": "报告文件按 format 生成；CSV 可用 smart_csv 解析"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读；生成报告文件",
+      "examples": [
+        {
+          "args": "/R C:\\Reports\\summary.txt /TEXT /SUM /SILENT",
+          "desc": "纯文本摘要报告",
+          "expect": "生成 summary.txt"
+        },
+        {
+          "args": "/R C:\\Reports\\pc.html /HTML /HW /SILENT",
+          "desc": "完整硬件 HTML 报告",
+          "expect": "生成 pc.html"
+        }
+      ],
+      "publisher": "FinalWire",
+      "tags": [
+        "硬件检测",
+        "传感器",
+        "基准"
+      ],
+      "tutorial_url": "https://www.aida64.com/",
+      "download_hint": "https://www.aida64.com/"
+    },
+    {
+      "name": "HWiNFO",
+      "category": "综合检测",
+      "exe_rel": "综合检测/hwinfo/HWiNFO64.exe",
+      "purpose": "专业硬件信息与实时传感器监控（静默/仅传感器模式）",
+      "when_to_use": "长时间记录传感器温度日志、监控 CPU/GPU 温度功耗",
+      "when_not_to_use": "只需一次性硬件信息时（L0 get_hardware_info）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/SM /LOG {extra}",
+        "params": [
+          {
+            "name": "extra",
+            "flag": "",
+            "type": "enum",
+            "required": false,
+            "default": "/S",
+            "desc": "/S 静默（无主窗口） /TRAY 托盘 /QT 快速启动"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "file",
+        "parser": "kv_lines",
+        "schema": "日志文件生成在 exe 同目录，传感器 key:value 行"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "首次启动安装传感器内核驱动；/LOG 写日志到 exe 目录",
+      "examples": [
+        {
+          "args": "/SM /LOG /S",
+          "desc": "静默启动 + 传感器日志",
+          "expect": "exe 目录生成传感器日志"
+        }
+      ],
+      "publisher": "REALiX",
+      "tags": [
+        "硬件检测",
+        "传感器",
+        "监控"
+      ],
+      "tutorial_url": "https://www.hwinfo.com/",
+      "download_hint": "https://www.hwinfo.com/"
+    },
+    {
+      "name": "USBDeview",
+      "category": "其他工具",
+      "exe_rel": "其他工具/USBDeview/USBDeview.exe",
+      "purpose": "USB 设备管理：列出/导出/断开/禁用/卸载 USB 设备（NirSoft）",
+      "when_to_use": "导出 USB 设备清单、安全弹出 U 盘（/stop_by_drive）、排查 USB 设备状态",
+      "when_not_to_use": "禁用/卸载/断开设备未获明确授权时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/scomma \"{outfile}\" /AddExportHeaderLine 1",
+        "params": [
+          {
+            "name": "outfile",
+            "flag": "/scomma",
+            "type": "path",
+            "required": false,
+            "desc": "导出 CSV（/stext /stab /shtml /sxml 同族）"
+          },
+          {
+            "name": "action",
+            "flag": "",
+            "type": "string",
+            "required": false,
+            "desc": "/stop_by_drive g: 断开盘 /is_connected \"名称\" 查询 /disable /remove"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "file",
+        "parser": "smart_csv",
+        "schema": "CSV 列含 Device Name/Device Type/Serial Number/Drive Letter 等"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "导出只读；断开/禁用/卸载设备改变系统状态",
+      "examples": [
+        {
+          "args": "/scomma \"usb.csv\" /AddExportHeaderLine 1",
+          "desc": "导出全部 USB 设备 CSV",
+          "expect": "CSV 含设备清单"
+        },
+        {
+          "args": "/stop_by_drive g:",
+          "desc": "安全弹出 G 盘",
+          "expect": "stdout 确认断开"
+        },
+        {
+          "args": "/is_connected_by_serial \"7538957348957398\"",
+          "desc": "检查某序列号 U 盘是否连接",
+          "expect": "退出码 = 匹配设备数"
+        }
+      ],
+      "publisher": "NirSoft",
+      "tags": [
+        "USB",
+        "设备管理"
+      ],
+      "tutorial_url": "https://www.nirsoft.net/utils/usb_devices_view.html",
+      "download_hint": "https://www.nirsoft.net/"
+    },
+    {
+      "name": "BlueScreenView",
+      "category": "其他工具",
+      "exe_rel": "其他工具/bluescreenview/BlueScreenViewx64.exe",
+      "purpose": "蓝屏（BSOD）dump 分析：解析崩溃原因与驱动",
+      "when_to_use": "分析蓝屏崩溃、查看 Minidump 中的崩溃驱动",
+      "when_not_to_use": "无 dump 文件时（先让用户确认有 .dmp）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/scomma \"{outfile}\" /AddExportHeaderLine 1",
+        "params": [
+          {
+            "name": "outfile",
+            "flag": "/scomma",
+            "type": "path",
+            "required": false,
+            "desc": "导出 CSV/HTML"
+          },
+          {
+            "name": "dump",
+            "flag": "/Dump",
+            "type": "path",
+            "required": false,
+            "desc": "指定 dump 文件分析"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "file",
+        "parser": "smart_csv",
+        "schema": "CSV 列含 Crash Time/Bug Check Code/Caused by Driver"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读",
+      "examples": [
+        {
+          "args": "/scomma bsod.csv /AddExportHeaderLine 1",
+          "desc": "导出全部蓝屏记录",
+          "expect": "CSV 含崩溃记录"
+        },
+        {
+          "args": "/Dump \"C:\\Windows\\Minidump\\Mini0812-01.dmp\"",
+          "desc": "分析指定 dump",
+          "expect": "stdout 分析结果"
+        }
+      ],
+      "publisher": "NirSoft",
+      "tags": [
+        "系统",
+        "蓝屏分析"
+      ],
+      "tutorial_url": "https://www.nirsoft.net/utils/blue_screen_view.html",
+      "download_hint": "https://www.nirsoft.net/"
+    },
+    {
+      "name": "BatteryInfoView",
+      "category": "其他工具",
+      "exe_rel": "其他工具/BatteryInfoView/BatteryInfoView.exe",
+      "purpose": "笔记本电池信息：设计/当前容量、磨损度、充放电状态",
+      "when_to_use": "查看电池健康（磨损度）、充放电状态",
+      "when_not_to_use": "台式机（无电池）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/scomma \"{outfile}\"",
+        "params": [
+          {
+            "name": "outfile",
+            "flag": "/scomma",
+            "type": "path",
+            "required": false,
+            "desc": "导出 CSV"
+          },
+          {
+            "name": "monitor",
+            "flag": "/monitor",
+            "type": "number",
+            "required": false,
+            "desc": "监控模式每 N 秒刷新"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "file",
+        "parser": "smart_csv",
+        "schema": "CSV 列含 Battery Name/Designed Capacity/Full Charged Capacity/Wear"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读",
+      "examples": [
+        {
+          "args": "/scomma battery.csv",
+          "desc": "导出当前电池状态",
+          "expect": "CSV 含容量/磨损"
+        }
+      ],
+      "publisher": "NirSoft",
+      "tags": [
+        "电池",
+        "充电",
+        "磨损"
+      ],
+      "tutorial_url": "https://www.nirsoft.net/utils/battery_information_view.html",
+      "download_hint": "https://www.nirsoft.net/"
+    },
+    {
+      "name": "Autoruns / autorunsc",
+      "category": "其他工具",
+      "exe_rel": "其他工具/Autoruns/autorunsc64.exe",
+      "purpose": "自启动项全量扫描导出（Sysinternals autorunsc 命令行版）",
+      "when_to_use": "审计自启动项、查找可疑第三方启动项、对比系统变化",
+      "when_not_to_use": "非 Sysinternals 场景、不熟悉自启动项含义时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-a {type} -{format} -accepteula",
+        "params": [
+          {
+            "name": "type",
+            "flag": "-a",
+            "type": "string",
+            "required": false,
+            "default": "*",
+            "desc": "* 全部 / l 登录 / s 服务驱动 / m WMI / t 计划任务 等"
+          },
+          {
+            "name": "format",
+            "flag": "",
+            "type": "enum",
+            "required": false,
+            "default": "c",
+            "desc": "-c CSV / -ct 制表 / -x XML"
+          },
+          {
+            "name": "hide_ms",
+            "flag": "-m",
+            "type": "boolean",
+            "required": false,
+            "desc": "隐藏微软条目"
+          },
+          {
+            "name": "verify_sig",
+            "flag": "-s",
+            "type": "boolean",
+            "required": false,
+            "desc": "验证数字签名"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "smart_csv",
+        "schema": "CSV 列含 Entry/Description/Publisher/Image Path/Hash（-c 输出到 stdout）"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读扫描；-u/-v 会上传文件哈希查 VirusTotal（隐私注意）",
+      "examples": [
+        {
+          "args": "-a * -c -accepteula",
+          "desc": "导出全部自启动项 CSV",
+          "expect": "stdout CSV 含全部条目"
+        },
+        {
+          "args": "-a * -c -m -s -accepteula",
+          "desc": "隐藏微软项验证签名",
+          "expect": "stdout 仅第三方条目"
+        }
+      ],
+      "publisher": "Sysinternals (Microsoft)",
+      "tags": [
+        "自启动项",
+        "系统审计"
+      ],
+      "tutorial_url": "https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns",
+      "download_hint": "https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns"
+    },
+    {
+      "name": "Everything",
+      "category": "其他工具",
+      "exe_rel": "其他工具/Everything/Everything.exe",
+      "purpose": "极速文件名搜索（索引常驻），支持命令行传搜索词/生成文件列表",
+      "when_to_use": "按文件名/扩展名/路径快速搜索文件",
+      "when_not_to_use": "搜索内容（Everything 只搜文件名）；首次运行未建索引时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-s \"{query}\"",
+        "params": [
+          {
+            "name": "query",
+            "flag": "-s",
+            "type": "string",
+            "required": true,
+            "desc": "搜索词（支持 * ? | 通配符）"
+          },
+          {
+            "name": "create_list",
+            "flag": "-create-file-list",
+            "type": "path",
+            "required": false,
+            "desc": "把路径下文件列表保存为 .efu"
+          },
+          {
+            "name": "path",
+            "flag": "-p",
+            "type": "path",
+            "required": false,
+            "desc": "按路径搜索"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "搜索窗口打开（GUI 反馈）；-create-file-list 生成 .efu"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读；打开 Everything 窗口",
+      "examples": [
+        {
+          "args": "-s \"*.mp4|*.avi\"",
+          "desc": "打开 Everything 搜索视频",
+          "expect": "Everything 窗口显示结果"
+        },
+        {
+          "args": "-create-file-list \"D:\\music.efu\" \"D:\\Music\" -create-file-list-include-only-files \"*.mp3;*.flac\"",
+          "desc": "生成音乐文件列表",
+          "expect": "生成 music.efu"
+        }
+      ],
+      "publisher": "voidtools",
+      "tags": [
+        "文件搜索",
+        "索引"
+      ],
+      "tutorial_url": "https://www.voidtools.com/",
+      "download_hint": "https://www.voidtools.com/"
+    },
+    {
+      "name": "Ventoy",
+      "category": "其他工具",
+      "exe_rel": "其他工具/ventoy/Ventoy2Disk.exe",
+      "purpose": "Ventoy 启动盘制作：VTOYCLI 命令行模式无交互安装/升级",
+      "when_to_use": "用户明确要求制作/升级 Ventoy 启动盘",
+      "when_not_to_use": "未确认目标盘符时——/I 会格式化目标盘；务必核对物理盘号/盘符",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "VTOYCLI /{action} /Drive:{drive}",
+        "params": [
+          {
+            "name": "action",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "/I 安装（格式化）/U 升级（保留数据）"
+          },
+          {
+            "name": "drive",
+            "flag": "/Drive",
+            "type": "string",
+            "required": true,
+            "desc": "目标盘符如 F:（或 /PhyDrive: 物理盘号）"
+          },
+          {
+            "name": "gpt",
+            "flag": "/GPT",
+            "type": "boolean",
+            "required": false,
+            "desc": "GPT 分区表（默认 MBR）"
+          },
+          {
+            "name": "nosb",
+            "flag": "/NOSB",
+            "type": "boolean",
+            "required": false,
+            "desc": "不启用安全启动"
+          }
+        ],
+        "timeout_secs": 1800
+      },
+      "output": {
+        "format": "file",
+        "parser": "stdout",
+        "schema": "cli_done.txt 内容 0=成功 1=失败；cli_log.txt 详细日志（同目录）"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "/I 格式化目标盘（数据不可逆）；写引导区",
+      "examples": [
+        {
+          "args": "VTOYCLI /U /PhyDrive:1",
+          "desc": "升级物理盘 1（保留数据）",
+          "expect": "cli_done.txt = 0"
+        }
+      ],
+      "publisher": "Ventoy project",
+      "tags": [
+        "启动盘",
+        "U盘",
+        "多系统"
+      ],
+      "tutorial_url": "https://www.ventoy.net/",
+      "download_hint": "https://www.ventoy.net/"
+    },
+    {
+      "name": "WinDbg",
+      "category": "其他工具",
+      "exe_rel": "其他工具/WinDbg/windbg.exe",
+      "purpose": "微软官方调试器：分析崩溃 dump、调试进程",
+      "when_to_use": "分析蓝屏/崩溃 dump（-z + -c \"!analyze -v\"）、附加调试进程",
+      "when_not_to_use": "非调试场景（GUI 交互式调试会挂起命令执行）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-z \"{dump}\" -y \"{symbols}\" -c \"!analyze -v\"",
+        "params": [
+          {
+            "name": "dump",
+            "flag": "-z",
+            "type": "path",
+            "required": true,
+            "desc": "崩溃转储文件"
+          },
+          {
+            "name": "symbols",
+            "flag": "-y",
+            "type": "string",
+            "required": false,
+            "desc": "符号路径 srv*C:\\symbols*https://msdl.microsoft.com/download/symbols"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "!analyze -v 输出崩溃原因分析"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "调试器附加进程（只读）；首次下载符号较大",
+      "examples": [
+        {
+          "args": "-z \"C:\\Windows\\MEMORY.DMP\" -y \"srv*C:\\symbols*https://msdl.microsoft.com/download/symbols\" -c \"!analyze -v\"",
+          "desc": "分析内存转储",
+          "expect": "stdout 崩溃分析"
+        }
+      ],
+      "publisher": "Microsoft",
+      "tags": [
+        "调试",
+        "崩溃分析"
+      ],
+      "tutorial_url": "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/",
+      "download_hint": "https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/"
+    },
+    {
+      "name": "CPU-Z",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/CPUZ/cpuz_x64.exe",
+      "purpose": "CPU/主板/内存/芯片组详细规格与实时频率",
+      "when_to_use": "确认 CPU 型号步进、内存频率时序、主板芯片组，装机验机",
+      "when_not_to_use": "只需汇总硬件信息时（L0 get_hardware_info 更快）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "无 CLI 文本输出；GUI 显示规格，退出码 0 = 正常"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读硬件信息，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动显示硬件规格",
+          "expect": "GUI 窗口显示 CPU/内存/主板规格"
+        }
+      ],
+      "publisher": "CPUID",
+      "tags": [
+        "CPU",
+        "规格",
+        "硬件检测"
+      ],
+      "tutorial_url": "https://www.cpuid.com/softwares/cpu-z.html",
+      "download_hint": "https://www.cpuid.com/"
+    },
+    {
+      "name": "CoreTemp",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/CoreTemp/Core Temp x64.exe",
+      "purpose": "CPU 核心温度与负载实时监控",
+      "when_to_use": "监控 CPU 温度、检查散热/硅脂状态、烤机时观察温度上限",
+      "when_not_to_use": "只需一次性温度时（hw_disk_health / HWiNFO 更合适）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 温度显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读传感器，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动温度监控",
+          "expect": "GUI 显示每核心温度"
+        }
+      ],
+      "publisher": "ALCPU",
+      "tags": [
+        "CPU",
+        "温度",
+        "监控"
+      ],
+      "tutorial_url": "https://www.alcpu.com/CoreTemp/",
+      "download_hint": "https://www.alcpu.com/CoreTemp/"
+    },
+    {
+      "name": "ThrottleStop",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/ThrottleStop/ThrottleStop.exe",
+      "purpose": "CPU 功耗/频率/降压调节与锁频工具",
+      "when_to_use": "笔记本功耗墙调节、降压降温、防止 CPU 降频",
+      "when_not_to_use": "普通用户无降压需求时（改动需重启验证，风险自负）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 调节，无 CLI 输出"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "修改 CPU 电压/频率设置（写入硬件寄存器），不当设置可能导致蓝屏/损坏",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动调节界面",
+          "expect": "GUI 打开，可调节功耗/降压"
+        }
+      ],
+      "publisher": "TechPowerUp",
+      "tags": [
+        "CPU",
+        "降压",
+        "功耗"
+      ],
+      "tutorial_url": "https://www.techpowerup.com/download/techpowerup-throttlestop/",
+      "download_hint": "https://www.techpowerup.com/"
+    },
+    {
+      "name": "GPU-Z",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/GPUZ/GPU-Z.exe",
+      "purpose": "显卡型号/核心/显存/驱动/传感器参数",
+      "when_to_use": "确认显卡规格、BIOS 版本、显存类型、核心频率",
+      "when_not_to_use": "只需汇总硬件信息时（L0 get_hardware_info）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 详细显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读显卡信息与传感器，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动显卡信息",
+          "expect": "GUI 显示显卡规格"
+        }
+      ],
+      "publisher": "TechPowerUp",
+      "tags": [
+        "显卡",
+        "规格",
+        "硬件检测"
+      ],
+      "tutorial_url": "https://www.techpowerup.com/gpuz/",
+      "download_hint": "https://www.techpowerup.com/gpuz/"
+    },
+    {
+      "name": "DDU",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/DDU/Display Driver Uninstaller.exe",
+      "purpose": "显卡驱动彻底卸载（清理残留注册表/文件）",
+      "when_to_use": "驱动异常/升级前残留清理、重装驱动前、N/A 驱动切换",
+      "when_not_to_use": "驱动正常时（卸载驱动有风险，非必要不要跑）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 流程，完成后提示重启"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "卸载显卡驱动（删驱动文件/注册表），卸载后需重装驱动；可能影响正在运行的图形程序",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动驱动卸载",
+          "expect": "GUI 引导选择卸载目标"
+        }
+      ],
+      "publisher": "Wagnardsoft",
+      "tags": [
+        "显卡",
+        "驱动",
+        "卸载"
+      ],
+      "tutorial_url": "https://www.wagnardsoft.com/display-driver-uninstaller-DDU-",
+      "download_hint": "https://www.wagnardsoft.com/"
+    },
+    {
+      "name": "CrystalDiskMark",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/CrystalDiskMark/DiskMark64S.exe",
+      "purpose": "磁盘顺序/随机读写性能基准",
+      "when_to_use": "测 SSD/HDD 读写速度、对比前后性能、验证新盘速度",
+      "when_not_to_use": "仅需健康信息时（CrystalDiskInfo）",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/b",
+        "params": [
+          {
+            "name": "bench",
+            "flag": "/b",
+            "type": "boolean",
+            "required": false,
+            "desc": "启动自动运行默认基准测试"
+          }
+        ],
+        "timeout_secs": 300
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "kv_lines",
+        "schema": "GUI 显示 Seq/4K 读写 Mbps；有 /b 参数可无交互跑默认项"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载读写基准（可能加速 SSD 写入磨损，大容量基准消耗磁盘寿命）",
+      "examples": [
+        {
+          "args": "/b",
+          "desc": "跑默认基准",
+          "expect": "显示 Seq 读写/4K 结果"
+        }
+      ],
+      "publisher": "Crystal Dew World",
+      "tags": [
+        "硬盘",
+        "基准",
+        "测试"
+      ],
+      "tutorial_url": "https://crystalmark.info/en/software/crystaldiskmark/",
+      "download_hint": "https://crystalmark.info/en/"
+    },
+    {
+      "name": "HDTune",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/HDTune/HDTune.exe",
+      "purpose": "硬盘健康/错误扫描/性能测试/温度监控",
+      "when_to_use": "检查坏道（错误扫描）、查看硬盘健康、测读写速度",
+      "when_not_to_use": "只需 SMART 汇总时（CrystalDiskInfo 更轻）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示健康/扫描结果"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "错误扫描会全盘读取（大容量盘耗时久，高负载）；但只读不写，无数据风险",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动磁盘测试",
+          "expect": "GUI 显示健康/性能"
+        }
+      ],
+      "publisher": "EFD Software",
+      "tags": [
+        "硬盘",
+        "健康",
+        "扫描"
+      ],
+      "tutorial_url": "https://www.hdtune.com/",
+      "download_hint": "https://www.hdtune.com/"
+    },
+    {
+      "name": "SpaceSniffer",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/SpaceSniffer/SpaceSniffer.exe",
+      "purpose": "可视化解磁盘占用（矩形树状图）",
+      "when_to_use": "直观找大文件/大目录、磁盘占用可视化分析",
+      "when_not_to_use": "需要结构化树数据时（内置扫描器扫出 Node 树更合适）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 树状图，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读扫描，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动可视化",
+          "expect": "GUI 显示目录占用树状图"
+        }
+      ],
+      "publisher": "Uderzo Software",
+      "tags": [
+        "磁盘",
+        "占用",
+        "可视化"
+      ],
+      "tutorial_url": "http://www.uderzo.it/main_products/space_sniffer/",
+      "download_hint": "http://www.uderzo.it/"
+    },
+    {
+      "name": "HWMonitor",
+      "category": "综合检测",
+      "exe_rel": "综合检测/HWMonitor/HWMonitor_x64.exe",
+      "purpose": "硬件电压/温度/风扇转速全方位监控",
+      "when_to_use": "整机硬件温度/电压/风扇监控、烤机压力观察",
+      "when_not_to_use": "仅需 CPU 温度时（CoreTemp 更专注）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 实时监控，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读传感器，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动监控",
+          "expect": "GUI 显示各传感器电压/温度"
+        }
+      ],
+      "publisher": "CPUID",
+      "tags": [
+        "硬件",
+        "温度",
+        "监控"
+      ],
+      "tutorial_url": "https://www.cpuid.com/softwares/hwmonitor.html",
+      "download_hint": "https://www.cpuid.com/"
+    },
+    {
+      "name": "Dism++",
+      "category": "其他工具",
+      "exe_rel": "其他工具/Dism++/Dism++x64.exe",
+      "purpose": "系统镜像处理/驱动备份/垃圾清理/启动项管理",
+      "when_to_use": "系统垃圾清理、驱动备份、镜像工具、启动项管理（比手动 Dism 更友好）",
+      "when_not_to_use": "AI 自动化时（GUI 工具，AI 只能启动不能脚本化）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 300
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 操作，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "系统级操作（驱动删除/镜像修改/启动项），误操作可能影响系统；只在用户明确授权后使用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动系统工具",
+          "expect": "GUI 打开可进行清理/备份"
+        }
+      ],
+      "publisher": "Chuyu Team",
+      "tags": [
+        "系统",
+        "清理",
+        "工具"
+      ],
+      "tutorial_url": "https://github.com/Chuyu-Team/Dism-plus-plus",
+      "download_hint": "https://github.com/Chuyu-Team/Dism-plus-plus"
+    },
+    {
+      "name": "Rufus",
+      "category": "其他工具",
+      "exe_rel": "其他工具/rufus/rufus.exe",
+      "purpose": "USB 启动盘制作（Windows/镜像写入）",
+      "when_to_use": "制作 WinPE/系统安装盘、ISO 写入 U 盘（注意会格式化目标 U 盘）",
+      "when_not_to_use": "U 盘有数据未备份时（会清空）",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 600
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 流程，写盘进度显示"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "格式化/覆写目标 U 盘（数据不可恢复），务必先备份目标盘数据",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动写盘工具",
+          "expect": "GUI 选择镜像写入 U 盘"
+        }
+      ],
+      "publisher": "Pete Batard",
+      "tags": [
+        "U盘",
+        "启动盘",
+        "镜像"
+      ],
+      "tutorial_url": "https://rufus.ie/",
+      "download_hint": "https://rufus.ie/"
+    }
+  ]
+}

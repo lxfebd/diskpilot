@@ -1,0 +1,139 @@
+id          = "teams"
+name        = "Microsoft Teams"
+homepage    = "https://www.microsoft.com/en-us/microsoft-teams"
+risk        = "low"
+disclaimer  = """\
+清理 Microsoft Teams（桌面版）的 Chromium 缓存、GPU 缓存、Blob 临时存储、\
+崩溃报告与会议音视频临时文件。这些由 Teams 自动生成，删除后重启应用即可重建，\
+不影响账号、聊天历史与登录态。\
+绝不触碰：登录态与账号（Local Storage / Session Storage / IndexedDB /\
+Network / Preferences / Cookies / Login Data / Local State / First Run）、\
+账号配置与设置（desktop-config / app_settings.json）、外接程序安装\
+（Teams Meeting Add-in）、新版 Teams 的状态区（LocalState / RoamingState /\
+Settings / SystemAppData）。\
+清理走系统回收站，可还原。\
+注意：清掉缓存后，下次打开聊天 / 频道时图片、附件与会话预览会重新加载。\
+兼容范围：1.x 经典版（Electron，%APPDATA%/Microsoft/Teams/）+ 2.x 新版\
+（MSTeams_8wekyb3d8bbwe 包，%LOCALAPPDATA%/Packages/）。"""
+
+# Teams 桌面版有两代数据根，都必须 detect：
+#  1.x 经典版（Electron）：%APPDATA%/Microsoft/Teams/（全部数据，同 Discord 布局）
+#  2.x 新版（单窗口/打包应用）：%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/
+# 两代可以同时存在（经典版未卸载时）。只 detect 不 clear 状态区。
+detect = [
+  "%APPDATA%/Microsoft/Teams",
+  "%LOCALAPPDATA%/Microsoft/Teams",
+  "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe",
+  "**/Microsoft/Teams",
+  "**/MSTeams_8wekyb3d8bbwe",
+]
+
+# 不用 name_contains：裸 "Teams" 可能命中用户自己命名的文件夹，
+# 也可能命中 Windows 自带 `Microsoft` 子目录里的非 Teams 内容。
+# 具体的 Microsoft/Teams 与 Packages/MSTeams_8wekyb3d8bbwe 路径才是权威判据。
+[match]
+
+# ============================================================================
+# L1 可重生缓存 — 1.x 经典版（Electron，%APPDATA%/Microsoft/Teams/）
+# ============================================================================
+
+[[scope]]
+id       = "cache"
+label    = "Chromium 缓存"
+glob     = "%APPDATA%/Microsoft/Teams/Cache/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "code-cache"
+label    = "代码缓存"
+glob     = "%APPDATA%/Microsoft/Teams/Code Cache/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "gpu-cache"
+label    = "GPU / WebGPU 缓存"
+glob     = "%APPDATA%/Microsoft/Teams/{GPUCache,DawnGraphiteCache,DawnWebGPUCache}/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "blob-storage"
+label    = "Blob 临时存储"
+glob     = "%APPDATA%/Microsoft/Teams/blob_storage/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "crashpad"
+label    = "崩溃报告"
+glob     = "%APPDATA%/Microsoft/Teams/Crashpad/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+# 会议音视频临时文件（媒体管线缓存）。不是用户原始内容——录制/接收的原件
+# 存在用户自己选择的目录或被聊天记录引用，这里只有可重生的中间产物。
+[[scope]]
+id       = "media-stack"
+label    = "会议音视频临时"
+glob     = "%APPDATA%/Microsoft/Teams/media-stack/**"
+mode     = "recycle"
+category = "media"
+prompt   = { kind = "none" }
+
+# 日志同时落在 Roaming 与 Local 两处，目录名有 `log` 与 `logs` 两种拼写；
+# 一个 scope 用 brace 全合并，避免重复按钮。
+[[scope]]
+id       = "app-logs"
+label    = "运行日志"
+glob     = "%USERPROFILE%/AppData/{Roaming,Local}/Microsoft/Teams/{log,logs}/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+# ============================================================================
+# L1 可重生缓存 — 2.x 新版（打包应用，MSTeams_8wekyb3d8bbwe 包）
+# ============================================================================
+
+# 新版 Teams 数据根下只有缓存子目录可清。LocalState / RoamingState / Settings /
+# SystemAppData 是账号与会话状态（红线），不在任何 scope 里。
+[[scope]]
+id       = "new-app-cache"
+label    = "新版 Application Cache"
+glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/AC/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "new-local-cache"
+label    = "新版 LocalCache"
+glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/LocalCache/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "new-temp-state"
+label    = "新版临时区"
+glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/TempState/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }
+
+# 新版把 Chromium 缓存放在包内 AppData/Local/ 与 AppData/Roaming/ 下（MSIX 约定）。
+# 这里只列具体缓存目录名，绝不用 AppData/** 或 AppData/*/** 这种宽 glob——
+# 同一棵 AppData 树里还住着 Local Storage / IndexedDB / Network（红线）。
+[[scope]]
+id       = "new-chromium-cache"
+label    = "新版 Chromium 缓存"
+glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/AppData/{Local,Roaming}/{Cache,Code Cache,GPUCache,ShaderCache,CodeCache,blob_storage,DawnGraphiteCache,DawnWebGPUCache,Crashpad}/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "none" }

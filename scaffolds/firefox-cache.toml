@@ -1,0 +1,47 @@
+id          = "firefox-cache"
+name        = "Firefox 浏览器缓存"
+homepage    = "https://www.mozilla.org/firefox/"
+risk        = "low"
+disclaimer  = """\
+清理 Firefox 的联网缓存（cache2 / startupCache / shader-cache）。\
+这些由浏览器自动生成，删除后再次上网自动重建，不影响书签、密码、历史、插件。\
+绝不触碰：places.sqlite（书签/历史）、cookies.sqlite、logins.json、key4.db、\
+formhistory.sqlite（表单历史）、storage/（网站数据）。\
+清理前请先完全关闭 Firefox。清理走系统回收站，可还原。"""
+
+detect = [
+  "%LOCALAPPDATA%/Mozilla/Firefox/Profiles",
+  "%USERPROFILE%/.mozilla/firefox",
+  "${HOME}/.mozilla/firefox",
+]
+
+[match]
+name_contains    = ["Profiles", "firefox"]
+must_have_child  = []
+
+[[scope]]
+id                  = "firefox-network-cache"
+label               = "网页缓存（cache2 / Cache）"
+glob                = "{%LOCALAPPDATA%/Mozilla/Firefox/Profiles,%USERPROFILE%/.mozilla/firefox,${HOME}/.mozilla/firefox}/**/{cache2,Cache}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "firefox-startup-cache"
+label               = "启动缓存（startupCache）"
+glob                = "{%LOCALAPPDATA%/Mozilla/Firefox/Profiles,%USERPROFILE%/.mozilla/firefox,${HOME}/.mozilla/firefox}/**/startupCache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "firefox-shader-cache"
+label               = "着色器缓存（shader-cache）"
+glob                = "{%LOCALAPPDATA%/Mozilla/Firefox/Profiles,%USERPROFILE%/.mozilla/firefox,${HOME}/.mozilla/firefox}/**/shader-cache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

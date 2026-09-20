@@ -1,0 +1,21 @@
+name: Scaffold request
+description: Ask for cleanup support for a specific app
+labels: [scaffold]
+body:
+  - type: input
+    id: app
+    attributes: { label: App name }
+    validations: { required: true }
+  - type: input
+    id: paths
+    attributes: { label: Cache directories (you can list more than one) }
+    validations: { required: true }
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Estimated risk
+      options: [low, medium, high]
+    validations: { required: true }
+  - type: textarea
+    id: notes
+    attributes: { label: Anything special the scaffold should prompt for }

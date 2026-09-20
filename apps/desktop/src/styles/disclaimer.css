@@ -1,0 +1,146 @@
+/* ── 开屏免责声明（Disclaimer.tsx）──────────────────────────────
+   首次启动强制弹窗：全屏遮罩 + 居中卡片。
+   10s 倒计时 + 必须滚到底部才能点亮「同意」。同意后 localStorage 记住。 */
+
+.disclaimer-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  backdrop-filter: blur(3px);
+  animation: disclaimer-fade .18s ease-out;
+}
+@keyframes disclaimer-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.disclaimer-modal {
+  width: min(720px, calc(100vw - 48px));
+  max-height: min(640px, calc(100vh - 64px));
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 60px color-mix(in srgb, var(--ink) 45%, transparent);
+  overflow: hidden;
+  font-size: calc(13px * var(--font-scale, 1));
+}
+
+.disclaimer-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 22px 14px;
+  border-bottom: 1.5px solid var(--line);
+  background: var(--risk-fill-d);
+  color: #fff;
+}
+.disclaimer-head svg { flex-shrink: 0; margin-top: 2px; }
+.disclaimer-head h2 {
+  margin: 0;
+  font-size: calc(17px * var(--font-scale, 1));
+  font-weight: 800;
+  color: #fff;
+}
+.disclaimer-sub {
+  margin: 3px 0 0;
+  font-size: calc(12px * var(--font-scale, 1));
+  color: color-mix(in srgb, #fff 80%, transparent);
+}
+
+.disclaimer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 22px 18px;
+  scroll-behavior: smooth;
+}
+.disclaimer-body section {
+  margin-top: 16px;
+}
+.disclaimer-body h3 {
+  margin: 0 0 8px;
+  font-size: calc(14px * var(--font-scale, 1));
+  font-weight: 800;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.disclaimer-body h3 svg { color: var(--accent); }
+.disclaimer-body p {
+  margin: 6px 0;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+.disclaimer-body ul {
+  margin: 6px 0;
+  padding-left: 20px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+.disclaimer-body li { margin: 4px 0; }
+.disclaimer-body a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.disclaimer-body strong { color: var(--ink); font-weight: 800; }
+
+/* 作者信息卡：突出显示 */
+.disclaimer-author {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 10px 14px 12px;
+  margin-top: 12px;
+}
+.disclaimer-author ul { padding-left: 0; list-style: none; }
+.disclaimer-author li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.disclaimer-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1.5px solid var(--line);
+  background: var(--surface-2);
+}
+.disclaimer-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.disclaimer-contact .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: calc(10.5px * var(--font-scale, 1));
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+.disclaimer-accept {
+  width: 100%;
+  padding: 11px 16px;
+  font-size: calc(14px * var(--font-scale, 1));
+  font-weight: 800;
+  border-radius: var(--radius-md);
+}
+.disclaimer-accept:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  filter: saturate(.6);
+}

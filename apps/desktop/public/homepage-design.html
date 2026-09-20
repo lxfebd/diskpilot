@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DiskPilot 首页设计稿 v1</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+  :root {
+    --ink:        #150818;
+    --ink-2:      #4a3742;
+    --ink-3:      #7a6675;
+    --paper:      #fff5f8;
+    --paper-2:    #ffe6ee;
+    --paper-3:    #ffd5e2;
+    --card:       #ffffff;
+    --pink:       #ff6fa8;
+    --pink-deep:  #e23f86;
+    --pink-soft:  #ffd0e0;
+    --pink-bg:    #ffeaf2;
+    --lavender:   #c9b6ff;
+    --mint:       #a8e6c4;
+    --peach:      #ffb37a;
+    --sun:        #ffe066;
+    --ok:         #3aa96a;
+    --warn:       #ff9f5e;
+    --err:        #ff3b5c;
+    --line:       var(--ink);
+    --shadow-sm:  3px 3px 0 var(--ink);
+    --shadow:     5px 5px 0 var(--ink);
+    --font-sans: "Geist", "Inter", -apple-system, system-ui, "Segoe UI Variable", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Consolas, "Cascadia Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(circle at 0% 0%, rgba(255,111,168,.16) 0%, transparent 38%),
+      radial-gradient(circle at 100% 100%, rgba(201,182,255,.16) 0%, transparent 38%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; font-weight: 700; font-family: var(--font-sans); }
+
+  /* ── 设计稿标注栏 ─────────────────────────── */
+  .draftbar {
+    position: sticky; top: 0; z-index: 99;
+    display: flex; align-items: center; gap: 12px;
+    background: #1b0d1e; color: #fff;
+    padding: 8px 20px;
+    font-size: 12.5px;
+  }
+  .draftbar b { color: var(--pink); font-weight: 800; }
+  .draftbar .tag {
+    background: var(--pink); color: var(--ink);
+    border-radius: 6px; padding: 2px 8px; font-weight: 800; font-size: 11px;
+  }
+  .draftbar .hint { color: #ffb6d2; margin-left: auto; }
+
+  .app {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 18px 24px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ── 顶栏 ────────────────────────────────── */
+  .topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+  }
+  .logo {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-weight: 800; font-size: 19px;
+    margin-right: 8px; letter-spacing: -0.03em;
+  }
+  .logo .disc {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--pink); border: 2.5px solid var(--ink);
+    box-shadow: 2px 2px 0 var(--ink);
+    position: relative;
+  }
+  .logo .disc::after {
+    content:''; position:absolute; inset:5px;
+    border:2px solid var(--ink); border-radius:50%; opacity:.55;
+  }
+  .pick {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--card); border: 2.5px solid var(--ink);
+    border-radius: 10px; padding: 7px 14px;
+    font-weight: 700; cursor: pointer; box-shadow: 2px 2px 0 var(--ink);
+  }
+  .scanbtn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--pink); border: 2.5px solid var(--ink);
+    border-radius: 10px; padding: 7px 16px;
+    font-weight: 800; cursor: pointer; box-shadow: 2px 2px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .scanbtn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--ink); }
+  .seg {
+    display: inline-flex; margin-left: 8px;
+    border: 2.5px solid var(--ink); border-radius: 10px; overflow: hidden;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .seg-item { padding: 7px 18px; background: var(--card); cursor: pointer; font-weight: 700; }
+  .seg-item.active { background: var(--pink); }
+  .seg-item + .seg-item { border-left: 2.5px solid var(--ink); }
+  .aipill {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card); border: 2.5px solid var(--ink);
+    border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 700;
+    box-shadow: 2px 2px 0 var(--ink);
+  }
+  .aipill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); border: 1.5px solid var(--ink); }
+
+  /* ── 顶部硬盘扫描条 ───────────────────────── */
+  .strip {
+    display: flex; gap: 10px; align-items: stretch;
+    padding: 10px 12px;
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+  }
+  .strip-all {
+    flex-shrink: 0;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    background: var(--pink); border: 2.5px solid var(--ink);
+    border-radius: 12px; padding: 8px 18px;
+    font-weight: 800; cursor: pointer; box-shadow: 2px 2px 0 var(--ink);
+  }
+  .strip-all small { font-size: 10.5px; font-weight: 700; opacity: .85; }
+  .drive-cell {
+    position: relative; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 5px;
+    min-width: 172px;
+    background: var(--card); border: 2.5px solid var(--ink);
+    border-radius: 12px; padding: 8px 12px;
+    cursor: pointer; box-shadow: 2px 2px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .drive-cell:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+  .drive-cell.sel { border-color: #3b6fd4; box-shadow: 3px 3px 0 #3b6fd4; background: #eef4ff; }
+  .drive-cell.scanned { border-color: var(--ok); }
+  .drive-cell.sel.scanned { border-color: #3b6fd4; box-shadow: 3px 3px 0 #3b6fd4; }
+  .dc-top { display: flex; align-items: center; gap: 6px; }
+  .dc-ic { font-size: 13px; font-weight: 800; }
+  .dc-name { font-family: var(--font-mono); font-size: 15px; font-weight: 800; }
+  .dc-done {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 800; color: #fff;
+    background: var(--ok); border: 1.5px solid var(--ink);
+    border-radius: 999px; padding: 1px 7px;
+  }
+  .dc-bar { height: 9px; background: var(--paper-3); border: 2px solid var(--ink); border-radius: 5px; overflow: hidden; }
+  .dc-bar > i { display: block; height: 100%; background: var(--pink-deep); }
+  .dc-meta { font-size: 11px; color: var(--ink-2); font-weight: 600; font-family: var(--font-mono); }
+  .dc-refresh {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--ink); border-radius: 50%;
+    background: var(--card); cursor: pointer; opacity: 0; transition: opacity .1s;
+    font-size: 11px; line-height: 1;
+  }
+  .drive-cell:hover .dc-refresh { opacity: 1; }
+
+  /* ── 两栏主体 ─────────────────────────────── */
+  .cols {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .card {
+    background: var(--card);
+    border: 2.5px solid var(--ink);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow-sm);
+    display: flex; flex-direction: column; gap: 12px; min-width: 0;
+  }
+  .card-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 800; margin: 0;
+  }
+  .card-title .note { margin-left: auto; font-size: 11px; color: var(--ink-3); font-weight: 600; font-family: var(--font-mono); }
+  .ico {
+    width: 20px; height: 20px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--pink-bg); border: 2px solid var(--ink); border-radius: 6px;
+    font-size: 11px;
+  }
+
+  /* 磁盘详情 */
+  .detail-head { display: flex; align-items: center; gap: 14px; }
+  .detail-name { font-size: 18px; font-weight: 800; }
+  .gauge { position: relative; width: 104px; height: 104px; flex-shrink: 0; }
+  .gauge svg { width: 104px; height: 104px; transform: rotate(-90deg); }
+  .gauge .ring { fill: none; stroke: var(--paper-3); stroke-width: 13; }
+  .gauge .val { fill: none; stroke: var(--pink-deep); stroke-width: 13; stroke-linecap: round; }
+  .gauge .c {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0;
+  }
+  .gauge .c b { font-size: 22px; font-weight: 800; font-family: var(--font-mono); }
+  .gauge .c span { font-size: 10px; color: var(--ink-3); font-weight: 700; }
+  .detail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .detail-list li {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 13px; color: var(--ink-2); font-weight: 600;
+  }
+  .detail-list li b { margin-left: auto; font-size: 13px; font-weight: 800; font-family: var(--font-mono); color: var(--ink); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); flex-shrink: 0; }
+
+  /* 快速操作 */
+  .quick { display: flex; flex-direction: column; gap: 8px; }
+  .quick-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    background: #e8f0fe; border: 2px solid var(--ink);
+    border-radius: 12px; padding: 9px 14px;
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    cursor: pointer; text-align: left;
+    transition: background .1s, transform .08s, box-shadow .08s;
+  }
+  .quick-btn:hover { background: #d2e2ff; transform: translate(-1px,-1px); box-shadow: 2px 2px 0 var(--ink); }
+  .quick-btn .qic {
+    width: 22px; height: 22px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #cfe0ff; border: 1.5px solid var(--ink); border-radius: 6px;
+    font-size: 12px;
+  }
+
+  /* 分类柱状图 */
+  .bars { display: flex; flex-direction: column; gap: 9px; }
+  .bar-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .bar-dot { width: 10px; height: 10px; border-radius: 3px; border: 1.5px solid var(--ink); flex-shrink: 0; }
+  .bar-name { font-size: 13px; font-weight: 700; flex: 0 1 86px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { flex: 1; min-width: 0; height: 13px; background: var(--paper-3); border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+  .bar-track > i { display: block; height: 100%; }
+  .bar-size { flex-shrink: 0; min-width: 64px; text-align: right; font-size: 12.5px; font-weight: 800; font-family: var(--font-mono); }
+
+  /* 建议清理 */
+  .clean-card { }
+  .clean-sum { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--pink-deep); font-family: var(--font-mono); }
+  .clean-list {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: 218px; overflow-y: auto; padding-right: 4px;
+  }
+  .clean-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    border: 2px solid var(--ink-3); border-radius: 10px;
+    background: var(--card); cursor: pointer; min-width: 0;
+  }
+  .clean-row:hover { background: var(--pink-bg); }
+  .clean-row input { width: 16px; height: 16px; accent-color: var(--pink-deep); flex-shrink: 0; cursor: pointer; }
+  .clean-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .clean-txt b { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clean-txt i { font-size: 11px; color: var(--ink-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clean-size { flex-shrink: 0; font-size: 12.5px; font-weight: 800; font-family: var(--font-mono); color: var(--err); }
+  .actionbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border-top: 2px solid var(--ink-3); padding-top: 12px; margin-top: 2px;
+  }
+  .actionbar .info { font-size: 13px; color: var(--ink-2); font-weight: 700; }
+  .actionbar .info b { color: var(--ink); font-weight: 800; }
+  .clean-btn {
+    min-width: 148px;
+    background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+    color: #fff; border: 2.5px solid var(--ink);
+    border-radius: 12px; padding: 10px 18px;
+    font-size: 14px; font-weight: 800;
+    cursor: pointer; box-shadow: 3px 3px 0 var(--ink);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .clean-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--ink); }
+
+  /* 底部空间大头 */
+  .toplist { display: flex; flex-direction: column; border: 2.5px solid var(--ink); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: var(--shadow-sm); }
+  .top-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1.5px solid var(--ink-3);
+  }
+  .top-row:last-child { border-bottom: none; }
+  .rank {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border-radius: 6px; background: var(--paper-3);
+    border: 1.5px solid var(--ink);
+    font-size: 11px; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+  }
+  .top-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-files { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); flex-shrink: 0; }
+  .top-bar { flex: 0 0 110px; height: 8px; background: var(--paper-3); border: 1.5px solid var(--ink); border-radius: 4px; overflow: hidden; }
+  .top-bar > i { display: block; height: 100%; background: var(--pink); }
+  .top-size { font-size: 12px; font-weight: 800; font-family: var(--font-mono); flex-shrink: 0; width: 72px; text-align: right; }
+  .top-pct { font-size: 11px; color: var(--ink-2); font-family: var(--font-mono); flex-shrink: 0; width: 46px; text-align: right; }
+
+  /* 底部统计 */
+  .foot {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    color: var(--ink-3); font-size: 12px; font-weight: 600;
+  }
+  .foot span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .empty-tip {
+    text-align: center; padding: 40px 20px; color: var(--ink-3);
+    font-size: 13px;
+  }
+  .empty-tip b { color: var(--pink-deep); }
+
+  /* ── SVG 图标 ─────────────────────────────── */
+  .ic {
+    width: 1em; height: 1em; flex-shrink: 0;
+    display: inline-block; vertical-align: -0.125em;
+    fill: none; stroke: currentColor;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .pick .ic { width: 15px; height: 15px; }
+  .scanbtn .ic { width: 15px; height: 15px; }
+  .strip-all .ic { width: 17px; height: 17px; }
+  .dc-ic .ic { width: 15px; height: 15px; }
+  .dc-done .ic { width: 10px; height: 10px; stroke-width: 3.5; vertical-align: 0; }
+  .dc-refresh .ic { width: 13px; height: 13px; stroke-width: 2.5; }
+  .ico .ic { width: 13px; height: 13px; }
+  .qic .ic { width: 14px; height: 14px; }
+  .foot .ic { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+  <!-- SVG 图标库 -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-hdd" viewBox="0 0 24 24">
+        <line x1="22" x2="2" y1="12" y2="12"/>
+        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+        <line x1="6" x2="6.01" y1="16" y2="16"/>
+        <line x1="10" x2="10.01" y1="16" y2="16"/>
+      </symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24">
+        <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+      </symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.3-4.3"/>
+      </symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24">
+        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+        <path d="M21 3v5h-5"/>
+        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+        <path d="M8 16H3v5"/>
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="M20 6 9 17l-5-5"/>
+      </symbol>
+      <symbol id="i-sparkles" viewBox="0 0 24 24">
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+      </symbol>
+      <symbol id="i-files" viewBox="0 0 24 24">
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+        <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+        <circle cx="11.5" cy="14.5" r="2.5"/>
+        <path d="M13.3 16.3 15 18"/>
+      </symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+      </symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24">
+        <path d="M3 6h18"/>
+        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+        <line x1="10" x2="10" y1="11" y2="17"/>
+        <line x1="14" x2="14" y1="11" y2="17"/>
+      </symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24">
+        <path d="M3 3v18h18"/>
+        <path d="M18 17V9"/>
+        <path d="M13 17V5"/>
+        <path d="M8 17v-3"/>
+      </symbol>
+      <symbol id="i-box" viewBox="0 0 24 24">
+        <path d="m7.5 4.27 9 5.15"/>
+        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+        <path d="M3.3 7 12 12l8.7-5"/>
+        <path d="M12 22V12"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- 设计稿标注栏 -->
+  <div class="draftbar">
+    <span class="tag">设计稿 v1</span>
+    <span>DiskPilot 首页 · <b>「顶部硬盘扫描条」方案</b></span>
+    <span class="hint">这是在浏览器里看的静态稿（假数据），不是真实扫描结果</span>
+  </div>
+
+  <div class="app">
+
+    <!-- 顶栏 -->
+    <header class="topbar">
+      <div class="logo"><span class="disc"></span>DiskPilot</div>
+      <button class="pick"><svg class="ic"><use href="#i-folder"/></svg>选择磁盘或文件夹</button>
+      <button class="scanbtn"><svg class="ic"><use href="#i-bolt"/></svg>扫描</button>
+      <div class="seg">
+        <span class="seg-item active">总览</span>
+        <span class="seg-item">工作台</span>
+      </div>
+      <span class="aipill"><span class="dot"></span>AI 已就绪</span>
+    </header>
+
+    <!-- ① 顶部硬盘扫描条 -->
+    <section class="strip">
+      <button class="strip-all">
+        <span><svg class="ic"><use href="#i-search"/></svg>一键扫描全部硬盘</span>
+        <small>扫完所有盘 · 已扫过的秒开</small>
+      </button>
+
+      <div class="drive-cell sel scanned">
+        <span class="dc-refresh"><svg class="ic"><use href="#i-refresh"/></svg></span>
+        <span class="dc-top">
+          <span class="dc-ic"><svg class="ic"><use href="#i-hdd"/></svg></span><span class="dc-name">C:</span>
+          <span class="dc-done"><svg class="ic"><use href="#i-check"/></svg>已扫描</span>
+        </span>
+        <span class="dc-bar"><i style="width:99%"></i></span>
+        <span class="dc-meta">可用 4.5 GB · 已用 295 GB</span>
+      </div>
+
+      <div class="drive-cell scanned">
+        <span class="dc-refresh"><svg class="ic"><use href="#i-refresh"/></svg></span>
+        <span class="dc-top">
+          <span class="dc-ic"><svg class="ic"><use href="#i-hdd"/></svg></span><span class="dc-name">D:</span>
+          <span class="dc-done"><svg class="ic"><use href="#i-check"/></svg>已扫描</span>
+        </span>
+        <span class="dc-bar"><i style="width:91%"></i></span>
+        <span class="dc-meta">可用 55 GB · 已用 576 GB</span>
+      </div>
+
+      <div class="drive-cell scanned">
+        <span class="dc-refresh"><svg class="ic"><use href="#i-refresh"/></svg></span>
+        <span class="dc-top">
+          <span class="dc-ic"><svg class="ic"><use href="#i-hdd"/></svg></span><span class="dc-name">E:</span>
+          <span class="dc-done"><svg class="ic"><use href="#i-check"/></svg>已扫描</span>
+        </span>
+        <span class="dc-bar"><i style="width:86%"></i></span>
+        <span class="dc-meta">可用 138 GB · 已用 816 GB</span>
+      </div>
+
+      <div class="drive-cell scanned">
+        <span class="dc-refresh"><svg class="ic"><use href="#i-refresh"/></svg></span>
+        <span class="dc-top">
+          <span class="dc-ic"><svg class="ic"><use href="#i-hdd"/></svg></span><span class="dc-name">H:</span>
+          <span class="dc-done"><svg class="ic"><use href="#i-check"/></svg>已扫描</span>
+        </span>
+        <span class="dc-bar"><i style="width:37%"></i></span>
+        <span class="dc-meta">可用 438 GB · 已用 260 GB</span>
+      </div>
+
+      <div class="drive-cell">
+        <span class="dc-refresh"><svg class="ic"><use href="#i-refresh"/></svg></span>
+        <span class="dc-top">
+          <span class="dc-ic"><svg class="ic"><use href="#i-hdd"/></svg></span><span class="dc-name">I:</span>
+        </span>
+        <span class="dc-bar"><i style="width:32%"></i></span>
+        <span class="dc-meta">可用 1.24 TB · 已用 597 GB</span>
+      </div>
+
+      <div class="drive-cell">
+        <span class="dc-refresh"><svg class="ic"><use href="#i-refresh"/></svg></span>
+        <span class="dc-top">
+          <span class="dc-ic"><svg class="ic"><use href="#i-hdd"/></svg></span><span class="dc-name">J:</span>
+        </span>
+        <span class="dc-bar"><i style="width:25%"></i></span>
+        <span class="dc-meta">可用 1.40 TB · 已用 478 GB</span>
+      </div>
+    </section>
+
+    <!-- ② 主体两栏 -->
+    <div class="cols">
+
+      <!-- 左栏 5/12 -->
+      <div class="col">
+        <section class="card">
+          <h3 class="card-title"><span class="ico"><svg class="ic"><use href="#i-hdd"/></svg></span>磁盘详情 <span class="note">当前选中 C 盘</span></h3>
+          <div class="detail-head">
+            <div class="gauge">
+              <svg viewBox="0 0 104 104">
+                <circle class="ring" cx="52" cy="52" r="42"></circle>
+                <circle class="val" cx="52" cy="52" r="42" stroke-dasharray="264 264" stroke-dashoffset="2.6"></circle>
+              </svg>
+              <div class="c"><b>99%</b><span>已使用</span></div>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:16px; font-weight:800;">C 盘</div>
+              <div style="font-size:11.5px; color:var(--ink-3); margin-top:2px;">系统盘 · 引导分区</div>
+            </div>
+          </div>
+          <ul class="detail-list">
+            <li><span class="dot" style="background:#5b8def"></span>总容量<b>299 GB</b></li>
+            <li><span class="dot" style="background:#f59e0b"></span>已用空间<b>295 GB</b></li>
+            <li><span class="dot" style="background:#22c55e"></span>可用空间<b>4.5 GB</b></li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h3 class="card-title"><span class="ico"><svg class="ic"><use href="#i-bolt"/></svg></span>快速操作</h3>
+          <div class="quick">
+            <button class="quick-btn"><span class="qic"><svg class="ic"><use href="#i-sparkles"/></svg></span>一键智能清理</button>
+            <button class="quick-btn"><span class="qic"><svg class="ic"><use href="#i-files"/></svg></span>大文件扫描</button>
+            <button class="quick-btn"><span class="qic"><svg class="ic"><use href="#i-copy"/></svg></span>重复文件查找</button>
+            <button class="quick-btn"><span class="qic"><svg class="ic"><use href="#i-trash"/></svg></span>系统垃圾清理</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- 右栏 7/12 -->
+      <div class="col">
+        <section class="card">
+          <h3 class="card-title"><span class="ico"><svg class="ic"><use href="#i-chart"/></svg></span>文件分类占用 <span class="note">C 盘 · 点击柱可定位</span></h3>
+          <div class="bars">
+            <div class="bar-row"><span class="bar-dot" style="background:#8a93a6"></span><span class="bar-name">系统文件</span><span class="bar-track"><i style="width:100%; background:#8a93a6"></i></span><span class="bar-size">82.4 GB</span></div>
+            <div class="bar-row"><span class="bar-dot" style="background:#5b8def"></span><span class="bar-name">应用程序</span><span class="bar-track"><i style="width:72%; background:#5b8def"></i></span><span class="bar-size">59.3 GB</span></div>
+            <div class="bar-row"><span class="bar-dot" style="background:#3fbf7f"></span><span class="bar-name">文档资料</span><span class="bar-track"><i style="width:48%; background:#3fbf7f"></i></span><span class="bar-size">39.6 GB</span></div>
+            <div class="bar-row"><span class="bar-dot" style="background:#9b6de0"></span><span class="bar-name">媒体文件</span><span class="bar-track"><i style="width:41%; background:#9b6de0"></i></span><span class="bar-size">33.8 GB</span></div>
+            <div class="bar-row"><span class="bar-dot" style="background:#f2a33c"></span><span class="bar-name">下载文件</span><span class="bar-track"><i style="width:29%; background:#f2a33c"></i></span><span class="bar-size">23.9 GB</span></div>
+            <div class="bar-row"><span class="bar-dot" style="background:#e05252"></span><span class="bar-name">临时文件</span><span class="bar-track"><i style="width:18%; background:#e05252"></i></span><span class="bar-size">14.8 GB</span></div>
+            <div class="bar-row"><span class="bar-dot" style="background:#c9d0da"></span><span class="bar-name">其他文件</span><span class="bar-track"><i style="width:14%; background:#c9d0da"></i></span><span class="bar-size">11.5 GB</span></div>
+          </div>
+        </section>
+
+        <section class="card clean-card">
+          <h3 class="card-title"><span class="ico"><svg class="ic"><use href="#i-trash"/></svg></span>建议清理项目 <span class="clean-sum">预计可释放 15.8 GB</span></h3>
+          <div class="clean-list">
+            <label class="clean-row"><input type="checkbox" checked />
+              <span class="clean-txt"><b>Windows 更新缓存</b><i>旧版本更新备份文件</i></span>
+              <span class="clean-size">8.2 GB</span>
+            </label>
+            <label class="clean-row"><input type="checkbox" checked />
+              <span class="clean-txt"><b>浏览器缓存</b><i>Chrome / Edge 缓存数据</i></span>
+              <span class="clean-size">3.6 GB</span>
+            </label>
+            <label class="clean-row"><input type="checkbox" checked />
+              <span class="clean-txt"><b>回收站</b><i>已删除但未清空的文件</i></span>
+              <span class="clean-size">2.1 GB</span>
+            </label>
+            <label class="clean-row"><input type="checkbox" checked />
+              <span class="clean-txt"><b>系统临时文件</b><i>Temp 目录下的过期文件</i></span>
+              <span class="clean-size">1.5 GB</span>
+            </label>
+            <label class="clean-row"><input type="checkbox" checked />
+              <span class="clean-txt"><b>缩略图缓存</b><i>Explorer 缩略图数据库</i></span>
+              <span class="clean-size">0.4 GB</span>
+            </label>
+          </div>
+          <div class="actionbar">
+            <span class="info">已选 <b>5</b> 项，共 <b>15.8 GB</b></span>
+            <button class="clean-btn">立即清理</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ③ 底部空间大头 -->
+    <section class="card" style="padding:14px 0 6px;">
+      <h3 class="card-title" style="padding:0 16px;"><span class="ico"><svg class="ic"><use href="#i-box"/></svg></span>空间大头 Top 10 <span class="note">点击目录定位查看</span></h3>
+      <div class="toplist" style="margin-top:4px;">
+        <div class="top-row"><span class="rank">1</span><span class="top-name">C:\Users\90740\AppData</span><span class="top-files">410k 文件</span><span class="top-bar"><i style="width:34%"></i></span><span class="top-size">71.1 GB</span><span class="top-pct">24%</span></div>
+        <div class="top-row"><span class="rank">2</span><span class="top-name">C:\Windows\WinSxS</span><span class="top-files">1.2M 文件</span><span class="top-bar"><i style="width:21%"></i></span><span class="top-size">45.0 GB</span><span class="top-pct">15%</span></div>
+        <div class="top-row"><span class="rank">3</span><span class="top-name">C:\Program Files</span><span class="top-files">88k 文件</span><span class="top-bar"><i style="width:17%"></i></span><span class="top-size">35.6 GB</span><span class="top-pct">12%</span></div>
+        <div class="top-row"><span class="rank">4</span><span class="top-name">C:\Users\90740\Downloads</span><span class="top-files">12k 文件</span><span class="top-bar"><i style="width:13%"></i></span><span class="top-size">27.2 GB</span><span class="top-pct">9%</span></div>
+        <div class="top-row"><span class="rank">5</span><span class="top-name">C:\ProgramData</span><span class="top-files">64k 文件</span><span class="top-bar"><i style="width:9%"></i></span><span class="top-size">19.8 GB</span><span class="top-pct">7%</span></div>
+      </div>
+    </section>
+
+    <!-- 底部统计 -->
+    <footer class="foot">
+      <span><svg class="ic"><use href="#i-hdd"/></svg>本机已用 3.02 TB</span>
+      <span><svg class="ic"><use href="#i-check"/></svg>已扫 4 / 6 个盘</span>
+      <span style="margin-left:auto;">DiskPilot v0.1.2 · 8 个脚本 · C:\ 已扫描</span>
+    </footer>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+id          = "obs-cache"
+name        = "OBS Studio 缓存"
+homepage    = "https://obsproject.com/"
+risk        = "low"
+disclaimer  = """\
+清理 OBS Studio 的运行缓存：崩溃转储与日志文件。\
+删除后 OBS 会按需自动重建，不影响已保存的录制文件、场景、来源、
+热键、配置与流媒体设置。\
+绝不触碰：%APPDATA%/obs-studio 下的 scene.json（场景配置）、scenes、
+profiles（配置文件）、plugin_config、basic 等配置目录，以及用户自己
+的录制视频。\
+注意：清理前请先退出 OBS，否则正在被占用的文件会被自动跳过。\
+清理走系统回收站，可还原。"""
+
+detect = [
+  "%APPDATA%/obs-studio",
+  "${HOME}/.config/obs-studio",
+]
+
+[match]
+name_contains    = ["obs-studio"]
+must_have_child  = []
+
+# 严格锚定 OBS 的配置根目录下的缓存子目录：Windows 的 %APPDATA%/obs-studio
+# 与 Linux 的 ~/.config/obs-studio。只回收 crash-dumps（崩溃转储）与 logs
+# （日志），绝不触碰 scenes / profiles / plugin_config / 配置。
+
+[[scope]]
+id                  = "obs-crash-dumps"
+label               = "OBS 崩溃转储"
+glob                = "{%APPDATA%,${HOME}/.config}/obs-studio/crash-dumps/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "obs-logs"
+label               = "OBS 日志文件"
+glob                = "{%APPDATA%,${HOME}/.config}/obs-studio/logs/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

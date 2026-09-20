@@ -1,0 +1,113 @@
+id          = "zoom"
+name        = "Zoom"
+homepage    = "https://zoom.us/"
+risk        = "low"
+disclaimer  = """\
+清理 Zoom 客户端的自建缓存：Chromium/GPU 缓存、WebRTC 音视频临时文件、\
+媒体缓存、应用遥测与日志。\
+删除后 Zoom 会在下次启动时按需重建，不影响会议内容与账号。\
+绝不触碰：%USERPROFILE%/Documents 下的 Zoom 与 ZoomRecordings（会议录制，\
+用户内容）、data 下的 im 聊天/会议消息数据库与账号配置（zoom.us.conf）、\
+登录态与加密物料（Chromium 的 Cookies / Login Data / Local State /\
+Network / Session Storage / IndexedDB，以及 key 与 crypto 目录）。\
+清理走系统回收站，可还原。\
+注意：清掉媒体缓存后，历史消息里的图片与临时文件附件会显示“已过期”。"""
+
+# Zoom 历史上用过两个数据根：旧客户端（ZoomUs.exe，5.x~6.x）写
+# %APPDATA%/zoom.us，新客户端（Zoom.exe，7.x+）写 %APPDATA%/Zoom。
+# 两者都会写 data/ 与 data/WebRTC，同一台机器可能同时残留两个目录。
+# %LOCALAPPDATA%/Zoom 是 Electron app 的 UserData 根（Cache / GPUCache /
+# logs 等 Chromium 缓存），同样在 scope 里。
+# 注意：%USERPROFILE%/Documents/Zoom 是录制根，只进 detect 让卡片可见，
+# 绝不写 scope（disclaimer 与 safety 测试双保险）。
+detect = [
+  "%APPDATA%/zoom.us",
+  "%APPDATA%/Zoom",
+  "%LOCALAPPDATA%/Zoom",
+  "%USERPROFILE%/Documents/Zoom",
+  "**/zoom.us",
+  "**/Zoom",
+]
+
+# 不放 name_contains：裸 "Zoom" 会误命中 ZoomCar / ZoomInfo / 用户自建文件夹。
+# 检测靠上面的具体路径。
+[match]
+
+# ============================================================================
+# L1 可重生缓存（默认勾选，全量清 / 保留期）
+#
+# 全部 glob 都以真实安装根锚定，且用「显式桶名」而非裸 `**` 遍历：
+# data/ 与 data/Telemetry 下面混着账号配置与聊天 DB，一旦写成
+# `%APPDATA%/zoom.us/data/**` 就会命中 config/ 类目录与 *.db，
+# 触发硬规则 #1。显式白名单把桶锁死在「纯缓存」范围。
+# ============================================================================
+
+# Zoom 客户端的音视频临时数据 —— 已知磁盘大头（WebRTC 抓帧/缓冲）。
+# WebRTC 与 media-cache 都在 data/ 下且只放临时文件，账号配置
+# （zoom.us.conf）与聊天 DB（data/im/*.db）不在这两个桶内。
+[[scope]]
+id                  = "data-cache"
+label               = "音视频缓存（WebRTC / 媒体缓存）"
+glob                = "%APPDATA%/zoom.us/data/{WebRTC,media-cache}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+# 应用遥测（会议用量/性能上报）。保留 30 天：最近的几条还能用来回答
+# “上周那场会为什么卡”。
+[[scope]]
+id                  = "telemetry"
+label               = "应用遥测数据"
+glob                = "%APPDATA%/zoom.us/data/Telemetry/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "保留最近多少天" }
+recycle_granularity = "directory"
+
+# 客户端日志。保留 30 天同上。logs 与 data 同级（Roaming/zoom.us/logs），
+# 不在 data/ 下，因此不触碰 data 内的账号数据。
+[[scope]]
+id                  = "logs"
+label               = "客户端日志"
+glob                = "%APPDATA%/zoom.us/logs/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "保留最近多少天" }
+recycle_granularity = "directory"
+
+# 安装包 / 补丁归档（setup.exe / installer 缓存）。体积可达数百 MB，
+# 清掉不影响已装版本运行。桶名来自社区清理脚本的公开描述，本机无 Zoom
+# 无法实地核对（见 appendix-zoom.md「实测附录」）；路径不存在时该 scope
+# 天然匹配为空，不会误删别的目录。
+[[scope]]
+id                  = "installer-downloads"
+label               = "安装包与补丁归档"
+glob                = "%APPDATA%/zoom.us/downloads/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "保留最近多少天" }
+recycle_granularity = "directory"
+
+# Electron (app) UserData 根：Chromium 网页缓存 / 代码缓存 / GPU 缓存。
+# 与 %APPDATA% 下的账号数据完全隔离，删后自动重建。
+[[scope]]
+id                  = "electron-cache"
+label               = "浏览器缓存（Chromium / GPU）"
+glob                = "%LOCALAPPDATA%/Zoom/{Cache,Code Cache,GPUCache,GrShaderCache,ShaderCache,DawnGraphiteCache,DawnWebGPUCache}"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+# app/ 内的日志与崩溃报告目录。刻意只取 logs 与 Crashpad：
+# app/ 下面还可能有 Local Storage / Session Storage / IndexedDB /
+# Network / key / crypto（加密 key 材料）等登录态目录，全部不碰。
+[[scope]]
+id                  = "electron-logs"
+label               = "应用日志与崩溃报告"
+glob                = "%LOCALAPPDATA%/Zoom/app/{logs,Crashpad}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "保留最近多少天" }
+recycle_granularity = "directory"

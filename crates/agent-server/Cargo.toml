@@ -1,0 +1,34 @@
+[package]
+name    = "agent-server"
+version.workspace     = true
+edition.workspace     = true
+license.workspace     = true
+repository.workspace  = true
+description = "DiskPilot 的 AI 可操作工具集 —— MCP（Model Context Protocol）stdio 服务"
+
+[[bin]]
+name = "agent-server"
+path = "src/main.rs"
+
+[dependencies]
+rmcp = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = { workspace = true }
+schemars = { workspace = true }
+jwalk = { workspace = true }
+rayon = { workspace = true }
+globset = { workspace = true }
+trash = { workspace = true }
+diskpilot-scaffold = { path = "../scaffold" }
+diskpilot-steam-inspector = { path = "../steam-inspector" }
+diskpilot-toolbelt = { path = "../toolbelt" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true }
+# PowerShell 输出 GBK 解码兜底（与主项目 hw.rs 同款）
+encoding_rs = { workspace = true }

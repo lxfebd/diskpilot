@@ -1,0 +1,13 @@
+{
+  "name": "diskpilot",
+  "private": true,
+  "version": "0.1.2",
+  "scripts": {
+    "dev": "pnpm -C apps/desktop dev",
+    "build": "pnpm -C apps/desktop build",
+    "tauri": "pnpm -C apps/desktop tauri",
+    "lint": "pnpm -C apps/desktop lint",
+    "test": "cargo test --workspace"
+  },
+  "packageManager": "pnpm@9.12.0"
+}

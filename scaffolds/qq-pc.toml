@@ -1,0 +1,83 @@
+id          = "qq-pc"
+name        = "QQ (PC)"
+homepage    = "https://im.qq.com/"
+risk        = "low"
+disclaimer  = """\
+清理 QQ（经典版 9.x）的临时文件与接收的图片/视频/文件。这些由 QQ 自动生成，\
+删除后不影响软件本体与聊天记录。\
+绝不触碰：聊天消息记录（Messageres*）、账号数据（nt_data / Accounts / config\
+/ login）、QQ 收藏、加密物料。\
+QQNT 版（新版 QQ）数据根在 nt_data 下，本 scaffold 不覆盖——那里是聊天库与\
+账号状态，交给官方「聊天记录迁移 / 数据清理」管理。\
+清理走系统回收站，可还原。\
+注意：删除旧媒体后，超出保留期的历史图片 / 视频在聊天里会显示“已过期”。"""
+
+# Data roots: classic QQ 9.x keeps data under %APPDATA%/Tencent/QQ (this
+# machine: only STemp remains after cleanup). QQNT keeps everything under
+# nt_data which is off-limits (see red_line_samples). We still detect the
+# QQNT root so the user sees the card; its scopes naturally match nothing.
+detect = [
+  "%APPDATA%/Tencent/QQ",
+  "%APPDATA%/Tencent/QQNT",
+  "**/Tencent/QQ",
+  "**/Tencent/QQNT",
+]
+
+# No `name_contains` on purpose: bare "QQ" matches QQMusic / QQLive / QQEX /
+# qqgameshare / WeGame etc. Detection relies on the concrete paths above.
+[match]
+
+# ============================================================================
+# L1 可重生缓存（默认勾选，全量清）
+# ============================================================================
+
+[[scope]]
+id       = "temp-cache"
+label    = "临时文件"
+glob     = "%APPDATA%/Tencent/QQ/{STemp,Temp}/**"
+mode     = "recycle"
+category = "cache"
+variant  = "9.x"
+prompt   = { kind = "none" }
+
+# ============================================================================
+# L2 可选历史数据（默认勾选 + 保留期）
+# ============================================================================
+
+[[scope]]
+id       = "received-files"
+label    = "接收的文件"
+glob     = "**/Tencent/QQ/*/{FileReceive,FileRecv}/**"
+mode     = "recycle"
+category = "media"
+variant  = "9.x"
+prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+
+[[scope]]
+id       = "received-images"
+label    = "接收的图片"
+# 后缀白名单：桶内混入的任何 *.db / 非媒体文件都不清（防御红线，
+# 与 wechat-pc received-images 同形态）。
+glob     = "**/Tencent/QQ/*/ImageRecv/**/*.{jpg,jpeg,png,gif,webp,bmp}"
+mode     = "recycle"
+category = "media"
+variant  = "9.x"
+prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+
+[[scope]]
+id       = "received-videos"
+label    = "接收的视频"
+glob     = "**/Tencent/QQ/*/VideoRecv/**/*.{mp4,mov,m4v,3gp,mkv,webm,avi}"
+mode     = "recycle"
+category = "media"
+variant  = "9.x"
+prompt   = { kind = "days", default = 7, label = "保留最近多少天" }
+
+[[scope]]
+id       = "received-stickers"
+label    = "接收的表情"
+glob     = "**/Tencent/QQ/*/CustomFaceRecv/**/*.{gif,jpg,jpeg,png,apng,webp}"
+mode     = "recycle"
+category = "media"
+variant  = "9.x"
+prompt   = { kind = "days", default = 30, label = "保留最近多少天" }

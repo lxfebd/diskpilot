@@ -1,0 +1,446 @@
+   上方散落的硬编码浅色值（白底、浅粉/浅蓝/浅黄块、白字按钮）只在
+   浅色预设下成立。深色预设把 --ink 反相成浅色、--card/--paper 变成深色，
+   这些硬编码就会变成「白底 + 浅灰字」的不可读组合。这里用
+   html[data-theme="dark"] 选择器统一改成深底 + 亮文字/亮边框。 */
+html[data-theme="dark"] .modal-bg { background: rgba(14, 12, 18, 0.78); }
+html[data-theme="pro"] .modal-bg { background: rgba(14, 12, 18, 0.78); }
+
+/* AI 气泡：原来那层近乎透明的深色边框在深底上不可见，换成主题线色。 */
+html[data-theme="dark"] .chat-turn.assistant .chat-bubble,
+html[data-theme="pro"] .chat-turn.assistant .chat-bubble {
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 0 var(--line), 0 6px 18px -10px rgba(0, 0, 0, 0.55);
+}
+
+/* 树 / 文件视图的行分隔线：浅粉线在深底上刺眼，换主题线色。 */
+html[data-theme="dark"] .tree-row,
+html[data-theme="dark"] .fileview-row { border-bottom: 1px solid var(--line); }
+html[data-theme="pro"] .fileview-row { border-bottom: 1px solid var(--line); }
+html[data-theme="dark"] .fileview-stats { border-bottom: 1px solid var(--line); }
+html[data-theme="pro"] .fileview-stats { border-bottom: 1px solid var(--line); }
+
+/* 右键菜单的危险项：深色下 #c43358 太暗，用主题 --err（深色下为亮红）。 */
+html[data-theme="dark"] .ctxmenu-item.danger { color: var(--err); }
+html[data-theme="pro"] .ctxmenu-item.danger { color: var(--err); }
+html[data-theme="dark"] .ctxmenu-item.danger:hover { background: var(--accent-bg); }
+html[data-theme="pro"] .ctxmenu-item.danger:hover { background: var(--accent-bg); }
+
+/* 清理提案：免责声明（琥珀）、覆盖率面板、保留期行、预览区 */
+html[data-theme="dark"] .cleanup-coverage,
+html[data-theme="dark"] .cleanup-preview-list { background: var(--card); }
+html[data-theme="pro"] .cleanup-preview-list { background: var(--card); }
+html[data-theme="dark"] .cleanup-preview-summary { background: var(--card); }
+html[data-theme="pro"] .cleanup-preview-summary { background: var(--card); }
+html[data-theme="dark"] .cleanup-row.within-retention,
+html[data-theme="pro"] .cleanup-row.within-retention {
+  background: #171f33;
+  border-color: #3b5aa6;
+}
+html[data-theme="dark"] .cleanup-row.within-retention .cleanup-row-meta { color: #9db6ea; }
+html[data-theme="pro"] .cleanup-row.within-retention .cleanup-row-meta { color: #9db6ea; }
+
+/* 图片挂件关闭按钮 hover：浅粉底换主题深粉。 */
+html[data-theme="dark"] .chat-image-pill button:hover { background: var(--accent-bg); }
+html[data-theme="pro"] .chat-image-pill button:hover { background: var(--accent-bg); }
+
+/* Steam：错误块现在走 --err-soft（color-mix 自动适配深浅主题），
+   ghost 行/横幅走 --warn-soft；排序按钮与主操作按钮的白字 */
+/* --pink 在深色下是浅粉，白字没有对比度 → 文字改用主题 ink（浅色），
+   边框用深一点的 pink-deep 保持按钮轮廓。 */
+html[data-theme="dark"] .steam-workshop-sortbtn.active,
+html[data-theme="dark"] .steam-action-primary,
+html[data-theme="dark"] .lefttab.active { color: var(--ink); border-color: var(--accent-strong); }
+html[data-theme="pro"] .lefttab.active { color: var(--ink); border-color: var(--accent-strong); }
+html[data-theme="dark"] .steam-action-primary .steam-kbd { background: var(--paper-3); color: var(--ink); }
+html[data-theme="pro"] .steam-action-primary .steam-kbd { background: var(--paper-3); color: var(--ink); }
+
+/* 概览（AssetOverview）：选中卡（蓝）、快速操作按钮（蓝） */
+html[data-theme="dark"] .ao-strip-card.sel,
+html[data-theme="dark"] .ao-strip-card.sel.scanned,
+html[data-theme="pro"] .ao-strip-card.sel.scanned {
+  border-color: #5b8df0;
+  box-shadow: var(--shadow);
+  background: #1b2a4d;
+}
+html[data-theme="dark"] .ao-quick-btn,
+html[data-theme="pro"] .ao-quick-btn {
+  background: #1c2740;
+}
+html[data-theme="dark"] .ao-quick-btn:hover { background: var(--accent-bg); }
+html[data-theme="pro"] .ao-quick-btn:hover { background: var(--accent-bg); }
+html[data-theme="dark"] .ao-quick-btn svg { color: var(--accent); }
+html[data-theme="pro"] .ao-quick-btn svg { color: var(--accent); }
+
+/* 扩展名占比条：浅粉轨道换深色底。 */
+html[data-theme="dark"] .fv-ext-bar { background: var(--paper-3); }
+html[data-theme="pro"] .fv-ext-bar { background: var(--paper-3); }
+
+/* 磁盘体检：bad 卡现在走 --err-soft + --risk-danger 文字，
+   color-mix 在深浅主题下自动适配，无需补丁。 */
+
+/* 工具箱风险标签：全部走 --risk-soft/--warn-soft/--err-soft + --risk-* 文字，同样自动适配。 */
+
+/* ── ChatPanel 工具箱 CLI 确认卡 ───────────────────────────────────── */
+.cli-confirm {
+  margin: 8px 14px 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--pink-deep, #f0628f);
+  border-radius: var(--radius-btn);
+  background: var(--paper-2);
+  font-size: 12.5px;
+}
+.cli-confirm-head {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 700; color: var(--ink); margin-bottom: 6px;
+}
+.cli-confirm-body { display: flex; flex-direction: column; gap: 6px; }
+.cli-confirm-cmd { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.cli-confirm-cmd code {
+  font-family: var(--mono, ui-monospace, monospace); font-size: 12px;
+  background: var(--paper-3); padding: 2px 6px; border-radius: var(--radius-xs);
+}
+.cli-confirm-args { color: var(--ink); }
+.cli-confirm-meta { color: var(--muted); font-size: 11.5px; }
+.cli-risk-low { color: var(--risk-safe); font-weight: 700; }
+.cli-risk-medium { color: var(--risk-caution); font-weight: 700; }
+.cli-risk-high { color: var(--risk-danger); font-weight: 700; }
+.cli-confirm-reason {
+  font-size: 11.5px; color: var(--muted); background: var(--paper-3);
+  padding: 6px 8px; border-radius: var(--radius-xs); white-space: pre-wrap; word-break: break-word;
+}
+.cli-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.cli-confirm-remember {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+}
+.cli-confirm-remember input { accent-color: var(--accent, var(--pink-deep, #f0628f)); }
+
+/* ── 工具墙详情卡「移除此工具」二次确认 ─────────────────────────────── */
+.recycle-confirm { width: 420px; max-width: 90vw; }
+.toolwall-recycle-btn { color: var(--err, var(--risk-danger)); }
+.toolwall-recycle-btn:hover { background: var(--err-soft, var(--accent-bg)); }
+
+/* ── 设置·版本更新行 ───────────────────────────────────────────────── */
+.update-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line, var(--border));
+}
+.update-main { min-width: 0; }
+.update-notes {
+  margin-top: 4px; white-space: pre-wrap; word-break: break-word;
+  max-height: 96px; overflow: auto;
+}
+.error-inline { color: var(--risk-danger); font-size: 12.5px; }
+
+/* ── 硬件检测报告卡片 / 压测确认面板 / 实时监控条 / AI 权限中心 ── */
+.hw-card {
+  margin: 10px 0 14px; padding: 14px 16px; border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--paper-2), var(--paper-1));
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.hw-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.hw-os { margin-left: auto; color: var(--muted); font-weight: 500; font-size: 12px; }
+.hw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+.hw-cell { background: var(--paper-3); border-radius: var(--radius-btn); padding: 10px 12px; }
+.hw-cell-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.hw-cell-main { font-size: 13.5px; font-weight: 600; margin-top: 2px; word-break: break-word; }
+.hw-cell-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.hw-section { margin-top: 14px; }
+.hw-section-title { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.hw-list { list-style: none; padding: 0; margin: 0; }
+.hw-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 4px 0; }
+.hw-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-meta { color: var(--muted); font-size: 11.5px; }
+.hw-foot { margin-top: 12px; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.hw-loading { display: flex; align-items: center; gap: 8px; padding: 18px 0; font-size: 13px; color: var(--muted); }
+.hw-error { margin: 4px 0 0; font-size: 12px; color: var(--risk-danger); }
+.tb-loading { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 500; }
+
+/* 硬件历史快照区（R7）：归档列表 + 两次对比 */
+.hw-hist {
+  margin: 12px 0 4px; padding: 12px 14px; border-radius: var(--radius-md);
+  background: var(--paper-1); border: 1px dashed var(--line);
+}
+.hw-hist-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.hw-hist-title .ghost { margin-left: auto; }
+.hw-hist-count { margin-left: 4px; }
+.hw-hist-empty { display: flex; align-items: center; gap: 6px; padding: 8px 0; font-size: 12px; }
+.hw-hist-pick { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.hw-hist-pick-col { display: flex; flex-direction: column; gap: 4px; min-width: 220px; flex: 1; }
+.hw-hist-pick-col select {
+  padding: 5px 8px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--paper-2); color: var(--ink); font-size: 12px;
+}
+.hw-hist-err { margin-top: 6px; font-size: 12px; color: var(--risk-danger); }
+.hw-hist-compare { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.hw-hist-compare-head { font-size: 11px; }
+.hw-hist-disk { background: var(--paper-3); border-radius: var(--radius-sm); padding: 8px 10px; }
+.hw-hist-disk-name { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.hw-hist-disk-fields { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.hw-hist-field { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.hw-hist-field-name { color: var(--muted); font-size: 11px; }
+.hw-hist-field-old { color: var(--muted); text-decoration: line-through; font-size: 11px; }
+.hw-hist-field-arrow { color: var(--muted); font-size: 10px; }
+.hw-hist-field-new { font-weight: 600; font-size: 12px; }
+.hw-hist-field-delta { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 6px; }
+.hw-hist-field-delta.up { color: var(--risk-danger); background: var(--err-soft, rgba(220,60,60,.12)); }
+.hw-hist-field-delta:not(.up) { color: var(--success, #22a06b); background: rgba(34,160,107,.12); }
+
+/* 压测确认面板 */
+.stress-modal { width: 460px; }
+.stress-line { font-size: 13px; padding: 4px 0; }
+.stress-note { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink); background: var(--paper-3); padding: 8px 10px; border-radius: var(--radius-sm); margin: 6px 0; }
+.stress-warn { font-size: 12px; color: var(--risk-danger); background: var(--err-soft); border: 1px solid color-mix(in srgb, var(--risk-danger) 55%, var(--border)); padding: 8px 10px; border-radius: var(--radius-sm); }
+.stress-remember { display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; margin: 6px 0; }
+.stress-input-row { margin-top: 8px; }
+.stress-input { width: 100%; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--paper-1); color: var(--ink); font-size: 13px; }
+
+/* 实时监控条 */
+.hw-monitor {
+  display: flex; align-items: center; gap: 12px; margin: 8px 0 10px; padding: 8px 12px;
+  border-radius: var(--radius-btn); background: linear-gradient(90deg, var(--paper-2), var(--paper-1));
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.hw-mon-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.hw-mon-spin { animation: spin 1.4s linear infinite; color: var(--accent-strong); }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hw-mon-title { font-size: 12.5px; font-weight: 600; }
+.hw-mon-time { font-size: 11px; color: var(--muted); }
+.hw-mon-bar { flex: 1; height: 6px; background: var(--paper-3); border-radius: 999px; overflow: hidden; }
+.hw-mon-fill { height: 100%; background: linear-gradient(90deg, var(--accent-strong), #ff9f5e); border-radius: 999px; transition: width .3s ease; }
+
+/* AI 权限中心 */
+.perm-center { display: flex; flex-direction: column; gap: 14px; }
+.perm-legend { display: flex; align-items: center; justify-content: space-between; }
+.perm-level { border: 1px solid var(--line); border-radius: var(--radius-btn); padding: 10px 12px; background: var(--paper-2); }
+.perm-level-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.perm-level-desc { margin-top: 2px; }
+.perm-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.perm-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--paper-1); }
+.perm-row.coming-soon { opacity: .6; }
+.perm-row-main { display: flex; flex-direction: column; min-width: 0; }
+.perm-name { font-size: 12.5px; font-weight: 600; }
+.perm-desc { font-size: 11px; color: var(--muted); }
+.perm-lock { color: var(--risk-danger); }
+.perm-coming { font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); padding: 1px 6px; border-radius: 999px; }
+.perm-foot { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+/* ── W2 工具墙：12 分类导航 + 图标网格 ─────────────────────────────── */
+/* 布局：grid 两列两行。顶栏（搜索）横跨全宽，下面左导航 + 右网格。
+   之前用 flex row，搜索框会被挤进第一列悬在导航下方——结构性 bug，别改回去。 */
+.toolwall {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px 18px;
+  min-height: 320px;
+  flex: 1;
+  min-width: 0;
+}
+.toolwall-top { grid-column: 1 / -1; }
+
+/* 左：分类导航（竖排） */
+.toolwall-nav {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+  overflow-y: auto;
+}
+.toolwall-nav-item {
+  appearance: none; display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: var(--radius-sm);
+  background: transparent; border: none; cursor: pointer; text-align: left;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+  transition: background .12s, color .12s;
+}
+.toolwall-nav-item:hover { background: var(--paper-2); color: var(--ink); }
+.toolwall-nav-item.active { background: var(--accent-bg); color: var(--accent-strong); font-weight: 600; }
+.toolwall-nav-item svg { flex-shrink: 0; }
+.toolwall-nav-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toolwall-nav-count { font-size: 10.5px; font-weight: 600; color: var(--ink-3); background: var(--paper-3); padding: 1px 7px; border-radius: 999px; }
+.toolwall-nav-item.active .toolwall-nav-count { background: var(--accent-soft); color: var(--accent-strong); }
+
+/* 右：图标网格 */
+.toolwall-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+.toolwall-grid-head { display: flex; align-items: baseline; gap: 10px; }
+.toolwall-grid-title {
+  font-size: 15px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.toolwall-grid-title::before { content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--accent); }
+.toolwall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 12px; }
+.toolwall-card {
+  position: relative;
+  border: 1.5px solid var(--line); border-radius: var(--radius-md); background: var(--paper);
+  padding: 14px 10px 11px; display: flex; flex-direction: column; align-items: center; gap: 7px;
+  cursor: pointer; text-align: center; box-shadow: var(--shadow-sm);
+  transition: transform .12s, box-shadow .12s, border-color .12s;
+  user-select: none;
+}
+.toolwall-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--accent-strong); }
+.toolwall-icon {
+  width: 46px; height: 46px; border-radius: 12px;
+  display: grid; place-items: center;
+}
+/* 真实 exe 图标（后端抽取），替换 Lucide 占位图标 */
+.toolwall-icon-img { width: 30px; height: 30px; object-fit: contain; border-radius: 7px; }
+.tdm-icon-img { width: 22px; height: 22px; object-fit: contain; border-radius: 5px; }
+.toolwall-card-name { font-size: 13px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toolwall-card-desc {
+  font-size: 10.5px; color: var(--ink-3); line-height: 1.4;
+  max-height: 30px; min-height: 30px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.toolwall-card-foot { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; justify-content: center; max-width: 100%; overflow: hidden; }
+.toolwall-risk { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.toolwall-cli-badge { font-size: 9px; font-weight: 700; background: var(--accent-bg); color: var(--accent-strong); padding: 1px 6px; border-radius: 999px; flex-shrink: 0; }
+.toolwall-plugin-badge { font-size: 9px; font-weight: 700; background: var(--paper-3); color: var(--accent-strong); padding: 1px 6px; border-radius: 999px; flex-shrink: 0; border: 1px dashed var(--accent-strong); }
+/* 迁移内容物管控：含广告/商业推广的工具标记（琥珀色，提醒用户启动前预期） */
+.toolwall-ad-badge {
+  font-size: 9px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--risk-caution) 14%, transparent);
+  color: var(--risk-caution);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--risk-caution) 34%, transparent);
+}
+.ad-notice {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--risk-caution);
+  background: var(--warn-soft);
+  border: 1px solid color-mix(in srgb, var(--risk-caution) 34%, transparent);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  margin: 6px 0;
+  line-height: 1.5;
+}
+.toolwall-link-badge { font-size: 9px; font-weight: 700; background: var(--paper-3); color: var(--ink-2); padding: 1px 6px; border-radius: 999px; }
+/* 纯推广项（流量卡/加速器返利链 .bat）：灰化 + 红色「推广」徽标，与真实工具区分 */
+.toolwall-promo-badge {
+  font-size: 9px; font-weight: 700;
+  background: color-mix(in srgb, var(--risk-danger) 14%, transparent); color: var(--risk-danger);
+  padding: 1px 6px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--risk-danger) 34%, transparent);
+  flex-shrink: 0;
+}
+.toolwall-card.toolwall-promo { opacity: .62; filter: saturate(.55); }
+.toolwall-card.toolwall-promo:hover { opacity: .85; filter: saturate(.75); }
+/* 顶栏「推广项」隐藏开关 */
+.toolwall-hidepromo {
+  margin-left: 8px; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; color: var(--ink-2); background: var(--paper-2);
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px;
+  cursor: pointer; vertical-align: middle;
+}
+.toolwall-hidepromo:hover { border-color: var(--accent); color: var(--ink); }
+.toolwall-hidepromo.active { background: color-mix(in srgb, var(--risk-danger) 10%, transparent); border-color: color-mix(in srgb, var(--risk-danger) 34%, transparent); color: var(--risk-danger); }
+.toolwall-hidepromo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--risk-danger); display: inline-block; }
+
+/* 工具墙顶栏：搜索 + 计数（横跨全宽） */
+.toolwall-top { display: flex; align-items: center; gap: 10px; }
+.toolwall-search {
+  display: flex; align-items: center; gap: 6px; flex: 1; max-width: 420px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  padding: 6px 11px; color: var(--ink-3); box-shadow: var(--shadow-sm);
+  transition: border-color .12s, box-shadow .12s;
+}
+.toolwall-search:focus-within { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft); }
+.toolwall-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--ink); font-size: 12.5px; padding: 0; }
+.toolwall-count { flex-shrink: 0; margin-left: auto; }
+
+/* 卡片「信息」按钮（详情通道，悬于卡片右上角） */
+.toolwall-info-btn {
+  position: absolute; top: 6px; right: 6px;
+  appearance: none; border: none; background: transparent; cursor: pointer;
+  color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center;
+  padding: 3px; border-radius: var(--radius-xs); transition: color .12s, background .12s;
+  opacity: .55;
+}
+.toolwall-card:hover .toolwall-info-btn { opacity: 1; }
+.toolwall-info-btn:hover { color: var(--accent-strong); background: var(--accent-bg); }
+
+/* 最近使用区 */
+.toolwall-recent { display: flex; flex-direction: column; gap: 8px; }
+.toolwall-recent .recent-title { font-size: 13px; font-weight: 700; color: var(--ink-3); display: flex; align-items: center; gap: 6px; }
+.toolwall-recent .recent-title::before { content: ''; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); }
+
+/* 就地启动确认：覆盖层 */
+.toolwall-inline-confirm { display: grid; place-items: center; }
+
+/* 硬件信息聚合页 */
+.hw-aggregate { display: flex; flex-direction: column; gap: 6px; }
+.hw-aggregate-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* 工具详情卡 */
+.tool-detail-modal { width: 560px; max-width: 92vw; max-height: 84vh; display: flex; flex-direction: column; }
+.tool-detail-modal .modal-body { overflow-y: auto; }
+.tdm-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.tdm-icon { width: 30px; height: 30px; border-radius: var(--radius-sm); display: grid; place-items: center; }
+.tdm-perm { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,.04); }
+.tdm-desc { font-size: 13px; color: var(--ink-2); margin: 8px 0; }
+.tdm-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-3); }
+.tdm-meta-item b { color: var(--ink); font-weight: 700; }
+.tdm-section-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px; }
+.tdm-line { font-size: 12.5px; color: var(--ink-2); line-height: 1.55; margin: 4px 0; }
+.tdm-line b { color: var(--ink); }
+.tdm-params { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tdm-params th { text-align: left; font-size: 11px; color: var(--ink-3); padding: 4px 8px; border-bottom: 1.5px solid var(--line); }
+.tdm-params td { padding: 5px 8px; border-bottom: 1px solid var(--paper-3); vertical-align: top; }
+.tdm-params code { font-family: ui-monospace, monospace; font-size: 11px; background: var(--paper-2); padding: 1px 5px; border-radius: var(--radius-xs); }
+.tdm-examples { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.tdm-example { display: flex; flex-direction: column; gap: 2px; }
+.tdm-example-args { font-family: ui-monospace, monospace; font-size: 11px; background: var(--paper-2); padding: 3px 7px; border-radius: var(--radius-xs); color: var(--ink-2); }
+.tdm-example-desc { font-size: 12px; color: var(--ink-2); }
+.tdm-example-expect { font-size: 11px; color: var(--ink-3); }
+.tdm-links { display: flex; gap: 8px; margin-top: 10px; }
+.tdm-links a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+
+/* 确认启动 modal（复用 modal 骨架） */
+.confirm-modal { width: 400px; }
+
+html[data-theme="dark"] .toolwall-nav-item:hover,
+html[data-theme="pro"] .toolwall-nav-item:hover { background: rgba(255,255,255,.05); }
+html[data-theme="dark"] .toolwall-card { background: var(--paper); }
+html[data-theme="pro"] .toolwall-card { background: var(--paper); }
+html[data-theme="dark"] .toolwall-icon { background: rgba(255,255,255,.06); }
+html[data-theme="pro"] .toolwall-icon { background: rgba(255,255,255,.06); }
+html[data-theme="dark"] .tdm-perm { background: rgba(255,255,255,.08); }
+html[data-theme="pro"] .tdm-perm { background: rgba(255,255,255,.08); }
+html[data-theme="dark"] .tdm-params code, html[data-theme="dark"] .tdm-example-args { background: rgba(255,255,255,.08); }
+html[data-theme="pro"] .tdm-params code, html[data-theme="dark"] .tdm-example-args { background: rgba(255,255,255,.08); }
+html[data-theme="dark"] .toolwall-nav-count,
+html[data-theme="pro"] .toolwall-nav-count { background: rgba(255,255,255,.08); color: var(--ink-2); }
+/* 含推广徽标 / 广告提示：--risk-caution 在深色预设下自动提亮为亮琥珀，
+   color-mix 以 transparent 为底即可在深浅主题下同时成立，无需补丁。 */
+
+/* 「AI 可操作」分区：agent-server 39 个只读 MCP 工具 */
+.toolwall-ai-section { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line, rgba(128,128,128,.25)); }
+.toolwall-ai-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.toolwall-ai-card {
+  display: flex; flex-direction: column; gap: 5px; text-align: left;
+  padding: 10px 12px; border-radius: var(--radius-sm, 8px);
+  background: var(--paper, rgba(0,0,0,.03)); border: 1px solid var(--line, rgba(128,128,128,.2));
+  cursor: pointer; transition: border-color .15s, transform .15s;
+  font: inherit; color: inherit;
+}
+.toolwall-ai-card:hover { border-color: var(--accent-strong); transform: translateY(-1px); }
+.toolwall-ai-name { font-size: 12.5px; font-weight: 700; font-family: ui-monospace, monospace; display: flex; align-items: center; gap: 6px; }
+.toolwall-ai-desc {
+  font-size: 11.5px; color: var(--ink-2, #666); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.toolwall-ai-badge {
+  align-self: flex-start; font-size: 10px; font-weight: 700; letter-spacing: .03em;
+  padding: 1px 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--ok, #22c55e) 14%, transparent); color: var(--ok, #22c55e);
+}
+/* 写操作徽标：橙色警示，与只读的绿色区分 */
+.toolwall-ai-badge-write {
+  background: color-mix(in srgb, var(--warn, #f59e0b) 16%, transparent); color: var(--warn, #f59e0b);
+}
+html[data-theme="dark"] .toolwall-ai-card,
+html[data-theme="pro"] .toolwall-ai-card { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1); }
+html[data-theme="dark"] .toolwall-ai-desc,
+html[data-theme="pro"] .toolwall-ai-desc { color: var(--ink-2); }
+

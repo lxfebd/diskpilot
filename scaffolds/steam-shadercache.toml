@@ -1,0 +1,31 @@
+id          = "steam-shadercache"
+name        = "Steam 着色器缓存"
+homepage    = "https://store.steampowered.com/"
+risk        = "low"
+disclaimer  = """\
+清理 Steam 的着色器/管线缓存（steamapps/shadercache）。\
+这是游戏运行时自动生成的临时渲染缓存，删除后下次启动游戏自动重建，\
+不影响存档、截图、云同步与游戏本体。\
+绝不触碰：steamapps/common（游戏本体）、steamapps/workshop（创意工坊）、\
+userdata（存档与设置）、appmanifest*.acf（游戏安装信息）。\
+清理走系统回收站，可还原。"""
+
+detect = [
+  "%ProgramFiles(x86)%/Steam/steamapps/shadercache",
+  "%ProgramFiles%/Steam/steamapps/shadercache",
+  "D:/Steam/steamapps/shadercache",
+  "**/steamapps/shadercache",
+]
+
+[match]
+name_contains    = ["shadercache"]
+must_have_child  = []
+
+[[scope]]
+id                  = "shader-cache"
+label               = "游戏着色器缓存"
+glob                = "{%ProgramFiles(x86)%/Steam,%ProgramFiles%/Steam,[A-Z]:/Steam*}/steamapps/shadercache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

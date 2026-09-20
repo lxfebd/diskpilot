@@ -1,0 +1,112 @@
+# Rust
+target/
+**/*.rs.bk
+# Cargo.lock is committed — this is an application workspace, not a library.
+
+# Node / pnpm
+node_modules/
+dist/
+dist-ssr/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Claude Code / 个人 AI 工具运行时（本仓库走 GitHub 公开发布，个人 AI 目录不入库）
+# 14-phase 工作流、个人 agents、settings.json、本地 settings.local.json 都留本地
+/.claude/
+# 个人备忘（本地 to-decide 清单 / 工作日志，不强加给合作者）
+NOTES-*.md
+TODO.md
+# Playwright MCP 浏览器调试产物（截图/快照）
+.playwright-mcp/
+
+# Local env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Build artefacts
+*.log
+*.dmp
+release/
+out/
+apps/desktop/vite.config.js
+apps/desktop/vite.config.d.ts
+**/tsconfig.tsbuildinfo
+
+# DiskPilot local data
+.diskpilot/
+.diskwise/
+diskpilot.local.json
+
+# Generated icon source (produced by scripts/generate-icon.ps1)
+apps/desktop/src-tauri/icon-source.png
+
+# Per-developer cargo config (e.g. China rsproxy.cn mirror).
+# Repo-level .cargo/config.toml forces the mirror on CI/non-CN devs and breaks
+# GitHub-hosted Windows runners (rsproxy.cn flaky from US/EU). Set in
+# ~/.cargo/config.toml (user-level) instead.
+.cargo/
+
+# Build backups / stray outputs
+dist_bak_*/
+dist_old_tmp/
+target-rel/
+target-rel2/
+package-lock.json
+
+# 本地探测/验证产物（Playwright/mock/probe 调试脚本与截图，绝不提交）
+_domprobe.js
+_inject.js
+_probe_target.html
+perm_probe.mjs
+_probe*.js
+_probe*.mjs
+*_probe*.py
+_vc_tmp/
+visual-check.*
+*.visual-check.*
+crates/agent-server-docs-tmp/
+*.wxs
+
+# Local dev metadata / stray backups (never commit)
+.mellos/
+.zcode/
+_backup_spec/
+
+# 交接/临时 md（给视觉 AI / 已完成的路线图底稿，不入库）
+*_HANDOFF.md
+UI_HANDOFF.md
+/docs/AIDA64_GAP_ANALYSIS.md
+
+# Local agent tool runtimes (history / hook-state / reports / memory; never commit)
+.mimosa/
+.workbuddy/
+
+# 图吧工具箱绿色版运行时：400MB+ 第三方软件，不提交进仓库。
+# 通过 `mklink /J Tools <图吧工具箱路径>\tools` 挂到本地最新绿色版即可。
+# 注意必须锚定仓库根（/Tools/）：不带前导斜杠会匹配任意层级同名目录，
+# Windows 大小写不敏感下会误伤 crates/agent-server/src/tools/（AI 工具集源码）。
+/Tools/
+
+# tauri sidecar 暂存目录：由 apps/desktop/scripts/prepare-sidecar.mjs 在打包前
+# 生成（`agent-server-<target-triple>[.exe]`），产物随安装包走，不入库。
+apps/desktop/src-tauri/binaries/

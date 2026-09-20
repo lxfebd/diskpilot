@@ -1,0 +1,70 @@
+id          = "security-suites"
+name        = "安全软件套装（360 / 电脑管家 / 火绒）"
+homepage    = "https://www.360.cn/"
+risk        = "medium"
+disclaimer  = """\
+清理国产安全软件（360 家族 / 腾讯电脑管家 / 火绒）的 Chromium 内核浏览器缓存：
+缓存目录（Cache / Code Cache / GPUCache / ShaderCache 等）由浏览器自动重建，
+删除只会让网页图片/脚本下次重新下载，不影响书签、密码、历史记录、登录态。
+\
+绝不触碰：浏览器的登录数据 / Cookies / 书签 / 历史（User Data 根下除缓存外的
+一切）、360 安全卫士的隔离区（被隔离的文件可能牵涉用户资料）、任何 *.db 配置、
+账号验证文件、急救箱/恢复工具的产品文件。\
+安全软件本体（360safe / QQPCMgr / Huorong 安装目录与规则库）不做清理——
+它们体积有限，误删会破坏病毒库与规则，属于「建议卸载而非清理」的对象。\
+清理走系统回收站，可还原。"""
+
+# 检测整个家族的用户数据根 / 安装根：让用户看到「检测到 N 个安全软件」卡片。
+# 注意：只 detect 不 scope 的目录（360safe 本体 / QQPCMgr / Huorong）会显示
+# 卡片但无可清项，语义与 qq-pc 对 QQNT 的处理一致——「检测到了，但要操作
+# 请走卸载/官方工具」。
+detect = [
+  # 360 浏览器家族（多代产品线：360ChromeX / 360Chrome / 360se）
+  "%LOCALAPPDATA%/360ChromeX/Chrome/User Data",
+  "%LOCALAPPDATA%/360Chrome/Chrome/User Data",
+  "%APPDATA%/360se6/User Data",
+  "**/360ChromeX/Chrome/User Data",
+  "**/360Chrome/Chrome/User Data",
+  "**/360se6/User Data",
+  # 360 安全卫士（本体，只检测不清理）
+  "%PROGRAMFILES%/360/360safe",
+  "%PROGRAMFILES(X86)%/360/360safe",
+  "%APPDATA%/360safe",
+  "%PROGRAMDATA%/360safe",
+  "**/360/360safe",
+  # 腾讯电脑管家（本体，只检测不清理）
+  "%PROGRAMDATA%/Tencent/QQPCMgr",
+  "%APPDATA%/Tencent/QQPCMgr",
+  "**/Tencent/QQPCMgr",
+  # 火绒（本体，只检测不清理）
+  "%PROGRAMDATA%/Huorong",
+  "**/Huorong",
+]
+
+[match]
+name_contains    = []
+must_have_child  = []
+
+# ============================================================================
+# L2 可选：360 浏览器家族 Chromium 内核缓存（默认勾选 + 保留期）
+# ============================================================================
+# 锚定到 User Data 的缓存子目录，绝不把整棵 User Data 纳入 —— Login Data /
+# Cookies / Bookmarks 等登录与收藏文件即使不带 .db 后缀也被红线清单覆盖
+# （Chrome 家族样本），这里用精确子目录进一步加固。
+
+[[scope]]
+id       = "360-browser-cache"
+label    = "360 浏览器渲染缓存（图片 / 脚本）"
+glob     = "**/360*/Chrome/User Data/*/{Cache,Code Cache,GPUCache,GrShaderCache,DawnCache,ShaderCache}/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+
+[[scope]]
+id       = "360se-cache"
+label    = "360 安全浏览器（经典版）渲染缓存"
+glob     = "**/360se6/User Data/*/{Cache,Code Cache,GPUCache,GrShaderCache}/**"
+mode     = "recycle"
+category = "cache"
+variant  = "legacy"
+prompt   = { kind = "days", default = 30, label = "清理多少天前的缓存" }

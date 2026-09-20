@@ -1,0 +1,30 @@
+[package]
+name        = "diskpilot-scanner"
+version.workspace     = true
+edition.workspace     = true
+license.workspace     = true
+repository.workspace  = true
+
+[features]
+# 真实卷快/慢路径计时对比：cargo run -p diskpilot-scanner --features bench -- bench C
+bench = []
+
+[[bin]]
+name = "diskpilot-scanner"
+path = "src/main.rs"
+# 冒烟 CLI 只在 bench feature 下构建，避免默认 workspace check 编译失败
+required-features = ["bench"]
+
+[dependencies]
+serde.workspace     = true
+walkdir.workspace   = true
+jwalk.workspace     = true
+globset.workspace   = true
+rayon.workspace     = true
+anyhow.workspace    = true
+thiserror.workspace = true
+tracing.workspace   = true
+
+[target.'cfg(windows)'.dependencies]
+ntfs.workspace        = true
+windows-sys.workspace = true

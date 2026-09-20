@@ -1,0 +1,116 @@
+/* DiskPilot — Tech-pink theme.
+   Mono-flavored display font, hard offset shadows, bold ink borders. */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --ink:        #150818;
+  --ink-2:      #4a3742;
+  --ink-3:      #7a6675;
+
+  --paper:      #fff5f8;
+  --paper-2:    #ffe6ee;
+  --paper-3:    #ffd5e2;
+  --card:       #ffffff;
+
+  --pink:       #ff6fa8;
+  --pink-deep:  #e23f86;
+  --pink-soft:  #ffd0e0;
+  --pink-bg:    #ffeaf2;
+
+  --lavender:   #c9b6ff;
+  --mint:       #a8e6c4;
+  --peach:      #ffb37a;
+  --sun:        #ffe066;
+
+  --ok:    #ff6fa8;
+  --warn:  #ff9f5e;
+  --err:   #ff3b5c;
+
+  --line:  var(--ink);
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow:    0 1px 2px rgba(0,0,0,.05), 0 2px 8px -2px rgba(0,0,0,.08);
+  --shadow-lg: 0 6px 16px -4px rgba(0,0,0,.12);
+
+  /* ── 语义 token（W4）：组件优先用语义层，主题预设只改原始色 ──
+     修复历史 bug：--paper-1 / --muted 此前在多个规则里被引用但从未定义，
+     浏览器按无效 var() 处理导致继承穿透；现在在这里一次性落地。 */
+  --bg:           var(--paper);
+  --surface:      var(--card);
+  --surface-2:    var(--paper-2);
+  --surface-3:    var(--paper-3);
+  --paper-1:      var(--paper-2);
+  --muted:        var(--ink-3);
+  --text:         var(--ink);
+  --text-2:       var(--ink-2);
+  --text-3:       var(--ink-3);
+  --accent:       var(--accent);
+  --accent-strong: var(--accent-strong);
+  --accent-soft:  var(--accent-soft);
+  --accent-bg:    var(--accent-bg);
+  --risk-safe:    var(--ok);
+  --risk-caution: var(--warn);
+  --risk-danger:  var(--err);
+  /* W4 状态色软底：light 预设下对 --surface 混出浅彩底，dark 预设下自动混出
+     深彩底（color-mix 在计算值阶段解析 inline 覆盖，17 套主题与自定义主色
+     全部适配，无需再按 data-theme 补丁）；文字/边框直接用 --risk-* 本体，
+     它在深色预设下本来就是提亮过的色值。 */
+  --risk-soft: color-mix(in srgb, var(--risk-safe) 14%, var(--surface));
+  --warn-soft: color-mix(in srgb, var(--risk-caution) 16%, var(--surface));
+  --err-soft:  color-mix(in srgb, var(--risk-danger) 12%, var(--surface));
+  --warn-fg:   var(--risk-caution);
+  /* 白字填充底：--risk-* 在浅色主题已是深色（够白字），在深色主题会被提亮成
+     粉彩（白字失对比）——填充场景统一压深一档，两种主题下白字都成立。 */
+  --risk-fill:    color-mix(in srgb, var(--risk-safe) 78%, var(--ink));
+  --risk-fill-d:  color-mix(in srgb, var(--risk-danger) 78%, var(--ink));
+  --risk-fill-o:  color-mix(in srgb, var(--risk-caution) 78%, var(--ink));
+
+  --font-sans: "Geist", "Inter", -apple-system, system-ui, "Segoe UI Variable", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Consolas, "Cascadia Mono", monospace;
+  --radius: 1rem; /* 主题预设可覆盖；派生档位让整套 UI 的圆角语言跟随主题 "性格" */
+  --radius-xs:   calc(var(--radius) * 0.4);   /* 小块/徽标  ~6px */
+  --radius-sm:   calc(var(--radius) * 0.5);   /* 输入/标签   8px */
+  --radius-btn:  calc(var(--radius) * 0.65);  /* 按钮/分段  10px */
+  --radius-md:   calc(var(--radius) * 0.75);  /* 小面板     12px */
+  --radius-card: calc(var(--radius) * 0.9);   /* 卡片       14px */
+  --radius-lg:   calc(var(--radius) * 1.05);  /* 弹窗       16px */
+
+  font-family: var(--font-sans);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  /* 重构：去掉双粉色径向渐变，背景回归中性 --bg（主题预设统一控制），
+     避免顶部粉色光晕 + 右下紫晕的「糖盒」感；低成本 -> 信息密度归位。 */
+  background: var(--bg);
+  color: var(--ink);
+  font-size: calc(13px * var(--font-scale, 1));
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+button { font: inherit; font-weight: 600; font-family: var(--font-sans); }
+code, .mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+/* Numeric & path-ish text uses mono so columns line up. */
+.mono-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.app {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+

@@ -1,0 +1,19 @@
+[package]
+name        = "diskpilot-executor"
+version.workspace     = true
+edition.workspace     = true
+license.workspace     = true
+repository.workspace  = true
+
+[dependencies]
+serde.workspace      = true
+serde_json.workspace = true
+anyhow.workspace     = true
+thiserror.workspace  = true
+trash.workspace      = true
+chrono.workspace     = true
+tracing.workspace    = true
+windows-sys.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

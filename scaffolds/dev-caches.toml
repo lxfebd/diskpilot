@@ -1,0 +1,80 @@
+id          = "dev-caches"
+name        = "开发缓存 npm / pip / 其它"
+homepage    = "https://docs.npmjs.com/"
+risk        = "low"
+disclaimer  = """\
+清理开发工具的包缓存：npm（Node 包）、pnpm、Yarn、pip（Python 包）、
+Rust 的 Cargo 下载缓存。这些缓存都能被原工具自动重新下载，删掉不影响
+已安装的软件与项目；只是下次装包要重新下载。\
+绝不触碰：node_modules（项目依赖）、任何项目源码、pip 已安装的环境\
+（site-packages）、Cargo registry 之外的任何东西。\
+清理走系统回收站，可还原。"""
+
+detect = [
+  "%LOCALAPPDATA%/npm-cache",
+  "%LOCALAPPDATA%/pnpm-cache",
+  "%LOCALAPPDATA%/Yarn/Cache",
+  "%LOCALAPPDATA%/pip/Cache",
+  "%USERPROFILE%/.npm/_cacache",
+  "%USERPROFILE%/.cache/pip",
+  "%USERPROFILE%/.cargo/registry",
+  "**/AppData/Local/npm-cache",
+  "**/AppData/Local/pnpm-cache",
+  "**/AppData/Local/Yarn/Cache",
+  "**/AppData/Local/pip/Cache",
+  "**/Users/*/.npm/_cacache",
+  "**/Users/*/.cache/pip",
+  "**/Users/*/.cargo/registry",
+]
+
+[match]
+name_contains    = []
+must_have_child  = []
+
+# 严格锚定到"用户 AppData/Local 下的包管理器缓存目录"，避免误命中
+# 用户文档/项目里手动创建的同名目录（如 Documents/npm-cache）。
+
+[[scope]]
+id                  = "npm-cache"
+label               = "npm / pnpm / Yarn 包缓存"
+glob                = "**/AppData/Local/{npm-cache,pnpm-cache}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "yarn-cache"
+label               = "Yarn 包缓存"
+glob                = "**/AppData/Local/Yarn/Cache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "npm-cacache"
+label               = "npm 内容缓存（_cacache）"
+glob                = "%USERPROFILE%/.npm/_cacache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "pip-cache"
+label               = "pip 下载缓存"
+glob                = "**/AppData/Local/pip/Cache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "cargo-cache"
+label               = "Cargo 下载缓存（registry）"
+glob                = "%USERPROFILE%/.cargo/registry/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recycle_granularity = "directory"

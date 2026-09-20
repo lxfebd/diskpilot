@@ -1,0 +1,69 @@
+id          = "browser-cache"
+name        = "浏览器缓存 Chrome / Edge"
+homepage    = "https://www.google.com/chrome/"
+risk        = "low"
+disclaimer  = """\
+清理 Chrome / Edge 的联网缓存（Cache、Code Cache、GPU 缓存、着色器缓存等）。\
+这些文件由浏览器自动生成，删除后再次上网会自动重建，不影响书签、密码、历史记录。\
+绝不触碰：书签、密码、登录信息、历史记录、Local Storage、IndexedDB、\
+Cookie、扩展程序数据、下载文件。\
+注意：清理前请先完全关闭对应的浏览器，否则正在被占用的文件会被自动跳过。\
+清理走系统回收站，可还原。"""
+
+detect = [
+  "%LOCALAPPDATA%/Google/Chrome/User Data",
+  "%LOCALAPPDATA%/Microsoft/Edge/User Data",
+  "${HOME}/.config/google-chrome",
+  "${HOME}/.config/microsoft-edge",
+]
+
+[match]
+name_contains    = ["User Data"]
+must_have_child  = ["Cache"]
+
+# ============================================================================
+# Chrome 缓存目录（每个 profile 下的重建式缓存，整目录回收）
+# 前缀锚定真实安装根（Windows %LOCALAPPDATA% / Linux ~/.config），
+# 警惕绝不用裸 `**/` 前缀（literal_separator=false 下 `**` 可跨目录，
+# 会误命中 Desktop/Documents 下的伪造同名目录）。
+# ============================================================================
+
+[[scope]]
+id                  = "chrome-cache"
+label               = "Chrome 网页 / 媒体缓存"
+glob                = "{%LOCALAPPDATA%/Google/Chrome/User Data,${HOME}/.config/google-chrome}/**/{Cache,Code Cache,GPUCache,GrShaderCache,DawnGraphiteCache,DawnWebGPUCache,ShaderCache}"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "chrome-serviceworker-cache"
+label               = "Chrome Service Worker 缓存"
+glob                = "{%LOCALAPPDATA%/Google/Chrome/User Data,${HOME}/.config/google-chrome}/**/Service Worker/CacheStorage"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+# ============================================================================
+# Edge 缓存目录（与 Chrome 同源同构）
+# ============================================================================
+
+[[scope]]
+id                  = "edge-cache"
+label               = "Edge 网页 / 媒体缓存"
+glob                = "{%LOCALAPPDATA%/Microsoft/Edge/User Data,${HOME}/.config/microsoft-edge}/**/{Cache,Code Cache,GPUCache,GrShaderCache,DawnGraphiteCache,DawnWebGPUCache,ShaderCache}"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "edge-serviceworker-cache"
+label               = "Edge Service Worker 缓存"
+glob                = "{%LOCALAPPDATA%/Microsoft/Edge/User Data,${HOME}/.config/microsoft-edge}/**/Service Worker/CacheStorage"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

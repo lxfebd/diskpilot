@@ -1,0 +1,23 @@
+[package]
+name = "diskpilot-toolbelt"
+description = "图吧工具箱 CLI 工具目录：文档驱动的权威参数表、路径解析与安全执行"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+toml = { workspace = true }
+png = { workspace = true }
+zip = { workspace = true }
+windows-sys = { workspace = true }
+sha2 = { workspace = true }
+hex = "0.4"
+ed25519-dalek = "2.1"
+getrandom = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+# 控制台工具（urwtest/prime95 等）中文输出是 GBK，UTF-8 解码失败时兜底
+encoding_rs = "0.8"

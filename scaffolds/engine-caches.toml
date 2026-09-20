@@ -1,0 +1,129 @@
+id          = "engine-caches"
+name        = "游戏引擎缓存（Unity / Unreal Engine / Godot）"
+homepage    = "https://docs.unity3d.com/"
+risk        = "low"
+disclaimer  = """\
+清理 Unity / Unreal Engine / Godot 三家的引擎级缓存：\
+Unity 的包下载缓存与编辑器日志、Unity Hub 日志、\
+Unreal 的派生数据缓存（DerivedDataCache / DDC）、\
+Godot 的编辑器缓存与导出缓存。\
+这些都是引擎运行时的可再生内容，删除后下次启动引擎会自动重建。\
+绝不触碰：任何项目目录里的 Library（Unity 项目的资源导入数据库）、\
+Assets、ProjectSettings、.git、.sln；任何 .uproject 所在的项目目录整体；\
+Unreal 的 Engine 安装目录（含 C:/Program Files/...）、\
+引擎 Saved/Config 下的用户配置；Godot 的 editor_settings.cfg / editor_layout.cfg\
+以及 app_userdata（每项目用户数据）。\
+清理走系统回收站，可还原。"""
+
+detect = [
+  # Unity
+  "%LOCALAPPDATA%/Unity",
+  "%LOCALAPPDATA%/UnityHub",
+  "%APPDATA%/UnityHub",
+  # Unreal Engine
+  "%LOCALAPPDATA%/UnrealEngine",
+  # Godot
+  "%APPDATA%/Godot",
+  "%LOCALAPPDATA%/Godot",
+  # Unix fallback
+  "${HOME}/.cache/unity",
+  "${HOME}/.local/share/godot",
+  "${HOME}/.config/godot",
+  "${HOME}/.cache/godot",
+  # 通用递归（多账号 / 非 C 盘用户目录）
+  "**/AppData/Local/Unity/cache",
+  "**/AppData/Local/Unity/Editor",
+  "**/AppData/Local/Unity/Caches/bee",
+  "**/AppData/Local/UnrealEngine/Common/DerivedDataCache",
+  "**/AppData/Roaming/UnityHub/logs",
+  "**/AppData/Roaming/Godot/editor_cache",
+]
+
+[match]
+name_contains    = []
+must_have_child  = []
+
+# 严格锚定到"引擎自身的用户缓存目录"，绝不进入任何项目目录（Unity 项目的
+# Library/、任何 .uproject 所在目录、Godot 项目的 .godot/editor 关键文件）。
+
+# ---------------------------------------------------------------------------
+# Unity 相关 scope（variant="unity"）
+# ---------------------------------------------------------------------------
+
+[[scope]]
+id                  = "unity-package-cache"
+label               = "Unity 包下载缓存"
+variant             = "unity"
+glob                = "{%LOCALAPPDATA%,${HOME}/.cache/unity}/Unity/cache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "unity-editor-logs"
+label               = "Unity 编辑器日志"
+variant             = "unity"
+glob                = "{%LOCALAPPDATA%,${HOME}/.cache/unity}/Unity/Editor/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "unity-hub-logs"
+label               = "Unity Hub 日志"
+variant             = "unity"
+glob                = "{%LOCALAPPDATA%,%APPDATA%,${HOME}/.config/unityhub}/UnityHub/{logs,Logs}/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+# ---------------------------------------------------------------------------
+# Unreal Engine 相关 scope（variant="unreal"）
+# ---------------------------------------------------------------------------
+
+[[scope]]
+id                  = "unreal-derived-data-cache"
+label               = "Unreal 派生数据缓存（DDC）"
+variant             = "unreal"
+glob                = "{%LOCALAPPDATA%,${HOME}/.cache/ue}/UnrealEngine/Common/DerivedDataCache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "unreal-dlc-partial"
+label               = "Unreal 派生数据缓存（DLC Partial）"
+variant             = "unreal"
+glob                = "{%LOCALAPPDATA%,${HOME}/.cache/ue}/UnrealEngine/Common/DerivedDataCache_Partial/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+# ---------------------------------------------------------------------------
+# Godot 相关 scope（variant="godot"）
+# ---------------------------------------------------------------------------
+
+[[scope]]
+id                  = "godot-editor-cache"
+label               = "Godot 编辑器缓存"
+variant             = "godot"
+glob                = "{%APPDATA%,${HOME}/.config/godot}/Godot/editor_cache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"
+
+[[scope]]
+id                  = "godot-export-cache"
+label               = "Godot 导出缓存"
+variant             = "godot"
+glob                = "{%APPDATA%,${HOME}/.config/godot}/Godot/export_cache/**"
+mode                = "recycle"
+category            = "cache"
+prompt              = { kind = "none" }
+recycle_granularity = "directory"

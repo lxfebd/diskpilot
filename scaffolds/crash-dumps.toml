@@ -1,0 +1,45 @@
+id          = "crash-dumps"
+name        = "崩溃转储 / 错误报告"
+homepage    = "https://learn.microsoft.com/windows-hardware/drivers/debugger/"
+risk        = "low"
+disclaimer  = """\
+清理系统与应用崩溃留下的转储文件（.dmp）和 Windows 错误报告（WER）。\
+这些是程序出问题时产生的诊断记录，删掉不影响任何功能、也不影响问题排查结论\
+（排查问题的是记录本身，不是这些旧副本）。\
+若某个文件正在被写入会自动跳过。清理走系统回收站，可还原。"""
+
+detect = [
+  "%LOCALAPPDATA%/CrashDumps",
+  "%LOCALAPPDATA%/Microsoft/Windows/WER",
+  "C:/Windows/Minidump",
+  "**/CrashDumps",
+  "**/Windows/WER",
+]
+
+[match]
+name_contains    = ["CrashDumps", "Minidump", "WER"]
+must_have_child  = []
+
+[[scope]]
+id       = "crash-dumps-local"
+label    = "应用崩溃转储（%LOCALAPPDATA%\\CrashDumps）"
+glob     = "%LOCALAPPDATA%/CrashDumps/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 30, label = "清理多少天前的崩溃转储" }
+
+[[scope]]
+id       = "wer-reports"
+label    = "Windows 错误报告（WER）"
+glob     = "%LOCALAPPDATA%/Microsoft/Windows/WER/{ReportQueue,ReportArchive}/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 30, label = "清理多少天前的错误报告" }
+
+[[scope]]
+id       = "crash-dumps-system"
+label    = "系统崩溃转储（C:\\Windows\\Minidump，需要管理员）"
+glob     = "C:/Windows/Minidump/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 30, label = "清理多少天前的系统崩溃转储" }

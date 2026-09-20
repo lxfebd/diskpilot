@@ -1,0 +1,28 @@
+id          = "system-temp"
+name        = "系统临时文件"
+homepage    = "https://learn.microsoft.com/windows/win32/fileio"
+risk        = "low"
+disclaimer  = """\
+清理 Windows 系统临时文件夹（%TEMP%）里的临时文件与缓存。\
+这些是系统和软件运行时的临时产物，及时清理可释放磁盘空间。\
+只清理超过保留天数的旧文件（默认 7 天前），最近的文件可能正在被使用会自动跳过，\
+不影响任何功能。清理走系统回收站，可还原。"""
+
+detect = [
+  "%TEMP%",
+  "%TMP%",
+  "**/AppData/Local/Temp",
+  "**/Temp",
+]
+
+[match]
+name_contains    = []
+must_have_child  = []
+
+[[scope]]
+id       = "temp-files"
+label    = "临时文件（保留最近 7 天）"
+glob     = "%TEMP%/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 7, label = "清理多少天前的临时文件" }
