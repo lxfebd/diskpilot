@@ -491,10 +491,7 @@ fn filter_builtin_dupes(
 }
 
 /// 社区列表去重后的条目（已装标记 + 与内置重复的条目被剔除）+ 剔除计数。
-fn dedup_plugins(
-    app: &AppHandle,
-    plugins: Vec<RegistryPlugin>,
-) -> (Vec<serde_json::Value>, usize) {
+fn dedup_plugins(app: &AppHandle, plugins: Vec<RegistryPlugin>) -> (Vec<serde_json::Value>, usize) {
     let builtin_ids = builtin_plugin_ids();
     let installed_ids = installed_plugin_ids(app);
     let (kept, skipped) = filter_builtin_dupes(plugins, &builtin_ids);
@@ -1385,8 +1382,10 @@ mod tests {
 
     #[test]
     fn filter_builtin_dupes_drops_overlapping_entries() {
-        let builtin: std::collections::HashSet<String> =
-            ["hwinfo", "crystaldiskinfo"].iter().map(|s| s.to_string()).collect();
+        let builtin: std::collections::HashSet<String> = ["hwinfo", "crystaldiskinfo"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         let (kept, skipped) = filter_builtin_dupes(
             vec![
                 plugin("hwinfo", "HWiNFO"),
@@ -1408,10 +1407,7 @@ mod tests {
         // 远端索引里 id 可能与内置净化名不同，但名字净化后撞上内置 id 也要剔除。
         let builtin: std::collections::HashSet<String> =
             ["hwinfo"].iter().map(|s| s.to_string()).collect();
-        let (kept, skipped) = filter_builtin_dupes(
-            vec![plugin("hwinfo-lite", "HWiNFO")],
-            &builtin,
-        );
+        let (kept, skipped) = filter_builtin_dupes(vec![plugin("hwinfo-lite", "HWiNFO")], &builtin);
         assert_eq!(skipped, 1, "名字净化后命中内置 id 也应剔除");
         assert!(kept.is_empty());
     }

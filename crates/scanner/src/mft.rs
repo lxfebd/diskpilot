@@ -585,7 +585,14 @@ fn build_node_tree(
         PathBuf::from(&volume_root)
     };
 
-    let node = build_node(start_frn, &start_path, entries, &sizes, keep_files, max_dirs);
+    let node = build_node(
+        start_frn,
+        &start_path,
+        entries,
+        &sizes,
+        keep_files,
+        max_dirs,
+    );
     let _ = bytes_total;
     node
 }

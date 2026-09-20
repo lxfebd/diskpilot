@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: rustsec/audit-action@v2
+      - uses: rustsec/audit-check@v2
         # 默认忽略 GHSA（GitHub 自带告警）与 dev 依赖噪音；
         # 只对 reachable 依赖报错，避免整树误报阻塞提交。
 

@@ -109,27 +109,32 @@ impl AgentServer {
         &self,
         _p: Parameters<DiskHealthParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || -> Result<String, String> {
-            let disks = disk::collect_disks();
-            if disks.is_empty() {
-                return Err("未检测到可用磁盘。".into());
-            }
-            let lines = disks
-                .iter()
-                .map(|d| {
-                    format!(
-                        "- {}：总 {} / 已用 {}（{:.1}%）/ 可用 {}",
-                        d.drive,
-                        fmt_bytes(d.total_bytes),
-                        fmt_bytes(d.used_bytes),
-                        d.used_percent,
-                        fmt_bytes(d.free_bytes)
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            Ok(format!("磁盘概览（{} 个分区）：\n{lines}", disks.len()))
-        }, "磁盘概览读取").await)
+        Ok(blocking_call(
+            30,
+            || -> Result<String, String> {
+                let disks = disk::collect_disks();
+                if disks.is_empty() {
+                    return Err("未检测到可用磁盘。".into());
+                }
+                let lines = disks
+                    .iter()
+                    .map(|d| {
+                        format!(
+                            "- {}：总 {} / 已用 {}（{:.1}%）/ 可用 {}",
+                            d.drive,
+                            fmt_bytes(d.total_bytes),
+                            fmt_bytes(d.used_bytes),
+                            d.used_percent,
+                            fmt_bytes(d.free_bytes)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                Ok(format!("磁盘概览（{} 个分区）：\n{lines}", disks.len()))
+            },
+            "磁盘概览读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -140,20 +145,25 @@ impl AgentServer {
         Parameters(p): Parameters<PartitionUsageParams>,
     ) -> Result<CallToolResult, McpError> {
         let path = p.path.clone();
-        Ok(blocking_call(30, move || -> Result<String, String> {
-            let pb = std::path::PathBuf::from(&path);
-            match disk::collect_volume_usage(&pb) {
-                Some(d) => Ok(format!(
-                    "{}（卷）：总 {} / 已用 {}（{:.1}%）/ 可用 {}",
-                    d.drive,
-                    fmt_bytes(d.total_bytes),
-                    fmt_bytes(d.used_bytes),
-                    d.used_percent,
-                    fmt_bytes(d.free_bytes)
-                )),
-                None => Err(format!("无法读取 {path} 所在卷的用量")),
-            }
-        }, "分区用量读取").await)
+        Ok(blocking_call(
+            30,
+            move || -> Result<String, String> {
+                let pb = std::path::PathBuf::from(&path);
+                match disk::collect_volume_usage(&pb) {
+                    Some(d) => Ok(format!(
+                        "{}（卷）：总 {} / 已用 {}（{:.1}%）/ 可用 {}",
+                        d.drive,
+                        fmt_bytes(d.total_bytes),
+                        fmt_bytes(d.used_bytes),
+                        d.used_percent,
+                        fmt_bytes(d.free_bytes)
+                    )),
+                    None => Err(format!("无法读取 {path} 所在卷的用量")),
+                }
+            },
+            "分区用量读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -163,30 +173,35 @@ impl AgentServer {
         &self,
         _p: Parameters<VolumeMetaParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || -> Result<String, String> {
-            let metas = disk::collect_volume_meta();
-            if metas.is_empty() {
-                return Err("未检测到分区元数据。".into());
-            }
-            let lines = metas
-                .iter()
-                .map(|m| {
-                    format!(
-                        "- {}：{}，{}，卷标「{}」",
-                        m.drive,
-                        m.drive_type,
-                        if m.fs.is_empty() {
-                            "未知文件系统"
-                        } else {
-                            &m.fs
-                        },
-                        if m.label.is_empty() { "无" } else { &m.label }
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            Ok(format!("分区类型（{} 个）：\n{lines}", metas.len()))
-        }, "分区元数据读取").await)
+        Ok(blocking_call(
+            30,
+            || -> Result<String, String> {
+                let metas = disk::collect_volume_meta();
+                if metas.is_empty() {
+                    return Err("未检测到分区元数据。".into());
+                }
+                let lines = metas
+                    .iter()
+                    .map(|m| {
+                        format!(
+                            "- {}：{}，{}，卷标「{}」",
+                            m.drive,
+                            m.drive_type,
+                            if m.fs.is_empty() {
+                                "未知文件系统"
+                            } else {
+                                &m.fs
+                            },
+                            if m.label.is_empty() { "无" } else { &m.label }
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                Ok(format!("分区类型（{} 个）：\n{lines}", metas.len()))
+            },
+            "分区元数据读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -203,35 +218,38 @@ impl AgentServer {
         }
         let top_n = p.top_n.unwrap_or(20).clamp(1, 100);
         let path_str = p.path.clone();
-        Ok(blocking_call(45, move || -> Result<String, String> {
-            let pb = std::path::PathBuf::from(&path_str);
-            let (stats, total, truncated) = disk::file_type_stats(&pb, top_n);
-            if stats.is_empty() {
-                return Ok(format!(
-                    "{path_str} 下没有可统计的文件（或目录为空）"
-                ));
-            }
-            let lines = stats
-                .iter()
-                .map(|s| {
-                    format!(
-                        "- .{}：{} 个文件，共 {}",
-                        s.ext,
-                        s.count,
-                        fmt_bytes(s.bytes)
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            let mut head = format!(
-                "{path_str} 按扩展名统计（合计 {}）：\n{lines}",
-                fmt_bytes(total)
-            );
-            if truncated {
-                head.push_str("\n（已达遍历上限，结果不完整）");
-            }
-            Ok(head)
-        }, "文件类型统计").await)
+        Ok(blocking_call(
+            45,
+            move || -> Result<String, String> {
+                let pb = std::path::PathBuf::from(&path_str);
+                let (stats, total, truncated) = disk::file_type_stats(&pb, top_n);
+                if stats.is_empty() {
+                    return Ok(format!("{path_str} 下没有可统计的文件（或目录为空）"));
+                }
+                let lines = stats
+                    .iter()
+                    .map(|s| {
+                        format!(
+                            "- .{}：{} 个文件，共 {}",
+                            s.ext,
+                            s.count,
+                            fmt_bytes(s.bytes)
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let mut head = format!(
+                    "{path_str} 按扩展名统计（合计 {}）：\n{lines}",
+                    fmt_bytes(total)
+                );
+                if truncated {
+                    head.push_str("\n（已达遍历上限，结果不完整）");
+                }
+                Ok(head)
+            },
+            "文件类型统计",
+        )
+        .await)
     }
 
     #[tool(
@@ -249,38 +267,48 @@ impl AgentServer {
         let max_depth = p.max_depth.unwrap_or(3).clamp(1, 10);
         let max_nodes = p.max_nodes.unwrap_or(100).clamp(1, 500);
         let path_str = p.path.clone();
-        Ok(blocking_call(45, move || -> Result<String, String> {
-            let pb = std::path::PathBuf::from(&path_str);
-            match files::file_tree(&pb, max_depth, max_nodes) {
-                Ok((nodes, truncated)) => {
-                    if nodes.is_empty() {
-                        return Ok(format!("{path_str} 是空目录或不可读"));
+        Ok(blocking_call(
+            45,
+            move || -> Result<String, String> {
+                let pb = std::path::PathBuf::from(&path_str);
+                match files::file_tree(&pb, max_depth, max_nodes) {
+                    Ok((nodes, truncated)) => {
+                        if nodes.is_empty() {
+                            return Ok(format!("{path_str} 是空目录或不可读"));
+                        }
+                        let lines = nodes
+                            .iter()
+                            .map(|n| {
+                                let pad = "  ".repeat(n.depth);
+                                if n.is_dir {
+                                    format!("{pad}[目录] {}", n.name)
+                                } else {
+                                    format!(
+                                        "{pad}[文件] {}（{}）",
+                                        n.name,
+                                        n.size_bytes
+                                            .map(fmt_bytes)
+                                            .unwrap_or_else(|| "未知".into())
+                                    )
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        let mut s = format!("{path_str} 目录树：\n{lines}");
+                        if truncated {
+                            s.push_str(&format!(
+                                "\n（已达 {} 条/{} 层上限）",
+                                max_nodes, max_depth
+                            ));
+                        }
+                        Ok(s)
                     }
-                    let lines = nodes
-                        .iter()
-                        .map(|n| {
-                            let pad = "  ".repeat(n.depth);
-                            if n.is_dir {
-                                format!("{pad}[目录] {}", n.name)
-                            } else {
-                                format!(
-                                    "{pad}[文件] {}（{}）",
-                                    n.name,
-                                    n.size_bytes.map(fmt_bytes).unwrap_or_else(|| "未知".into())
-                                )
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    let mut s = format!("{path_str} 目录树：\n{lines}");
-                    if truncated {
-                        s.push_str(&format!("\n（已达 {} 条/{} 层上限）", max_nodes, max_depth));
-                    }
-                    Ok(s)
+                    Err(e) => Err(e),
                 }
-                Err(e) => Err(e),
-            }
-        }, "目录树读取").await)
+            },
+            "目录树读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -290,11 +318,13 @@ impl AgentServer {
         &self,
         _p: Parameters<SystemInfoParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || -> Result<String, String> {
-            let s = system::collect_system_info();
-            let up_days = s.uptime_secs / 86400;
-            let up_hrs = (s.uptime_secs % 86400) / 3600;
-            Ok(format!(
+        Ok(blocking_call(
+            30,
+            || -> Result<String, String> {
+                let s = system::collect_system_info();
+                let up_days = s.uptime_secs / 86400;
+                let up_hrs = (s.uptime_secs % 86400) / 3600;
+                Ok(format!(
                 "系统：{}\nCPU 逻辑核心：{}\n内存：{}，已用 {}（{:.1}%）\n开机时长：{} 天 {} 小时",
                 s.os,
                 s.cpu_cores,
@@ -304,7 +334,10 @@ impl AgentServer {
                 up_days,
                 up_hrs
             ))
-        }, "系统信息读取").await)
+            },
+            "系统信息读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -321,37 +354,44 @@ impl AgentServer {
         }
         let limit = p.limit.unwrap_or(100).clamp(1, 500);
         let path_str = p.path.clone();
-        Ok(blocking_call(45, move || -> Result<String, String> {
-            let pb = std::path::PathBuf::from(&path_str);
-            match files::list_dir(&pb, limit) {
-                Ok((items, truncated)) => {
-                    if items.is_empty() {
-                        return Ok(format!("{path_str} 是空目录或不可读"));
+        Ok(blocking_call(
+            45,
+            move || -> Result<String, String> {
+                let pb = std::path::PathBuf::from(&path_str);
+                match files::list_dir(&pb, limit) {
+                    Ok((items, truncated)) => {
+                        if items.is_empty() {
+                            return Ok(format!("{path_str} 是空目录或不可读"));
+                        }
+                        let lines = items
+                            .iter()
+                            .map(|e| {
+                                if e.is_dir {
+                                    format!("[目录] {}", e.name)
+                                } else {
+                                    format!(
+                                        "[文件] {}（{}）",
+                                        e.name,
+                                        e.size_bytes
+                                            .map(fmt_bytes)
+                                            .unwrap_or_else(|| "未知".into())
+                                    )
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        let mut s = format!("{path_str}（{} 项）：\n{lines}", items.len());
+                        if truncated {
+                            s.push_str(&format!("\n（只显示前 {} 项）", limit));
+                        }
+                        Ok(s)
                     }
-                    let lines = items
-                        .iter()
-                        .map(|e| {
-                            if e.is_dir {
-                                format!("[目录] {}", e.name)
-                            } else {
-                                format!(
-                                    "[文件] {}（{}）",
-                                    e.name,
-                                    e.size_bytes.map(fmt_bytes).unwrap_or_else(|| "未知".into())
-                                )
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    let mut s = format!("{path_str}（{} 项）：\n{lines}", items.len());
-                    if truncated {
-                        s.push_str(&format!("\n（只显示前 {} 项）", limit));
-                    }
-                    Ok(s)
+                    Err(e) => Err(e),
                 }
-                Err(e) => Err(e),
-            }
-        }, "目录列表读取").await)
+            },
+            "目录列表读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -367,19 +407,24 @@ impl AgentServer {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         let path_str = p.path.clone();
-        Ok(blocking_call(30, move || -> Result<String, String> {
-            let pb = std::path::PathBuf::from(&path_str);
-            match files::read_text_file(&pb) {
-                Ok((content, truncated)) => {
-                    let mut s = format!("【{path_str}】\n{content}");
-                    if truncated {
-                        s.push_str("\n（内容已截断到 256KB）");
+        Ok(blocking_call(
+            30,
+            move || -> Result<String, String> {
+                let pb = std::path::PathBuf::from(&path_str);
+                match files::read_text_file(&pb) {
+                    Ok((content, truncated)) => {
+                        let mut s = format!("【{path_str}】\n{content}");
+                        if truncated {
+                            s.push_str("\n（内容已截断到 256KB）");
+                        }
+                        Ok(s)
                     }
-                    Ok(s)
+                    Err(e) => Err(e),
                 }
-                Err(e) => Err(e),
-            }
-        }, "文件读取").await)
+            },
+            "文件读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -397,39 +442,44 @@ impl AgentServer {
         let max_hits = p.max_hits.unwrap_or(50).clamp(1, 500);
         let root_str = p.root.clone();
         let keyword = p.keyword.clone();
-        Ok(blocking_call(45, move || -> Result<String, String> {
-            let rb = std::path::PathBuf::from(&root_str);
-            match files::find_files(&rb, &keyword, max_hits) {
-                Ok((hits, truncated)) => {
-                    if hits.is_empty() {
-                        return Ok(format!(
-                            "{root_str} 下没有文件名包含「{keyword}」的项目"
-                        ));
+        Ok(blocking_call(
+            45,
+            move || -> Result<String, String> {
+                let rb = std::path::PathBuf::from(&root_str);
+                match files::find_files(&rb, &keyword, max_hits) {
+                    Ok((hits, truncated)) => {
+                        if hits.is_empty() {
+                            return Ok(format!("{root_str} 下没有文件名包含「{keyword}」的项目"));
+                        }
+                        let lines = hits
+                            .iter()
+                            .map(|h| {
+                                if h.is_dir {
+                                    format!("[目录] {}", h.path)
+                                } else {
+                                    format!(
+                                        "[文件] {}（{}）",
+                                        h.path,
+                                        h.size_bytes
+                                            .map(fmt_bytes)
+                                            .unwrap_or_else(|| "未知".into())
+                                    )
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n");
+                        let mut s = format!("命中 {} 项：\n{lines}", hits.len());
+                        if truncated {
+                            s.push_str(&format!("\n（已达 {} 条上限，还有更多）", max_hits));
+                        }
+                        Ok(s)
                     }
-                    let lines = hits
-                        .iter()
-                        .map(|h| {
-                            if h.is_dir {
-                                format!("[目录] {}", h.path)
-                            } else {
-                                format!(
-                                    "[文件] {}（{}）",
-                                    h.path,
-                                    h.size_bytes.map(fmt_bytes).unwrap_or_else(|| "未知".into())
-                                )
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join("\n");
-                    let mut s = format!("命中 {} 项：\n{lines}", hits.len());
-                    if truncated {
-                        s.push_str(&format!("\n（已达 {} 条上限，还有更多）", max_hits));
-                    }
-                    Ok(s)
+                    Err(e) => Err(e),
                 }
-                Err(e) => Err(e),
-            }
-        }, "文件查找").await)
+            },
+            "文件查找",
+        )
+        .await)
     }
 
     #[tool(
@@ -440,33 +490,38 @@ impl AgentServer {
         Parameters(p): Parameters<ListProcessesParams>,
     ) -> Result<CallToolResult, McpError> {
         let top_n = p.top_n.unwrap_or(50).clamp(1, 500);
-        Ok(blocking_call(45, move || -> Result<String, String> {
-            let procs = process::list_processes(top_n);
-            if procs.is_empty() {
-                return Err("无法枚举进程（非 Windows 环境或权限不足）。".into());
-            }
-            let lines = procs
-                .iter()
-                .map(|pr| {
-                    format!(
-                        "- PID {}：{}（内存 {}，路径 {}）",
-                        pr.pid,
-                        pr.name,
-                        fmt_bytes(pr.mem_bytes),
-                        if pr.exe_path.is_empty() {
-                            "未知".into()
-                        } else {
-                            pr.exe_path.clone()
-                        }
-                    )
-                })
-                .collect::<Vec<_>>()
-                .join("\n");
-            Ok(format!(
-                "进程列表（{} 个，按内存降序）：\n{lines}",
-                procs.len()
-            ))
-        }, "进程列表读取").await)
+        Ok(blocking_call(
+            45,
+            move || -> Result<String, String> {
+                let procs = process::list_processes(top_n);
+                if procs.is_empty() {
+                    return Err("无法枚举进程（非 Windows 环境或权限不足）。".into());
+                }
+                let lines = procs
+                    .iter()
+                    .map(|pr| {
+                        format!(
+                            "- PID {}：{}（内存 {}，路径 {}）",
+                            pr.pid,
+                            pr.name,
+                            fmt_bytes(pr.mem_bytes),
+                            if pr.exe_path.is_empty() {
+                                "未知".into()
+                            } else {
+                                pr.exe_path.clone()
+                            }
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                Ok(format!(
+                    "进程列表（{} 个，按内存降序）：\n{lines}",
+                    procs.len()
+                ))
+            },
+            "进程列表读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -884,12 +939,7 @@ impl AgentServer {
         }
         let name = p.name.clone();
         let action = p.action.clone();
-        Ok(blocking_call(
-            60,
-            move || sys::control_service(&name, &action),
-            "服务控制",
-        )
-        .await)
+        Ok(blocking_call(60, move || sys::control_service(&name, &action), "服务控制").await)
     }
 
     // ── 盘点/建议（steam.rs + cleanup.rs）──────────────────────────────
@@ -902,12 +952,7 @@ impl AgentServer {
         Parameters(p): Parameters<SteamGamesParams>,
     ) -> Result<CallToolResult, McpError> {
         let top_n = p.top_n.unwrap_or(20);
-        Ok(blocking_call(
-            45,
-            move || steam::collect_steam_games(top_n),
-            "Steam 盘点",
-        )
-        .await)
+        Ok(blocking_call(45, move || steam::collect_steam_games(top_n), "Steam 盘点").await)
     }
 
     #[tool(
@@ -1267,7 +1312,9 @@ impl AgentServer {
         }
         let path = p.path.clone();
         let size_mb = p.size_mb;
-        match tokio::task::spawn_blocking(move || bench::bench_disk(path, size_mb, Some(dry_run))).await {
+        match tokio::task::spawn_blocking(move || bench::bench_disk(path, size_mb, Some(dry_run)))
+            .await
+        {
             Ok(Ok(s)) => Ok(text_result(s)),
             Ok(Err(e)) => Ok(tool_error(e)),
             Err(e) => Ok(tool_error(format!("磁盘基准任务崩溃: {e}"))),
@@ -1380,12 +1427,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let n = p.n;
         let format = p.format;
-        Ok(blocking_call(
-            45,
-            move || report::sensor_trend(n, format),
-            "传感器趋势",
-        )
-        .await)
+        Ok(blocking_call(45, move || report::sensor_trend(n, format), "传感器趋势").await)
     }
 
     #[tool(

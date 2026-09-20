@@ -538,17 +538,14 @@ fn undo_core(
         .ok_or_else(|| format!("undo index out of range: {index}"))?;
     // 防 index 漂移：条目已不是用户点的那一行则拒绝（重新刷新后再试）。
     if entry.source.to_string_lossy() != source {
-        return Err(
-            "撤销目标已变化（列表可能被其他清理操作刷新），请刷新后再试。".into(),
-        );
+        return Err("撤销目标已变化（列表可能被其他清理操作刷新），请刷新后再试。".into());
     }
     if !matches!(entry.action, diskpilot_executor::Action::Quarantine) {
         return Ok(None);
     }
-    let restored_source = restore_quarantined(&entry, quarantine_root)
-        .map_err(|e| format!("undo failed: {e}"))?;
-    remove_restored(undo_log, std::slice::from_ref(&restored_source))
-        .map_err(|e| e.to_string())?;
+    let restored_source =
+        restore_quarantined(&entry, quarantine_root).map_err(|e| format!("undo failed: {e}"))?;
+    remove_restored(undo_log, std::slice::from_ref(&restored_source)).map_err(|e| e.to_string())?;
     Ok(Some(entry))
 }
 
@@ -585,7 +582,11 @@ mod tests {
         let src = w.join("data.dat");
         std::fs::write(&src, "hello").unwrap();
         execute(
-            &Plan { action: diskpilot_executor::Action::Quarantine, paths: vec![src.clone()], reason: "test".into() },
+            &Plan {
+                action: diskpilot_executor::Action::Quarantine,
+                paths: vec![src.clone()],
+                reason: "test".into(),
+            },
             false,
             &log,
             &qr,
@@ -611,7 +612,11 @@ mod tests {
         std::fs::write(&a, "a").unwrap();
         std::fs::write(&b, "b").unwrap();
         execute(
-            &Plan { action: diskpilot_executor::Action::Quarantine, paths: vec![a.clone(), b.clone()], reason: "test".into() },
+            &Plan {
+                action: diskpilot_executor::Action::Quarantine,
+                paths: vec![a.clone(), b.clone()],
+                reason: "test".into(),
+            },
             false,
             &log,
             &qr,
@@ -623,7 +628,10 @@ mod tests {
             Err(m) => m.clone(),
             Ok(_) => String::new(),
         };
-        assert!(r.is_err() && msg.contains("撤销目标已变化"), "source 漂移必须拒绝，got: {r:?}");
+        assert!(
+            r.is_err() && msg.contains("撤销目标已变化"),
+            "source 漂移必须拒绝，got: {r:?}"
+        );
         assert!(!a.exists() && !b.exists(), "漂移拒绝时不能恢复任何文件");
     }
 

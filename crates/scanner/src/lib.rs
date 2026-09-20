@@ -591,7 +591,13 @@ fn build_tree(
         // 的 size 已在 walk 时汇总；子目录 Node 建出来后按 size 排序截断。
         let mut sub_nodes: Vec<Node> = Vec::with_capacity(names.len());
         for sub in names {
-            sub_nodes.push(build_tree(&dir.join(sub), accs, subdirs, keep_files, max_dirs));
+            sub_nodes.push(build_tree(
+                &dir.join(sub),
+                accs,
+                subdirs,
+                keep_files,
+                max_dirs,
+            ));
         }
         sub_nodes.sort_by_key(|c| std::cmp::Reverse(c.size));
         if let Some(limit) = max_dirs {
@@ -1134,8 +1140,11 @@ mod tests {
         // 根下 5 个子目录，大小各不相同（越大越应该保留）
         for i in 0..5u32 {
             fs::create_dir_all(dir.join(format!("d{i}"))).unwrap();
-            fs::write(dir.join(format!("d{i}/big.bin")), vec![b'x'; (i * 100) as usize])
-                .unwrap();
+            fs::write(
+                dir.join(format!("d{i}/big.bin")),
+                vec![b'x'; (i * 100) as usize],
+            )
+            .unwrap();
         }
         // 根下 2 个文件：不受目录 top-K 影响
         fs::write(dir.join("f1.bin"), vec![b'a'; 10]).unwrap();

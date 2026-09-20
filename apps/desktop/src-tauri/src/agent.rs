@@ -140,7 +140,9 @@ fn resolve_scaffolds_dir() -> Option<std::path::PathBuf> {
 /// `DISKPILOT_UNDO_LOG`，让 agent-server 的 `file_recycle` 等写操作也能把
 /// 条目写进同一份日志（兑现「一切删除可撤销」，agent-server 与主项目共享
 /// undo 链）。None（如只读工具调用）则不注入。
-async fn connect(undo_log: Option<&std::path::Path>) -> Result<rmcp::service::RunningService<rmcp::service::RoleClient, ()>, String> {
+async fn connect(
+    undo_log: Option<&std::path::Path>,
+) -> Result<rmcp::service::RunningService<rmcp::service::RoleClient, ()>, String> {
     let bin = agent_server_binary()
         .ok_or_else(|| "找不到 agent-server.exe（AI 工具集未构建）。请先 cargo build -p agent-server，或设置 DISKPILOT_AGENT_SERVER 指向其路径。".to_string())?;
     let mut cmd = Command::new(&bin);
@@ -291,13 +293,7 @@ pub async fn agent_call_tool(
     arguments: serde_json::Value,
     confirmed: Option<bool>,
 ) -> Result<AgentToolCall, String> {
-    agent_call_tool_core(
-        name,
-        arguments,
-        confirmed,
-        Some(state.undo_log.as_path()),
-    )
-    .await
+    agent_call_tool_core(name, arguments, confirmed, Some(state.undo_log.as_path())).await
 }
 
 /// 探活：agent-server.exe 是否可用（找不到二进制时前端提示降级）。

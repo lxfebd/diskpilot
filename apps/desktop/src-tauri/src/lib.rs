@@ -149,11 +149,7 @@ pub(crate) async fn ssrf_safe_get(
         let mut body = Vec::new();
         let mut downloaded: u64 = 0;
         let mut stream = resp;
-        while let Some(chunk) = stream
-            .chunk()
-            .await
-            .map_err(|e| format!("下载中断：{e}"))?
-        {
+        while let Some(chunk) = stream.chunk().await.map_err(|e| format!("下载中断：{e}"))? {
             downloaded = downloaded.saturating_add(chunk.len() as u64);
             if downloaded > max_bytes {
                 return Err(format!(
@@ -1704,14 +1700,10 @@ mode = "delete"
         // 就会因为私网拒绝——这验证的是「私网首跳拒绝」。重定向绕过验证
         // 依赖公网首跳，单测里无法真打公网；这里验证核心语义：任何私网
         // 目标（含 302 后跳向私网）都无法到达。
-        let err = ssrf_safe_get(
-            &format!("http://127.0.0.1:{port}/ok"),
-            1024,
-            None,
-        )
-        .await
-        .err()
-        .expect("私网目标必须拒绝");
+        let err = ssrf_safe_get(&format!("http://127.0.0.1:{port}/ok"), 1024, None)
+            .await
+            .err()
+            .expect("私网目标必须拒绝");
         assert!(
             err.contains("https") || err.contains("不可用"),
             "拒绝信息应说明协议/私网原因: {err}"
@@ -1750,7 +1742,15 @@ mode = "delete"
         for id in good {
             assert!(is_controlled_perm(id), "{id} 应在白名单内");
         }
-        let bad = ["disk.format", "bios.flash", "hw.overclock", "system.files", "", "..", "plugin.manage; rm -rf"];
+        let bad = [
+            "disk.format",
+            "bios.flash",
+            "hw.overclock",
+            "system.files",
+            "",
+            "..",
+            "plugin.manage; rm -rf",
+        ];
         for id in bad {
             assert!(!is_controlled_perm(id), "{id} 必须被白名单拒绝");
         }

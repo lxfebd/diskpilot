@@ -504,9 +504,7 @@ fn remove_node(tree: &mut crate::Node, rel: &Path, size_hint: Option<u64>) -> bo
             let Some(hint) = size_hint else {
                 return false; // no size info and nothing to remove → no-op
             };
-            let is_dir = std::fs::metadata(rel)
-                .map(|m| m.is_dir())
-                .unwrap_or(false);
+            let is_dir = std::fs::metadata(rel).map(|m| m.is_dir()).unwrap_or(false);
             let ds = -(hint as i64);
             let dc = if is_dir { 0 } else { -1 };
             propagate_delta(tree, &parent_rel, ds, dc);

@@ -654,7 +654,10 @@ mod tests {
         // 系统目录下的文件：写操作必须拒绝（只读 check 同口径前缀匹配后同样拒绝）
         let p = Path::new("C:/Windows/System32/cmd.exe");
         assert!(
-            matches!(g.check(p), Err(GuardError::SystemDir) | Err(GuardError::Missing)),
+            matches!(
+                g.check(p),
+                Err(GuardError::SystemDir) | Err(GuardError::Missing)
+            ),
             "只读 check 也应拒绝系统区子路径"
         );
         // 存在性前置：本机测试时若路径不存在会先报 Missing，属正确守卫路径；
@@ -784,10 +787,7 @@ mod tests {
     /// 指向的文件（纯追加，行尾换行），供主项目 list_undo 消费。
     #[test]
     fn append_undo_writes_line_to_env_log() {
-        let dir = std::env::temp_dir().join(format!(
-            "dp-agent-undo-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("dp-agent-undo-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let log = dir.join("undo.jsonl");
         let prev = std::env::var_os("DISKPILOT_UNDO_LOG");
@@ -815,23 +815,18 @@ mod tests {
         let raw = std::fs::read_to_string(&log).expect("undo 日志应存在");
         let lines: Vec<&str> = raw.lines().collect();
         assert_eq!(lines.len(), 2, "应追加两行: {raw}");
-        let first: serde_json::Value =
-            serde_json::from_str(lines[0]).expect("首行应为合法 JSON");
+        let first: serde_json::Value = serde_json::from_str(lines[0]).expect("首行应为合法 JSON");
         assert_eq!(first["action"], "recycle");
         assert_eq!(first["source"], "C:/tmp/victim.dat");
         assert_eq!(first["bytes_freed"], 4096);
-        let second: serde_json::Value =
-            serde_json::from_str(lines[1]).expect("次行应为合法 JSON");
+        let second: serde_json::Value = serde_json::from_str(lines[1]).expect("次行应为合法 JSON");
         assert!(second.get("bytes_freed").is_none(), "None 字节应省略键");
     }
 
     /// path_bytes 统计回归：单文件返回 len，目录递归求和。
     #[test]
     fn path_bytes_counts_file_and_dir() {
-        let dir = std::env::temp_dir().join(format!(
-            "dp-agent-bytes-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("dp-agent-bytes-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("sub")).unwrap();
         std::fs::write(dir.join("a.dat"), vec![0u8; 100]).unwrap();
         std::fs::write(dir.join("sub/b.dat"), vec![0u8; 250]).unwrap();
