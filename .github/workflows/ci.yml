@@ -51,6 +51,11 @@ jobs:
   # 放 ubuntu-latest 与其余 Rust job 一致，避免平台相关依赖漏检。
   audit-rust:
     runs-on: ubuntu-latest
+    # rustsec/audit-check 要把审计结果上报成 GitHub check-run：push 事件下
+    # GITHUB_TOKEN 默认 read-only，须显式授予 checks: write，否则
+    # 「Resource not accessible by integration」红（审计本身通过）。
+    permissions:
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v2

@@ -169,13 +169,14 @@ pub fn execute(
         }
         Action::Quarantine => {
             std::fs::create_dir_all(quarantine_root)?;
-            for src in &plan.paths {
-                let stamp = chrono::Utc::now().timestamp_millis();
+            let batch_stamp = chrono::Utc::now().timestamp_millis();
+            for (i, src) in plan.paths.iter().enumerate() {
                 let leaf = src
                     .file_name()
                     .map(|s| s.to_string_lossy().to_string())
                     .unwrap_or_else(|| "item".into());
-                let dst = quarantine_root.join(format!("{stamp}-{leaf}"));
+                // 同一批次内毫秒时间戳会撞车（同名 leaf 各自成槽），加序号保证唯一。
+                let dst = quarantine_root.join(format!("{batch_stamp}-{i}-{leaf}"));
                 let bytes = path_bytes_before(src);
                 if let Err(e) = std::fs::rename(src, &dst) {
                     tracing::warn!("rename failed ({}); falling back to copy+remove", e);
@@ -284,6 +285,7 @@ fn protected_path_folded(p: &Path) -> Option<&'static str> {
     let first = segs[0];
     let first_lower = first.to_lowercase();
     const BLOCKED: &[&str] = &[
+        // Windows
         "windows",
         "program files",
         "program files (x86)",
@@ -294,6 +296,28 @@ fn protected_path_folded(p: &Path) -> Option<&'static str> {
         "$windows.~ws",
         "perflogs",
         "recovery",
+        // Unix（Linux/macOS）
+        "etc",
+        "usr",
+        "bin",
+        "sbin",
+        "lib",
+        "lib64",
+        "boot",
+        "dev",
+        "proc",
+        "sys",
+        "var",
+        "srv",
+        "opt",
+        "root",
+        "media",
+        "mnt",
+        "run",
+        // macOS
+        "system",
+        "library",
+        "applications",
     ];
     if BLOCKED.contains(&first_lower.as_str()) {
         return Some("a system directory");
@@ -309,6 +333,11 @@ fn protected_path_folded(p: &Path) -> Option<&'static str> {
         {
             return Some("a user home directory");
         }
+    }
+    // Unix 用户主目录：`/home` 父级（len 1）与 `/home/<名字>`（len 2）都不可清理；
+    // `/home/<名字>/…` 子目录（len ≥ 3）允许（与 Windows Users 规则对齐）。
+    if segs.len() <= 2 && first_lower == "home" {
+        return Some("a user home directory");
     }
     None
 }

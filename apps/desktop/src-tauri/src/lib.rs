@@ -1654,7 +1654,12 @@ mode = "delete"
         // scope glob 里的 ${USERPROFILE} 先展开再编译，命中展开后的真实路径
         let s = test_scaffold(vec![test_scope("env", "${USERPROFILE}/tmpcache/**")]);
         let builds = crate::cleanup::build_scope_builds(&s).unwrap();
-        let up = std::env::var("USERPROFILE").unwrap().replace('\\', "/");
+        // USERPROFILE 是 Windows 变量；非 Windows 上它不被展开（glob 原样编译），
+        // 该用例只验证「展开后命中」这一行为，非 Windows 直接跳过断言。
+        let Ok(up_raw) = std::env::var("USERPROFILE") else {
+            return;
+        };
+        let up = up_raw.replace('\\', "/");
         assert!(
             builds[0].set.is_match(format!("{up}/tmpcache/sub/f.txt")),
             "展开后的 glob 应命中 USERPROFILE 下的路径"
