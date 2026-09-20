@@ -230,6 +230,7 @@ fn recycle_moves_file_to_os_trash() {
 }
 
 #[test]
+#[cfg(windows)] // OpenOptions::share_mode 是 Windows 专属 API（独占句柄制造锁定）
 fn recycle_skips_unrecyclable_but_continues_others() {
     let w = Workspace::new();
     // 一个被独占打开（share_mode=NONE）的锁定文件（recycle 会失败）+

@@ -891,6 +891,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(windows)] // sid_tail 是 Windows-only 辅助函数
     fn sid_tail_extracts_rid() {
         // S-1-5-21-1234567890-1234567890-1234567890-1001 → RID 1001
         assert_eq!(

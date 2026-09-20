@@ -1699,6 +1699,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(windows)]
     fn prefix_to_mask_known() {
         assert_eq!(prefix_to_mask(24), "255.255.255.0");
         assert_eq!(prefix_to_mask(16), "255.255.0.0");
@@ -1708,6 +1709,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn adapter_status_cn_known() {
         assert_eq!(adapter_status_cn(1), "已连接");
         assert_eq!(adapter_status_cn(2), "未连接");
