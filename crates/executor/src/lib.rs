@@ -282,6 +282,16 @@ fn protected_path_folded(p: &Path) -> Option<&'static str> {
     } else {
         &folded[..]
     };
+    // macOS 的 /etc、/tmp、/var 是合成 symlink，canonicalize 后变成
+    // /private/etc、/private/tmp、/private/var——剥掉 /private 前缀让黑名单
+    // 照常命中。不会误伤临时区：/private/var/folders 剥掉后首段是 var，
+    // 而 var 按设计不在黑名单（与 BLOCKED 注同理）。
+    #[cfg(target_os = "macos")]
+    let segs: &[&str] = if segs.len() >= 2 && segs[0].eq_ignore_ascii_case("private") {
+        &segs[1..]
+    } else {
+        segs
+    };
     let first = segs[0];
     let first_lower = first.to_lowercase();
     const BLOCKED: &[&str] = &[
