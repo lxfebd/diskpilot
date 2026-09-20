@@ -13,6 +13,9 @@ class MemoryStorage {
 describe('i18n 文案表', () => {
   beforeEach(() => {
     vi.stubGlobal('localStorage', new MemoryStorage());
+    // CI 的 node 20 没有全局 navigator（本机 node 21+ 有），钉死为中文系统
+    // 环境避免平台差异；钉 en 的用例会显式 setLang('en') / defineProperty 覆盖
+    vi.stubGlobal('navigator', { language: 'zh-CN' });
     setLang('system');
   });
 

@@ -25,10 +25,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - if: matrix.os == 'ubuntu-latest'
+        name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      # desktop 的 build.rs 校验 sidecar binaries/agent-server-<triple> 必须存在
+      # （tauri externalBin）。workspace 各 crate 零横向依赖，cargo clippy/test
+      # 的编译顺序不保证 agent-server 先就位，故显式先编一次（build.rs 兜底复制）。
+      - run: cargo build -p agent-server
       - run: cargo fmt --all -- --check
       # 不加 `-D warnings`：R1–R9 累积了 ~42 处存量 clippy 噪音（useless vec! /
       # redundant closure / doc-list 缩进 / sort_by_key 等机械项），散在 desktop
@@ -44,6 +54,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
         # 默认忽略 GHSA（GitHub 自带告警）与 dev 依赖噪音；
         # 只对 reachable 依赖报错，避免整树误报阻塞提交。
 
@@ -65,6 +77,8 @@ jobs:
             librsvg2-dev patchelf libgtk-3-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      # 同 lint-rust：sidecar 先编，desktop build.rs 校验才能过
+      - run: cargo build -p agent-server
       - run: cargo test --workspace --no-fail-fast
 
   # Windows-only：scaffold-lint 走 bash glob，只有 shell 会展开
