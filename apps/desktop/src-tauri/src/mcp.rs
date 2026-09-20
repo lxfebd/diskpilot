@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use rmcp::model::CallToolRequestParam;
+use rmcp::model::CallToolRequestParams;
 use rmcp::service::ServiceExt;
 use rmcp::transport::TokioChildProcess;
 use serde::{Deserialize, Serialize};
@@ -850,13 +850,11 @@ pub(crate) async fn mcp_call_tool(
             return Err(msg);
         }
     };
-    let result = match service
-        .call_tool(CallToolRequestParam {
-            name: name.clone().into(),
-            arguments: args_obj,
-        })
-        .await
-    {
+    let mut params = CallToolRequestParams::new(name.clone());
+    if let Some(args) = args_obj {
+        params = params.with_arguments(args);
+    }
+    let result = match service.call_tool(params).await {
         Ok(r) => r,
         Err(e) => {
             let msg = format!("tools/call 失败：{e}");
@@ -880,7 +878,6 @@ pub(crate) async fn mcp_call_tool(
 
     let text = result
         .content
-        .unwrap_or_default()
         .into_iter()
         .filter_map(|c| match &*c {
             rmcp::model::RawContent::Text(t) => Some(t.text.clone()),

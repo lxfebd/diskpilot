@@ -1,4 +1,4 @@
-//! MCP 工具路由（rmcp 0.4.1 API）：
+//! MCP 工具路由（rmcp 1.8 API）：
 //!
 //! - 每个工具 = 一个参数 struct（derive Deserialize + JsonSchema）
 //! - 每个工具 = 一个带 `#[tool(description)]` 的方法
@@ -30,16 +30,11 @@ pub mod toolbelt;
 mod lenient;
 
 use rmcp::{
-    handler::server::{
-        tool::{Parameters, ToolRouter},
-        ServerHandler,
-    },
+    handler::server::{wrapper::Parameters, ServerHandler},
     model::{AnnotateAble, CallToolResult, RawContent, ServerCapabilities, ServerInfo},
     schemars, tool, tool_handler, tool_router, ErrorData as McpError,
 };
 use serde::Deserialize;
-// rmcp 宏展开引用裸 `Future`，需入作用域
-use std::future::Future;
 
 fn text_result(s: String) -> CallToolResult {
     CallToolResult::success(vec![RawContent::text(s).no_annotation()])
@@ -90,16 +85,12 @@ pub fn fmt_bytes(n: u64) -> String {
 }
 
 #[derive(Debug, Clone)]
-pub struct AgentServer {
-    tool_router: ToolRouter<Self>,
-}
+pub struct AgentServer;
 
 #[tool_router]
 impl AgentServer {
     pub fn new() -> Self {
-        Self {
-            tool_router: Self::tool_router(),
-        }
+        Self
     }
 
     #[tool(
@@ -2064,16 +2055,10 @@ struct EnvVarsParams {
 #[tool_handler]
 impl ServerHandler for AgentServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            protocol_version: Default::default(),
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: rmcp::model::Implementation::from_build_env(),
-            instructions: Some(
-                "DiskPilot 的 AI 可操作工具集：只读磁盘/系统/文件/进程/程序清单查询。\
-                 所有路径参数受安全守卫保护（盘根/系统目录/主目录根被拒绝）。\
-                 回答磁盘空间、系统状态、目录内容、进程、已装软件问题时先用这些工具拿真实数据。"
-                    .into(),
-            ),
-        }
+        ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
+            "DiskPilot 的 AI 可操作工具集：只读磁盘/系统/文件/进程/程序清单查询。\
+             所有路径参数受安全守卫保护（盘根/系统目录/主目录根被拒绝）。\
+             回答磁盘空间、系统状态、目录内容、进程、已装软件问题时先用这些工具拿真实数据。",
+        )
     }
 }

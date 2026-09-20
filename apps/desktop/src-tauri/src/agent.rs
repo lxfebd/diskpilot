@@ -30,7 +30,7 @@
 
 use std::process::Stdio;
 
-use rmcp::{model::CallToolRequestParam, service::ServiceExt, transport::TokioChildProcess};
+use rmcp::{model::CallToolRequestParams, service::ServiceExt, transport::TokioChildProcess};
 use tauri::State;
 use tokio::process::Command;
 
@@ -262,16 +262,16 @@ pub async fn agent_call_tool_core(
         serde_json::Value::Null => None,
         _ => return Err(format!("参数必须是 JSON 对象，收到：{arguments}")),
     };
+    let mut params = CallToolRequestParams::new(name);
+    if let Some(args) = args_obj {
+        params = params.with_arguments(args);
+    }
     let result = service
-        .call_tool(CallToolRequestParam {
-            name: name.into(),
-            arguments: args_obj,
-        })
+        .call_tool(params)
         .await
         .map_err(|e| format!("agent-server tools/call 失败：{e}"))?;
     let text = result
         .content
-        .unwrap_or_default()
         .into_iter()
         .filter_map(|c| match &*c {
             rmcp::model::RawContent::Text(t) => Some(t.text.clone()),
