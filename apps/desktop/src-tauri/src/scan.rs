@@ -14,9 +14,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
 
 use diskpilot_scaffold::{compile_all, detect_compiled, CompiledScaffold};
+#[cfg(windows)]
+use diskpilot_scanner::scan_with_usn;
+#[cfg(windows)]
 use diskpilot_scanner::usn::UsnCursor;
 use diskpilot_scanner::ScanOptions;
-use diskpilot_scanner::{scan_with_stats_cancellable, scan_with_usn, Node, ScanStats};
+use diskpilot_scanner::{scan_with_stats_cancellable, Node, ScanStats};
 use tauri::{AppHandle, Emitter, State};
 
 use crate::cleanup::{suggestions_from_tree, CleanupSuggestion};
@@ -331,7 +334,7 @@ fn query_baseline_cursor(root: &Path) -> Option<UsnCursor> {
 }
 
 #[cfg(not(windows))]
-fn query_baseline_cursor(_root: &Path) -> Option<UsnCursor> {
+fn query_baseline_cursor(_root: &Path) -> Option<()> {
     None
 }
 
@@ -350,13 +353,19 @@ fn drive_letter_of(p: &Path) -> Option<char> {
 
 /// 扫描结果统一落盘：emit scan-stats 事件、更新 cleanup-suggestions 缓存、
 /// 覆盖 scan_tree 完整树、写回 USN 游标。`new_cursor` 为 None 时游标不动
-/// （非 Windows 或调用方明确不续游标）。
+/// （非 Windows 或调用方明确不续游标）。游标类型按平台别名：Windows 为
+/// `UsnCursor`，非 Windows 用 `()` 占位（`query_baseline_cursor` 返回同型）。
+#[cfg(windows)]
+type CursorParam<'a> = Option<&'a diskpilot_scanner::usn::UsnCursor>;
+#[cfg(not(windows))]
+type CursorParam<'a> = Option<&'a ()>;
+
 async fn commit_scan(
     app: AppHandle,
     state: State<'_, AppState>,
     key: &str,
     outcome: ScanOutcome,
-    new_cursor: Option<&UsnCursor>,
+    new_cursor: CursorParam<'_>,
 ) -> Result<Node, String> {
     let cmd_ms = outcome.stats.total_ms; // 增量路径无独立 cmd 计时，近似用 scanner_total
     tracing::info!(

@@ -192,7 +192,11 @@ struct AppState {
     /// 每盘（归一化盘根 key）最近一次扫描后的 USN Journal 游标。`scan_path_usn`
     /// 用它在增量可用时只回放变更日志并 merge 进 `scan_tree` 缓存树，把重扫
     /// 从分钟级降到亚秒级。游标与 scan_tree 生命周期一致：树被覆盖时同步更新。
+    /// 非 Windows 无 journal，用 `()` 占位（`commit_scan` 泛型参数退化，行为不变）。
+    #[cfg(windows)]
     usn_cursors: Mutex<HashMap<String, diskpilot_scanner::usn::UsnCursor>>,
+    #[cfg(not(windows))]
+    usn_cursors: Mutex<HashMap<String, ()>>,
     /// 进行中的硬件压测「用户停止」开关列表：每个测试实例注册自己的
     /// Arc<AtomicBool>，hw_stop_test 遍历全部置 true。用多槽而非单槽：
     /// 单槽全局 flag 会被后启动的测试 reset，导致先启动的测试停不下来。

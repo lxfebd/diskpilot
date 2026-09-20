@@ -4,9 +4,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-
 use tauri::{AppHandle, Emitter, State};
 
 use crate::toolbelt::toolbelt_explicit_root;
@@ -363,12 +360,17 @@ $out | ConvertTo-Json -Depth 4 -Compress
 fn run_cli_capture(exe_path: &str, args: &[&str], timeout: Duration) -> Result<String, String> {
     use std::io::Read;
     use std::process::Stdio;
-    let mut child = std::process::Command::new(exe_path)
-        .args(args)
+    let mut cmd = std::process::Command::new(exe_path);
+    cmd.args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("启动 {exe_path} 失败：{e}"))?;
     let started = std::time::Instant::now();

@@ -145,6 +145,12 @@ fn is_file_busy(path: &Path) -> bool {
     !opened
 }
 
+/// 非 Windows 无「拒绝写共享」语义，统一视为非占用（只读展示字段，不参与判定）。
+#[cfg(not(windows))]
+fn is_file_busy(_path: &Path) -> bool {
+    false
+}
+
 /// 读文件头部 [`HEAD_HASH_BYTES`] 字节并计算 `DefaultHasher` 哈希。
 /// 打不开文件（被占用 / 权限 / 已被删）返回 `None`（不计入判定）。
 fn read_head_hash(path: &Path) -> Option<u64> {

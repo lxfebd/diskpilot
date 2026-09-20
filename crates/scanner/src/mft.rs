@@ -227,14 +227,23 @@ where
         // 语义与慢路径的「扫到第 N 条」一致，只是没有中间回调。
         on_progress(entries.len() as u64, bytes_total);
         link_children(&mut entries);
-        return Ok(build_node_tree(
+        // 子路径（非盘根）解析失败 → 报错让上层回退 walkdir，绝不回退整卷
+        // （8.3 短名 / 重解析点 / 大小写差异都会导致逐组件匹配失败）。
+        match build_node_tree(
             volume_letter,
             subroot,
             keep_files,
             max_dirs,
             &entries,
             bytes_total,
-        ));
+        ) {
+            Ok(node) => return Ok(node),
+            Err(_) => {
+                return Err(anyhow::anyhow!(
+                    "MFT scan: subroot path not resolvable in $MFT"
+                ))
+            }
+        }
     }
 
     // 慢路径（原实现）：逐条 ntfs::file()。
@@ -560,6 +569,8 @@ fn rollup(
 }
 
 /// 构建可见 Node 树（快/慢路径共用）。`bytes_total` 仅用于日志/统计。
+/// 子路径在 $MFT 里逐组件匹配不到时返回 Err（绝不回退整卷），
+/// 上层据此落到 walkdir 兜底。
 fn build_node_tree(
     volume_letter: char,
     subroot: Option<&Path>,
@@ -567,7 +578,7 @@ fn build_node_tree(
     max_dirs: Option<usize>,
     entries: &HashMap<u64, Entry>,
     bytes_total: u64,
-) -> Node {
+) -> anyhow::Result<Node> {
     let root_frn = KnownNtfsFileRecordNumber::RootDirectory as u64;
     let volume_root = format!("{}:\\", volume_letter.to_ascii_uppercase());
 
@@ -575,7 +586,15 @@ fn build_node_tree(
     rollup(root_frn, entries, &mut sizes);
 
     let start_frn = if let Some(sub) = subroot {
-        find_frn_for_path(sub, root_frn, entries).unwrap_or(root_frn)
+        match find_frn_for_path(sub, root_frn, entries) {
+            Some(frn) => frn,
+            None => {
+                return Err(anyhow::anyhow!(
+                    "subroot not found in $MFT: {}",
+                    sub.display()
+                ))
+            }
+        }
     } else {
         root_frn
     };
@@ -594,7 +613,7 @@ fn build_node_tree(
         max_dirs,
     );
     let _ = bytes_total;
-    node
+    Ok(node)
 }
 
 /// 慢路径（原实现）：逐条 `ntfs::file()` + seek。保留作快路径失败的回退。
@@ -705,14 +724,14 @@ where
 
     // 公共的 children 链接 + 树构建。
     link_children(&mut entries);
-    Ok(build_node_tree(
+    build_node_tree(
         volume_letter,
         subroot,
         keep_files,
         max_dirs,
         &entries,
         bytes_total,
-    ))
+    )
 }
 
 fn find_frn_for_path(target: &Path, root_frn: u64, entries: &HashMap<u64, Entry>) -> Option<u64> {
@@ -1033,7 +1052,23 @@ pub mod bench {
         )?;
         let fast_ms = t0.elapsed().as_millis();
         link_children(&mut entries_fast);
-        let node_fast = build_node_tree(volume_letter, None, None, None, &entries_fast, bytes_fast);
+        // bench 只跑盘根（subroot=None），不会 Err；失败给个可读兜底。
+        let node_fast = build_node_tree(volume_letter, None, None, None, &entries_fast, bytes_fast)
+            .unwrap_or_else(|e| {
+                println!("快路径树构建失败：{e:#}");
+                Node {
+                    name: volume_letter.to_string(),
+                    path: format!("{}:\\", volume_letter.to_ascii_uppercase()),
+                    is_dir: true,
+                    size: 0,
+                    file_count: 0,
+                    children: Vec::new(),
+                    scaffold_id: None,
+                    top_extensions: Vec::new(),
+                    children_truncated: None,
+                    mtime: None,
+                }
+            });
 
         // 慢路径（逐条 ntfs::file()），无进度回调。
         let t1 = Instant::now();
