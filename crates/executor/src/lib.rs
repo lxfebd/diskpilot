@@ -296,7 +296,9 @@ fn protected_path_folded(p: &Path) -> Option<&'static str> {
         "$windows.~ws",
         "perflogs",
         "recovery",
-        // Unix（Linux/macOS）
+        // Unix（Linux/macOS）：只拦「永远不该清、且无用户数据在下面」的系统根。
+        // var/srv/media/mnt/run/tmp 首段下混着用户数据（/var/folders 是 mac 的
+        // 默认 temp 区），整体列入会把正常临时目录扫描误判为系统目录，故排除。
         "etc",
         "usr",
         "bin",
@@ -307,13 +309,7 @@ fn protected_path_folded(p: &Path) -> Option<&'static str> {
         "dev",
         "proc",
         "sys",
-        "var",
-        "srv",
-        "opt",
         "root",
-        "media",
-        "mnt",
-        "run",
         // macOS
         "system",
         "library",
