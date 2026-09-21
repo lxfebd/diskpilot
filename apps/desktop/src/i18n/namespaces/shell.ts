@@ -72,7 +72,7 @@ export const shell = {
     'shell.fdp.topChildren': '占用子项 Top 6',
 
     // 页脚
-    'shell.footer.rules': 'DiskPilot v0.2.0 · 内置 {n} 条清理规则',
+    'shell.footer.rules': 'DiskPilot v0.2.1 · 内置 {n} 条清理规则',
     'shell.footer.noScan': '还没扫描',
 
     // 错误边界
@@ -202,7 +202,7 @@ export const shell = {
     'shell.fdp.topChildren': 'Top 6 items by size',
 
     // 页脚
-    'shell.footer.rules': 'DiskPilot v0.2.0 · {n} built-in cleanup rules',
+    'shell.footer.rules': 'DiskPilot v0.2.1 · {n} built-in cleanup rules',
     'shell.footer.noScan': 'Nothing scanned yet',
 
     // 错误边界

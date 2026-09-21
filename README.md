@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v0.2.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.0)
+[![Release](https://img.shields.io/badge/Release-v0.2.1-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.1)
 
 [下载](#下载) · [看效果](#看效果) · [功能一览](#功能一览) · [安全模型](#安全模型) · [隐私](#隐私) · [架构](#架构) · [文档](#文档) · [路线图](#路线图) · [开发](#开发) · [贡献](#贡献)
 
@@ -23,12 +23,12 @@
 
 ## 下载
 
-当前版本 **v0.2.0**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
+当前版本 **v0.2.1**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
 
 | 平台 | 安装包 | 说明 |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_0.2.0_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
-| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.0_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
+| Windows 10/11 x64 | `DiskPilot_0.2.1_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
+| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.1_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI 产物，**未在真实 Linux 机器上验证过**，欢迎反馈 |
 
 所有安装包附 `.sig` 签名，内置自动更新（tauri-plugin-updater），发新版后应用内会提示升级。
@@ -195,7 +195,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 - [x] 硬件中心（基准 / 压测 / 传感器 / 体检报告）+ 工具墙 90+ 工具集成
 - [x] Steam 游戏库只读盘点 + 着色器缓存清理
 - [x] 性能专项：扫描链路内存与渲染优化（克隆裁剪 / 选中节点引用 / 虚拟滚动 / 批量检测 / 黑名单目录）
-- [x] v0.2.0 发布管线：CI 构建 + 签名 + 应用内自动更新
+- [x] v0.2.1 发布管线：CI 构建 + 签名 + 应用内自动更新
 
 进行中 / 计划：
 

@@ -1,12 +1,12 @@
 # DiskPilot 使用说明书
 
-> 适用于：普通用户。当前版本 v0.2.0。
+> 适用于：普通用户。当前版本 v0.2.1。
 > 下载：[GitHub Releases](https://github.com/lxfebd/diskpilot/releases)
 
 ## 1. 安装
 
 ### Windows
-1. 下载 `DiskPilot_0.2.0_x64-setup.exe`，双击安装
+1. 下载 `DiskPilot_0.2.1_x64-setup.exe`，双击安装
 2. 首次启动若被 SmartScreen 拦截：点「更多信息」→「仍要运行」
 3. 应用需要管理员权限（NTFS MFT 直读），启动时会自动弹 UAC，点「是」即可
 
