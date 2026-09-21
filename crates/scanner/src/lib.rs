@@ -91,7 +91,11 @@ impl Node {
                 .iter()
                 .map(|e| e.ext.len() + 16)
                 .sum::<usize>();
-        own + self.children.iter().map(|c| c.memory_estimate()).sum::<usize>()
+        own + self
+            .children
+            .iter()
+            .map(|c| c.memory_estimate())
+            .sum::<usize>()
     }
 }
 
@@ -1283,7 +1287,10 @@ mod tests {
             }
         }
 
-        assert!(truncated.total_nodes() < full.total_nodes(), "截断树节点数应小于完整树");
+        assert!(
+            truncated.total_nodes() < full.total_nodes(),
+            "截断树节点数应小于完整树"
+        );
         assert!(
             truncated.memory_estimate() < full.memory_estimate(),
             "截断树内存估算应小于完整树：trunc={} vs full={}",
@@ -1291,7 +1298,10 @@ mod tests {
             full.memory_estimate()
         );
         // 数字对得上：完整树 = 1（根）+ 40 + 1600 + 64000 + 640000 = 705641
-        assert_eq!(full.total_nodes(), 1 + 40 + 40 * 40 + 40 * 40 * 40 + 40 * 40 * 40 * 10);
+        assert_eq!(
+            full.total_nodes(),
+            1 + 40 + 40 * 40 + 40 * 40 * 40 + 40 * 40 * 40 * 10
+        );
     }
 
     fn tempdir_path() -> PathBuf {
