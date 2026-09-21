@@ -231,15 +231,12 @@ pnpm -C apps/desktop exec vitest run   # 前端测试
 
 其他方向同样欢迎：修复扫描/性能问题、补翻译、在真实 Linux/macOS 机器上验证并回报问题。
 
-[Claude Code](https://claude.com/claude-code) 用户在仓库根目录敲 `/add-scaffold <id>` 可以一键启动完整的新增脚本工作流。
-
 ---
 
 ## 致谢
 
 - **灵感与思路参考**：[WizTree](https://diskanalyzer.com)（NTFS MFT 直读）、[SpaceSniffer](http://www.uderzo.it/main_products/space_sniffer/)（treemap 可视化）、[CleanMyWechat](https://github.com/blackboxo/CleanMyWechat)（微信清理边界）、[SquirrelDisk](https://github.com/adileo/squirreldisk)（Tauri + Rust 形态）
 - **依赖**：[Tauri](https://tauri.app) · [`d3-hierarchy`](https://github.com/d3/d3-hierarchy) · [`jwalk`](https://github.com/jessegrosjean/jwalk) · [`ntfs`](https://github.com/ColinFinck/ntfs) · [`globset`](https://github.com/BurntSushi/ripgrep/tree/master/crates/globset) · [`trash-rs`](https://github.com/Byron/trash-rs) · [react-markdown](https://github.com/remarkjs/react-markdown) · [rmcp](https://github.com/modelcontextprotocol/rust-sdk)
-- **协作**：[Claude Code](https://claude.com/claude-code) · [@jtlyu](https://github.com/jtlyu)
 
 ---
 

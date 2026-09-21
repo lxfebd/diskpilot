@@ -50,5 +50,3 @@ pnpm install && pnpm tauri dev      # Studio 里看到卡片、scope 数字合�
 ## 5. 提 PR
 
 模板会带检查清单。CI 全绿（fmt / clippy / cargo test / scaffold-lint / vitest / tsc）即进入 review。
-
-> Claude Code 用户在仓库根目录敲 `/add-scaffold <id>` 可一键走完全流程。
