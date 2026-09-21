@@ -60,4 +60,14 @@ describe('treeMayContain', () => {
     // 前缀必须按整段边界匹配：C:\US 不能误吞 C:\Users
     expect(treeMayContain('C:\\US', 'C:\\Users')).toBe(false);
   });
+
+  it('normalizes trailing backslash on the tree key (drive root C:\\ vs child)', () => {
+    // 盘符扫描的根节点 path 带尾反斜杠（后端 "C:\\"），回收剪枝判定
+    // 必须命中子树，否则刚回收的目录会留在可见树里。
+    expect(treeMayContain('C:\\', 'C:\\Users')).toBe(true);
+    expect(treeMayContain('c:\\', 'c:\\users\\alice')).toBe(true);
+    expect(treeMayContain('C:', 'C:\\Users')).toBe(true);
+    expect(treeMayContain('C:\\Users\\', 'C:\\Users\\alice')).toBe(true);
+    expect(treeMayContain('C:\\', 'D:\\Users')).toBe(false);
+  });
 });

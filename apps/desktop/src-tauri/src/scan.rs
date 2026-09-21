@@ -201,11 +201,14 @@ pub(crate) async fn scan_path_usn(
             let compiled = compile_all(&state.scaffolds.lock().unwrap().clone());
             let scaffolds_for_stats = state.scaffolds.lock().unwrap().clone();
             let node = tree;
-            let node_full = node.clone();
+            // 建议统计必须跑在完整树上（先于截断）。截断只 clone 一份供 tag
+            // 原地修改，原始树整体 move 为 node_full 进缓存——峰值从 3 份整树
+            // 同驻留降到 2 份（node_full + truncated）。
             let suggestions = suggestions_from_tree(&node, &scaffolds_for_stats);
             let tag_t0 = std::time::Instant::now();
             let mut truncated = node.clone();
             tag_and_truncate(&mut truncated, &compiled, 0);
+            let node_full = node;
             let tag_ms = tag_t0.elapsed().as_millis() as u64;
             let stats = ScanStats {
                 mode: "usn".into(),
@@ -286,6 +289,8 @@ async fn run_full_scan(
             // 丢弃部分子树，之后的树只能得到偏小的估计。完整树同时保留给
             // `state.scan_tree`（见外层），让 cleanup_suggestions / AI 总览 /
             // dry_run 目录匹配都能在内存树上秒算，不再每次切页都全盘 walk。
+            // 峰值内存：`full` 克隆瞬间为 2 份完整树；随后原地截断 `node`，
+            // 被掐掉的子项边排边释放，稳态回到 1 份完整树 + 1 份截断树。
             let full = node.clone();
             let suggestions = suggestions_from_tree(&node, &scaffolds_for_stats);
             let mut node = node;
@@ -369,11 +374,15 @@ async fn commit_scan(
 ) -> Result<Node, String> {
     let cmd_ms = outcome.stats.total_ms; // 增量路径无独立 cmd 计时，近似用 scanner_total
     tracing::info!(
-        "scan: mode={} cmd_ms={} scanner_ms={} tag_ms={}",
+        "scan: mode={} cmd_ms={} scanner_ms={} tag_ms={} truncated_nodes={} truncated_bytes_est={} full_nodes={} full_bytes_est={}",
         outcome.stats.mode,
         cmd_ms,
         outcome.stats.total_ms,
         outcome.tag_ms,
+        outcome.node.total_nodes(),
+        outcome.node.memory_estimate(),
+        outcome.node_full.total_nodes(),
+        outcome.node_full.memory_estimate(),
     );
     let _ = app.emit(
         "scan-stats",
@@ -391,11 +400,11 @@ async fn commit_scan(
             },
         );
     }
-    // 返回前端的树是截断后的；这里存的是完整克隆，按盘 key 入多槽缓存，
-    // 切盘后每盘都能命中自己的树做增量/秒算，互不覆盖。
-    let node_full = outcome.node_full.clone();
+    // 返回前端的树是截断后的；这里存的是完整树，按盘 key 入多槽缓存，
+    // 切盘后每盘都能命中自己的树做增量/秒算，互不覆盖。直接 move 入槽，
+    // 不再多克隆一份完整树（C2：消除峰值期的第 2 份完整树）。
     if let Ok(mut trees) = state.scan_tree.lock() {
-        trees.insert(key.to_string(), node_full);
+        trees.insert(key.to_string(), outcome.node_full);
     }
     // 游标与树生命周期一致：树被覆盖时同步更新，保证增量始终有有效起点。
     if let Some(c) = new_cursor {

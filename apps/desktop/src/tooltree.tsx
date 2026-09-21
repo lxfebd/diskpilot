@@ -50,7 +50,7 @@ export function pruneMany(root: Node, paths: string[]): Node {
 // 某棵缓存树（key = 归一化后的扫描目标）是否可能包含 path：批量剪枝时只动
 // 受影响的树，而不是把每棵缓存盘都重建一遍。
 export function treeMayContain(treeKey: string, path: string): boolean {
-  const k = treeKey.toUpperCase();
+  const k = treeKey.replace(/[\\/]+$/, '').toUpperCase();
   const p = path.replace(/[\\/]+$/, '').toUpperCase();
   return p === k || p.startsWith(k + '\\');
 }

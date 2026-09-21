@@ -571,12 +571,19 @@ function FileDetailPanel() {
   const t = useT();
   const root = useStore((s) => s.root);
   const selectedPath = useStore((s) => s.selectedPath);
+  const selectedNode = useStore((s) => s.selectedNode);
   const select = useStore((s) => s.selectPath);
   const recycle = useStore((s) => s.recyclePaths);
   const pushTurn = useStore((s) => s.pushChatTurn);
   const setBusy = useStore((s) => s.setChatBusy);
 
+  // C3：不再从 root 整树 DFS 找选中节点。选中节点由点击处直接把引用存进
+  // store（selectedNode），这里 O(1) 读取。selectedNode 可能为 null——
+  // 由旧调用点只传 path（如 FileView 的过滤结果，节点不在当前 root 上）
+  // 或回收剪枝后清空导致；此时回退用 path 大小写不敏感的整树查找兜底
+  // （低频路径，只在无引用时触发，不影响常规点击的主路径性能）。
   const node = useMemo(() => {
+    if (selectedNode) return selectedNode;
     if (!root || !selectedPath) return null;
     const walk = (n: Node): Node | null => {
       if (n.path === selectedPath) return n;
@@ -587,7 +594,7 @@ function FileDetailPanel() {
       return null;
     };
     return walk(root);
-  }, [root, selectedPath]);
+  }, [selectedNode, root, selectedPath]);
 
   if (!node) {
     return (
@@ -614,7 +621,7 @@ function FileDetailPanel() {
     <div className="fdp">
       <div className="fdp-head">
         <span className="fdp-path" title={node.path}>{node.is_dir ? '📁' : '📄'} {node.name || node.path}</span>
-        <button className="ghost icon" onClick={() => select(node.path)} title={t('shell.fdp.locate')}><ListTree size={14} /></button>
+        <button className="ghost icon" onClick={() => select(node.path, node)} title={t('shell.fdp.locate')}><ListTree size={14} /></button>
       </div>
       <div className="fdp-meta">
         <span className="fdp-stat"><b>{formatBytes(node.size)}</b> {t('shell.fdp.used')}</span>

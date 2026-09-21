@@ -72,6 +72,29 @@ pub struct ExtShare {
     pub count: u64,
 }
 
+impl Node {
+    /// 子树节点总数（含自身）。
+    pub fn total_nodes(&self) -> u64 {
+        1 + self.children.iter().map(|c| c.total_nodes()).sum::<u64>()
+    }
+
+    /// 子树内存占用的粗略下界估算（字节）：节点结构体 + 字符串长度 +
+    /// 顶层扩展名元数据。不含分配器/对齐/树容器自身开销，仅供日志对比
+    /// 「完整树 vs 截断树」的数量级，不作为精确度量。
+    pub fn memory_estimate(&self) -> usize {
+        let own = std::mem::size_of::<Node>()
+            + self.name.len()
+            + self.path.len()
+            + self.scaffold_id.as_ref().map_or(0, |s| s.len())
+            + self
+                .top_extensions
+                .iter()
+                .map(|e| e.ext.len() + 16)
+                .sum::<usize>();
+        own + self.children.iter().map(|c| c.memory_estimate()).sum::<usize>()
+    }
+}
+
 #[derive(Debug, Default)]
 struct DirAcc {
     size: u64,
@@ -1195,6 +1218,80 @@ mod tests {
         assert_eq!(node_all.children_truncated, None);
 
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn node_memory_estimate_counts_nodes_and_bounds_truncated_vs_full() {
+        // 契约测试：`total_nodes` / `memory_estimate` 是 C2 内存日志与「截断
+        // 收益」判定的基础。完整树必须显著大于同一棵树的深度截断版，
+        // 否则「只回传截断树」的 C1 论点不成立，需要重新审视。
+        let mk = |name: &str, path: &str, children: Vec<Node>| Node {
+            name: name.into(),
+            path: path.into(),
+            is_dir: true,
+            size: 0,
+            file_count: 0,
+            children,
+            scaffold_id: None,
+            top_extensions: Vec::new(),
+            children_truncated: None,
+            mtime: None,
+        };
+        // 4 层 × 每层 40 个子目录 × 各 10 个文件 ≈ 70 万节点（每节点带路径）
+        let mut root = mk("root", "C:\\", vec![]);
+        for d1 in 0..40 {
+            let mut sub = mk("d1", &format!("C:\\d1{d1}"), vec![]);
+            for d2 in 0..40 {
+                let mut sub2 = mk("d2", &format!("C:\\d1{d1}\\d2{d2}"), vec![]);
+                for d3 in 0..40 {
+                    let mut sub3 = mk("d3", &format!("C:\\d1{d1}\\d2{d2}\\d3{d3}"), vec![]);
+                    for f in 0..10 {
+                        sub3.children.push(Node {
+                            name: "f".into(),
+                            path: format!("C:\\d1{d1}\\d2{d2}\\d3{d3}\\f{f}.bin"),
+                            is_dir: false,
+                            size: 0,
+                            file_count: 0,
+                            children: Vec::new(),
+                            scaffold_id: None,
+                            top_extensions: Vec::new(),
+                            children_truncated: None,
+                            mtime: None,
+                        });
+                    }
+                    sub2.children.push(sub3);
+                }
+                sub.children.push(sub2);
+            }
+            root.children.push(sub);
+        }
+        let full = root;
+
+        // 模拟 tag_and_truncate 的深度 cap：每层只保留前 20 个子项，制造截断树。
+        let mut truncated = full.clone();
+        let cap_children = |n: &mut Node| {
+            let keep = n.children.len().min(20);
+            n.children.truncate(keep);
+        };
+        for c in &mut truncated.children {
+            cap_children(c);
+            for c2 in &mut c.children {
+                cap_children(c2);
+                for c3 in &mut c2.children {
+                    cap_children(c3);
+                }
+            }
+        }
+
+        assert!(truncated.total_nodes() < full.total_nodes(), "截断树节点数应小于完整树");
+        assert!(
+            truncated.memory_estimate() < full.memory_estimate(),
+            "截断树内存估算应小于完整树：trunc={} vs full={}",
+            truncated.memory_estimate(),
+            full.memory_estimate()
+        );
+        // 数字对得上：完整树 = 1（根）+ 40 + 1600 + 64000 + 640000 = 705641
+        assert_eq!(full.total_nodes(), 1 + 40 + 40 * 40 + 40 * 40 * 40 + 40 * 40 * 40 * 10);
     }
 
     fn tempdir_path() -> PathBuf {

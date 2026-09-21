@@ -11,7 +11,7 @@ type View = 'tree' | 'treemap' | 'files';
 type Props = {
   root: Node;
   selectedPath: string | null;
-  onSelect: (p: string) => void;
+  onSelect: (path: string, node?: Node) => void;
 };
 
 // 视图页签表：写成函数而非常量，标签在渲染处现取——模块顶层求值会把中文

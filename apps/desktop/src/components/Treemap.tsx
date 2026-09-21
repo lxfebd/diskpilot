@@ -8,7 +8,7 @@ type Props = {
   node: Node;
   width: number;
   height: number;
-  onSelect: (path: string) => void;
+  onSelect: (path: string, node?: Node) => void;
   selectedPath: string | null;
 };
 
@@ -80,7 +80,7 @@ export const Treemap = memo(function Treemap({ node, width, height, onSelect, se
         return (
           <g
             key={i}
-            onClick={() => onSelect(d.data.path)}
+            onClick={() => onSelect(d.data.path, d.data)}
             style={{ cursor: 'pointer' }}
           >
             <title>{t('overview.treemap.tip', { path: d.data.path, size: formatBytes(d.data.size), share: share.toFixed(1) })}</title>

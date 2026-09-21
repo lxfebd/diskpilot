@@ -148,6 +148,7 @@ interface AppState {
   scanSeq: number;
   scaffolds: Scaffold[];
   selectedPath: string | null;
+  selectedNode: Node | null;
   reclaimedBytes: number;
   chat: ChatSession;
   studioRequest: { scaffoldId: string; ts: number } | null;
@@ -159,7 +160,7 @@ interface AppState {
   cacheDrives: (entries: Record<string, Node>) => void;
   takeDrive: (key: string) => Node | null;
   setScaffolds: (s: Scaffold[]) => void;
-  selectPath: (p: string | null) => void;
+  selectPath: (p: string | null, node?: Node | null) => void;
   addReclaimed: (n: number) => void;
 
   focusChatOn: (node: Node, scaffoldId: string | null) => void;
@@ -219,6 +220,7 @@ export const useStore = create<AppState>((set, get) => {
       root: root && rootAffected ? pruneMany(root, succeeded) : root,
       scanCache: cacheChanged ? prunedCache : st.scanCache,
       selectedPath: null,
+      selectedNode: null,
     });
   };
 
@@ -228,6 +230,7 @@ export const useStore = create<AppState>((set, get) => {
   scanSeq: 0,
   scaffolds: [],
   selectedPath: null,
+  selectedNode: null,
   reclaimedBytes: 0,
   // 启动时恢复上次活动会话（turns 同步）；无则空会话
   chat: (() => {
@@ -264,7 +267,13 @@ export const useStore = create<AppState>((set, get) => {
     return node;
   },
   setScaffolds: (scaffolds) => set({ scaffolds }),
-  selectPath: (selectedPath) => set({ selectedPath }),
+  selectPath: (selectedPath, node) =>
+    // 带 node 引用时整树 DFS 免了：FileDetailPanel 直接读 selectedNode。
+    // 只传 path（无 node）的旧调用点仍兼容——它们多来自 FileView（path
+    // 可能来自截断树/过滤结果，节点引用不在 root 上，回退查找由组件自己兜）。
+    // node ?? null：path-only 选中必须把旧引用清成 null（undefined 会破掉
+    // "selectedNode is Node | null" 这一不变量，切选后可能读到上一路径的节点）。
+    set({ selectedPath, selectedNode: node ?? null }),
   addReclaimed: (n) => set((s) => ({ reclaimedBytes: s.reclaimedBytes + n })),
 
   toast: (text, kind = 'ok') => {

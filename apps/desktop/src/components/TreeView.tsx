@@ -13,7 +13,7 @@ import { useT } from '../i18n';
 type Props = {
   root: Node;
   selectedPath: string | null;
-  onSelect: (p: string) => void;
+  onSelect: (path: string, node?: Node) => void;
 };
 
 const ROW_H = 22; // must match .tree-row height in styles.css
@@ -264,7 +264,7 @@ const Row = memo(function Row({
   parentSize: number;
   depth: number;
   selectedPath: string | null;
-  onSelect: (p: string) => void;
+  onSelect: (path: string, node?: Node) => void;
   onCtx: (e: React.MouseEvent, node: Node) => void;
   open: boolean;
   loading: boolean;
@@ -281,7 +281,7 @@ const Row = memo(function Row({
   return (
     <div
       className={'tree-row' + (sel ? ' selected' : '') + (node.is_dir ? '' : ' is-file')}
-      onClick={() => onSelect(node.path)}
+      onClick={() => onSelect(node.path, node)}
       onContextMenu={(e) => onCtx(e, node)}
       draggable
       onDragStart={(e) => {
