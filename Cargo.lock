@@ -10,7 +10,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
 name = "agent-server"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -985,7 +985,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-desktop"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1020,7 +1020,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-executor"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-scaffold"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "globset",
@@ -1048,7 +1048,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-scaffold-lint"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "diskpilot-scaffold",
@@ -1058,7 +1058,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-scanner"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "globset",
@@ -1074,7 +1074,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-steam-inspector"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "dirs 5.0.1",
@@ -1087,7 +1087,7 @@ dependencies = [
 
 [[package]]
 name = "diskpilot-toolbelt"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "ed25519-dalek",
  "encoding_rs",

@@ -30,7 +30,7 @@ DiskPilot 是一个 **Windows 优先的磁盘清理桌面应用**（Tauri 2 + Re
 | 包管理 | pnpm workspace（根 package.json + apps/desktop）+ Cargo workspace |
 | 数据 | 全部本机 `~/.diskpilot/`（undo.jsonl + quarantine/），不上云 |
 
-版本：0.1.2 · MIT · Rust edition 2021 · 前端 vite 5 + vitest 2 + TS 5.6
+版本：0.2.0 · MIT · Rust edition 2021 · 前端 vite 5 + vitest 2 + TS 5.6
 
 ---
 
