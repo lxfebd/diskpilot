@@ -95,7 +95,6 @@ _backup_spec/
 # 交接/临时 md（给视觉 AI / 已完成的路线图底稿，不入库）
 *_HANDOFF.md
 UI_HANDOFF.md
-/docs/AIDA64_GAP_ANALYSIS.md
 
 # Local agent tool runtimes (history / hook-state / reports / memory; never commit)
 .mimosa/

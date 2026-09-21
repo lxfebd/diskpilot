@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DiskPilot — 看清磁盘 · 问懂 AI · 安全删净</title>
+<meta name="description" content="开源磁盘分析与清理工具。NTFS MFT 秒扫整盘，陌生文件夹拖给 AI 解释，18 份清理脚本按 scope 回收，默认进回收站可撤销，75 个 MCP 工具接入 AI agent。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F6F7F9;
+    --card: #FFFFFF;
+    --ink: #16181D;
+    --ink-2: #5A6270;
+    --line: #E3E6EB;
+    --pink: #FF4F9A;
+    --pink-ink: #C2185B;
+    --blue: #2F6FED;
+    --orange: #E8820C;
+    --green: #1D9A63;
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    --disp: "Space Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font: 16px/1.75 -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+
+  /* ── nav ─ */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(246,247,249,.9); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
+  .logo { font-family: var(--disp); font-weight: 700; font-size: 19px; letter-spacing: -.02em; text-decoration: none; display: flex; align-items: center; gap: 9px; }
+  .logo .dot { width: 12px; height: 12px; border-radius: 3px; background: var(--pink); box-shadow: 3px 3px 0 var(--blue); }
+  nav .links { display: flex; gap: 22px; font-size: 14.5px; color: var(--ink-2); margin-left: auto; }
+  nav .links a { text-decoration: none; }
+  nav .links a:hover { color: var(--ink); }
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 600; font-size: 15px;
+    padding: 10px 22px; border-radius: 8px; transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-pink { background: var(--ink); color: #fff; }
+  .btn-pink:hover { background: var(--pink-ink); transform: translateY(-1px); }
+  .btn-ghost { border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--ink-2); }
+  nav .btn { padding: 7px 16px; font-size: 14px; }
+
+  /* ── hero ── */
+  .hero { padding: 72px 0 88px; }
+  .hero .wrap { display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: center; }
+  .kicker { font-family: var(--mono); font-size: 12.5px; letter-spacing: .12em; color: var(--pink-ink); text-transform: uppercase; margin-bottom: 18px; }
+  h1 { font-family: var(--disp); font-size: clamp(34px, 4.6vw, 52px); line-height: 1.18; font-weight: 700; letter-spacing: -.02em; }
+  h1 em { font-style: normal; color: var(--pink-ink); }
+  .hero p.lead { margin: 22px 0 30px; font-size: 17.5px; color: var(--ink-2); max-width: 46ch; }
+  .hero .cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .hero .ver { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); }
+
+  /* treemap signature */
+  .tm {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; box-shadow: 0 24px 60px -32px rgba(22,24,29,.25);
+  }
+  .tm-head { display: flex; align-items: baseline; gap: 10px; padding: 2px 4px 12px; font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+  .tm-head b { color: var(--ink); font-weight: 500; }
+  .tm-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(4, 62px);
+    gap: 6px;
+    grid-template-areas:
+      "wc wc dk dk ot ot"
+      "wc wc dk dk ot ot"
+      "st st st st dl sm"
+      "st st st st pj tp";
+  }
+  .blk {
+    border-radius: 7px; padding: 9px 11px; min-width: 0; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.45; color: #fff;
+    opacity: 0; transform: scale(.96); animation: pop .5s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  .blk .sz { font-size: 14.5px; font-weight: 500; }
+  .blk .nm { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @keyframes pop { to { opacity: 1; transform: scale(1); } }
+  .b-st { grid-area: st; background: #3B4252; }
+  .b-wc { grid-area: wc; background: var(--pink); }
+  .b-dk { grid-area: dk; background: var(--blue); }
+  .b-ot { grid-area: ot; background: #9AA4B2; }
+  .b-dl { grid-area: dl; background: #6E7A8A; }
+  .b-pj { grid-area: pj; background: #B3702A; }
+  .b-tp { grid-area: tp; background: var(--orange); }
+  .b-sm { grid-area: sm; background: #C7CDD6; color: var(--ink-2); }
+  .tm-legend { display: flex; gap: 18px; padding: 12px 4px 2px; font-size: 12.5px; color: var(--ink-2); flex-wrap: wrap; }
+  .tm-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+  .tm-hint { font-family: var(--mono); font-size: 11.5px; color: var(--pink-ink); padding: 6px 4px 0; }
+
+  /* ── sections ── */
+  section { padding: 84px 0; }
+  section.alt { background: var(--card); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  h2 { font-family: var(--disp); font-size: clamp(26px, 3vw, 34px); font-weight: 700; letter-spacing: -.015em; margin-bottom: 14px; }
+  .sub { color: var(--ink-2); max-width: 62ch; margin-bottom: 44px; }
+
+  /* loop */
+  .loop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .step { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 26px 24px; }
+  .step .no { font-family: var(--mono); font-size: 12px; color: var(--pink-ink); letter-spacing: .1em; }
+  .step h3 { font-size: 18.5px; margin: 8px 0 10px; font-weight: 700; }
+  .step p { font-size: 15px; color: var(--ink-2); }
+  .step .stat { font-family: var(--disp); font-weight: 700; font-size: 26px; margin-top: 16px; }
+  .step .stat small { font-size: 13px; color: var(--ink-2); font-weight: 500; margin-left: 6px; }
+
+  /* features */
+  .feat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .f { border: 1px solid var(--line); border-radius: 12px; padding: 24px; background: var(--paper); }
+  .f h3 { font-size: 16.5px; margin-bottom: 8px; }
+  .f p { font-size: 14.5px; color: var(--ink-2); }
+  .f .tag { font-family: var(--mono); font-size: 11.5px; color: var(--blue); }
+
+  /* safety */
+  .safety .wrap { display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: start; }
+  .quote {
+    font-family: var(--disp); font-weight: 700; font-size: clamp(24px, 2.6vw, 32px);
+    line-height: 1.4; letter-spacing: -.01em; margin-top: 20px;
+  }
+  .quote span { color: var(--pink-ink); }
+  .gates { counter-reset: g; list-style: none; }
+  .gates li {
+    counter-increment: g; display: grid; grid-template-columns: 44px 1fr; gap: 16px;
+    padding: 18px 0; border-bottom: 1px solid var(--line);
+  }
+  .gates li:first-child { padding-top: 0; }
+  .gates li:last-child { border-bottom: 0; padding-bottom: 0; }
+  .gates li::before {
+    content: "0" counter(g); font-family: var(--mono); font-size: 13px; color: var(--pink-ink); padding-top: 4px;
+  }
+  .gates h3 { font-size: 16.5px; margin-bottom: 4px; }
+  .gates p { font-size: 14.5px; color: var(--ink-2); }
+
+  /* screenshots */
+  .shots figure { margin-bottom: 40px; }
+  .shots img { width: 100%; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 18px 48px -28px rgba(22,24,29,.3); }
+  .shots figcaption { font-size: 14px; color: var(--ink-2); margin-top: 12px; font-family: var(--mono); }
+
+  /* download */
+  .dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .plat { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 26px 24px; display: flex; flex-direction: column; }
+  .plat h3 { font-size: 17px; margin-bottom: 6px; }
+  .plat .file { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); margin-bottom: 12px; word-break: break-all; }
+  .plat p { font-size: 14px; color: var(--ink-2); flex: 1; margin-bottom: 18px; }
+  .plat .btn { text-align: center; font-size: 14px; padding: 9px 16px; }
+  .dl-note { margin-top: 22px; font-size: 13.5px; color: var(--ink-2); }
+  .dl-note b { color: var(--green); }
+
+  footer { border-top: 1px solid var(--line); padding: 36px 0 44px; font-size: 14px; color: var(--ink-2); }
+  footer .wrap { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+  footer a { text-decoration: none; }
+  footer a:hover { color: var(--ink); }
+  footer .sp { margin-left: auto; font-family: var(--mono); font-size: 12.5px; }
+
+  :is(a, button):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+
+  @media (max-width: 900px) {
+    .hero .wrap, .safety .wrap { grid-template-columns: 1fr; gap: 40px; }
+    .loop, .feat, .dl { grid-template-columns: 1fr; }
+    nav .links { display: none; }
+    .tm-grid { grid-template-rows: repeat(4, 54px); }
+    section { padding: 60px 0; }
+    .hero { padding: 48px 0 60px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .blk { animation: none; opacity: 1; transform: none; }
+    .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#top"><span class="dot"></span>DiskPilot</a>
+    <div class="links">
+      <a href="#loop">怎么用</a>
+      <a href="#features">功能</a>
+      <a href="#safety">安全模型</a>
+      <a href="#shots">截图</a>
+      <a href="https://github.com/lxfebd/diskpilot">GitHub</a>
+    </div>
+    <a class="btn btn-pink" href="#download">下载</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <div class="kicker">Open source · Tauri 2 + Rust · MIT</div>
+      <h1>C 盘满了，<br>但空间<em>到底去哪了</em>？</h1>
+      <p class="lead">DiskPilot 秒级扫完整盘，把空间去向画成一张图；不认识的文件夹拖给 AI 问一句；确认能删的，一键进回收站、随时撤销。</p>
+      <div class="cta">
+        <a class="btn btn-pink" href="https://github.com/lxfebd/diskpilot/releases/tag/v0.2.0">下载 v0.2.0（免费）</a>
+        <a class="btn btn-ghost" href="#loop">它是怎么干活的</a>
+        <span class="ver">Win · macOS · Linux&nbsp;&nbsp;·&nbsp;&nbsp;内置自动更新</span>
+      </div>
+    </div>
+
+    <figure class="tm" aria-label="扫描结果示意 treemap">
+      <div class="tm-head"><b>D:\</b> 已用 465.3 GB · 扫描耗时 <b>3.2 s</b>（NTFS MFT 直读）</div>
+      <div class="tm-grid">
+        <div class="blk b-st"  style="animation-delay:.05s"><span class="sz">186.2 GB</span><span class="nm">steam\steamapps</span></div>
+        <div class="blk b-wc"  style="animation-delay:.15s"><span class="sz">80.4 GB</span><span class="nm">xwechat_files</span></div>
+        <div class="blk b-dk"  style="animation-delay:.25s"><span class="sz">50.1 GB</span><span class="nm">AppData\Docker</span></div>
+        <div class="blk b-ot"  style="animation-delay:.35s"><span class="sz">81.0 GB</span><span class="nm">其他 214 个目录</span></div>
+        <div class="blk b-dl"  style="animation-delay:.45s"><span class="sz">34.2 GB</span><span class="nm">Downloads</span></div>
+        <div class="blk b-pj"  style="animation-delay:.55s"><span class="sz">22.8 GB</span><span class="nm">projects</span></div>
+        <div class="blk b-tp"  style="animation-delay:.65s"><span class="sz">9.6 GB</span><span class="nm">Temp</span></div>
+        <div class="blk b-sm"  style="animation-delay:.75s"><span class="sz">1.0 GB</span><span class="nm">…</span></div>
+      </div>
+      <div class="tm-legend">
+        <span><i style="background:var(--pink)"></i>脚本可清理（微信接收缓存）</span>
+        <span><i style="background:var(--orange)"></i>建议清理（临时文件）</span>
+        <span><i style="background:#3B4252"></i>你的数据（只展示，不碰）</span>
+      </div>
+      <div class="tm-hint">点一下粉色块？在真实应用里，它会展开 23 个清理 scope，逐项勾选。</div>
+    </figure>
+  </div>
+</header>
+
+<section class="alt" id="loop">
+  <div class="wrap">
+    <h2>三步闭环：扫 → 问 → 删</h2>
+    <p class="sub">不是又一个"一键加速"。它先让你看懂，再让你放心动手。</p>
+    <div class="loop">
+      <div class="step">
+        <div class="no">STEP 1</div>
+        <h3>秒级扫描，看清去向</h3>
+        <p>Windows 直读 NTFS MFT，配合 USN 日志增量更新；其他平台自动降级为跨平台遍历。treemap + 树视图双形态，每个目录带占用条。</p>
+        <div class="stat">2–5<small>秒扫完整盘 C:</small></div>
+      </div>
+      <div class="step">
+        <div class="no">STEP 2</div>
+        <h3>拖给 AI："这是什么"</h3>
+        <p>陌生文件夹拖进聊天框，AI 解释它是什么、能不能删、删了会丢什么。自带 Key（Anthropic / OpenAI / Gemini）或本地 Ollama 零成本。</p>
+        <div class="stat">0<small>文件内容被读取——只发目录元数据</small></div>
+      </div>
+      <div class="step">
+        <div class="no">STEP 3</div>
+        <h3>按 scope 放心删</h3>
+        <p>18 份官方清理脚本覆盖微信、QQ、Steam、浏览器、IDE、Conda、Docker 等，逐项勾选、默认进回收站、操作日志一键撤销。</p>
+        <div class="stat">18<small>份脚本 · 100+ 个 scope</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>远不止一个磁盘分析器</h2>
+    <p class="sub">同一套安全模型之下，长出了一个系统工具箱。</p>
+    <div class="feat">
+      <div class="f">
+        <div class="tag">agent-server · MCP stdio</div>
+        <h3>75 个 MCP 工具，AI agent 直接接入</h3>
+        <p>64 个只读（磁盘健康 / SMART / 传感器 / 网络 / 事件日志 / Steam 盘点…）+ 11 个写操作——写操作必须过界面两步确认，AI 绕不过去。</p>
+      </div>
+      <div class="f">
+        <div class="tag">硬件中心</div>
+        <h3>AIDA64 同类能力，开源免费</h3>
+        <p>CPU / 内存 / 磁盘 / GPU 基准与压测（温度熔断守门）、全量传感器快照、趋势告警、蓝屏转储分析、系统体检报告。</p>
+      </div>
+      <div class="f">
+        <div class="tag">工具墙</div>
+        <h3>90+ 系统工具一站集齐</h3>
+        <p>12 个分类，CLI 白名单执行 + GUI 一键启动，每个工具带风险徽标；四级权限模型，最高危一档永久禁止。</p>
+      </div>
+      <div class="f">
+        <div class="tag">scaffold 体系</div>
+        <h3>每份清理脚本都有 CI 红线闸</h3>
+        <p>TOML 声明边界 + 安全测试断言"用户数据 0 命中"。没验证过 glob 的脚本一律不收——36 份旧模板就是这么被下架的。</p>
+      </div>
+      <div class="f">
+        <div class="tag">隐私</div>
+        <h3>数据不出本机</h3>
+        <p>扫描结果、清理历史、撤销日志全在 ~/.diskpilot/；API Key 存本地，请求直发服务商；WiFi 工具绝不读密码。</p>
+      </div>
+      <div class="f">
+        <div class="tag">体验</div>
+        <h3>中 / 英文 · 浅 / 深色主题</h3>
+        <p>为"给长辈用"做过小白化：首次免责声明、AI 未配置引导、破坏性操作三件套确认。自动更新开箱即用。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt safety" id="safety">
+  <div class="wrap">
+    <div>
+      <h2>删错一个文件，<br>比省下一百 GB 严重得多</h2>
+      <div class="quote">宁可错放 <span>1000 GB</span>，<br>不可错删<span>一个文件</span>。</div>
+    </div>
+    <ol class="gates">
+      <li><div><h3>默认回收站，不直接抹除</h3><p>所有删除走系统回收站；可另开 7 天隔离区双保险。</p></div></li>
+      <li><div><h3>操作日志 + 一键撤销</h3><p>每次删除写入 undo.jsonl（含真实释放字节），"最近清理"面板原地找回。</p></div></li>
+      <li><div><h3>脚本红线，CI 强制</h3><p>聊天数据库、收藏、登录态、凭据列入红线清单；scaffold-lint 与装载闸用同一把尺，命中即拒绝。</p></div></li>
+      <li><div><h3>写操作确认门</h3><p>11 个 MCP 写工具在协议层要求确认参数，两步 UI 确认后才下发。</p></div></li>
+      <li><div><h3>路径守卫</h3><p>盘根、系统目录、用户主目录根，代码层面直接拒绝。</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="shots" id="shots">
+  <div class="wrap">
+    <h2>界面长这样</h2>
+    <p class="sub">以下均为 v0.2.0 真机截图。</p>
+    <figure>
+      <img src="img/overview.png" alt="总览页：磁盘详情、空间趋势曲线、建议清理项目清单" loading="lazy">
+      <figcaption>总览 · 磁盘卡片 + 各盘空间趋势 + 建议清理 23.7 GB 一键勾</figcaption>
+    </figure>
+    <figure>
+      <img src="img/workspace.png" alt="工作台三栏：文件夹树、AI 对话、Studio 清理脚本" loading="lazy">
+      <figcaption>工作台 · 左树 / 中 AI / 右 Studio（已识别 18 个清理脚本）</figcaption>
+    </figure>
+    <figure>
+      <img src="img/toolwall.png" alt="工具墙：90+ 系统工具分类卡片与硬件检测报告" loading="lazy">
+      <figcaption>工具墙 · 12 分类 90+ 工具 + 实时硬件检测报告</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="alt" id="download">
+  <div class="wrap">
+    <h2>下载 DiskPilot v0.2.0</h2>
+    <p class="sub">免费 · 开源（MIT）· 无广告 · 无遥测 · 内置自动更新。</p>
+    <div class="dl">
+      <div class="plat">
+        <h3>Windows 10 / 11</h3>
+        <div class="file">DiskPilot_0.2.0_x64-setup.exe</div>
+        <p>完整支持：MFT 秒扫 + USN 增量。安装后首次启动自动请求管理员权限。</p>
+        <a class="btn btn-pink" href="https://github.com/lxfebd/diskpilot/releases/tag/v0.2.0">下载</a>
+      </div>
+      <div class="plat">
+        <h3>macOS</h3>
+        <div class="file">.dmg（aarch64 / x64）</div>
+        <p>未签名公证，首次打开请右键 →「打开」；尚未真机全面验证。</p>
+        <a class="btn btn-ghost" href="https://github.com/lxfebd/diskpilot/releases/tag/v0.2.0">下载</a>
+      </div>
+      <div class="plat">
+        <h3>Linux</h3>
+        <div class="file">.deb / .rpm / .AppImage</div>
+        <p>CI 产物，未在真实机器上系统验证，欢迎回报问题。</p>
+        <a class="btn btn-ghost" href="https://github.com/lxfebd/diskpilot/releases/tag/v0.2.0">下载</a>
+      </div>
+    </div>
+    <p class="dl-note">所有安装包附 <b>.sig 签名</b>；SmartScreen 拦截时点「更多信息 → 仍要运行」。源码与完整文档：<a href="https://github.com/lxfebd/diskpilot">github.com/lxfebd/diskpilot</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="#top" style="font-size:16px"><span class="dot"></span>DiskPilot</a>
+    <a href="https://github.com/lxfebd/diskpilot">GitHub</a>
+    <a href="https://github.com/lxfebd/diskpilot/releases">Releases</a>
+    <a href="https://github.com/lxfebd/diskpilot/blob/main/docs/guide.md">使用说明书</a>
+    <a href="https://github.com/lxfebd/diskpilot/blob/main/docs/architecture.md">架构文档</a>
+    <a href="https://github.com/lxfebd">作者 @lxfebd</a>
+    <span class="sp">MIT License · 2026</span>
+  </div>
+</footer>
+
+</body>
+</html>

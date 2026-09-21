@@ -4,113 +4,147 @@
 
 # DiskPilot
 
-**扫盘 · 看懂 · 一条一条删干净。**
+**看清磁盘 · 问懂 AI · 安全删净 —— 还能让 AI 自己来操作。**
 
-开源磁盘清理工具。秒扫整盘看空间分配，把不认识的文件夹拖给 AI 让它告诉你这是什么、能不能删、删了会丢什么，再按 scope 逐项放心删——默认进回收站，永远不读你的文件内容。
+开源的磁盘分析与系统探查工具，Tauri 2 + Rust 实现。整盘秒扫定位空间去向，陌生文件夹拖给 AI 解释，已知应用按清理脚本逐项回收；内置 75 个 MCP 工具，AI agent 可以直接接入做系统巡检。
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Platform](https://img.shields.io/badge/Windows-lightgrey.svg)](#获取)
+[![Release](https://img.shields.io/badge/Release-v0.2.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.0)
 
-[获取](#获取) · [看效果](#看效果) · [三件事](#三件事) · [怎么用](#怎么用) · [架构](#架构) · [路线图](#路线图) · [帮帮孩子吧](#帮帮孩子吧) · [致谢](#致谢)
+[下载](#下载) · [看效果](#看效果) · [功能一览](#功能一览) · [安全模型](#安全模型) · [隐私](#隐私) · [架构](#架构) · [文档](#文档) · [路线图](#路线图) · [开发](#开发) · [贡献](#贡献)
+
+**作者：[@lxfebd](https://github.com/lxfebd) · [github.com/lxfebd/diskpilot](https://github.com/lxfebd/diskpilot)**
 
 **简体中文 | [English](README_EN.md)**
 </div>
 
 ---
 
-## 获取
+## 下载
 
-**目前还没有发布安装包**（代码仓库与 release 通道还没上线）。想试用的可以自己编译，约 10-15 分钟：
+当前版本 **v0.2.0**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
+
+| 平台 | 安装包 | 说明 |
+|---|---|---|
+| Windows 10/11 x64 | `DiskPilot_0.2.0_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
+| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.0_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
+| Linux | `.deb` / `.rpm` / `.AppImage` | CI 产物，**未在真实 Linux 机器上验证过**，欢迎反馈 |
+
+所有安装包附 `.sig` 签名，内置自动更新（tauri-plugin-updater），发新版后应用内会提示升级。
+
+也可以自行编译（约 10-15 分钟）：
 
 ```bash
 git clone https://github.com/lxfebd/diskpilot diskpilot
 cd diskpilot
 pnpm install
 pnpm tauri dev        # 开发模式（首次编译 Rust 5-15 分钟）
-pnpm tauri build      # 打出安装包（NSIS .exe + MSI，产物在 src-tauri/target/release/bundle/）
+pnpm tauri build      # 打安装包
 ```
 
-需要 **Node 20+ · pnpm 9+ · Rust stable · VS Build Tools 2022 + WebView2**（Windows 10/11 x64）。
-
-> 安装包发布后：SmartScreen 首次拦截点"更多信息"→"仍要运行"；NTFS MFT 直读需要管理员权限，安装包带 manifest 自动 UAC。
->
-> macOS / Linux 暂不提供预编译版（macOS 还没有签名证书，Linux 也没在真实机器上验过），同样可以用 `pnpm tauri build` 自行编译。
+需要 **Node 20+ · pnpm 9+ · Rust stable**；Windows 另需 VS Build Tools 2022 + WebView2。
 
 ---
 
 ## 看效果
 
 <p align="center">
-  <img src="assets/hero.png" alt="实际使用 · 扫完 D 盘后拖文件夹给 AI + 展开 Studio conda 卡片" width="100%">
+  <img src="assets/overview.png" alt="总览页 · 磁盘详情 + 空间趋势 + 建议清理项目" width="100%">
 </p>
 
-<p align="center"><sub>实际使用 · 左：D:\ 树状视图（每行带占用百分比条）· 中：拖 <code>D:\steam\steamapps</code> 给 AI，AI 用 markdown 回答这是什么、能不能删 · 右：Studio 卡片展开 Conda packages cache（5.12 GB · 150,867 文件）</sub></p>
+<p align="center"><sub>总览页 · 左：AI 顾问（问"整机配置和当前状态"，它把硬件表格 + 温度 + 磁盘警戒一起答好）· 中：磁盘详情 + 各盘空间趋势曲线 · 右：建议清理项目（勾选 16 项共 23.7 GB，一键立即清理）</sub></p>
 
 <p align="center">
-  <img src="assets/empty.png" alt="初始空态 · 还没扫描时的三栏布局" width="100%">
+  <img src="assets/workspace.png" alt="工作台 · 三栏布局：磁盘树 / AI 对话 / Studio 清理脚本" width="100%">
 </p>
 
-<p align="center"><sub>初始空态 · 顶部"选择磁盘或文件夹"→ 点扫描后才会有内容；右侧 Studio 已经认出 WeChat / Conda 两个脚本（脚本默认路径还没扫到，所以是"未扫到"状态）</sub></p>
+<p align="center"><sub>工作台 · 顶部盘符卡片（一键扫描全部硬盘）· 左：文件夹树 · 中：拖文件夹给 AI 分析 · 右：Studio 已识别 18 个清理脚本（Steam 盘点、Conda、微信、安全套装……）</sub></p>
+
+<p align="center">
+  <img src="assets/toolwall.png" alt="工具墙 · 90+ 系统工具分类集成" width="100%">
+</p>
+
+<p align="center"><sub>工具墙 · CPU / 内存 / 显卡 / 磁盘 / 烤机 / 游戏 / 外设等 12 个分类 90+ 条目，单击看详情、双击启动，每个工具带风险等级徽标；左栏是实时硬件检测报告（SMART 寿命、温度、传感器）</sub></p>
 
 ---
 
-## 三件事
+## 功能一览
 
-DiskPilot 只做三件事：简单、简单、还是TMD简单
+### 1. 秒级整盘扫描
 
-### 1. 把磁盘空间分配看清楚
+Windows 直读 NTFS MFT（配合 USN 日志增量更新），其他平台用 jwalk 跨平台遍历兜底。整盘 C: 通常 2-5 秒扫完。结果以两种视图呈现：彩色 treemap + 单行 22px 的紧凑树视图，每个目录带占用百分比条。首页"总览"另有磁盘卡片墙、各盘空间趋势曲线与按分类聚合的占用统计。
 
-Windows 上直读 NTFS Master File Table（其他平台用 jwalk 跨平台 walker 兜底），整盘 C: **2–5 秒**扫完。出彩色 treemap + 单行 22px 高的树视图——一眼看到 `D:\xwechat_files` 占了 80GB，`C:\Users\<你>\AppData\Local\Docker` 占了 50GB。
+### 2. 拖给 AI：这个文件夹是什么
 
-### 2. 拖拽到中间 AI 分析"这个文件夹是什么"
+不认识的文件夹，从树里拖进中间聊天框，AI 告诉你这是什么、能不能删、删了会丢什么。AI 顾问也能直接问整机状态（配置、温度、磁盘健康、清理建议）。BYOK 模式——自带 Anthropic / OpenAI / Gemini 的 API Key，或者本地跑 Ollama 完全免费。支持中/英文界面与深浅主题。
 
-不认识的文件夹？把它从左边树或右边路径**拖进中间聊天框**，AI 解释这是什么、能不能删、删了会丢什么。BYOK——你提供 Anthropic / OpenAI / Gemini 的 Key，或本地跑 Ollama 完全免费。
+### 3. 十八份清理脚本，按 scope 逐项清
 
-**DiskPilot 只发目录元数据**给 AI（路径名、大小、文件数、扩展名占比、最多 20 条样本路径）—— **永远不读文件内容**。
+对占空间大、边界清楚的大众应用，写一份**清理脚本**（TOML 声明 scope + Rust 安全集成测试），Studio 卡片里按 scope 单独清。**现有 18 份**：
 
-### 3. 已知应用走专属清理脚本
-
-某些应用大众化、占空间大、清理边界清楚——给它写一份**清理脚本**（一份 TOML + 一份 Rust 集成测试），用户在 Studio 卡片里直接按 scope 单独清。**目前十八份**：
-
-| scaffold | scope 数 | 清理内容 |
+| scaffold | scope | 清理内容 |
 |---|---|---|
-| **微信 PC 端** | 23 | 3.x + 4.x 双兼容，清缓存/接收媒体/聊天备份，永不动聊天 DB / 收藏 / 朋友圈 / `CustomEmotion` |
+| **微信 PC 端** | 23 | 3.x + 4.x 双兼容，清缓存/接收媒体/聊天备份；聊天 DB、收藏、朋友圈、`CustomEmotion` 在红线清单里永不触碰 |
 | **Conda 环境** | 3 | 整目录回收 stale env（`conda-meta/history` mtime > 90 天），base env 灰显不可勾 |
 | **浏览器缓存** | 4 | Chrome / Edge 缓存 + ServiceWorker cache |
 | **开发缓存** | 5 | npm / yarn / pip / cargo 缓存 |
-| **Firefox 缓存** | 3 | 网络缓存 / 启动缓存 / shader 缓存 |
-| **Steam 着色器缓存** | 1 | Steam ShaderCache 预编译缓存 |
-| **崩溃转储** | 3 | 用户级崩溃转储 + WER 报告 + 系统级崩溃转储 |
-| **系统临时** | 1 | `%TEMP%` 临时文件 |
-| **Docker Buildx 构建缓存** | 2 | BuildKit 构建缓存（`~/.cache/buildkit`）+ Docker Buildx 实例元数据；永不动镜像/容器/卷 |
-| **HuggingFace 缓存** | 3 | 模型 hub / 数据集 / Spaces 缓存（`~/.cache/huggingface`），删后自动重建 |
-| **OBS 录像缓存** | 2 | OBS 崩溃转储 + 日志文件（`%APPDATA%/obs-studio`），不影响录制文件 |
-| **IDE 缓存** | 4 | VSCode / Cursor 的 Cache/GPUCache/CachedData/logs + IntelliJ 系 caches/index |
-| **QQ (PC)** | 5 | 9.x 经典版缓存 / 图片 / 文件，绝不碰 `nt_data`（聊天消息目录在红线清单） |
-| **Discord** | 5 | Electron 缓存 / GPUCache / Code Cache，登录态、凭据文件红线不碰 |
-| **游戏引擎缓存** | 7 | Unity / UE / Godot 引擎级缓存（ShaderCache、DDC、Intermediate）；绝不进项目 `Library` / `.uproject` / `.godot` |
-| **Microsoft Teams** | 11 | 1.x 经典版 7 项 + 2.x 新版 4 项；MSIX 包只列目录名 |
-| **Zoom** | 6 | 录制缓存 / WebRTC 媒体缓存白名单；录制文件只 detect 不 scope |
-| **安全软件套装** | 2 | 360 全家桶（浏览器 / 安全卫士）/ 电脑管家 / 火绒缓存；绝不动隔离区与本体二进制 |
+| **Firefox 缓存** | 3 | 网络 / 启动 / shader 缓存 |
+| **Steam 着色器缓存** | 1 | ShaderCache 预编译缓存 |
+| **崩溃转储** | 3 | 用户转储 + WER 报告 + 系统转储 |
+| **系统临时** | 1 | `%TEMP%` |
+| **Docker Buildx** | 2 | BuildKit 构建缓存 + 实例元数据；不动镜像/容器/卷 |
+| **HuggingFace 缓存** | 3 | 模型 hub / 数据集 / Spaces，删后自动重建 |
+| **OBS** | 2 | 崩溃转储 + 日志；不动录制文件 |
+| **IDE 缓存** | 4 | VSCode / Cursor 缓存日志 + IntelliJ 系 caches/index |
+| **QQ (PC)** | 5 | 9.x 缓存 / 图片 / 文件；绝不碰 `nt_data` |
+| **Discord** | 5 | Electron 缓存 / GPUCache / Code Cache；登录态与凭据红线不碰 |
+| **游戏引擎缓存** | 7 | Unity / UE / Godot 引擎级缓存；不进项目 `Library` / `.uproject` / `.godot` |
+| **Microsoft Teams** | 11 | 1.x 经典 + 2.x 新版；MSIX 包只列目录名 |
+| **Zoom** | 6 | 录制缓存 / WebRTC 媒体缓存白名单 |
+| **安全软件套装** | 2 | 360 全家桶 / 电脑管家 / 火绒缓存；不动隔离区与本体 |
 
-**为什么砍掉之前那 36 个 legacy scaffold**：因为没人验过 glob 边界，存在误删风险（典型例子：旧版 `node-modules` 把 Cursor / VSCode / 游戏内嵌的 node_modules 也命中了）。每个新增脚本都走同一套 14-phase 工作流：实地勘测 → 精准 glob → scaffold-lint 红线检查 → safety 集成测试（正向 + 红线反向）→ 真机 dry-run 验证。
+每份脚本都经过同一套流程：真实机器勘测目录结构 → 精准 glob → `scaffold-lint` 红线校验（CI 强制）→ 安全测试（正向断言 + 红线反向断言）→ 真机试运行验证。宁缺毋滥——早期曾有 36 份未经核验的模板脚本被全部下架，因为 glob 边界没验证过就存在误删风险。
 
-### 4. AI 可操作工具集（agent-server，75 个 MCP 工具 = 64 只读 + 11 写）
+### 4. AI agent 可操作：75 个 MCP 工具（64 只读 + 11 写）
 
-独立的 `agent-server` crate 通过 **MCP（Model Context Protocol）stdio** 给 AI 提供 64 个**只读**（L0 级）查询能力与 11 个**写操作**（需用户确认）：磁盘健康 / 大文件 / 重复文件、进程与 CPU / 服务与驱动 / 开机启动项、CPU / GPU / 内存 / 主板 / 温度 / **全量传感器快照（AIDA64 同类，CPU/GPU/主板温度、风扇转速、电压、功耗、频率、负载）** / 电池 / SMART、网络连接 / **网卡明细（MAC/子网掩码/网关/DNS）** / WiFi（绝不读密码）、事件日志 / 防火墙规则 / 登录审计 / **Defender 状态 / 用户账户**、回收站占用 / 环境变量 / **软件与 Office 激活状态**，外加 AIDA64 复刻基准（CPU / 内存 / 磁盘 / GPU）、压力测试（CPU / GPU 温度熔断守门）、系统体检报告、传感器趋势 / 告警、DRAM 时序 / CPUID 指令集 / 显示器信息、蓝屏转储分析、内存检测（MemTest86 简化版）、Steam 游戏库盘点与按 scaffold 分类的清理建议（只出建议不删文件）。路径守卫从环境变量推导，拒绝盘根 / 系统目录 / 主目录根。工具墙里有独立的「AI 可操作」分区，每个工具带详情弹窗（参数说明 + 只读徽标）。
+独立的 `agent-server` crate 通过 **MCP（Model Context Protocol）stdio** 把自己接到任意 AI agent 上：
 
-所有删除默认进**系统回收站**，可恢复。每一次操作写 `~/.diskpilot/undo.jsonl`，可选 7 天 quarantine。
+- **只读 64 个**：磁盘健康 / SMART / 大文件 / 重复文件、进程 / 服务 / 驱动 / 启动项、CPU / GPU / 内存 / 主板 / 温度 / 全量传感器快照、电池、网络连接 / 网卡明细 / WiFi（绝不读密码）、事件日志 / 防火墙 / 登录审计 / Defender 状态、回收站占用 / 环境变量 / 软件清单与 Office 激活状态、蓝屏转储分析、Steam 游戏库盘点与清理建议（只出建议不删文件）
+- **写 11 个**：进程终止 / 服务控制 / 文件回收 / 软件卸载 / 压力测试 / 风扇自愈等——每一个都必须经过应用内 UI 两步确认，AI 无法绕过确认门直接改变系统状态
+
+路径守卫从环境变量推导，拒绝盘根 / 系统目录 / 主目录根。桌面端工具墙里有独立的「AI 可操作」分区，每个工具带详情弹窗与只读/可写徽标。
+
+### 5. 硬件中心（AIDA64 同类能力）
+
+CPU / 内存 / 磁盘 / GPU 基准测试、CPU / GPU 压力测试（温度熔断守门）、全量传感器快照（温度、风扇、电压、功耗、频率、负载）、传感器趋势与告警、DRAM 时序 / CPUID 指令集 / 显示器信息、内存检测、系统体检报告。
+
+### 6. 工具墙：90+ 系统工具一站集齐
+
+CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分类，CLI 白名单执行 + GUI 一键启动，每个工具带风险等级徽标，配四级权限模型（最高危一档永久禁止）。
 
 ---
 
-## 怎么用
+## 安全模型
 
-1. **拿安装包**[（上面）](#获取)——发布通道上线前先用 `pnpm tauri build` 自编译，双击安装，桌面出现 DiskPilot 图标
-2. **打开 → 右上角 ⚙ 配 AI**——填LLM的API Key
-3. **顶部"选择磁盘或文件夹"→ 点扫描**——2-5 秒后看到 treemap + 树
-4. **遇到陌生大文件夹**——拖到中间聊天框问 AI；或者右侧 Studio 已经认出了的（微信、conda）直接看清理面板
-5. **删除前**：已支持十八份清理脚本（微信、Conda、浏览器、开发缓存、Firefox、Steam 着色器、崩溃转储、系统临时、Docker Buildx、HuggingFace、OBS、IDE 缓存、QQ、Discord、游戏引擎、Teams、Zoom、安全软件套装），按 scope 自动无风险清理。其他的，自行清理，毕竟宁可错放 1000GB，不可错删一个文件。
+删错一个文件比省下一百 GB 严重得多。DiskPilot 的删除路径上有层层闸门：
+
+1. **默认进系统回收站**，不直接抹除，可恢复
+2. **操作日志**：每一次删除写 `~/.diskpilot/undo.jsonl`，"最近清理"面板支持一键撤销（回收站 / 隔离区两条找回路径），可选 7 天隔离区（quarantine）模式
+3. **清理脚本红线**：`scaffold-lint` 在 CI 上强制校验每份 TOML 的 glob 不许命中用户数据目录；每份脚本配套的安全测试包含**红线反向断言**（例如微信脚本必须断言聊天 DB 永不被命中），没有测试的脚本进不了仓库
+4. **写操作确认门**：11 个 MCP 写工具在协议层要求确认参数，桌面 UI 两步确认后才下发；agent 模式下 AI 拿到工具也越不过这道门
+5. **路径守卫**：拒绝盘根、系统目录、用户主目录根这类"删了就完蛋"的路径
+
+原则就一句话：**宁可错放 1000GB，不可错删一个文件。**
+
+---
+
+## 隐私
+
+- 拖给 AI 的只有**目录元数据**：路径名、大小、文件数、扩展名占比、最多 20 条样本路径——**永远不读文件内容**
+- BYOK：API Key 存在你本机，请求直接从你的机器发给模型服务商
+- 扫描数据、清理历史、撤销日志全部在本机 `~/.diskpilot/`，没有任何云端上传
+- 工具层枚举目录时只用目录列表，不读取聊天数据库、媒体文件、凭据文件
 
 ---
 
@@ -122,78 +156,93 @@ Windows 上直读 NTFS Master File Table（其他平台用 jwalk 跨平台 walke
 │   (前端 UI)         │<────│  (7 crates)         │
 └────────────────────┘     └──────────┬──────────┘
                                       │
-   ┌───────────┬───────────┬──────────┼────────────┬───────────┬────────────┬───────────┐
+   ┌───────────┬───────────┬──────────────────────┬───────────┬────────────┬───────────┐
    │           │           │          │            │           │            │           │
 ┌──▼─────┐ ┌───▼─────┐ ┌──▼─────┐ ┌──▼──────┐ ┌───▼───────┐ ┌─▼────────┐ ┌─▼──────────┐
 │scanner │ │scaffold │ │executor│ │scaffold-│ │steam-     │ │toolbelt  │ │agent-server│
-│NTFS MFT│ │TOML 加载│ │Recycle/│ │lint CI  │ │insp. Steam│ │图吧工具箱 │ │75 个 MCP   │
-│+ jwalk │ │+ globset│ │Quarant.│ │红线校验 │ │盘点(ACF)  │ │集成       │ │工具(64+11) │
+│NTFS MFT│ │TOML 加载│ │回收站/ │ │lint CI  │ │insp.      │ │工具墙    │ │75 个 MCP   │
+│+USN+walk││+globset │ │隔离区  │ │红线校验 │ │Steam 盘点 │ │90+ 集成  │ │工具(64+11) │
 └────────┘ └─────────┘ └────────┘ └─────────┘ └───────────┘ └──────────┘ └────────────┘
 ```
 
 | 层 | 技术栈 |
 |---|---|
-| 前端 | React 18 + TypeScript + Tauri 2 + react-markdown |
+| 前端 | React 18 + TypeScript + Tauri 2 · Zustand · i18n（中/英）· 深浅主题 |
 | 后端 | Rust workspace（7 crates）+ Tauri IPC |
-| 扫描器 | Windows: NTFS MFT 直读（`ntfs` crate）/ 跨平台: `jwalk` |
-| AI | BYOK · Anthropic · OpenAI · Gemini · Ollama 四协议 |
+| 扫描 | Windows：NTFS MFT 直读 + USN 日志增量 / 跨平台：jwalk |
+| AI | BYOK · Anthropic / OpenAI / Gemini / Ollama 四协议 |
+| agent 接口 | MCP stdio（`agent-server` 独立进程，可被任意外部 agent 挂接） |
 | 数据 | 用户本机 `~/.diskpilot/`（undo.jsonl + quarantine/）· 不上云 |
+
+---
+
+## 文档
+
+- [docs/](docs/README.md) — 架构详解、使用说明书、清理脚本编写指南
+- [website/index.html](website/index.html) — 项目宣传站（本地浏览器直接打开即可预览）
 
 ---
 
 ## 路线图
 
-- [x] 整盘秒扫，看到每个文件夹占多少
-- [x] 拖任意文件夹给 AI 问"这是什么、能不能删"
-- [x] 十八份清理脚本：微信、Conda、浏览器缓存、开发缓存、Firefox、Steam 着色器、崩溃转储、系统临时、Docker Buildx、HuggingFace、OBS、IDE 缓存、QQ、Discord、游戏引擎缓存、Teams、Zoom、安全软件套装
-- [x] "撤销"按钮：删错了能从回收站 / 隔离区一键找回（`~/.diskpilot/undo.jsonl` + 前端"最近清理"面板）
-- [x] Steam 着色器缓存清理（SteamInspector 只读盘点 + shader scaffold 清理）
-- [x] 首页"磁盘资产总览"改版：磁盘卡片墙 + 按分类（cache / media / backup / envs）的占用卡片墙 + Top N 大目录，点击卡片定位回工作台对应节点
-- [x] 性能专项：scanner 端批量 scaffold 检测（消灭前端逐节点 IPC）、build_tree 复用扫描一趟数据、每目录 top-K 文件内存裁剪、系统目录黑名单（WinSxS / Installer / $Recycle.Bin / hiberfil.sys 等）、scanner 累加并行化、扫描取消通道、进度按文件数+时间双阈值节流、TreeView 虚拟滚动、MFT fallback 提示
-- [x] 工具墙：图吧工具箱 30 工具集成（CLI 白名单执行 + GUI 启动）+ 四级权限（L3 永禁）+ 硬件中心（AIDA64 复刻：基准/压测/报告/趋势/告警）
-- [ ] 出 macOS / Linux 的预编译版（要先解决签名 + 真机验证）
-- [ ] 让用户能自己写、自己分享清理脚本（`scaffold new` CLI + 社区仓库）
+已完成：
+
+- [x] 整盘秒扫 + treemap / 树视图 + 总览页（磁盘卡片墙 / 空间趋势 / 分类占用）
+- [x] 拖文件夹给 AI 解释 + AI 顾问整机问答（BYOK 四协议）
+- [x] 18 份清理脚本 + 红线校验 + 安全测试流水线
+- [x] 回收站 / undo.jsonl / 隔离区 / 一键撤销
+- [x] 75 个 MCP 工具的 AI agent 操作层（写操作确认门）
+- [x] 硬件中心（基准 / 压测 / 传感器 / 体检报告）+ 工具墙 90+ 工具集成
+- [x] Steam 游戏库只读盘点 + 着色器缓存清理
+- [x] 性能专项：扫描链路内存与渲染优化（克隆裁剪 / 选中节点引用 / 虚拟滚动 / 批量检测 / 黑名单目录）
+- [x] v0.2.0 发布管线：CI 构建 + 签名 + 应用内自动更新
+
+进行中 / 计划：
+
+- [ ] 扫描结果落盘持久化（重启不丢扫描数据）
+- [ ] 低配机器优化专项
+- [ ] macOS 签名公证 + Linux 真机验证
+- [ ] 用户自制清理脚本（脚手架 CLI + 社区分享渠道）
 
 ---
 
-## 帮帮孩子吧
-
-最有价值的贡献是**写新的清理脚本**。每加一个 App 支持就是一份 PR（等公开仓库上线后开放提 PR；现在可以在本地跑完整流程自验）：
-
-1. 在你机器上跑这个 App，用 `Glob` 列出真实目录结构，找出 cache vs 用户数据的边界
-2. 抄 [`scaffolds/_templates/scaffold.toml`](scaffolds/_templates/scaffold.toml) 写 TOML
-3. 抄 [`crates/scaffold/tests/_templates/scaffold_safety.rs`](crates/scaffold/tests/_templates/scaffold_safety.rs) 写 safety test（**正向断言 + 红线断言**，CI 必跑，没测试不收）
-4. `pnpm tauri dev` 目视确认卡片渲染
-5. 提 PR（公开仓库上线后），模板会带 14 项 checklist
-
-[Claude Code](https://claude.com/claude-code) 用户可以直接在仓库根目录敲 `/add-scaffold <id>`，一键启动 14-phase 工作流。
-
-### 开发
+## 开发
 
 ```bash
 git clone https://github.com/lxfebd/diskpilot diskpilot
 cd diskpilot
 pnpm install
-pnpm tauri dev            # 桌面 app（首次会编译 Rust 依赖，5-15 分钟）
-pnpm -C apps/desktop dev  # 仅前端，浏览器调试，mock 后端
-cargo test --workspace    # 全工作空间测试
+pnpm tauri dev            # 桌面 app（首次编译 Rust 依赖 5-15 分钟）
+pnpm -C apps/desktop dev  # 仅前端，浏览器调试
+cargo test --workspace    # Rust 全工作空间测试（Windows 上 MFT 相关用例需管理员权限终端）
+pnpm -C apps/desktop exec vitest run   # 前端测试
 ```
 
-需要 **Node 20+ · pnpm 9+ · Rust stable · Tauri 前置依赖**（Windows 上是 VS Build Tools 2022 + WebView2）。
+目录速览：`apps/desktop`（Tauri 前端 + 后端）、`crates/`（7 个 Rust crate）、`scaffolds/`（18 份清理脚本 TOML）。
+
+## 贡献
+
+最有价值的贡献是**为新的应用写清理脚本**。每份脚本要求：
+
+1. 在真实机器上勘测该应用的目录结构，找出缓存与用户数据的边界
+2. 照 [`scaffolds/_templates/`](scaffolds/_templates/) 的模板写 TOML
+3. 照 [`crates/scaffold/tests/_templates/`](crates/scaffold/tests/_templates/) 写安全测试——**正向断言 + 红线反向断言**，CI 必跑，没测试不收
+4. 本地试运行验证后再提 PR
+
+其他方向同样欢迎：修复扫描/性能问题、补翻译、在真实 Linux/macOS 机器上验证并回报问题。
+
+[Claude Code](https://claude.com/claude-code) 用户在仓库根目录敲 `/add-scaffold <id>` 可以一键启动完整的新增脚本工作流。
 
 ---
 
 ## 致谢
 
-- **灵感来源**
-  - [WizTree](https://diskanalyzer.com) —— NTFS MFT 直读思路与速度标杆
-  - [SpaceSniffer](http://www.uderzo.it/main_products/space_sniffer/) —— treemap 可视化先驱
-  - [CleanMyWechat](https://github.com/blackboxo/CleanMyWechat) —— 微信清理脚本范本，messaging 需求文档参考它
-  - [SquirrelDisk](https://github.com/adileo/squirreldisk) —— Tauri + Rust 实现参考
-- **依赖巨人的肩膀**：[Tauri](https://tauri.app) · [`d3-hierarchy`](https://github.com/d3/d3-hierarchy) · [`jwalk`](https://github.com/jessegrosjean/jwalk) · [`ntfs`](https://github.com/ColinFinck/ntfs) · [`globset`](https://github.com/BurntSushi/ripgrep/tree/master/crates/globset) · [`trash-rs`](https://github.com/Byron/trash-rs) · [react-markdown](https://github.com/remarkjs/react-markdown)
-- **协作**：[Claude Code](https://claude.com/claude-code) · [@jtlyu](https://github.com/jtlyu)（性能优化 + WeChat 4.x 重写 + scaffold harness 工作流基建）
+- **灵感与思路参考**：[WizTree](https://diskanalyzer.com)（NTFS MFT 直读）、[SpaceSniffer](http://www.uderzo.it/main_products/space_sniffer/)（treemap 可视化）、[CleanMyWechat](https://github.com/blackboxo/CleanMyWechat)（微信清理边界）、[SquirrelDisk](https://github.com/adileo/squirreldisk)（Tauri + Rust 形态）
+- **依赖**：[Tauri](https://tauri.app) · [`d3-hierarchy`](https://github.com/d3/d3-hierarchy) · [`jwalk`](https://github.com/jessegrosjean/jwalk) · [`ntfs`](https://github.com/ColinFinck/ntfs) · [`globset`](https://github.com/BurntSushi/ripgrep/tree/master/crates/globset) · [`trash-rs`](https://github.com/Byron/trash-rs) · [react-markdown](https://github.com/remarkjs/react-markdown) · [rmcp](https://github.com/modelcontextprotocol/rust-sdk)
+- **协作**：[Claude Code](https://claude.com/claude-code) · [@jtlyu](https://github.com/jtlyu)
+
 ---
 
 ## License
 
-[MIT](LICENSE) · 欢迎 fork、商用、闭源衍生。改 scaffold 时记得同步改它的 safety test——红线断言是防止误删用户数据的最后一道闸。
+[MIT](LICENSE) · 欢迎 fork、商用、闭源衍生。改清理脚本时请同步维护它的安全测试——红线断言是防止误删用户数据的最后一道闸。
