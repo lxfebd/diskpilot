@@ -42,13 +42,13 @@ pnpm tauri build      # 打出安装包（NSIS .exe + MSI，产物在 src-tauri/
 ## 看效果
 
 <p align="center">
-  <img src="docs/screenshots/hero.png" alt="实际使用 · 扫完 D 盘后拖文件夹给 AI + 展开 Studio conda 卡片" width="100%">
+  <img src="assets/hero.png" alt="实际使用 · 扫完 D 盘后拖文件夹给 AI + 展开 Studio conda 卡片" width="100%">
 </p>
 
 <p align="center"><sub>实际使用 · 左：D:\ 树状视图（每行带占用百分比条）· 中：拖 <code>D:\steam\steamapps</code> 给 AI，AI 用 markdown 回答这是什么、能不能删 · 右：Studio 卡片展开 Conda packages cache（5.12 GB · 150,867 文件）</sub></p>
 
 <p align="center">
-  <img src="docs/screenshots/empty.png" alt="初始空态 · 还没扫描时的三栏布局" width="100%">
+  <img src="assets/empty.png" alt="初始空态 · 还没扫描时的三栏布局" width="100%">
 </p>
 
 <p align="center"><sub>初始空态 · 顶部"选择磁盘或文件夹"→ 点扫描后才会有内容；右侧 Studio 已经认出 WeChat / Conda 两个脚本（脚本默认路径还没扫到，所以是"未扫到"状态）</sub></p>
@@ -116,10 +116,6 @@ Windows 上直读 NTFS Master File Table（其他平台用 jwalk 跨平台 walke
 
 ## 架构
 
-> 想看人话解释（不堆术语，普通用户也能看懂）：📖 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
-
-> **文档体系**（仓库根）：[AGENTS.md](AGENTS.md)（AI/新开发者入口）· [project-overview.md](project-overview.md)（整体说明）· [architecture.md](architecture.md)（架构与数据流）· [DESIGN.md](DESIGN.md)（视觉规则）· [TODO.md](TODO.md)（任务与进度）· [development.md](development.md)（开发命令与回归）· [user-guide.md](user-guide.md)（使用指南）· [component-api.md](component-api.md)（组件 API）
-
 ```
 ┌────────────────────┐     ┌─────────────────────┐
 │   React + Tauri    │────>│  Rust workspace     │
@@ -164,16 +160,13 @@ Windows 上直读 NTFS Master File Table（其他平台用 jwalk 跨平台 walke
 
 最有价值的贡献是**写新的清理脚本**。每加一个 App 支持就是一份 PR（等公开仓库上线后开放提 PR；现在可以在本地跑完整流程自验）：
 
-1. 在 [`docs/scaffold-requirements/`](docs/scaffold-requirements/) 写需求文档（红线清单：聊天 DB？账号 key？用户收藏？）
-2. 在你机器上跑这个 App，用 `Glob` 列出真实目录结构，找出 cache vs 用户数据的边界
-3. 抄 [`scaffolds/_templates/scaffold.toml`](scaffolds/_templates/scaffold.toml) 写 TOML
-4. 抄 [`crates/scaffold/tests/_templates/scaffold_safety.rs`](crates/scaffold/tests/_templates/scaffold_safety.rs) 写 safety test（**正向断言 + 红线断言**，CI 必跑，没测试不收）
-5. `pnpm tauri dev` 目视确认卡片渲染
-6. 提 PR（公开仓库上线后），模板会带 14 项 checklist
+1. 在你机器上跑这个 App，用 `Glob` 列出真实目录结构，找出 cache vs 用户数据的边界
+2. 抄 [`scaffolds/_templates/scaffold.toml`](scaffolds/_templates/scaffold.toml) 写 TOML
+3. 抄 [`crates/scaffold/tests/_templates/scaffold_safety.rs`](crates/scaffold/tests/_templates/scaffold_safety.rs) 写 safety test（**正向断言 + 红线断言**，CI 必跑，没测试不收）
+4. `pnpm tauri dev` 目视确认卡片渲染
+5. 提 PR（公开仓库上线后），模板会带 14 项 checklist
 
 [Claude Code](https://claude.com/claude-code) 用户可以直接在仓库根目录敲 `/add-scaffold <id>`，一键启动 14-phase 工作流。
-
-详细流程：[development.md](development.md) 的「新增/修改 scaffold」章节。
 
 ### 开发
 

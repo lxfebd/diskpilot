@@ -43,13 +43,13 @@ Requires **Node 20+ · pnpm 9+ · Rust stable · VS Build Tools 2022 + WebView2*
 ## Demo
 
 <p align="center">
-  <img src="docs/screenshots/hero.png" alt="In use · drag a folder into the AI after scanning + expand Studio's conda card" width="100%">
+  <img src="assets/hero.png" alt="In use · drag a folder into the AI after scanning + expand Studio's conda card" width="100%">
 </p>
 
 <p align="center"><sub>In use · Left: <code>D:\</code> tree view (each row shows a usage % bar) · Center: drag <code>D:\steam\steamapps</code> into the AI, it answers in markdown — what this is and whether it's safe to delete · Right: Studio card expanded for Conda packages cache (5.12 GB · 150,867 files)</sub></p>
 
 <p align="center">
-  <img src="docs/screenshots/empty.png" alt="Empty state · the three-pane layout before scanning" width="100%">
+  <img src="assets/empty.png" alt="Empty state · the three-pane layout before scanning" width="100%">
 </p>
 
 <p align="center"><sub>Empty state · Top "Pick a disk or folder" → click Scan to populate; the right-hand Studio already recognizes WeChat / Conda (showing "not detected" because the scaffold's default paths haven't been scanned yet)</sub></p>
@@ -113,8 +113,6 @@ All deletes go to the **system Recycle Bin** by default — recoverable. Every a
 
 ## Architecture
 
-> Want a plain-language walkthrough (no jargon, written for non-technical readers — Chinese for now): 📖 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
-
 ```
 ┌────────────────────┐     ┌─────────────────────┐
 │   React + Tauri    │────>│  Rust workspace     │
@@ -158,16 +156,13 @@ All deletes go to the **system Recycle Bin** by default — recoverable. Every a
 
 The most valuable contribution is **writing a new cleanup scaffold**. Each app is one PR (open for public contribution once the public repo is up; you can still run the full flow locally to self-verify):
 
-1. Write the requirements doc under [`docs/scaffold-requirements/`](docs/scaffold-requirements/) (red lines: chat DBs? account keys? user favorites?)
-2. Actually run the app on your machine, use `Glob` to enumerate the real directory tree, find the cache-vs-user-data boundary
-3. Copy [`scaffolds/_templates/scaffold.toml`](scaffolds/_templates/scaffold.toml) and write the TOML
-4. Copy [`crates/scaffold/tests/_templates/scaffold_safety.rs`](crates/scaffold/tests/_templates/scaffold_safety.rs) and write the safety test (**positive + red-line assertions**, CI runs this — no test, no merge)
-5. `pnpm tauri dev` to verify the card renders
-6. Open the PR — the template walks you through 14 checklist items
+1. Actually run the app on your machine, use `Glob` to enumerate the real directory tree, find the cache-vs-user-data boundary
+2. Copy [`scaffolds/_templates/scaffold.toml`](scaffolds/_templates/scaffold.toml) and write the TOML
+3. Copy [`crates/scaffold/tests/_templates/scaffold_safety.rs`](crates/scaffold/tests/_templates/scaffold_safety.rs) and write the safety test (**positive + red-line assertions**, CI runs this — no test, no merge)
+4. `pnpm tauri dev` to verify the card renders
+5. Open the PR — the template walks you through 14 checklist items
 
 [Claude Code](https://claude.com/claude-code) users: just type `/add-scaffold <id>` from the repo root and the 14-phase workflow kicks in.
-
-Full workflow: [development.md](development.md) — "Adding / modifying a scaffold" section.
 
 ### Development
 
