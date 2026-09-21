@@ -1,8 +1,11 @@
 import { useEffect, useReducer, useState } from 'react';
 import { getHwProfile, recommendLocal, type HwProfile } from '../hwProfile';
-import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, SlidersHorizontal, ShieldCheck, RefreshCw, ExternalLink, Wrench, Plug, Package, Bell } from 'lucide-react';
+import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, SlidersHorizontal, ShieldCheck, RefreshCw, ExternalLink, Download, RotateCw, Wrench, Plug, Package, Bell } from 'lucide-react';
 import { api } from '../api';
 import { isTauri } from '../env';
+import { ConfirmDialog } from './ConfirmDialog';
+import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { PermissionCenter } from './PermissionCenter';
 import { SystemTools } from './SystemTools';
 import { McpServers } from './McpServers';
@@ -124,6 +127,9 @@ export function Settings({ onClose, initialTab }: Props) {
   // 检查更新：null = 未查过；字符串 = 出错信息；对象 = 结果。
   const [update, setUpdate] = useState<import('../api').UpdateInfo | null | string | undefined>(undefined);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  // 一键更新：null = 未下载；'confirm' = 待两步确认；'downloading' = 下载中；'installed' = 装完待重启；字符串 = 出错。
+  const [updatePhase, setUpdatePhase] = useState<null | 'confirm' | 'downloading' | 'installed' | string>(null);
+  const [updateProgress, setUpdateProgress] = useState(0);
 
   const checkUpdate = async () => {
     setCheckingUpdate(true);
@@ -133,6 +139,48 @@ export function Settings({ onClose, initialTab }: Props) {
       setUpdate(String(e instanceof Error ? e.message : e));
     } finally {
       setCheckingUpdate(false);
+    }
+  };
+
+  const installUpdate = async (u: Update) => {
+    setUpdatePhase('downloading');
+    setUpdateProgress(0);
+    let total = 0;
+    let downloaded = 0;
+    try {
+      await u.downloadAndInstall((event) => {
+        if (event.event === 'Started' && event.data.contentLength != null) {
+          total = event.data.contentLength;
+        } else if (event.event === 'Progress') {
+          downloaded += event.data.chunkLength;
+          if (total > 0) setUpdateProgress(Math.round((downloaded / total) * 100));
+        }
+      });
+      setUpdatePhase('installed');
+    } catch (e) {
+      setUpdatePhase(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  // 两步确认通过后才真正检查并下载：点击按钮只弹确认框。
+  const confirmAndInstall = async () => {
+    try {
+      const u = await updaterCheck();
+      if (!u) {
+        setUpdatePhase(null);
+        return;
+      }
+      await installUpdate(u);
+    } catch (e) {
+      setUpdatePhase(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  const restartApp = async () => {
+    try {
+      await relaunch();
+    } catch (e) {
+      setUpdatePhase(String(e instanceof Error ? e.message : e));
     }
   };
 
@@ -588,11 +636,49 @@ export function Settings({ onClose, initialTab }: Props) {
                     {t('settings.general.updateGo')} <ExternalLink size={11} style={{ verticalAlign: '-1px' }} />
                   </a>
                 )}
+                {update !== null && typeof update === 'object' && update.available && isTauri && (
+                  <div className="update-install" style={{ marginTop: 8 }}>
+                    {updatePhase === 'installed' ? (
+                      <>
+                        <button className="primary small" onClick={restartApp}>
+                          <RotateCw size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.general.updateRestart')}
+                        </button>
+                        <span className="muted small">{t('settings.general.updateDownloaded')}</span>
+                      </>
+                    ) : updatePhase === 'downloading' ? (
+                      <div className="update-progress">
+                        <div className="update-progress-bar" style={{ width: `${updateProgress}%` }} />
+                        <span className="muted small">{t('settings.general.updateInstalling', { pct: updateProgress })}</span>
+                      </div>
+                    ) : (
+                      <button
+                        className="primary small"
+                        onClick={() => { setUpdatePhase('confirm'); }}
+                        title={t('settings.general.updateInstallTitle')}
+                      >
+                        <Download size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.general.updateInstall')}
+                      </button>
+                    )}
+                    {typeof updatePhase === 'string' && updatePhase !== 'confirm' && updatePhase !== 'installed' && (
+                      <span className="error-inline small" style={{ display: 'block', marginTop: 4 }}>{updatePhase}</span>
+                    )}
+                  </div>
+                )}
               </div>
               <button className="ghost small" onClick={checkUpdate} disabled={checkingUpdate || !isTauri} title={isTauri ? t('settings.general.updateCheckTitle') : t('settings.general.updateDesktopOnly')}>
                 <RefreshCw size={12} className={checkingUpdate ? 'spin' : undefined} /> {checkingUpdate ? t('settings.general.updateChecking') : t('settings.general.updateCheck')}
               </button>
             </div>
+
+            {update !== null && typeof update === 'object' && update.available && updatePhase === 'confirm' && (
+              <ConfirmDialog
+                title={t('settings.general.updateConfirmTitle', { latest: update.latest })}
+                body={t('settings.general.updateConfirmBody', { latest: update.latest, current: update.current })}
+                confirmLabel={t('settings.general.updateInstall')}
+                onConfirm={confirmAndInstall}
+                onCancel={() => setUpdatePhase(null)}
+              />
+            )}
 
             <p className="muted small" style={{ marginTop: 10 }}>{t('settings.general.aiInactiveHint')}</p>
             <p className="muted small" style={{ marginTop: 4 }}>{t('settings.general.aiNotSetupWorks')}</p>

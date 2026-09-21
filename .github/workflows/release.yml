@@ -59,6 +59,13 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 更新签名私钥：updater 只认持此私钥签名的安装包。私钥由
+          # `tauri signer generate` 生成，公钥已写进 tauri.conf.json
+          # plugins.updater.pubkey；私钥必须作为 Actions Secret 配置，
+          # 名为 TAURI_SIGNING_PRIVATE_KEY（无密码时 TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+          # 可留空）。丢失私钥 = 已装用户再也无法更新，务必离线备份。
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # beforeBuildCommand 里的 prepare-sidecar.mjs 读它：agent-server 必须
           # 和应用编到同一个 target triple，否则 macOS arm64 runner 打 x86_64 包
           # 会塞进错架构的 sidecar（cargo 默认只按 host 出包）。
@@ -75,6 +82,9 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "DiskPilot ${{ github.ref_name }}"
           releaseDraft: true
+          # updater 走 GitHub Release latest.json；Windows 同时出 NSIS/MSI 时
+          # 优先 NSIS（setup.exe），与用户下载习惯一致。
+          updaterJsonPreferNsis: true
           prerelease: false
           args: --target ${{ matrix.target }}
 
