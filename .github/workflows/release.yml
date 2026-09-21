@@ -56,6 +56,31 @@ jobs:
 
       - run: pnpm install --frozen-lockfile=false
 
+      # macOS 签名/公证（可选）：仅当证书 secret 已配置时才注入。
+      # 2026-09-21 踩坑：直接在 tauri-action env 里写
+      # `APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}`，未配置时是空字符串，
+      # 会被 tauri-action 当成"有证书"去 `security import`，
+      # 报 `failed to import keychain certificate`、构建中止。
+      #
+      # 这里不依赖 `if:` 解析 secrets（step 级可用但语义微妙），
+      # 改用 shell 显式判断：只有非空值才写入 GITHUB_ENV。
+      - name: Inject macOS signing env (only when configured)
+        if: startsWith(matrix.os, 'macos')
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for v in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+                   APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!v}" ]; then
+              printf '%s=%s\n' "$v" "${!v}" >> "$GITHUB_ENV"
+            fi
+          done
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,13 +95,6 @@ jobs:
           # 和应用编到同一个 target triple，否则 macOS arm64 runner 打 x86_64 包
           # 会塞进错架构的 sidecar（cargo 默认只按 host 出包）。
           TAURI_TARGET_TRIPLE: ${{ matrix.target }}
-          # macOS 签名/公证（未配置 secrets 时 tauri-action 自动跳过签名）
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
           tagName: ${{ github.ref_name }}
