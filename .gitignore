@@ -100,11 +100,12 @@ UI_HANDOFF.md
 .mimosa/
 .workbuddy/
 
-# 图吧工具箱绿色版运行时：400MB+ 第三方软件，不提交进仓库。
-# 通过 `mklink /J Tools <图吧工具箱路径>\tools` 挂到本地最新绿色版即可。
+# 图吧工具箱工具集：从 E:\图吧工具箱202601\tools 整目录拷入仓库根 Tools/，
+# 随安装包一起分发（bundle.resources 打进去），工具版权归各自作者。
 # 注意必须锚定仓库根（/Tools/）：不带前导斜杠会匹配任意层级同名目录，
 # Windows 大小写不敏感下会误伤 crates/agent-server/src/tools/（AI 工具集源码）。
-/Tools/
+# 若自带绿色版升级，覆盖 Tools/ 目录内容后直接提交即可。
+# /Tools/
 
 # tauri sidecar 暂存目录：由 apps/desktop/scripts/prepare-sidecar.mjs 在打包前
 # 生成（`agent-server-<target-triple>[.exe]`），产物随安装包走，不入库。

@@ -41,7 +41,8 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "../../../scaffolds": "scaffolds"
+      "../../../scaffolds": "scaffolds",
+      "../../../Tools": "Tools"
     },
     "externalBin": [
       "binaries/agent-server"

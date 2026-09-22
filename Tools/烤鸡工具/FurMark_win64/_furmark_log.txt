@@ -1,0 +1,68 @@
+(19:04:13:773)	FurMark 2.10.2.0 (build: Oct 22 2025@12:39:49)
+(19:04:13:773)	(c)2007-2025 Geeks3D
+(19:04:13:773)	homepage: https://www.geeks3d.com/furmark/
+(19:04:13:773)	discord server : https://geeks3d.com/discord/
+(19:04:13:773)	FurMark (GeeXLab engine) initialization...
+(19:04:13:773)	command line: furmark.exe --demo furmark-gl --gpu-index 0 --p1080 --dpi-scaling 1.500000 
+(19:04:13:773)	FurMark home directory: E:\图吧工具箱202601\tools\烤鸡工具\FurMark_win64\
+(19:04:13:773)	[stb] STB image loader. Supported formats: *.JPEG, *.PNG, *.TGA, *.BMP, *.PSD, *.GIF, *.HDR, *.PIC
+(19:04:13:773)	[tinyexr] EXR image loader.
+(19:04:13:773)	[lib3ds] Lib3ds loader (core plugin).
+(19:04:13:774)	[ObjLoaderV1] OBJ 3D loader (core plugin).
+(19:04:13:774)	[ObjLoaderV2] OBJ loader based on Tiny OBJ Loader (core plugin).
+(19:04:13:774)	[STL] STL (StereoLithography) 3D loader (core plugin).
+(19:04:13:774)	[glTF] glTF 3D loader (core plugin).
+(19:04:13:774)	[SQLite3] SQLite3 version 3.50.4
+(19:04:13:774)	GraphX Core 0.60.1.0 (codename: Dirac) initialization ok.
+(19:04:13:774)	Windows version: Windows 11 build 26200
+(19:04:13:774)	HW platform type: PC
+(19:04:13:774)	SW platform type: Windows 64-bit
+(19:04:13:774)	[GpuMonitor] Operating system detected: Windows 11 build 26200
+(19:04:13:786)	[GpuMonitor] NV/R530+: physical GPU(s): 1 - logical GPU(s): 1
+(19:04:13:814)	[GpuMonitor]   - Blackwell arch - ROPs: 176 (no missing ROPs)
+(19:04:13:841)	[GpuMonitor] Num GPUs detected: 3
+(19:04:13:841)	[GpuMonitor] > GPU0
+(19:04:13:841)	[GpuMonitor]   - name: NVIDIA GeForce RTX 5090 D v2
+(19:04:13:841)	[GpuMonitor]   - PCI codes: 0x10DE-0x2B8C
+(19:04:13:841)	[GpuMonitor]   - Bus ID: 1
+(19:04:13:841)	[GpuMonitor]   - VBIOS: 98.02.69.00.5c
+(19:04:13:841)	[GpuMonitor]   - core temperature: 37 degC
+(19:04:13:841)	[GpuMonitor]   - driver: 610.47
+(19:04:13:841)	[GpuMonitor] > GPU1
+(19:04:13:841)	[GpuMonitor]   - name: OrayIddDriver Device
+(19:04:13:841)	[GpuMonitor]   - PCI codes: 0x232DD-0x1127559
+(19:04:13:841)	[GpuMonitor]   - driver: 17.1.58.818 (11-15-2022)
+(19:04:13:841)	[GpuMonitor] > GPU2
+(19:04:13:841)	[GpuMonitor]   - name: MuMu Virtual Display Adapter
+(19:04:13:841)	[GpuMonitor]   - PCI codes: 0x1F2DD-0x1127559
+(19:04:13:841)	[GpuMonitor]   - driver: 20.36.41.498 (3-12-2026)
+(19:04:13:841)	FurMark (GeeXLab engine) started ok.
+(19:04:13:841)	system DPI: 96
+(19:04:14:125)	Fullscreen mode enabled. Resolution: 1920x1080
+(19:04:14:178)	3D window size: 1920 x 1080
+(19:04:14:481)	current DPI: xdpi(144), ydpi(144) - DPI scale: 1.5
+(19:04:14:987)	GL_RENDERER: NVIDIA GeForce RTX 5090 D v2/PCIe/SSE2
+(19:04:14:987)	GL_VENDOR: NVIDIA Corporation
+(19:04:14:987)	GL_VERSION: 3.2.0 NVIDIA 610.47
+(19:04:14:987)	GL_SHADING_LANGUAGE_VERSION: 1.50 NVIDIA via Cg compiler
+(19:04:14:987)	OpenGL version detected: 3.2
+(19:04:14:987)	OpenGL extensions: 435
+(19:04:15:057)	[ArtifactScanner] Artifact scanner for GPU stability checking.
+(19:05:20:363)	[ Demo Quick Stats ]
+(19:05:20:363)	- demo                 : FurMark (GL) (built-in: YES)
+(19:05:20:363)	- renderer             : NVIDIA GeForce RTX 5090 D v2/PCIe/SSE2
+(19:05:20:363)	- 3D API               : OpenGL 3.2.0 NVIDIA 610.47
+(19:05:20:363)	- resolution           : 2560x1440
+(19:05:20:363)	- SCORE                : 25011
+(19:05:20:364)	- duration             : 60000 ms (60.001522 sec)
+(19:05:20:364)	- FPS (min/avg/max)    : 361.000000 / 417.829712 / 518.000000
+(19:05:20:365)	- GPU 0: NVIDIA GeForce RTX 5090 D v2 [10DE-2B8C]
+(19:05:20:365)	  .max temperature: 68癈
+(19:05:20:365)	  .max usage: 100%
+(19:05:20:365)	  .max core clock: 2776 MHz
+(19:05:20:365)	  .min core clock: 2558 MHz
+(19:05:20:365)	- GPU 1: OrayIddDriver Device [232DD-1127559]
+(19:05:20:365)	- GPU 2: MuMu Virtual Display Adapter [1F2DD-1127559]
+(19:05:24:998)	FurMark (GeeXLab engine) is shutting down...
+(19:05:25:006)	GraphX Core stopped ok.
+(19:05:25:006)	FurMark (GeeXLab engine) shutdown ok.
