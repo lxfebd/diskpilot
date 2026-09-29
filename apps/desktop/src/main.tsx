@@ -9,11 +9,14 @@ import { loadPermConfig } from './permissions';
 import { t } from './i18n';
 import './styles/tokens.css';
 import './styles/layout.css';
+import './styles/app-shell.css';
 import './styles/chat.css';
 import './styles/steam.css';
 import './styles/settings.css';
 import './styles/overview.css';
 import './styles/toolwall.css';
+import './styles/cleanup.css';
+import './styles/history.css';
 import './styles/dark.css';
 import './styles/disclaimer.css';
 

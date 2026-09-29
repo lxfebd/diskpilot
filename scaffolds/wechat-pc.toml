@@ -46,6 +46,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "web-resource-cache"
@@ -55,6 +57,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "sticker-cache"
@@ -64,6 +68,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "temp-files"
@@ -73,6 +79,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "avatar-cache"
@@ -82,6 +90,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "apm-records"
@@ -91,6 +101,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "received-files"
@@ -104,6 +116,8 @@ prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
 # 4.x 实测：图片和视频混在同一棵 msg/video/<YYYY-MM>/ 目录下（msg/image/
 # 在 4.x 不存在）。两个 scope 共享 video/ 树，按文件后缀分流；缩略图
 # (_thumb.jpg) 归图片桶，高清版 (_raw.mp4) 归视频桶——纯按后缀，简单一致。
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 [[scope]]
 id       = "received-videos"
 label    = "接收的视频"
@@ -112,6 +126,8 @@ mode     = "recycle"
 category = "media"
 variant  = "4.x"
 prompt   = { kind = "days", default = 7, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "received-images"
@@ -121,6 +137,8 @@ mode     = "recycle"
 category = "media"
 variant  = "4.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "voice-attachments"
@@ -130,6 +148,8 @@ mode     = "recycle"
 category = "media"
 variant  = "4.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "chat-backups"
@@ -143,6 +163,8 @@ prompt   = { kind = "confirm", label = "我确认要删除聊天备份" }
 # ============================================================================
 # Roaming app dir (4.x: %APPDATA%/Tencent/xwechat)
 # ============================================================================
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "app-logs-crashes"
@@ -152,6 +174,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "4.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "app-update-leftover"
@@ -173,6 +197,8 @@ prompt   = { kind = "none" }
 # 3.x 双路径：早期版本用顶层目录（Image/Image, Video, Files, Attachment），
 # 后期统一搬进 FileStorage/{Image,Video,File,Cache}。两套都得扫——参见
 # CleanMyWeChat 的 picCache/file/pic/video 分支：每个桶都同时匹配两种写法。
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 [[scope]]
 id       = "image-cache-3x"
 label    = "接收的图片"
@@ -181,6 +207,8 @@ mode     = "recycle"
 category = "media"
 variant  = "3.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "video-cache-3x"
@@ -190,6 +218,8 @@ mode     = "recycle"
 category = "media"
 variant  = "3.x"
 prompt   = { kind = "days", default = 7, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "file-cache-3x"
@@ -199,6 +229,8 @@ mode     = "recycle"
 category = "media"
 variant  = "3.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "voice-cache-3x"
@@ -208,6 +240,8 @@ mode     = "recycle"
 category = "media"
 variant  = "3.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "msg-attach-3x"
@@ -217,6 +251,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "3.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "sticker-cache-3x"
@@ -226,6 +262,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "3.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "temp-files-3x"
@@ -235,6 +273,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "3.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "cache-misc-3x"
@@ -248,6 +288,8 @@ variant  = "3.x"
 prompt   = { kind = "none" }
 
 # 3.x 漫游目录（%APPDATA%/Tencent/WeChat/）
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 [[scope]]
 id       = "app-logs-crashes-3x"
 label    = "应用日志与崩溃信息"
@@ -256,6 +298,8 @@ mode     = "recycle"
 category = "cache"
 variant  = "3.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]
 
 [[scope]]
 id       = "app-update-leftover-3x"
@@ -265,3 +309,5 @@ mode     = "recycle"
 category = "cache"
 variant  = "3.x"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["WeChat.exe", "Weixin.exe"]

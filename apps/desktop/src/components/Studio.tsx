@@ -9,7 +9,7 @@ import type { Node, Scaffold } from '../types';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
-import { CleanupModal } from './CleanupModal';
+import { collectScaffoldCards, type ScaffoldCard } from '../cleanup/matches';
 import { SteamInspectorModal } from './SteamInspectorModal';
 import { UndoPanel } from './UndoPanel';
 
@@ -23,30 +23,9 @@ const ICONS: Record<string, string> = {
   'conda':     '🐍',
 };
 
-function fallbackByNameContains(root: Node | null, sc: Scaffold): Node | null {
-  const fragments = (sc.match?.name_contains ?? []).map((s) => s.toLowerCase());
-  if (fragments.length === 0 || !root) return null;
-  const dfs = (n: Node | null): Node | null => {
-    if (!n) return null;
-    const lower = n.path.toLowerCase();
-    if (fragments.some((f) => lower.includes(f))) return n;
-    for (const c of n.children ?? []) {
-      const f = dfs(c);
-      if (f) return f;
-    }
-    return null;
-  };
-  return dfs(root);
-}
+type CardData = ScaffoldCard;
 
-interface CardData {
-  scaffold: Scaffold;
-  matches: Node[];
-  totalSize: number;
-  totalFiles: number;
-}
-
-export function Studio() {
+export function Studio({ onOpenCleanup, onOpenHistory }: { onOpenCleanup: (scaffoldId: string) => void; onOpenHistory?: () => void }) {
   const t = useT();
   const root = useStore((s) => s.root);
   const scaffolds = useStore((s) => s.scaffolds);
@@ -65,41 +44,7 @@ export function Studio() {
 
   const allCards: CardData[] = useMemo(() => {
     if (hidden) return [];
-    // 一次 DFS 按 scaffold_id 分组收集所有命中节点，替代原先"每个 scaffold
-    // 各做一次全树遍历"（N 个 scaffold = N 倍全树开销）。命中即不再下钻，
-    // 与旧 findAllMatchesByScaffold 语义一致：同一 scaffold 不会自递归重复收集。
-    const byId = new Map<string, Node[]>();
-    const collect = (n: Node) => {
-      if (n.scaffold_id) {
-        const arr = byId.get(n.scaffold_id);
-        if (arr) arr.push(n);
-        else byId.set(n.scaffold_id, [n]);
-        return;
-      }
-      for (const c of n.children ?? []) collect(c);
-    };
-    if (root) collect(root);
-
-    const items: CardData[] = scaffolds.map((sc) => {
-      let matches = byId.get(sc.id) ?? [];
-      if (matches.length === 0) {
-        const fb = fallbackByNameContains(root, sc);
-        if (fb) matches = [fb];
-      }
-      matches.sort((a, b) => b.size - a.size);
-      const totalSize = matches.reduce((s, m) => s + m.size, 0);
-      const totalFiles = matches.reduce((s, m) => s + m.file_count, 0);
-      return { scaffold: sc, matches, totalSize, totalFiles };
-    });
-    items.sort((a, b) => {
-      const aDet = a.matches.length > 0;
-      const bDet = b.matches.length > 0;
-      if (aDet && !bDet) return -1;
-      if (!aDet && bDet) return 1;
-      if (aDet && bDet) return b.totalSize - a.totalSize;
-      return a.scaffold.name.localeCompare(b.scaffold.name);
-    });
-    return items;
+    return collectScaffoldCards(root, scaffolds);
   }, [scaffolds, root, hidden]);
 
   if (hidden) {
@@ -151,7 +96,7 @@ export function Studio() {
         </ErrorBoundary>
         {featured.map((c) => (
           <ErrorBoundary key={c.scaffold.id} fallbackLabel={t('studio.cardFailed', { name: c.scaffold.name })}>
-            <Card card={c} expanded={expanded.has(c.scaffold.id)} onToggle={() => toggle(c.scaffold.id)} onAsk={() => requestStudio(c.scaffold.id)} />
+            <Card card={c} expanded={expanded.has(c.scaffold.id)} onToggle={() => toggle(c.scaffold.id)} onAsk={() => requestStudio(c.scaffold.id)} onOpenCleanup={onOpenCleanup} />
           </ErrorBoundary>
         ))}
       </div>
@@ -162,7 +107,7 @@ export function Studio() {
           <div className="studio-grid">
             {others.map((c) => (
               <ErrorBoundary key={c.scaffold.id} fallbackLabel={t('studio.cardFailed', { name: c.scaffold.name })}>
-                <Card card={c} expanded={expanded.has(c.scaffold.id)} onToggle={() => toggle(c.scaffold.id)} onAsk={() => requestStudio(c.scaffold.id)} />
+                <Card card={c} expanded={expanded.has(c.scaffold.id)} onToggle={() => toggle(c.scaffold.id)} onAsk={() => requestStudio(c.scaffold.id)} onOpenCleanup={onOpenCleanup} />
               </ErrorBoundary>
             ))}
           </div>
@@ -170,7 +115,7 @@ export function Studio() {
       )}
 
       <ErrorBoundary fallbackLabel={t('studio.fbUndoPanel')}>
-        <UndoPanel />
+        <UndoPanel onOpenHistory={onOpenHistory} />
       </ErrorBoundary>
 
       {openTool === 'steam-inspector' && (
@@ -412,17 +357,15 @@ function ToolCard({
   );
 }
 
-function Card({ card, expanded, onToggle, onAsk }: { card: CardData; expanded: boolean; onToggle: () => void; onAsk: () => void }) {
+function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardData; expanded: boolean; onToggle: () => void; onAsk: () => void; onOpenCleanup: (scaffoldId: string) => void }) {
   const t = useT();
   const sc = card.scaffold;
   const matches = card.matches;
   const detected = matches.length > 0;
   const Caret = expanded ? ChevronDown : ChevronRight;
-  const addReclaimed = useStore((s) => s.addReclaimed);
   const setScaffolds = useStore((s) => s.setScaffolds);
   const toast = useStore((s) => s.toast);
 
-  const [showCleanup, setShowCleanup] = useState(false);
   const [showAllChildren, setShowAllChildren] = useState(false);
   const [ctx, setCtx] = useState<ContextMenuState | null>(null);
 
@@ -555,7 +498,7 @@ function Card({ card, expanded, onToggle, onAsk }: { card: CardData; expanded: b
               <div className="studio-card-actions">
                 <button
                   className="primary studio-cleanup-btn"
-                  onClick={() => setShowCleanup(true)}
+                  onClick={() => onOpenCleanup(sc.id)}
                 >
                   <Trash2 size={12} /> {t('studio.configureCleanup')}
                 </button>
@@ -581,14 +524,6 @@ function Card({ card, expanded, onToggle, onAsk }: { card: CardData; expanded: b
         </div>
       )}
 
-      {showCleanup && detected && (
-        <CleanupModal
-          scaffold={sc}
-          matches={matches}
-          onClose={() => setShowCleanup(false)}
-          onCleaned={(bytes) => addReclaimed(bytes)}
-        />
-      )}
       <ContextMenu state={ctx} onClose={() => setCtx(null)} />
     </div>
   );

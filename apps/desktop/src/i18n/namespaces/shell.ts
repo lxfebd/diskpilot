@@ -18,6 +18,10 @@ export const shell = {
     'shell.nav.overviewTitle': '磁盘资产总览',
     'shell.nav.workspace': '工作台',
     'shell.nav.workspaceTitle': '目录树 + AI + 清理工作台',
+    'shell.nav.cleanup': '清理',
+    'shell.nav.cleanupTitle': '按脚本精细清理：勾选 scope · 保留期 · 两步预览',
+    'shell.nav.history': '历史',
+    'shell.nav.historyTitle': '清理操作台账：全部记录 · 按天分组 · 隔离可恢复',
     'shell.nav.tools': '工具',
     'shell.nav.toolsTitle': '工具箱：硬件信息 / 工具墙 / 网络检测 / 系统信息',
     'shell.nav.wsHint': '选择上方磁盘或文件夹后扫描',
@@ -26,6 +30,15 @@ export const shell = {
     'shell.nav.rootStatus': '{size} · {n} 文件',
     'shell.nav.settingsBound': '已绑定 {provider} · 点开管理',
     'shell.nav.settingsUnbound': 'AI 还没配置 · 点开设置',
+    'shell.nav.settings': '设置',
+    'shell.nav.settingsTitle': '偏好设置、AI 服务与清理规则',
+
+    // 导航侧栏（分组标题与折叠开关）
+    'shell.sidebar.groups.space': '存储空间',
+    'shell.sidebar.groups.system': '系统工具',
+    'shell.sidebar.collapse': '收起侧边栏',
+    'shell.sidebar.expand': '展开侧边栏',
+    'shell.sidebar.ariaLabel': '主导航',
 
     // 全局 AI 侧栏
     'shell.airail.title': 'AI 顾问',
@@ -72,7 +85,7 @@ export const shell = {
     'shell.fdp.topChildren': '占用子项 Top 6',
 
     // 页脚
-    'shell.footer.rules': 'DiskPilot v0.2.1 · 内置 {n} 条清理规则',
+    'shell.footer.rules': 'DiskPilot v{version} · 内置 {n} 条清理规则',
     'shell.footer.noScan': '还没扫描',
 
     // 错误边界
@@ -82,6 +95,8 @@ export const shell = {
     'shell.boundary.overviewFailed': '资产总览渲染失败',
     'shell.boundary.detailFailed': '详情面板渲染失败',
     'shell.boundary.studioFailed': 'Studio 面板渲染失败',
+    'shell.boundary.cleanupFailed': '清理页渲染失败',
+    'shell.boundary.historyFailed': '操作历史页渲染失败',
 
     // 进度按钮 / 分隔条
     'shell.progressbutton.cleaning': '清理中',
@@ -148,6 +163,10 @@ export const shell = {
     'shell.nav.overviewTitle': 'Disk space overview',
     'shell.nav.workspace': 'Workbench',
     'shell.nav.workspaceTitle': 'Folder tree + AI + cleanup workbench',
+    'shell.nav.cleanup': 'Cleanup',
+    'shell.nav.cleanupTitle': 'Per-script cleanup: tick scopes · retention · two-step preview',
+    'shell.nav.history': 'History',
+    'shell.nav.historyTitle': 'Cleanup ledger: full log · grouped by day · quarantine restorable',
     'shell.nav.tools': 'Tools',
     'shell.nav.toolsTitle': 'Toolbox: hardware info / tool wall / network checks / system info',
     'shell.nav.wsHint': 'Pick a drive above or a folder, then scan',
@@ -156,6 +175,15 @@ export const shell = {
     'shell.nav.rootStatus': '{size} · {n} files',
     'shell.nav.settingsBound': 'Connected to {provider} · click to manage',
     'shell.nav.settingsUnbound': 'No AI provider set up yet · open settings',
+    'shell.nav.settings': 'Settings',
+    'shell.nav.settingsTitle': 'Preferences, AI provider and cleanup rules',
+
+    // 导航侧栏（分组标题与折叠开关）
+    'shell.sidebar.groups.space': 'Storage',
+    'shell.sidebar.groups.system': 'System tools',
+    'shell.sidebar.collapse': 'Collapse sidebar',
+    'shell.sidebar.expand': 'Expand sidebar',
+    'shell.sidebar.ariaLabel': 'Main navigation',
 
     // 全局 AI 侧栏
     'shell.airail.title': 'AI Advisor',
@@ -202,7 +230,7 @@ export const shell = {
     'shell.fdp.topChildren': 'Top 6 items by size',
 
     // 页脚
-    'shell.footer.rules': 'DiskPilot v0.2.1 · {n} built-in cleanup rules',
+    'shell.footer.rules': 'DiskPilot v{version} · {n} built-in cleanup rules',
     'shell.footer.noScan': 'Nothing scanned yet',
 
     // 错误边界
@@ -212,6 +240,8 @@ export const shell = {
     'shell.boundary.overviewFailed': 'Asset overview failed to render',
     'shell.boundary.detailFailed': 'Detail panel failed to render',
     'shell.boundary.studioFailed': 'Studio panel failed to render',
+    'shell.boundary.cleanupFailed': 'Cleanup page failed to render',
+    'shell.boundary.historyFailed': 'History page failed to render',
 
     // 进度按钮 / 分隔条
     'shell.progressbutton.cleaning': 'Cleaning',

@@ -43,6 +43,8 @@ prompt   = { kind = "none" }
 # ============================================================================
 # L2 可选历史数据（默认勾选 + 保留期）
 # ============================================================================
+recommended_selected = true
+required_stopped_processes = ["QQ.exe"]
 
 [[scope]]
 id       = "received-files"
@@ -52,6 +54,8 @@ mode     = "recycle"
 category = "media"
 variant  = "9.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["QQ.exe"]
 
 [[scope]]
 id       = "received-images"
@@ -63,6 +67,8 @@ mode     = "recycle"
 category = "media"
 variant  = "9.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["QQ.exe"]
 
 [[scope]]
 id       = "received-videos"
@@ -72,6 +78,8 @@ mode     = "recycle"
 category = "media"
 variant  = "9.x"
 prompt   = { kind = "days", default = 7, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["QQ.exe"]
 
 [[scope]]
 id       = "received-stickers"
@@ -81,3 +89,5 @@ mode     = "recycle"
 category = "media"
 variant  = "9.x"
 prompt   = { kind = "days", default = 30, label = "保留最近多少天" }
+recommended_selected = false
+required_stopped_processes = ["QQ.exe"]

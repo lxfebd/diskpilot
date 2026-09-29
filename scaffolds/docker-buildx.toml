@@ -36,6 +36,7 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
 
 [[scope]]
 id                  = "docker-buildx-metadata"
@@ -45,3 +46,4 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true

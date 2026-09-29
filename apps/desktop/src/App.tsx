@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Folder, ScanLine, Settings as SettingsIcon, LayoutGrid, ListTree, Wrench, MessageSquare, X, Trash2 as TrashIcon } from 'lucide-react';
+import { Folder, ScanLine, ListTree, MessageSquare, X, Trash2 as TrashIcon } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import { api } from './api';
@@ -11,16 +11,31 @@ import { Studio } from './components/Studio';
 import { Settings } from './components/Settings';
 import { AssetOverview } from './components/AssetOverview';
 import { Toolbelt } from './components/Toolbelt';
+import { CleanupPage } from './components/cleanup/CleanupPage';
+import { HistoryPage } from './components/history/HistoryPage';
+import { useCleanupStore } from './useCleanupStore';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
-import { Logo } from './components/Logo';
+import { PageHeader } from './components/PageHeader';
+import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CleanupProposalDialog } from './components/CleanupProposalDialog';
 import Disclaimer from './components/Disclaimer';
 import { formatBytes, ellipsizePath } from './format';
 import { loadSettings, isConfigured } from './advisorClient';
 import { prefs } from './theme';
+import { APP_VERSION } from './version';
 import { useT } from './i18n';
+import {
+  PAGE_IDS,
+  SIDEBAR_COLLAPSED_WIDTH_PX,
+  SIDEBAR_EXPANDED_WIDTH_PX,
+  createSidebarLayoutState,
+  navItemById,
+  resizeSidebarLayout,
+  toggleSidebarLayout,
+  type PageId,
+} from './nav';
 import type { Node } from './types';
 
 function normKey(p: string): string {
@@ -94,7 +109,8 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState<import('./components/Settings').SettingsTab | undefined>(undefined);
   const [advisorTag, setAdvisorTag] = useState<{ provider: string } | null>(null);
   const [drives, setDrives] = useState<DriveInfo[]>([]);
-  const [view, setView] = useState<'overview' | 'workspace' | 'tools'>('overview');
+  // 页面分发：设置不在其中——它是全局模态（点导航项只开弹窗，不切页）。
+  const [view, setView] = useState<Exclude<PageId, 'settings'>>(PAGE_IDS.overview);
   const [diag, setDiag] = useState<ScanDiag | null>(null);
   // Holds the latest scan-stats event so we can merge it into ScanDiag once
   // api.scan() returns. Tauri emits the event right before the command resolves.
@@ -108,13 +124,44 @@ export default function App() {
   });
   useEffect(() => { localStorage.setItem('diskpilot.aiOpen', aiOpen ? '1' : '0'); }, [aiOpen]);
   useEffect(() => { localStorage.setItem('diskpilot.aiWidth', String(aiWidth)); }, [aiWidth]);
+
+  // ── 导航侧栏折叠三态（响应式 + 用户显式选择，见 nav.ts）──
+  // 显式收起/展开跨会话记住（与 AI 栏 aiOpen 同款存储）；缺省展开。
+  const [sidebar, setSidebar] = useState(() =>
+    createSidebarLayoutState(window.innerWidth, localStorage.getItem('diskpilot.sidebarExpanded') !== '0'),
+  );
+  useEffect(() => {
+    const onResize = () => setSidebar((s) => resizeSidebarLayout(s, window.innerWidth));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem('diskpilot.sidebarExpanded', sidebar.preferredExpanded ? '1' : '0');
+  }, [sidebar.preferredExpanded]);
+  const toggleSidebar = () => setSidebar(toggleSidebarLayout);
+  // 侧栏占的横向宽度（含 1px 右边框）：下面所有内容区宽度预算都要扣掉它，
+  // 否则「侧栏展开 + AI 栏打开」时三栏工作台会溢出被裁。
+  const sidebarFootprint = (sidebar.expanded ? SIDEBAR_EXPANDED_WIDTH_PX : SIDEBAR_COLLAPSED_WIDTH_PX) + 1;
+  // 侧栏导航：设置走模态入口，其余切页。
+  const navigate = (id: PageId) => {
+    if (id === PAGE_IDS.settings) { setShowSettings(true); return; }
+    setView(id);
+  };
+  // 总览/Studio 跳清理页：可选传 scaffoldId 预选脚本，不传则进页自动挑第一个命中。
+  const openCleanup = (scaffoldId?: string) => {
+    useCleanupStore.getState().select(scaffoldId);
+    setView(PAGE_IDS.cleanup);
+  };
+  // Studio「最近清理」→ 操作历史整页（P2c）。
+  const openHistory = () => setView(PAGE_IDS.history);
+
   // AI 侧栏拖宽
   const dragAi = (dx: number) => {
     setAiWidth((w) => {
       const winW = window.innerWidth;
       // 主内容区至少留 480px（含最小左栏 320 + 中栏 360 的预算内），
       // AI 侧栏最多占到 winW - 480。
-      const maxAi = Math.max(260, winW - 480);
+      const maxAi = Math.max(260, winW - sidebarFootprint - 480);
       return Math.max(260, Math.min(maxAi, w + dx));
     });
   };
@@ -138,13 +185,13 @@ export default function App() {
   // 否则隐藏右栏，把宽度让给目录树和详情面板。窗口放大后自动恢复。
   const [rightVisible, setRightVisible] = useState<boolean>(() => true);
   useEffect(() => {
-    const avail = () => window.innerWidth - aiFootprint - 40;
+    const avail = () => window.innerWidth - aiFootprint - sidebarFootprint - 40;
     const show = avail() >= THREE_COL_BUDGET;
     setRightVisible(show);
     const onResize = () => setRightVisible(avail() >= THREE_COL_BUDGET);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [aiFootprint]);
+  }, [aiFootprint, sidebarFootprint]);
   const [leftWidth, setLeftWidth] = useState<number>(() => {
     const v = Number(localStorage.getItem('diskpilot.leftWidth'));
     return Number.isFinite(v) && v > MIN_LEFT ? v : DEFAULT_LEFT;
@@ -162,7 +209,7 @@ export default function App() {
   useEffect(() => {
     const fit = () => {
       const winW = window.innerWidth;
-      const avail = Math.max(MIN_LEFT + MIN_CENTER + MIN_RIGHT, winW - aiFootprint - 40);
+      const avail = Math.max(MIN_LEFT + MIN_CENTER + MIN_RIGHT, winW - aiFootprint - sidebarFootprint - 40);
       const over = leftWidth + rightWidth + MIN_CENTER - avail;
       if (over > 0) {
         const lShrink = Math.min(over, leftWidth - MIN_LEFT);
@@ -174,21 +221,21 @@ export default function App() {
     fit();
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
-  }, [aiFootprint, leftWidth, rightWidth]);
+  }, [aiFootprint, sidebarFootprint, leftWidth, rightWidth]);
 
   const dragLeft = (dx: number) => {
     setLeftWidth((w) => {
       const winW = window.innerWidth;
-      // 可用宽度 = 窗口 - AI 侧栏占位 - 右栏（若显示） - 中栏保底
+      // 可用宽度 = 窗口 - 侧栏 - AI 侧栏占位 - 右栏（若显示） - 中栏保底
       const others = (rightVisible ? rightWidth + 8 : 0) + MIN_CENTER;
-      const maxLeft = Math.max(MIN_LEFT, winW - aiFootprint - others - 24);
+      const maxLeft = Math.max(MIN_LEFT, winW - sidebarFootprint - aiFootprint - others - 24);
       return Math.max(MIN_LEFT, Math.min(maxLeft, w + dx));
     });
   };
   const dragRight = (dx: number) => {
     setRightWidth((w) => {
       const winW = window.innerWidth;
-      const maxRight = Math.max(MIN_RIGHT, winW - aiFootprint - leftWidth - MIN_CENTER - 24);
+      const maxRight = Math.max(MIN_RIGHT, winW - sidebarFootprint - aiFootprint - leftWidth - MIN_CENTER - 24);
       return Math.max(MIN_RIGHT, Math.min(maxRight, w - dx));
     });
   };
@@ -358,10 +405,22 @@ export default function App() {
     }
   };
 
+  const pageNav = navItemById(view);
+
   return (
     <div className="app">
       {/* 开屏免责声明：首次启动强制阅读（10s 倒计时 + 滑到底部），同意后不再弹 */}
       <Disclaimer />
+      {/* 导航侧栏：页面分发 + 折叠三态；品牌与设置入口都收在这里 */}
+      <Sidebar
+        current={view}
+        onNavigate={navigate}
+        expanded={sidebar.expanded}
+        onToggle={toggleSidebar}
+        busy={scanning ? PAGE_IDS.workspace : null}
+        settingsDot={!!advisorTag}
+        settingsHint={advisorTag ? t('shell.nav.settingsBound', { provider: advisorTag.provider }) : t('shell.nav.settingsUnbound')}
+      />
       {/* 全局 AI 侧栏：贯穿所有页面，可折叠/可拖宽 */}
       <div className={'ai-rail' + (aiOpen ? ' open' : '')} style={aiOpen ? { width: aiWidth } : undefined}>
         <div className="ai-rail-head">
@@ -375,74 +434,47 @@ export default function App() {
       {aiOpen && <Splitter onDrag={dragAi} />}
 
       <div className="app-content">
-      <header>
-        <span className="brand"><Logo size={20} /> DiskPilot</span>
-        <div className="seg-viewtabs">
-          <button
-            className={'seg-item' + (view === 'overview' ? ' active' : '')}
-            onClick={() => setView('overview')}
-            title={t('shell.nav.overviewTitle')}
-          >
-            <LayoutGrid size={14} /> {t('shell.nav.overview')}
-          </button>
-          <button
-            className={'seg-item' + (view === 'workspace' ? ' active' : '')}
-            onClick={() => setView('workspace')}
-            title={t('shell.nav.workspaceTitle')}
-          >
-            <ListTree size={14} /> {t('shell.nav.workspace')}
-          </button>
-          <button
-            className={'seg-item' + (view === 'tools' ? ' active' : '')}
-            onClick={() => setView('tools')}
-            title={t('shell.nav.toolsTitle')}
-          >
-            <Wrench size={14} /> {t('shell.nav.tools')}
-          </button>
-        </div>
-        <div className="grow" />
-        {view === 'workspace' && (
-          <span className="muted small ws-hint">{t('shell.nav.wsHint')}</span>
-        )}
-        {reclaimedBytes > 0 && (
-          <span className="reclaimed-pill" title={t('shell.nav.reclaimedTitle')}>
-            {t('shell.nav.reclaimed', { size: formatBytes(reclaimedBytes) })}
-          </span>
-        )}
-        {root && (
-          <span className="muted small ws-status">
-            {t('shell.nav.rootStatus', { size: formatBytes(root.size), n: root.file_count.toLocaleString() })}
-          </span>
-        )}
-        <button
-          className={'ghost icon settings-btn' + (advisorTag ? ' bound' : '')}
-          onClick={() => setShowSettings(true)}
-          title={advisorTag ? t('shell.nav.settingsBound', { provider: advisorTag.provider }) : t('shell.nav.settingsUnbound')}
-        >
-          <SettingsIcon size={16} />
-          {advisorTag && <span className="settings-dot" />}
-        </button>
-        {view === 'workspace' && (
+      <PageHeader
+        title={pageNav ? t(pageNav.titleKey) : ''}
+        subtitle={pageNav?.subtitleKey ? t(pageNav.subtitleKey) : undefined}
+        actions={
           <>
-            <button className="ghost icon" onClick={pickDirectory} title={pickedPath ? t('shell.scan.picked', { path: pickedPath }) : t('shell.scan.pickFolder')}>
-              <Folder size={14} />
-            </button>
-            <button
-              className="primary scan-btn"
-              onClick={() => {
-                if (scanning) {
-                  void api.cancelScan();
-                  return;
-                }
-                void scan();
-              }}
-              disabled={!pickedPath}
-            >
-              <ScanLine size={14} /> {scanning ? t('shell.scan.cancel') : t('shell.scan.start')}
-            </button>
+            {view === 'workspace' && (
+              <span className="muted small ws-hint">{t('shell.nav.wsHint')}</span>
+            )}
+            {reclaimedBytes > 0 && (
+              <span className="reclaimed-pill" title={t('shell.nav.reclaimedTitle')}>
+                {t('shell.nav.reclaimed', { size: formatBytes(reclaimedBytes) })}
+              </span>
+            )}
+            {root && (
+              <span className="muted small ws-status">
+                {t('shell.nav.rootStatus', { size: formatBytes(root.size), n: root.file_count.toLocaleString() })}
+              </span>
+            )}
+            {view === 'workspace' && (
+              <>
+                <button className="ghost icon" onClick={pickDirectory} title={pickedPath ? t('shell.scan.picked', { path: pickedPath }) : t('shell.scan.pickFolder')}>
+                  <Folder size={14} />
+                </button>
+                <button
+                  className="primary scan-btn"
+                  onClick={() => {
+                    if (scanning) {
+                      void api.cancelScan();
+                      return;
+                    }
+                    void scan();
+                  }}
+                  disabled={!pickedPath}
+                >
+                  <ScanLine size={14} /> {scanning ? t('shell.scan.cancel') : t('shell.scan.start')}
+                </button>
+              </>
+            )}
           </>
-        )}
-      </header>
+        }
+      />
 
       <ScanBar scanning={scanning} ref={scanBarRef} />
       {err && <div className="banner error">{err}</div>}
@@ -462,6 +494,7 @@ export default function App() {
               onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
               onRefresh={(p) => scan([p], { force: true })}
               onGoWorkspace={() => setView('workspace')}
+              onOpenCleanup={() => openCleanup()}
             />
           </ErrorBoundary>
         </main>
@@ -475,6 +508,18 @@ export default function App() {
             onGoWorkspace={() => setView('workspace')}
             onOpenSettings={(tab) => { setSettingsTab(tab); setShowSettings(true); }}
           />
+        </main>
+      ) : view === 'cleanup' ? (
+        <main className="cleanup-page">
+          <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
+            <CleanupPage />
+          </ErrorBoundary>
+        </main>
+      ) : view === 'history' ? (
+        <main className="history-page">
+          <ErrorBoundary fallbackLabel={t('shell.boundary.historyFailed')}>
+            <HistoryPage />
+          </ErrorBoundary>
         </main>
       ) : (
       <main
@@ -513,7 +558,7 @@ export default function App() {
         {rightVisible && (
         <aside className="right">
           <ErrorBoundary fallbackLabel={t('shell.boundary.studioFailed')}>
-            <Studio />
+            <Studio onOpenCleanup={(id) => openCleanup(id)} onOpenHistory={openHistory} />
           </ErrorBoundary>
         </aside>
         )}
@@ -521,7 +566,7 @@ export default function App() {
       )}
 
       <footer>
-        <span>{t('shell.footer.rules', { n: scaffolds.length })}</span>
+        <span>{t('shell.footer.rules', { version: APP_VERSION, n: scaffolds.length })}</span>
         <span>{root?.path ?? t('shell.footer.noScan')}</span>
       </footer>
       </div>

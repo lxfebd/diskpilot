@@ -47,7 +47,7 @@ export const overview = {
     'overview.quick.dup': '重复文件查找',
     'overview.quick.dupTip': '扫描选中盘 ≥1MB 的重复文件，出清单后经确认窗回收副本',
     'overview.quick.junk': '系统垃圾清理',
-    'overview.quick.junkTip': '打开工作台的分类清理',
+    'overview.quick.junkTip': '打开清理页：按脚本勾选要清的目录再预览',
 
     // 文件分类占用
     'overview.cat.title': '文件分类占用',
@@ -58,6 +58,7 @@ export const overview = {
 
     // 建议清理项目（两步确认 + 结果三态，措辞不许软化）
     'overview.clean.title': '建议清理项目',
+    'overview.clean.openPage': '打开清理页',
     'overview.clean.checking': '正在检查可清理项…',
     'overview.clean.checkingList': '正在检查可清理项目…',
     'overview.clean.estimated': '预计可释放 {size}',
@@ -169,7 +170,7 @@ export const overview = {
     'overview.quick.dup': 'Find duplicates',
     'overview.quick.dupTip': 'Scan the selected drive for ≥1MB duplicates, then recycle the copies through the confirmation dialog',
     'overview.quick.junk': 'System junk cleanup',
-    'overview.quick.junkTip': 'Open category cleanup in the workbench',
+    'overview.quick.junkTip': 'Open the cleanup page: tick scopes per script, then preview',
 
     // Space by category
     'overview.cat.title': 'Space by file category',
@@ -180,6 +181,7 @@ export const overview = {
 
     // Suggested cleanup (two-step confirm + three-state result; wording must stay explicit)
     'overview.clean.title': 'Suggested cleanup',
+    'overview.clean.openPage': 'Open cleanup page',
     'overview.clean.checking': 'Checking what can be cleaned…',
     'overview.clean.checkingList': 'Checking cleanup items…',
     'overview.clean.estimated': 'About {size} to free',

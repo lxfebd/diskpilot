@@ -35,6 +35,8 @@ glob     = "%APPDATA%/discord/Cache/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["Discord.exe"]
 
 [[scope]]
 id       = "code-cache"
@@ -43,6 +45,8 @@ glob     = "%APPDATA%/discord/Code Cache/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["Discord.exe"]
 
 [[scope]]
 id       = "gpu-cache"
@@ -51,6 +55,8 @@ glob     = "%APPDATA%/discord/{GPUCache,DawnGraphiteCache,DawnWebGPUCache}/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["Discord.exe"]
 
 [[scope]]
 id       = "blob-storage"
@@ -59,6 +65,8 @@ glob     = "%APPDATA%/discord/blob_storage/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["Discord.exe"]
 
 [[scope]]
 id       = "crashpad"
@@ -67,3 +75,6 @@ glob     = "%APPDATA%/discord/Crashpad/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+
+required_stopped_processes = ["Discord.exe"]

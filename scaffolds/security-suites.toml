@@ -59,6 +59,7 @@ glob     = "**/360*/Chrome/User Data/*/{Cache,Code Cache,GPUCache,GrShaderCache,
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recommended_selected = true
 
 [[scope]]
 id       = "360se-cache"
@@ -68,3 +69,5 @@ mode     = "recycle"
 category = "cache"
 variant  = "legacy"
 prompt   = { kind = "days", default = 30, label = "清理多少天前的缓存" }
+recommended_selected = true
+

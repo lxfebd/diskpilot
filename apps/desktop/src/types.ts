@@ -30,6 +30,10 @@ export interface Scope {
   category?: 'cache' | 'media' | 'backup' | 'envs';
   variant?: string;
   recycle_granularity?: RecycleGranularity;
+  /** 清理页进入时的推荐预选（P2b）；只是 UI 建议，用户仍可逐项取消 */
+  recommended_selected?: boolean;
+  /** 清理本 scope 前建议退出的进程（preflight 只读检查，不在这里杀进程） */
+  required_stopped_processes?: string[];
   prompt?:
     | { kind: 'none' }
     | { kind: 'days'; default: number; label?: string }
@@ -94,6 +98,13 @@ export interface UndoEntry {
   reason: string;
   /** 实际释放字节数；后端未统计时为 null（前端展示标「预估」）。 */
   bytes_freed?: number | null;
+}
+
+/** P2b 清理预检（只读）：建议退出的进程里还在跑的 + 推荐预选 scope。 */
+export interface PreflightReport {
+  scaffold_id: string;
+  running_processes: string[];
+  recommended_scope_ids: string[];
 }
 
 /// Mirror of Rust's CondaEnv (apps/desktop/src-tauri/src/lib.rs). Returned

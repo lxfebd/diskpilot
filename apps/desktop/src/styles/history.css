@@ -1,0 +1,135 @@
+/* ── 操作历史整页（P2c）──────────────────────────────────────────── */
+/* 行样式复用 UndoPanel 的 undo-list / undo-item（settings.css），这里只补
+   整页骨架：汇总头部、过滤 chips、按天分组。配色全走 tokens.css 既有变量。 */
+.history-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--layout-page-padding-inline, 20px) 16px;
+  overflow: auto;
+}
+
+.hp-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.hp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hp-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.hp-freed {
+  color: var(--ok);
+  font-size: 12px;
+}
+
+.hp-refresh {
+  margin-left: auto;
+}
+
+.hp-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.hp-chip:hover {
+  border-color: var(--accent);
+}
+
+.hp-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.hp-chip-n {
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.hp-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.hp-search input {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  width: 180px;
+  outline: none;
+}
+
+.hp-search:focus-within {
+  border-color: var(--accent);
+}
+
+.hp-day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hp-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 12px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hp-list {
+  margin: 0;
+}
+
+.hp-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hp-msg {
+  font-size: 12px;
+}

@@ -44,6 +44,8 @@ glob     = "%APPDATA%/Microsoft/Teams/Cache/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 
 [[scope]]
 id       = "code-cache"
@@ -52,6 +54,8 @@ glob     = "%APPDATA%/Microsoft/Teams/Code Cache/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 
 [[scope]]
 id       = "gpu-cache"
@@ -60,6 +64,8 @@ glob     = "%APPDATA%/Microsoft/Teams/{GPUCache,DawnGraphiteCache,DawnWebGPUCach
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 
 [[scope]]
 id       = "blob-storage"
@@ -68,6 +74,8 @@ glob     = "%APPDATA%/Microsoft/Teams/blob_storage/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 
 [[scope]]
 id       = "crashpad"
@@ -79,6 +87,8 @@ prompt   = { kind = "none" }
 
 # 会议音视频临时文件（媒体管线缓存）。不是用户原始内容——录制/接收的原件
 # 存在用户自己选择的目录或被聊天记录引用，这里只有可重生的中间产物。
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 [[scope]]
 id       = "media-stack"
 label    = "会议音视频临时"
@@ -89,6 +99,8 @@ prompt   = { kind = "none" }
 
 # 日志同时落在 Roaming 与 Local 两处，目录名有 `log` 与 `logs` 两种拼写；
 # 一个 scope 用 brace 全合并，避免重复按钮。
+recommended_selected = false
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 [[scope]]
 id       = "app-logs"
 label    = "运行日志"
@@ -103,6 +115,8 @@ prompt   = { kind = "none" }
 
 # 新版 Teams 数据根下只有缓存子目录可清。LocalState / RoamingState / Settings /
 # SystemAppData 是账号与会话状态（红线），不在任何 scope 里。
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 [[scope]]
 id       = "new-app-cache"
 label    = "新版 Application Cache"
@@ -110,6 +124,8 @@ glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/AC/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 
 [[scope]]
 id       = "new-local-cache"
@@ -118,6 +134,8 @@ glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/LocalCache/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 
 [[scope]]
 id       = "new-temp-state"
@@ -130,6 +148,8 @@ prompt   = { kind = "none" }
 # 新版把 Chromium 缓存放在包内 AppData/Local/ 与 AppData/Roaming/ 下（MSIX 约定）。
 # 这里只列具体缓存目录名，绝不用 AppData/** 或 AppData/*/** 这种宽 glob——
 # 同一棵 AppData 树里还住着 Local Storage / IndexedDB / Network（红线）。
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]
 [[scope]]
 id       = "new-chromium-cache"
 label    = "新版 Chromium 缓存"
@@ -137,3 +157,5 @@ glob     = "%LOCALAPPDATA%/Packages/MSTeams_8wekyb3d8bbwe/AppData/{Local,Roaming
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "none" }
+recommended_selected = true
+required_stopped_processes = ["ms-teams.exe", "Teams.exe"]

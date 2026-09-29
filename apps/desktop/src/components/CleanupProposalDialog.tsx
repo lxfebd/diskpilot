@@ -1,21 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Check, Trash2, X, ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { useStore, type CleanupProposalItem, type CleanupRisk } from '../store';
+import { Check, Trash2, X, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { useStore, type CleanupProposalItem } from '../store';
 import { api } from '../api';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
-
-// 风险分级元数据：对标 Dism++ 三级（安全 / 谨慎 / 高危）。文案走 cleanup 表，
-// 这里只存键名，渲染时求值（模块顶层求值会把中文烤进首次 import）。
-const RISK_META: Record<
-  CleanupRisk,
-  { labelKey: string; icon: typeof ShieldCheck; cls: string }
-> = {
-  safe: { labelKey: 'cleanup.riskSafe', icon: ShieldCheck, cls: 'risk-safe' },
-  caution: { labelKey: 'cleanup.riskCaution', icon: AlertTriangle, cls: 'risk-caution' },
-  danger: { labelKey: 'cleanup.riskDanger', icon: ShieldAlert, cls: 'risk-danger' },
-};
-const RISK_ORDER: CleanupRisk[] = ['safe', 'caution', 'danger'];
+import { RISK_META, RISK_ORDER } from './cleanup/RiskBadge';
 
 // 高危项解锁口令：参与逐字比较的数据常量，不随语言翻译（提示语里原样显示）。
 const DANGER_WORD = '确认'; // @i18n-keep

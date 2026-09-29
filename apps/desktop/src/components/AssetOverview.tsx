@@ -24,6 +24,7 @@ type Props = {
   onScanAll: () => void;
   onRefresh: (path: string) => void;
   onGoWorkspace: () => void;
+  onOpenCleanup: () => void;
 };
 
 function normKey(p: string): string {
@@ -237,7 +238,7 @@ interface CleanItem {
   files: number;
 }
 
-export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace }: Props) {
+export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup }: Props) {
   const t = useT();
   const scanCache = useStore((s) => s.scanCache);
   const toast = useStore((s) => s.toast);
@@ -487,6 +488,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       onDupScan();
       return;
     }
+    if (id === 'junk') {
+      onOpenCleanup();
+      return;
+    }
     onGoWorkspace();
   };
 
@@ -618,6 +623,9 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             <h2 className="ao-card-title">
               <Trash2 size={16} /> {t('overview.clean.title')}
               <span className="ao-clean-summary">{cleanSummaryText}</span>
+              <button className="ghost small" onClick={onOpenCleanup} style={{ marginLeft: 'auto', fontSize: 11, padding: '0 8px' }}>
+                {t('overview.clean.openPage')}
+              </button>
             </h2>
             <div className="ao-clean-list">
               {cleanState === 'loading' ? (

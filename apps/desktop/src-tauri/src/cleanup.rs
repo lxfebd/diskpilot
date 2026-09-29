@@ -905,6 +905,8 @@ mod tests {
                 category: None,
                 variant: None,
                 recycle_granularity: RecycleGranularity::File,
+                recommended_selected: None,
+                required_stopped_processes: None,
             }],
         }];
 

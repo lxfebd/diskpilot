@@ -16,6 +16,7 @@ import { chat } from './chat';
 import { cleanup } from './cleanup';
 import { common } from './common';
 import { errors } from './errors';
+import { history } from './history';
 import { hw } from './hw';
 import { mcp } from './mcp';
 import { overview } from './overview';
@@ -36,5 +37,5 @@ export interface Namespace {
 }
 
 export const NAMESPACES: Namespace[] = [
-  chat, cleanup, common, errors, hw, mcp, overview, perm, settings, shell, steam, studio, system, theme, toolbelt,
+  chat, cleanup, common, errors, history, hw, mcp, overview, perm, settings, shell, steam, studio, system, theme, toolbelt,
 ];

@@ -1,0 +1,197 @@
+/* ── 应用外壳 2.0：左侧导航 + 页头 ────────────────────────────────────
+   尺寸全部走 tokens.css 的 --layout-* 变量，页面之间共用同一套节奏。
+   网格行（header / 内容 / footer）仍由 layout.css 的 .app-content 定义，
+   这里只补「导航侧栏」与「页头内部排版」两块。 */
+
+/* ── 导航侧栏（最左，可折叠）──────────────────────────────────────── */
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  flex-shrink: 0;
+  width: var(--layout-sidebar-expanded-width);
+  background: var(--paper-2);
+  border-right: 1px solid var(--border);
+  /* 宽度过渡：折叠/展开是明确的用户动作，给一点位移感但不拖沓 */
+  transition: width 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+.app-sidebar.collapsed { width: var(--layout-sidebar-collapsed-width); }
+/* 键盘焦点：品牌站式描边 + 限缩在圆角内，不靠默认 focus ring（深色底上发虚） */
+.side-item:focus-visible,
+.side-toggle:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
+
+.side-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--layout-page-header-height);
+  padding: 0 14px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+.app-sidebar.collapsed .side-brand { padding: 0; justify-content: center; }
+
+.side-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.side-group { display: flex; flex-direction: column; gap: 2px; }
+.side-group + .side-group { margin-top: 12px; }
+.side-group-label {
+  padding: 6px 10px 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+.app-sidebar.collapsed .side-group-label { display: none; }
+
+.side-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: var(--layout-sidebar-item-height);
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+.side-item:hover { background: var(--paper-3); color: var(--ink); }
+.side-item.active {
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+/* 激活竖条绝对定位：不参与布局，hover 时不会推挤文字 */
+.side-item.active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  transform: translateY(-50%);
+  border-radius: 0 2px 2px 0;
+  background: var(--accent-strong);
+}
+.app-sidebar.collapsed .side-item { justify-content: center; padding: 0; }
+
+.side-item-ic { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
+/* flex 子项默认 min-width:auto 不会收缩到出省略号，显式置 0 让长标签截断而非溢出 */
+.side-item-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.side-item-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 1px solid var(--paper-2);
+}
+
+.side-foot {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.side-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: var(--layout-sidebar-item-height);
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.side-toggle:hover { background: var(--paper-3); color: var(--ink); }
+.app-sidebar.collapsed .side-toggle { justify-content: center; padding: 0; }
+
+/* ── 页头（.app-content 网格第 1 行，列表滚动时不动）────────────────
+   基础排版（display/padding/border/background）由 layout.css 的全局 header
+   规则提供，这里只补页头特有的内部排版与降级策略。 */
+.page-head {
+  gap: 12px;
+  min-width: 0;
+  /* 动作区不可收缩（flex-shrink:0），极窄时宁可裁掉而不是让它溢出去压到右侧列 */
+  overflow: hidden;
+  /* 声明为容器：窗口被侧栏/AI 栏挤窄时，动作区按容器宽度丢车保帅 */
+  container-type: inline-size;
+}
+.page-heading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+.page-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page-subtitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 动作区右对齐、不参与收缩：标题会省略号收缩，按钮不能被压扁到点不中 */
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* 挤压降级：先丢「引导提示」，再丢「扫描规模」，最后才丢「已释放数」——
+   选目录/扫描按钮始终可见，标题走省略号收缩。 */
+@container (max-width: 560px) { .page-head .ws-hint { display: none; } }
+@container (max-width: 420px) { .page-head .ws-status { display: none; } }
+@container (max-width: 340px) { .page-head .reclaimed-pill { display: none; } }

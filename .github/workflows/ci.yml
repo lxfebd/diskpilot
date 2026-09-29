@@ -107,5 +107,7 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile=false
-      - run: pnpm -C apps/desktop test
+      # check = tsc -b + eslint + vitest（含版本单源守卫 / 样式 token 守卫），
+      # 一条命令覆盖全部前端门禁；build 再跑一次 vite build 验证产物可出。
+      - run: pnpm -C apps/desktop check
       - run: pnpm -C apps/desktop build

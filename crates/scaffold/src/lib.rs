@@ -64,6 +64,14 @@ pub struct Scope {
     /// minutes; per-directory creates one entry per logical unit.
     #[serde(default)]
     pub recycle_granularity: RecycleGranularity,
+    /// 清理页进入时的推荐预选（P2b）。只是 UI 建议，用户仍可逐项取消——
+    /// 不改变「先出清单 → 确认 → 执行」铁律；执行范围永远以用户勾选为准。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recommended_selected: Option<bool>,
+    /// 清理本 scope 前建议退出的进程名（如微信占用 msg 缓存）。cleanup_preflight
+    /// 只读检查是否在跑，绝不在这里杀进程——杀进程是独立的写路径。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub required_stopped_processes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq, Eq)]

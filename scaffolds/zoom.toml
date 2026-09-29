@@ -56,6 +56,8 @@ recycle_granularity = "directory"
 
 # 应用遥测（会议用量/性能上报）。保留 30 天：最近的几条还能用来回答
 # “上周那场会为什么卡”。
+recommended_selected = true
+required_stopped_processes = ["Zoom.exe"]
 [[scope]]
 id                  = "telemetry"
 label               = "应用遥测数据"
@@ -67,6 +69,8 @@ recycle_granularity = "directory"
 
 # 客户端日志。保留 30 天同上。logs 与 data 同级（Roaming/zoom.us/logs），
 # 不在 data/ 下，因此不触碰 data 内的账号数据。
+recommended_selected = true
+required_stopped_processes = ["Zoom.exe"]
 [[scope]]
 id                  = "logs"
 label               = "客户端日志"
@@ -80,6 +84,8 @@ recycle_granularity = "directory"
 # 清掉不影响已装版本运行。桶名来自社区清理脚本的公开描述，本机无 Zoom
 # 无法实地核对（见 appendix-zoom.md「实测附录」）；路径不存在时该 scope
 # 天然匹配为空，不会误删别的目录。
+recommended_selected = true
+required_stopped_processes = ["Zoom.exe"]
 [[scope]]
 id                  = "installer-downloads"
 label               = "安装包与补丁归档"
@@ -91,6 +97,8 @@ recycle_granularity = "directory"
 
 # Electron (app) UserData 根：Chromium 网页缓存 / 代码缓存 / GPU 缓存。
 # 与 %APPDATA% 下的账号数据完全隔离，删后自动重建。
+recommended_selected = true
+required_stopped_processes = ["Zoom.exe"]
 [[scope]]
 id                  = "electron-cache"
 label               = "浏览器缓存（Chromium / GPU）"
@@ -103,6 +111,8 @@ recycle_granularity = "directory"
 # app/ 内的日志与崩溃报告目录。刻意只取 logs 与 Crashpad：
 # app/ 下面还可能有 Local Storage / Session Storage / IndexedDB /
 # Network / key / crypto（加密 key 材料）等登录态目录，全部不碰。
+recommended_selected = true
+required_stopped_processes = ["Zoom.exe"]
 [[scope]]
 id                  = "electron-logs"
 label               = "应用日志与崩溃报告"
@@ -111,3 +121,5 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "days", default = 30, label = "保留最近多少天" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["Zoom.exe"]

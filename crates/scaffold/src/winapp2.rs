@@ -356,6 +356,8 @@ pub fn winapp2_to_scaffold(entry: &Winapp2Entry) -> Option<Scaffold> {
             category: Some("cache".to_string()),
             variant: None,
             recycle_granularity: RecycleGranularity::File,
+            recommended_selected: None,
+            required_stopped_processes: None,
             prompt: None,
         });
     }

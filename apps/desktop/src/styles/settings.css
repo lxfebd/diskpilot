@@ -70,7 +70,6 @@ html[data-theme="minimal"] body {
   background: var(--paper);
   letter-spacing: 0;
 }
-html[data-theme="minimal"] .brand svg { filter: grayscale(0.6); }
 html[data-theme="dark"] body,
 html[data-theme="pro"] body {
   background:

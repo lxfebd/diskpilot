@@ -59,6 +59,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]
 
 [[scope]]
 id                  = "unity-editor-logs"
@@ -69,6 +71,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]
 
 [[scope]]
 id                  = "unity-hub-logs"
@@ -83,6 +87,8 @@ recycle_granularity = "directory"
 # ---------------------------------------------------------------------------
 # Unreal Engine 相关 scope（variant="unreal"）
 # ---------------------------------------------------------------------------
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]
 
 [[scope]]
 id                  = "unreal-derived-data-cache"
@@ -93,6 +99,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]
 
 [[scope]]
 id                  = "unreal-dlc-partial"
@@ -107,6 +115,8 @@ recycle_granularity = "directory"
 # ---------------------------------------------------------------------------
 # Godot 相关 scope（variant="godot"）
 # ---------------------------------------------------------------------------
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]
 
 [[scope]]
 id                  = "godot-editor-cache"
@@ -117,6 +127,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]
 
 [[scope]]
 id                  = "godot-export-cache"
@@ -127,3 +139,5 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["UnrealEditor.exe", "Unity.exe"]

@@ -1181,6 +1181,7 @@ pub fn run() {
             executor::execute_ai_plan,
             executor::list_undo,
             executor::undo,
+            executor::cleanup_preflight,
             dups::scan_duplicate_files_cmd,
             volume_info,
             reminder::get_reminder_config,
@@ -1607,6 +1608,8 @@ mode = "delete"
             category: None,
             variant: None,
             recycle_granularity: Default::default(),
+            recommended_selected: None,
+            required_stopped_processes: None,
         }
     }
 

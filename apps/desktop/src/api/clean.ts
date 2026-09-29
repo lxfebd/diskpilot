@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { Scaffold, UndoEntry, CondaEnv } from '../types';
+import type { Scaffold, UndoEntry, CondaEnv, PreflightReport } from '../types';
 import { isTauri } from '../env';
 import * as mocks from '../mocks';
 import { t } from '../i18n';
@@ -120,6 +120,13 @@ export const cleanApi = {
 
   listUndo: (limit?: number) =>
     isTauri ? invoke<UndoEntry[]>('list_undo', { limit: limit ?? null }) : Promise.resolve([]),
+
+  // P2b 清理预检（只读）：建议退出的进程里还在跑的 + 推荐预选 scope id。
+  // 绝不在这里杀进程——杀进程是独立写路径，走 toolbelt 的确认闸。
+  cleanupPreflight: (scaffoldId: string) =>
+    isTauri
+      ? invoke<PreflightReport>('cleanup_preflight', { scaffoldId })
+      : Promise.resolve({ scaffold_id: scaffoldId, running_processes: [], recommended_scope_ids: [] }),
 
   // index 是展示列表位置；source 是与后端对齐的条目路径（防列表在两次
   // 刷新之间变化导致 index 漂移、恢复错条目——后端会双重校验）。

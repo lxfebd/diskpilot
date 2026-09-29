@@ -26,3 +26,5 @@ glob     = "%TEMP%/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "days", default = 7, label = "清理多少天前的临时文件" }
+recommended_selected = true
+

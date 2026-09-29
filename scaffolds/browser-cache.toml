@@ -36,6 +36,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["chrome.exe", "msedge.exe", "brave.exe"]
 
 [[scope]]
 id                  = "chrome-serviceworker-cache"
@@ -49,6 +51,8 @@ recycle_granularity = "directory"
 # ============================================================================
 # Edge 缓存目录（与 Chrome 同源同构）
 # ============================================================================
+recommended_selected = true
+required_stopped_processes = ["chrome.exe", "msedge.exe", "brave.exe"]
 
 [[scope]]
 id                  = "edge-cache"
@@ -58,6 +62,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["chrome.exe", "msedge.exe", "brave.exe"]
 
 [[scope]]
 id                  = "edge-serviceworker-cache"
@@ -67,3 +73,6 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+
+required_stopped_processes = ["chrome.exe", "msedge.exe", "brave.exe"]

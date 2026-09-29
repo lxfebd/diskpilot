@@ -27,6 +27,7 @@ glob     = "%LOCALAPPDATA%/CrashDumps/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "days", default = 30, label = "清理多少天前的崩溃转储" }
+recommended_selected = true
 
 [[scope]]
 id       = "wer-reports"
@@ -35,6 +36,7 @@ glob     = "%LOCALAPPDATA%/Microsoft/Windows/WER/{ReportQueue,ReportArchive}/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "days", default = 30, label = "清理多少天前的错误报告" }
+recommended_selected = true
 
 [[scope]]
 id       = "crash-dumps-system"
@@ -43,3 +45,5 @@ glob     = "C:/Windows/Minidump/**"
 mode     = "recycle"
 category = "cache"
 prompt   = { kind = "days", default = 30, label = "清理多少天前的系统崩溃转储" }
+recommended_selected = true
+

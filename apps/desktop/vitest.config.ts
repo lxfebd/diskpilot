@@ -5,6 +5,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
+    // token-guard.test.ts 用 ?raw 读 styles/*.css 做硬编码颜色守卫；
+    // vitest 默认 css:false 会把一切 CSS 导入换成空模块，?raw 也拿不到内容，
+    // 故开启。其余测试均不 import CSS，无波及。
+    css: true,
     include: ['src/**/*.test.{ts,tsx}'],
     // _backup_spec/ 是历史高权限计划文件（勿执行），里面的旧 spec 已失效且
     // 依赖缺失，vitest 兜底扫描到会误报失败——显式排除，绝不动文件内容。

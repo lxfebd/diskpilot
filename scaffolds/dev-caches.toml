@@ -42,6 +42,7 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
 recycle_granularity = "directory"
+recommended_selected = true
 
 [[scope]]
 id                  = "yarn-cache"
@@ -51,6 +52,7 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
 recycle_granularity = "directory"
+recommended_selected = true
 
 [[scope]]
 id                  = "npm-cacache"
@@ -60,6 +62,7 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
 recycle_granularity = "directory"
+recommended_selected = true
 
 [[scope]]
 id                  = "pip-cache"
@@ -69,6 +72,7 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
 recycle_granularity = "directory"
+recommended_selected = true
 
 [[scope]]
 id                  = "cargo-cache"
@@ -78,3 +82,5 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "days", default = 30, label = "清理多少天前的缓存" }
 recycle_granularity = "directory"
+recommended_selected = true
+

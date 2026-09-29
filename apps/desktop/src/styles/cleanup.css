@@ -1,0 +1,356 @@
+/* ── 清理页 + dry-run 预览窗 + 风险徽标 ──────────────────────────────
+   原 CleanupModal 的样式从 layout.css 迁出；整页壳（.cp-shell / .cp-list /
+   .cp-main / .selbar / .risk-badge / .sel-mode）是新加的。dark.css 的
+   cleanup 覆盖项仍排在本文件之后加载，保持优先级。 */
+
+/* ── 整页壳 ── */
+.app-content > main.cleanup-page {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.cp-shell {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 0;
+}
+.cp-list {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.cp-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+}
+.cp-list-rows {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+}
+.cp-script {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  transition: background 0.12s, border-color 0.12s;
+}
+.cp-script:hover { background: var(--accent-bg); }
+.cp-script.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-strong);
+  color: var(--ink);
+}
+.cp-script.detected .cp-script-size { color: var(--ink); font-weight: 600; }
+.cp-script-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.cp-script-size {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.cp-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cp-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  font-size: 13px;
+  padding: 40px 20px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── 吸底行动条（复用 .cleanup-footer 的内部结构，外层 .selbar 钉高度）── */
+.selbar {
+  height: var(--layout-action-bar-height);
+  margin-top: 0;
+  padding: 0 16px;
+  border-top: 2px dashed var(--ink-3);
+  flex-shrink: 0;
+}
+.selbar-summary { flex: 1; min-width: 0; }
+.selbar-actions { flex-shrink: 0; }
+.sel-mode { display: inline-flex; gap: 4px; }
+
+/* ── 风险徽标 ── */
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.risk-badge.risk-safe { background: var(--risk-soft, color-mix(in srgb, var(--ok) 14%, transparent)); color: var(--ok); }
+.risk-badge.risk-caution { background: var(--risk-soft, color-mix(in srgb, var(--warn) 14%, transparent)); color: var(--warn); }
+.risk-badge.risk-danger { background: var(--risk-soft, color-mix(in srgb, var(--err) 14%, transparent)); color: var(--err); }
+
+/* ── 迁移自 layout.css（原 CleanupModal 样式，去掉 .cleanup-modal 外壳）── */
+.cleanup-paths {
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--accent-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+.cleanup-path-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.cleanup-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.cleanup-section {
+  display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 10px 12px;
+  background: var(--card);
+}
+.cleanup-section-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cleanup-toggle-all {
+  font-size: 10.5px;
+  padding: 1px 8px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cleanup-rows {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.cleanup-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid transparent;
+  background: var(--paper);
+}
+.cleanup-row:hover { background: var(--accent-bg); }
+.cleanup-row.checked {
+  background: var(--accent-bg);
+  border-color: var(--accent-strong);
+}
+.cleanup-row.empty { opacity: 0.5; }
+.cleanup-row-main {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+  min-width: 0;
+}
+.cleanup-row-main input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--accent-strong);
+}
+.cleanup-row-text {
+  display: flex; flex-direction: column; gap: 1px;
+  min-width: 0;
+}
+.cleanup-row-label {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.cleanup-row-meta {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+}
+.cleanup-row-days {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.cleanup-row-days input {
+  width: 56px;
+  padding: 2px 6px;
+  font-size: 11px;
+  text-align: right;
+}
+.cleanup-wxid-grid {
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+}
+.cleanup-wxid-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-family: var(--font-mono);
+  cursor: pointer; user-select: none;
+}
+.cleanup-wxid-chip input { accent-color: var(--accent-strong); }
+.cleanup-disclaimer {
+  margin: 2px 0;
+  font-size: 11px;
+  color: var(--ink-2);
+  display: flex; align-items: flex-start; gap: 5px;
+  background: var(--warn-soft);
+  border: 1.5px solid var(--warn-fg);
+  border-radius: var(--radius-sm);
+  padding: 6px 9px;
+  line-height: 1.45;
+}
+.cleanup-disclaimer svg { flex-shrink: 0; margin-top: 2px; color: var(--warn-fg); }
+.cleanup-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px dashed var(--ink-3);
+}
+.cleanup-summary {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.cleanup-summary strong { color: var(--ink); font-weight: 600; }
+.cleanup-actions { display: flex; gap: 6px; }
+.cleanup-execute.armed {
+  background: #c43358;
+  color: #fff;
+  border-color: #8a1d3a;
+  animation: pulse-armed 1s ease-in-out infinite;
+}
+@keyframes pulse-armed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 51, 88, 0.5); }
+  50%      { box-shadow: 0 0 0 5px rgba(196, 51, 88, 0); }
+}
+
+/* Coverage breakdown — explains the "13 GB total but only 4 GB in scopes" gap. */
+.cleanup-coverage {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1.5px dashed var(--ink-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.cleanup-coverage-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+.cleanup-coverage-row strong { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
+.cleanup-coverage-row.protected { color: var(--warn-fg); }
+
+/* "Within retention" rows: distinct from "empty" — content exists, just protected. */
+.cleanup-row.within-retention {
+  background: #f3f6ff;
+  border-color: #b9c6e8;
+}
+.cleanup-row.within-retention .cleanup-row-label { color: var(--ink-2); }
+.cleanup-row.within-retention .cleanup-row-meta { color: #4a5b87; }
+
+/* Dry-run preview dialog. */
+.cleanup-preview-modal {
+  max-width: 720px;
+  width: 90vw;
+}
+.cleanup-preview-summary {
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.cleanup-preview-summary strong { font-weight: 600; color: var(--ink); }
+.cleanup-preview-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1.5px solid var(--ink-3);
+  border-radius: var(--radius-xs);
+  padding: 6px 8px;
+  background: var(--surface-2);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px;
+}
+.cleanup-preview-path {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 0;
+  color: var(--ink-2);
+}
+.cleanup-preview-more {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--ink-3);
+  text-align: center;
+}
+
+/* P2b preflight：required_stopped_processes 里还在跑的进程提醒条 */
+.cleanup-preflight-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--peach);
+  border-radius: 8px;
+  background: var(--paper-2, var(--paper));
+  color: var(--ink);
+  font-size: 12px;
+}

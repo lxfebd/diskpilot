@@ -14,8 +14,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
-  padding: 0 12px;
+  height: var(--layout-page-header-height);
+  padding: 0 var(--layout-page-padding-inline);
   border-bottom: 1px solid var(--border);
   background: var(--paper-2);
   flex-shrink: 0;
@@ -63,7 +63,7 @@
   /* 单列必须 minmax(0,1fr)：缺省 auto 列会被 header 的 max-content（按钮/Tabs）
      撑破，导致整个内容区溢出容器（AI 栏+splitter 之后只剩 ~440px 时尤其致命） */
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: 52px auto auto 1fr 26px;
+  grid-template-rows: var(--layout-page-header-height) auto auto 1fr 26px;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -82,31 +82,23 @@
 .muted { color: var(--ink-3); font-weight: 600; }
 .muted.small { font-size: 11px; font-family: var(--font-mono); }
 
-/* ── Header ────────────────────────────────────────────────────────── */
+/* ── Header ──────────────────────────────────────────────────────────
+   页头（.page-head）的基线样式：内部排版与降级见 styles/app-shell.css。 */
 header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  padding: 0 var(--layout-page-padding-inline);
   border-bottom: 1px solid var(--border);
   background: var(--paper-2);
 }
 .grow { flex: 1; }
 
-.brand {
-  display: inline-flex; gap: 8px; align-items: center;
-  font-family: var(--font-mono);
-  font-weight: 700; font-size: 16px;
-  letter-spacing: -0.03em;
-  margin-right: 6px;
-}
-.brand svg {
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,.12));
-}
-
-/* 顶栏收拢后的辅助信息 / 扫描按钮 */
-.ws-hint { font-size: 11.5px; opacity: .8; }
-.ws-status { font-size: 11.5px; white-space: nowrap; }
+/* 顶栏收拢后的辅助信息 / 扫描按钮。
+   字号不在此重设：两个 span 带 .muted.small（class 特异性更高），
+   这里补的是次要信息的「弱化」与换行控制。 */
+.ws-hint { opacity: .8; }
+.ws-status { white-space: nowrap; }
 .scan-btn { margin-left: 2px; }
 
 .threshold {
@@ -219,19 +211,6 @@ input:focus, select:focus {
 }
 
 /* ── Header advisor pill ───────────────────────────────────────────── */
-.settings-btn { position: relative; }
-.settings-btn.bound { background: var(--mint); }
-.settings-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-strong);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
 .provider-pill {
   display: inline-flex;
   align-items: center;
@@ -1307,225 +1286,8 @@ footer {
   padding-right: 10px;
 }
 
-/* ── CleanupModal ──────────────────────────────────────────────────── */
-.cleanup-modal {
-  width: 560px;
-  max-width: 94vw;
-  max-height: 88vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-.cleanup-paths {
-  display: flex; flex-direction: column; gap: 3px;
-  background: var(--accent-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 7px 10px;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  max-height: 80px;
-  overflow-y: auto;
-}
-.cleanup-path-row {
-  display: flex; justify-content: space-between; gap: 12px;
-  white-space: nowrap;
-  min-width: 0;
-}
-.cleanup-path {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden; text-overflow: ellipsis;
-}
-.cleanup-section {
-  display: flex; flex-direction: column; gap: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
-  padding: 10px 12px;
-  background: var(--card);
-}
-.cleanup-section-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--ink);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.cleanup-toggle-all {
-  font-size: 10.5px;
-  padding: 1px 8px;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
-}
-.cleanup-rows {
-  list-style: none;
-  margin: 0; padding: 0;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.cleanup-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid transparent;
-  background: var(--paper);
-}
-.cleanup-row:hover { background: var(--accent-bg); }
-.cleanup-row.checked {
-  background: var(--accent-bg);
-  border-color: var(--accent-strong);
-}
-.cleanup-row.empty { opacity: 0.5; }
-.cleanup-row-main {
-  display: flex; align-items: center; gap: 10px;
-  cursor: pointer;
-  min-width: 0;
-}
-.cleanup-row-main input[type="checkbox"] {
-  width: 14px; height: 14px;
-  accent-color: var(--accent-strong);
-}
-.cleanup-row-text {
-  display: flex; flex-direction: column; gap: 1px;
-  min-width: 0;
-}
-.cleanup-row-label {
-  font-weight: 600;
-  font-size: 12.5px;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis;
-}
-.cleanup-row-meta {
-  font-size: 10.5px;
-  color: var(--ink-3);
-  font-family: var(--font-mono);
-}
-.cleanup-row-days {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 10.5px;
-  color: var(--ink-3);
-}
-.cleanup-row-days input {
-  width: 56px;
-  padding: 2px 6px;
-  font-size: 11px;
-  text-align: right;
-}
-.cleanup-wxid-grid {
-  display: flex; flex-wrap: wrap; gap: 4px 10px;
-}
-.cleanup-wxid-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11.5px; font-family: var(--font-mono);
-  cursor: pointer; user-select: none;
-}
-.cleanup-wxid-chip input { accent-color: var(--accent-strong); }
-.cleanup-disclaimer {
-  margin: 2px 0;
-  font-size: 11px;
-  color: var(--ink-2);
-  display: flex; align-items: flex-start; gap: 5px;
-  background: var(--warn-soft);
-  border: 1.5px solid var(--warn-fg);
-  border-radius: var(--radius-sm);
-  padding: 6px 9px;
-  line-height: 1.45;
-}
-.cleanup-disclaimer svg { flex-shrink: 0; margin-top: 2px; color: var(--warn-fg); }
-.cleanup-footer {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 2px dashed var(--ink-3);
-}
-.cleanup-summary {
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.cleanup-summary strong { color: var(--ink); font-weight: 600; }
-.cleanup-actions { display: flex; gap: 6px; }
-.cleanup-execute.armed {
-  background: #c43358;
-  color: #fff;
-  border-color: #8a1d3a;
-  animation: pulse-armed 1s ease-in-out infinite;
-}
-@keyframes pulse-armed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 51, 88, 0.5); }
-  50%      { box-shadow: 0 0 0 5px rgba(196, 51, 88, 0); }
-}
-
-/* Coverage breakdown — explains the "13 GB total but only 4 GB in scopes" gap. */
-.cleanup-coverage {
-  margin-top: 4px;
-  padding: 8px 10px;
-  border: 1.5px dashed var(--ink-3);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  /* 长路径/长标签换行而不撑破弹窗，永远不出现横向滚动条 */
-  min-width: 0;
-}
-.cleanup-coverage-row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--ink-2);
-  min-width: 0;
-}
-.cleanup-coverage-row strong { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
-.cleanup-coverage-row.protected { color: var(--warn-fg); }
-
-/* "Within retention" rows: distinct from "empty" — content exists, just protected. */
-.cleanup-row.within-retention {
-  background: #f3f6ff;
-  border-color: #b9c6e8;
-}
-.cleanup-row.within-retention .cleanup-row-label { color: var(--ink-2); }
-.cleanup-row.within-retention .cleanup-row-meta { color: #4a5b87; }
-
-/* Dry-run preview dialog. */
-.cleanup-preview-modal {
-  max-width: 720px;
-  width: 90vw;
-}
-.cleanup-preview-summary {
-  font-size: 13px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #fff;
-}
-.cleanup-preview-summary strong { font-weight: 600; color: var(--ink); }
-.cleanup-preview-list {
-  max-height: 320px;
-  overflow-y: auto;
-  border: 1.5px solid var(--ink-3);
-  border-radius: var(--radius-xs);
-  padding: 6px 8px;
-  background: var(--surface-2);
-  font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 11px;
-}
-.cleanup-preview-path {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 1px 0;
-  color: var(--ink-2);
-}
-.cleanup-preview-more {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px dashed var(--ink-3);
-  text-align: center;
-}
+/* cleanup 样式已迁到 styles/cleanup.css（清理页 + dry-run 预览窗 + 风险徽标）。
+   dark.css 的 cleanup 覆盖项仍保留，加载顺序保证覆盖生效。 */
 
 .studio-scopes {
   list-style: none;

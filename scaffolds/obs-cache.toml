@@ -33,6 +33,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["obs64.exe"]
 
 [[scope]]
 id                  = "obs-logs"
@@ -42,3 +44,5 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["obs64.exe"]

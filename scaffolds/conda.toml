@@ -44,6 +44,7 @@ glob                = "{%USERPROFILE%/{anaconda3,miniconda3,miniforge3,.conda},$
 mode                = "recycle"
 category            = "cache"
 recycle_granularity = "directory"
+recommended_selected = true
 
 [[scope]]
 id                  = "unused-packages"
@@ -59,6 +60,7 @@ recycle_granularity = "directory"
 # env name 作为 env_filter 传 execute_scope。execute_scope 通过
 # recycle_granularity = "directory" + path_passes_env 在通用路径下命中 envs/<name>，
 # 整目录 recycle（1 回收站条目代替几万文件）。
+recommended_selected = true
 [[scope]]
 id                  = "envs-stale"
 label               = "未使用的 environments"
@@ -66,3 +68,4 @@ glob                = "{%USERPROFILE%/{anaconda3,miniconda3,miniforge3,.conda},$
 mode                = "recycle"
 category            = "envs"
 recycle_granularity = "directory"
+recommended_selected = true

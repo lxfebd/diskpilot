@@ -508,6 +508,166 @@ pub(crate) fn list_undo(
     Ok(entries.into_iter().take(limit.unwrap_or(100)).collect())
 }
 
+/// P2b 清理预检（只读）：清理页进入 / 执行前调用。返回
+/// ① `running_processes` —— TOML `required_stopped_processes` 里当前还在跑的
+///    进程名（提示用户先退出；这里绝不杀进程，杀进程是独立写路径）；
+/// ② `recommended_scope_ids` —— `recommended_selected = true` 的 scope，供前端
+///    做预选建议（用户仍可逐项取消，不改变「先出清单 → 确认」铁律）。
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PreflightReport {
+    pub scaffold_id: String,
+    pub running_processes: Vec<String>,
+    pub recommended_scope_ids: Vec<String>,
+}
+
+#[tauri::command]
+pub(crate) fn cleanup_preflight(
+    state: State<'_, AppState>,
+    scaffold_id: String,
+) -> Result<PreflightReport, String> {
+    let scaffolds = state.scaffolds.lock().unwrap();
+    let scaffold = scaffolds
+        .iter()
+        .find(|s| s.id == scaffold_id)
+        .ok_or_else(|| format!("unknown scaffold: {scaffold_id}"))?;
+    let wanted: Vec<String> = scaffold
+        .scopes
+        .iter()
+        .filter_map(|sc| sc.required_stopped_processes.as_ref())
+        .flatten()
+        .cloned()
+        .collect();
+    let snapshot = running_process_names();
+    Ok(PreflightReport {
+        running_processes: running_required(&wanted, &snapshot),
+        recommended_scope_ids: preflight_recommended(scaffold),
+        scaffold_id,
+    })
+}
+
+/// 纯函数（单测）：TOML 声明的进程名 ∩ 当前快照。大小写不敏感匹配（快照侧
+/// 已小写），结果去重保序，显示保留 TOML 原始大小写。
+fn running_required(wanted: &[String], snapshot: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for name in wanted {
+        let key = name.trim().to_lowercase();
+        if key.is_empty() || !seen.insert(key.clone()) {
+            continue;
+        }
+        if snapshot.iter().any(|p| *p == key) {
+            out.push(name.trim().to_string());
+        }
+    }
+    out
+}
+
+/// 纯函数（单测）：推荐预选 scope id（`recommended_selected == Some(true)`）。
+fn preflight_recommended(scaffold: &diskpilot_scaffold::Scaffold) -> Vec<String> {
+    scaffold
+        .scopes
+        .iter()
+        .filter(|sc| sc.recommended_selected == Some(true))
+        .map(|sc| sc.id.clone())
+        .collect()
+}
+
+/// 当前在跑的进程名快照（小写）。Windows 用 Toolhelp32（普通权限即可）；
+/// 非 Windows 返回空集——preflight 退化为纯建议查询，不阻塞（R10 口径）。
+#[cfg(windows)]
+fn running_process_names() -> Vec<String> {
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+    let mut out = Vec::new();
+    let snap = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    if snap == INVALID_HANDLE_VALUE {
+        return out;
+    }
+    let mut entry: PROCESSENTRY32W = unsafe { std::mem::zeroed() };
+    entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+    unsafe {
+        if Process32FirstW(snap, &mut entry) != 0 {
+            loop {
+                let len = entry
+                    .szExeFile
+                    .iter()
+                    .position(|&c| c == 0)
+                    .unwrap_or(entry.szExeFile.len());
+                out.push(String::from_utf16_lossy(&entry.szExeFile[..len]).to_lowercase());
+                if Process32NextW(snap, &mut entry) == 0 {
+                    break;
+                }
+            }
+        }
+        CloseHandle(snap);
+    }
+    out
+}
+
+#[cfg(not(windows))]
+fn running_process_names() -> Vec<String> {
+    Vec::new()
+}
+
+#[cfg(test)]
+mod preflight_tests {
+    use super::{preflight_recommended, running_required};
+
+    #[test]
+    fn running_required_大小写不敏感且去重保序() {
+        let snapshot = vec!["wechat.exe".to_string(), "explorer.exe".to_string()];
+        let wanted = vec![
+            "WeChat.exe".to_string(),
+            "wechat.exe".to_string(),
+            " QQ.exe ".to_string(),
+            "".to_string(),
+        ];
+        let out = running_required(&wanted, &snapshot);
+        assert_eq!(out, vec!["WeChat.exe".to_string()]);
+    }
+
+    #[test]
+    fn running_required_快照为空_全不在跑() {
+        let wanted = vec!["WeChat.exe".to_string()];
+        assert!(running_required(&wanted, &[]).is_empty());
+    }
+
+    #[test]
+    fn preflight_recommended_只取显式推荐项() {
+        let scaffold: diskpilot_scaffold::Scaffold = toml::from_str(
+            r#"
+id = "t"
+name = "T"
+risk = "low"
+disclaimer = "d"
+detect = []
+[[scope]]
+id = "a"
+label = "A"
+glob = "**/a"
+mode = "recycle"
+recommended_selected = true
+[[scope]]
+id = "b"
+label = "B"
+glob = "**/b"
+mode = "recycle"
+required_stopped_processes = ["WeChat.exe"]
+"#,
+        )
+        .unwrap();
+        assert_eq!(preflight_recommended(&scaffold), vec!["a".to_string()]);
+        // 反序列化侧：required_stopped_processes 也正确落到 scope 上
+        assert_eq!(
+            scaffold.scopes[1].required_stopped_processes.as_deref(),
+            Some(&["WeChat.exe".to_string()][..])
+        );
+    }
+}
+
 /// Restores a quarantined item back to its original path. Only `Quarantine`
 /// records are restorable; recycled/delete entries must be restored from the
 /// OS recycle bin or are unrecoverable.

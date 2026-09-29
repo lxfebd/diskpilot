@@ -77,6 +77,16 @@
   --radius-card: calc(var(--radius) * 0.9);   /* 卡片       14px */
   --radius-lg:   calc(var(--radius) * 1.05);  /* 弹窗       16px */
 
+  /* ── 布局节奏（app-shell 2.0）：外壳 / 页头 / 动作条共用一套尺寸，
+     组件只引用变量，改节奏只动这一处。sidebar 宽度与 nav.ts 的
+     SidebarLayoutState 判断同源（响应式断点见 nav.ts）。 ── */
+  --layout-page-header-height: 52px;
+  --layout-action-bar-height: 44px;
+  --layout-sidebar-collapsed-width: 56px;  /* 与 nav.ts SIDEBAR_COLLAPSED_WIDTH_PX 同步 */
+  --layout-sidebar-expanded-width: 208px;  /* 与 nav.ts SIDEBAR_EXPANDED_WIDTH_PX 同步 */
+  --layout-page-padding-inline: 16px;
+  --layout-sidebar-item-height: 34px;
+
   font-family: var(--font-sans);
   color-scheme: light;
 }

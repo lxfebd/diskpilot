@@ -41,6 +41,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["Code.exe", "idea64.exe"]
 
 [[scope]]
 id                  = "cursor-cache"
@@ -50,6 +52,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["Code.exe", "idea64.exe"]
 
 [[scope]]
 id                  = "intellij-caches"
@@ -59,6 +63,8 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["Code.exe", "idea64.exe"]
 
 [[scope]]
 id                  = "intellij-index"
@@ -68,3 +74,5 @@ mode                = "recycle"
 category            = "cache"
 prompt              = { kind = "none" }
 recycle_granularity = "directory"
+recommended_selected = true
+required_stopped_processes = ["Code.exe", "idea64.exe"]

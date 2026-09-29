@@ -36,7 +36,7 @@ const ACTION_CLASS: Record<UndoEntry['action'], string> = {
   delete: 'undo-tag-delete',
 };
 
-export function UndoPanel() {
+export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
   const t = useT();
   const [entries, setEntries] = useState<UndoEntry[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
@@ -87,6 +87,11 @@ export function UndoPanel() {
       <div className="studio-head">
         <span><History size={13} /> {t('cleanup.recent')}</span>
         <span className="muted small">{t('cleanup.entriesCount', { n: entries.length })}</span>
+        {onOpenHistory && (
+          <button type="button" className="ghost" onClick={onOpenHistory}>
+            {t('cleanup.viewAll')}
+          </button>
+        )}
       </div>
       <ul className="undo-list">
         {entries.map((e, i) => (

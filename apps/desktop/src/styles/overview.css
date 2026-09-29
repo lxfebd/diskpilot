@@ -1,27 +1,3 @@
-.seg-viewtabs {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-btn);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  background: var(--card);
-}
-.seg-item {
-  border: none;
-  background: transparent;
-  color: var(--ink-3);
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 6px 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-.seg-item + .seg-item { border-left: 1px solid var(--border); }
-.seg-item:hover { background: var(--paper-3); color: var(--ink); }
-.seg-item.active { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 -1px 0 0 var(--border-strong); }
-
 /* ── 资产总览主视图（顶部概览条 + 左40/右60 两栏） ── */
 /* 总览页不能用工作台的 5 列网格（460px 4px 1fr 4px 360px），否则内容被塞进第一列 */
 .app-content > main.overview { display: block; overflow-y: auto; }
