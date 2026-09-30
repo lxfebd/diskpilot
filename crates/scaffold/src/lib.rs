@@ -24,6 +24,9 @@ pub struct Scaffold {
         default
     )]
     pub scopes: Vec<Scope>,
+    /// 可选标签：驱动前端分组/筛选（如 "privacy" 归入隐私清理页）。
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -238,6 +241,11 @@ fn expand_winpct(s: &str) -> String {
 /// 的 env：开发者机上 `%USERPROFILE%` 展开成 `C:/Users/<真名>`，对样本
 /// `C:/Users/test/**` 零命中，宽到覆盖整个 home 的 scope 反而躲过红线。
 fn red_line_anchor(var: &str) -> Option<&'static str> {
+    // 注意边界：所有样本都锚定在 `C:/Users/test/...`（及 pagefile.sys 等盘根系统文件）
+    // 之下，因此 `C:/Users/**` 这类覆盖整个 home 的宽 glob 会命中样本并被拦，
+    // 而盘根 `C:/` / `C:`（不带 `**`，字面字串）反而不命中任何样本——globset
+    // 的 `C:` 不会匹配 `C:/Users/...` 这种全路径字面。真正该拦的盘级宽扫描
+    // 形态是 `C:/**`（见 red_line_check_is_machine_env_independent 外的边界测试）。
     let v = var.to_ascii_uppercase();
     Some(match v.as_str() {
         "USERPROFILE" | "HOME" => "C:/Users/test",
@@ -586,6 +594,25 @@ mod tests {
                 "宽 scope `{wide}` 必须命中红线"
             );
         }
+    }
+
+    #[test]
+    fn red_line_boundary_drive_root_vs_home() {
+        // 边界文档化（G-中2）：样本都锚定在 C:/Users/test 之下，
+        // 所以 `C:/Users/**` 命中，盘根字面 `C:/`（无 **）不命中，
+        // 而 `C:/**` 这种盘级宽扫描命中全部样本。
+        assert!(
+            !red_line_violations("C:/Users/**").is_empty(),
+            "`C:/Users/**` 必须命中（覆盖整个 home 的宽 glob）"
+        );
+        assert!(
+            red_line_violations("C:/").is_empty(),
+            "盘根字面 `C:/`（无 **）不应误命中样本"
+        );
+        assert!(
+            !red_line_violations("C:/**").is_empty(),
+            "`C:/**` 全程扫描应命中系统文件与 home 样本"
+        );
     }
 
     #[test]

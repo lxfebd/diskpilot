@@ -27,7 +27,7 @@ export interface Scope {
   label: string;
   glob: string;
   mode: Mode;
-  category?: 'cache' | 'media' | 'backup' | 'envs';
+  category?: 'cache' | 'media' | 'backup' | 'envs' | 'privacy';
   variant?: string;
   recycle_granularity?: RecycleGranularity;
   /** 清理页进入时的推荐预选（P2b）；只是 UI 建议，用户仍可逐项取消 */
@@ -51,6 +51,8 @@ export interface Scaffold {
   detect: string[];
   match: { name_contains?: string[]; must_have_child?: string[] };
   scopes: Scope[];
+  /** TOML `tags = [...]`：驱动前端分组筛选（"privacy" → 隐私清理页）。 */
+  tags?: string[];
 }
 
 export interface AdvisorResponse {

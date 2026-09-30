@@ -4,11 +4,18 @@
 流程: initialize -> notifications/initialized -> tools/list -> bench_disk 实测（dry_run=false, 64MB 临时目录）-> 守卫拒绝路径验证
 """
 import json
+import os
 import subprocess
 import sys
 import time
 
-BIN = sys.argv[1] if len(sys.argv) > 1 else r"J:\DiskPilot\agent-server.exe"
+# 默认取仓库内 target/release 产物：脚本在 scripts/ 下，回退到仓库根找二进制。
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BIN = (
+    sys.argv[1]
+    if len(sys.argv) > 1
+    else os.path.join(_REPO_ROOT, "target", "release", "agent-server.exe")
+)
 
 
 def main():

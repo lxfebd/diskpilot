@@ -21,7 +21,7 @@ custom-protocol = ["tauri/custom-protocol"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri                = { version = "2", features = [] }
+tauri                = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog  = "2"
 tauri-plugin-fs      = "2"
 tauri-plugin-shell   = "2"

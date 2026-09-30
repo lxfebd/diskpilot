@@ -1338,6 +1338,13 @@ let cliIndexPromise: Promise<string | null> | null = null;
 // 与 toolbeltStatus 的索引分开缓存——manifest 是独立后端调用，数据更全。
 let manifestsPromise: Promise<ToolManifest[]> | null = null;
 
+/** 安装/卸载/刷新插件后调用：让下一次 getCliIndexContext 重新拉取，避免旧索引
+ *  永久生效（模块级懒加载本就不失效）。 */
+export function invalidateToolbeltCache(): void {
+  cliIndexPromise = null;
+  manifestsPromise = null;
+}
+
 function getManifests(): Promise<ToolManifest[]> {
   if (manifestsPromise) return manifestsPromise;
   manifestsPromise = api.toolbeltManifests().catch(() => [] as ToolManifest[]);

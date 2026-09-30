@@ -17,6 +17,7 @@ import './styles/overview.css';
 import './styles/toolwall.css';
 import './styles/cleanup.css';
 import './styles/history.css';
+import './styles/optimizer.css';
 import './styles/dark.css';
 import './styles/disclaimer.css';
 

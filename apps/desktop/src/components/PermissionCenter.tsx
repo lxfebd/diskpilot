@@ -10,11 +10,7 @@ import {
   type PermDef,
 } from '../permissions';
 import { LEVEL_COLORS } from '../colors';
-import { zhText, useT } from '../i18n';
-
-// 「即将上线」历史上是写在权限说明里的标记，判定只看中文原文（与显示语言无关）。
-// 这是数据标记不是文案，故不参与翻译。
-const COMING_SOON_MARK = '（即将上线）'; // @i18n-keep
+import { useT } from '../i18n';
 
 // 存文案键而非中文：顶层常量在定义处求值会把中文烤死在首次 import，切语言不生效。
 const LEVEL_META: Record<'L0' | 'L1' | 'L2' | 'L3', { labelKey: string; icon: typeof ShieldCheck; color: string; descKey: string }> = {
@@ -79,9 +75,8 @@ export function PermissionCenter() {
             <div className="perm-list">
               {rows(lv).map((p: PermDef) => {
                 const on = isPermEnabled(p.id, cfg);
-                const comingSoon = zhText(p.descKey).includes(COMING_SOON_MARK);
                 return (
-                  <div key={p.id} className={'perm-row' + (comingSoon ? ' coming-soon' : '')}>
+                  <div key={p.id} className="perm-row">
                     <div className="perm-row-main">
                       <span className="perm-name">{t(p.labelKey)}</span>
                       <span className="perm-desc">{t(p.descKey)}</span>
@@ -91,8 +86,6 @@ export function PermissionCenter() {
                     ) : lv === 'L0' ? (
                       // L0 始终开启不可关：禁用态开关 + 常开视觉，点了也不会有「没反应」的错觉
                       <button type="button" className="switch on" disabled aria-label={t(p.labelKey)} title={t('perm.center.l0Title')} />
-                    ) : comingSoon ? (
-                      <span className="perm-coming">{t('perm.center.comingSoon')}</span>
                     ) : (
                       <button
                         type="button"

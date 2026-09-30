@@ -3,11 +3,14 @@
 // `t(nav.titleKey)` 这种动态取值——键名打错不会红，只会在界面上显示键名本身。
 // 这里把「nav.ts 声明的每个键都能在文案表命中」钉成测试补上这个洞。
 import { describe, it, expect } from 'vitest';
+import tokensCss from './styles/tokens.css?raw';
 import {
   PAGE_IDS,
   PRIMARY_NAV_GROUPS,
   SECONDARY_NAV_ITEMS,
   SIDEBAR_EXPANDED_MIN_WIDTH_PX,
+  SIDEBAR_EXPANDED_WIDTH_PX,
+  SIDEBAR_COLLAPSED_WIDTH_PX,
   createSidebarLayoutState,
   navItemById,
   resizeSidebarLayout,
@@ -94,5 +97,31 @@ describe('侧边栏折叠三态', () => {
     const s = createSidebarLayoutState(900, true);
     expect(s.expanded).toBe(false);
     expect(s.preferredExpanded).toBe(true);
+  });
+});
+
+describe('侧栏宽度与 tokens.css 同步（跨文件守卫）', () => {
+  // nav.ts 的宽度常量负责内容区宽度预算，styles/tokens.css 的
+  // --layout-sidebar-*-width 负责实际渲染——两处是「口头同步」，
+  // 改一处忘了另一处时布局错位且无报错。这里直接以 ?raw 读 css 原文，
+  // 把两处数值钉死（vitest ?raw 为字符串，纯正则断言常量与 css 一致）。
+  const css = tokensCss;
+
+  it('展开宽度与 CSS 变量一致', () => {
+    const m = css.match(/--layout-sidebar-expanded-width:\s*(\d+)px/);
+    expect(m, 'tokens.css 里找不到 --layout-sidebar-expanded-width').not.toBeNull();
+    expect(Number(m![1])).toBe(SIDEBAR_EXPANDED_WIDTH_PX);
+  });
+
+  it('折叠宽度与 CSS 变量一致', () => {
+    const m = css.match(/--layout-sidebar-collapsed-width:\s*(\d+)px/);
+    expect(m, 'tokens.css 里找不到 --layout-sidebar-collapsed-width').not.toBeNull();
+    expect(Number(m![1])).toBe(SIDEBAR_COLLAPSED_WIDTH_PX);
+  });
+
+  it('页面内边距变量存在且为 16px 预算参考', () => {
+    const m = css.match(/--layout-page-padding-inline:\s*(\d+)px/);
+    expect(m, 'tokens.css 里找不到 --layout-page-padding-inline').not.toBeNull();
+    expect(Number(m![1])).toBeGreaterThan(0);
   });
 });

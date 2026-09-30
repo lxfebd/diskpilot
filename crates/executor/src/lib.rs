@@ -126,13 +126,15 @@ pub fn execute(
 
     if dry_run {
         for p in &plan.paths {
+            // dry-run 也实测每项字节（与真删后的 path_bytes_before 同一口径），
+            // 让确认面板「预估」与实际可清量对齐，不再恒 None。
             out.push(UndoEntry {
                 timestamp: now(),
                 action: plan.action,
                 source: p.clone(),
                 destination: None,
                 reason: format!("dry-run: {}", plan.reason),
-                bytes_freed: None,
+                bytes_freed: path_bytes_before(p),
             });
         }
         write_log(undo_log, &out)?;

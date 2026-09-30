@@ -16,6 +16,7 @@ import { RISK_COLORS, LEVEL_COLORS } from '../../colors';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { useStore } from '../../store';
+import { invalidateToolbeltCache } from '../../advisor/tools';
 import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
 import type { SettingsTab } from '../Settings';
 import { HwReportCard, HwHistorySection } from '../HwPanels';
@@ -43,6 +44,9 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
 
   const refresh = useCallback(() => {
     if (!isTauri) return;
+    // 重新探测/改 tools_root 后，AI 侧的 toolbelt 索引缓存必须作废，
+    // 否则下一次对话仍用旧工具清单（模块级懒加载不会自失效）。
+    invalidateToolbeltCache();
     api.toolbeltStatus().then((s) => {
       setStatus(s);
       setRootDraft(s.tools_root ?? '');

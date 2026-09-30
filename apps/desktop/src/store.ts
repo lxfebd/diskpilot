@@ -177,6 +177,8 @@ interface AppState {
   newChat: () => void;
   switchChat: (id: string) => void;
   deleteChat: (id: string) => void;
+  /** 把当前活动会话（非空）归档进历史列表并落盘；不换新会话。关窗前调用防对话丢失。 */
+  archiveActiveChat: () => void;
 
   toast: (text: string, kind?: 'ok' | 'err') => void;
   dismissToast: (id: string) => void;
@@ -332,11 +334,35 @@ export const useStore = create<AppState>((set, get) => {
     // 失败就整体中止、其余项静默没动（后端 execute 是 `?` 提前返回语义）。
     const batch = paths.map((p) => p.path);
     try {
-      await api.executeAiPlan(batch, true, true);
-      await api.executeAiPlan(batch, true, false);
-      done = paths.length;
-      bytes = paths.reduce((s, p) => s + (p.size_hint ?? 0), 0);
-      succeeded.push(...batch);
+      // dry-run 返回值 = 后端认为实际可回收的条目。为空说明这些路径已不存在
+      // 或全部命中保护（可能刚被清过），再真删也是空转——不按全量计成功，
+      // 落到下方逐项再各试一次（逐项只对真正失败的单个计数）。
+      const dry = await api.executeAiPlan(batch, true, true);
+      if (dry.length > 0) {
+        await api.executeAiPlan(batch, true, false);
+        done = paths.length;
+        bytes = paths.reduce((s, p) => s + (p.size_hint ?? 0), 0);
+        succeeded.push(...batch);
+      } else {
+        // 整批 dry-run 无实际条目 → 逐项兜底（可能单个路径仍可回收，
+        // 也可能逐项也空，那样 failed 计数如实反映）。不抛异常走批量 catch，
+        // 直接继续到下方逐项循环。
+        for (const p of paths) {
+          try {
+            const d = await api.executeAiPlan([p.path], true, true);
+            if (d.length === 0) {
+              failed += 1;
+              continue;
+            }
+            await api.executeAiPlan([p.path], true, false);
+            done += 1;
+            bytes += p.size_hint ?? 0;
+            succeeded.push(p.path);
+          } catch {
+            failed += 1;
+          }
+        }
+      }
     } catch {
       // 批量不可行（含 dry-run 拒绝 / 保护路径命中）：回退逐项，保持
       // 「失败的不计入、其余照常」的既有语义，已成功的仍一次性剪树。
@@ -406,6 +432,18 @@ export const useStore = create<AppState>((set, get) => {
       persistChatSessions(list);
       persistActiveChatId(id);
       return { chatSessions: list, activeChatId: id, chat: { node: null, scaffoldId: null, turns: [], busy: false } };
+    }),
+  // 关窗前归档：与 newChat 的归档逻辑同源，但不换会话、不清活动 turns。
+  // 高频路径不逐条落盘的设计不变，只是补上「结束前」这个落盘点。
+  archiveActiveChat: () =>
+    set((s) => {
+      if (s.chat.turns.length === 0) return {};
+      const id = s.activeChatId ?? `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      const title = s.chat.turns.find((turn) => turn.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 24) || t('common.chat.untitled');
+      const meta: ChatSessionMeta = { id, title, ts: Date.now(), turns: s.chat.turns };
+      const list = [meta, ...s.chatSessions.filter((x) => x.id !== meta.id)];
+      persistChatSessions(list);
+      return { chatSessions: list };
     }),
   switchChat: (id) =>
     set((s) => {

@@ -151,7 +151,7 @@ const MOCK_TREE: Node = {
   ],
 };
 
-// 浏览器/mock 预览用的 scaffold 清单——与 scaffolds/*.toml 逐份对齐（17 份）。
+// 浏览器/mock 预览用的 scaffold 清单——与 scaffolds/*.toml 逐份对齐（21 份）。
 // 真实 Tauri 环境走后端 list_scaffolds（load_dir 只读 scaffolds/ 顶层 .toml）；
 // 这里只服务 vite dev 预览。2026-09-08 整肃：删除 2026-05-05 已下架的 23 个
 // legacy 幽灵项（dingtalk/feishu/slack/telegram/spotify/vscode/cursor/teams 旧版/
@@ -397,6 +397,37 @@ export const SCAFFOLDS: Scaffold[] = [
     scopes: [
       { id: '360-browser-cache', label: '360 浏览器渲染缓存（图片 / 脚本）', glob: '**/360*/Chrome/User Data/*/{Cache,Code Cache,GPUCache,GrShaderCache,DawnCache,ShaderCache}/**', mode: 'recycle', category: 'cache', prompt: { kind: 'days', default: 30, label: '清理多少天前的缓存' }, recycle_granularity: 'directory' },
       { id: '360se-cache', label: '360 安全浏览器（经典版）渲染缓存', glob: '**/360se6/User Data/*/{Cache,Code Cache,GPUCache,GrShaderCache}/**', mode: 'recycle', category: 'cache', variant: 'legacy', prompt: { kind: 'days', default: 30, label: '清理多少天前的缓存' }, recycle_granularity: 'directory' },
+    ],
+  },
+  {
+    id: 'windows-update', name: 'Windows 更新缓存', risk: 'medium',
+    disclaimer: '清理 Windows 更新已下载的安装包缓存（SoftwareDistribution\\Download）与传递优化（Delivery Optimization）下载缓存。这些是更新安装完成后留下的旧副本，删掉不影响系统更新功能，之后的更新会按需重新下载。传递优化缓存默认会被系统自动清理，这里只在缓存明显偏大时手动回收。清理走系统回收站，可还原；系统目录需管理员权限，无权限的部分会自动跳过。',
+    detect: ['C:/Windows/SoftwareDistribution', 'C:/Windows/ServiceProfiles/NetworkService/AppData/Local/Microsoft/Windows/DeliveryOptimization'],
+    match: { name_contains: ['SoftwareDistribution', 'DeliveryOptimization'], must_have_child: [] },
+    scopes: [
+      { id: 'windows-update-download', label: 'Windows 更新安装包缓存（SoftwareDistribution\\Download）', glob: '%WINDIR%/SoftwareDistribution/Download/**', mode: 'recycle', category: 'cache', prompt: { kind: 'days', default: 1, label: '清理多少天前的更新缓存（已安装的旧包）' }, recommended_selected: true },
+      { id: 'delivery-optimization-cache', label: '传递优化下载缓存（Delivery Optimization）', glob: '%WINDIR%/ServiceProfiles/NetworkService/AppData/Local/Microsoft/Windows/DeliveryOptimization/Cache/**', mode: 'recycle', category: 'cache', prompt: { kind: 'days', default: 7, label: '清理多少天前的传递优化缓存' } },
+    ],
+  },
+  {
+    id: 'windows-privacy', name: 'Windows 活动与使用痕迹', risk: 'medium', tags: ['privacy'],
+    disclaimer: '清理 Windows 留下的个人使用痕迹：最近打开的文件列表、缩略图缓存、IE/Edge 遗留的临时网络文件（INetCache）。这些是方便用途的索引与缓存，删掉不影响文件和程序本身，只是系统会重新生成。绝不触碰：浏览器书签、密码、登录信息、历史记录、Windows 账户凭据。缩略图删除后资源管理器会按需重建。清理走系统回收站，可还原。',
+    detect: ['%APPDATA%/Microsoft/Windows/Recent', '%LOCALAPPDATA%/Microsoft/Windows/Explorer/thumbcache_*.db', '%LOCALAPPDATA%/Microsoft/Windows/INetCache'],
+    match: { name_contains: ['Recent', 'thumbcache', 'INetCache'], must_have_child: [] },
+    scopes: [
+      { id: 'recent-items', label: '最近打开的文件列表（Recent / JumpList）', glob: '%APPDATA%/Microsoft/Windows/Recent/**', mode: 'recycle', category: 'privacy', prompt: { kind: 'none' } },
+      { id: 'thumbcache', label: '资源管理器缩略图缓存（thumbcache）', glob: '%LOCALAPPDATA%/Microsoft/Windows/Explorer/thumbcache_*.db', mode: 'recycle', category: 'privacy', prompt: { kind: 'none' } },
+      { id: 'inet-cache', label: 'IE / Edge 遗留临时网络文件（INetCache）', glob: '%LOCALAPPDATA%/Microsoft/Windows/INetCache/**', mode: 'recycle', category: 'privacy', prompt: { kind: 'days', default: 30, label: '清理多少天前的临时网络文件' } },
+    ],
+  },
+  {
+    id: 'browser-privacy', name: '浏览器使用痕迹（历史 / 表单）', risk: 'medium', tags: ['privacy'],
+    disclaimer: '清理 Chrome / Edge 的浏览历史与 Firefox 的表单填写记录。这些记录会在这三个浏览器彻底关闭后才会完整写入磁盘，清理前请完全退出浏览器。绝不触碰：书签、密码（Login Data）、Cookie、会话登录状态、扩展程序数据、Local Storage、IndexedDB——Cookie 与登录数据属于项目安全红线，任何清理都不会触及。Firefox 浏览历史与书签同库（places.sqlite），为安全起见同样不清理。历史记录删除后不可在浏览器内找回。清理走系统回收站，可还原。',
+    detect: ['%LOCALAPPDATA%/Google/Chrome/User Data/Default/History', '%LOCALAPPDATA%/Microsoft/Edge/User Data/Default/History', '%APPDATA%/Mozilla/Firefox/Profiles'],
+    match: { name_contains: ['User Data', 'Firefox'], must_have_child: [] },
+    scopes: [
+      { id: 'chromium-history', label: 'Chrome / Edge 浏览历史', glob: '{%LOCALAPPDATA%/Google/Chrome/User Data,%LOCALAPPDATA%/Microsoft/Edge/User Data}/**/{History,History-journal,History-journal-ms}*', mode: 'recycle', category: 'privacy', prompt: { kind: 'none' }, required_stopped_processes: ['chrome.exe', 'msedge.exe'] },
+      { id: 'firefox-formhistory', label: 'Firefox 表单填写记录', glob: '%APPDATA%/Mozilla/Firefox/Profiles/*/formhistory.sqlite*', mode: 'recycle', category: 'privacy', prompt: { kind: 'none' }, required_stopped_processes: ['firefox.exe'] },
     ],
   },
 ];

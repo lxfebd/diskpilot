@@ -232,12 +232,10 @@ html[data-theme="pro"] .fv-ext-bar { background: var(--paper-3); }
 .perm-level-desc { margin-top: 2px; }
 .perm-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .perm-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 8px; border-radius: var(--radius-sm); background: var(--paper-1); }
-.perm-row.coming-soon { opacity: .6; }
 .perm-row-main { display: flex; flex-direction: column; min-width: 0; }
 .perm-name { font-size: 12.5px; font-weight: 600; }
 .perm-desc { font-size: 11px; color: var(--muted); }
 .perm-lock { color: var(--risk-danger); }
-.perm-coming { font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); padding: 1px 6px; border-radius: 999px; }
 .perm-foot { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 
 /* ── W2 工具墙：12 分类导航 + 图标网格 ─────────────────────────────── */

@@ -87,10 +87,23 @@ fn run_fancmd(args: &[&str]) -> Result<String, String> {
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::null())
         .creation_flags(0x08000000) // CREATE_NO_WINDOW
         .spawn()
         .map_err(|e| format!("启动 fancmd（{exe}）失败：{e}"))?;
+    // 后台线程先读 stdout：输出膨胀时若等退出后才读，进程写满 64KB 管道缓冲
+    // 会阻塞，与「等退出」互等死锁（与 hw.rs run_fancmd_sensors 同一预读策略）。
+    let raw = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    if let Some(mut so) = child.stdout.take() {
+        let raw2 = std::sync::Arc::clone(&raw);
+        std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            let _ = so.read_to_end(&mut buf);
+            if let Ok(mut g) = raw2.lock() {
+                *g = buf;
+            }
+        });
+    }
     let started = std::time::Instant::now();
     let timeout = std::time::Duration::from_secs(15);
     let status = loop {
@@ -110,14 +123,8 @@ fn run_fancmd(args: &[&str]) -> Result<String, String> {
         }
         std::thread::sleep(std::time::Duration::from_millis(40));
     };
-    let mut raw = Vec::new();
-    if let Some(mut so) = child.stdout.take() {
-        let _ = so.read_to_end(&mut raw);
-    }
-    if let Some(mut se) = child.stderr.take() {
-        let mut sink = Vec::new();
-        let _ = se.read_to_end(&mut sink);
-    }
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    let raw = raw.lock().map(|g| g.clone()).unwrap_or_default();
     if !status.success() && raw.is_empty() {
         return Err(format!("fancmd 退出码 {:?}", status.code()));
     }

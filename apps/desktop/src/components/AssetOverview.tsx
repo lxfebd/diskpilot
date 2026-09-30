@@ -8,6 +8,13 @@ import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
 import type { Node, Scaffold } from '../types';
 
+// SVG 渐变 id 的唯一序列源：每实例自增，保证跨 remount/多实例不撞。
+let trendSeq = 0;
+function trendFillSeq(): number {
+  trendSeq += 1;
+  return trendSeq;
+}
+
 interface DriveInfo {
   path: string;
   total_bytes: number;
@@ -148,8 +155,9 @@ function SpaceTrendCard({ selPath, onGoWorkspace }: { selPath: string | null; on
 
   const selfKey = selPath ? spaceNormKey(selPath) : null;
 
-  // 渐变 id 需要唯一（多条 row 共用同一 svg defs namespace）
-  const fillId = useMemo(() => `trend-fill-${Math.random().toString(36).slice(2, 8)}`, []);
+  // 渐变 id 需要每实例唯一：用模块级自增计数而非 Math.random——随机既不可复现，
+  // 多实例并发渲染时也可能撞 id（曲线引用错位）。
+  const fillId = useMemo(() => `trend-fill-${trendFillSeq()}`, []);
 
   // 聚合到盘：只取同盘快照（C:\ vs C:\Users 视为同一盘；记录本身是扫描根，
   // 去重键取盘根）。按时间排序，保留最新 14 条。
@@ -326,6 +334,12 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
   const selCount = useMemo(() => cleanItems.filter((i) => checked[i.key]).length, [cleanItems, checked]);
   const selBytes = useMemo(() => cleanItems.filter((i) => checked[i.key]).reduce((s, i) => s + i.bytes, 0), [cleanItems, checked]);
+  // 微信缓存一旦勾选，从总览一键清理会覆盖本机所有微信账号（清理页才有账号筛选）。
+  // 这里不拦截，只在运行时如实提示，避免多账号场景误清其他账号却毫无预兆。
+  const wechatChecked = useMemo(
+    () => cleanItems.some((i) => i.scaffoldId === 'wechat-pc' && checked[i.key]),
+    [cleanItems, checked],
+  );
 
   const doClean = async () => {
     const sel = cleanItems.filter((i) => checked[i.key]);
@@ -651,6 +665,9 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
               )}
             </div>
             <div className="ao-actionbar">
+              {wechatChecked && (
+                <span className="ao-actionbar-warn">{t('overview.clean.wechatAll')}</span>
+              )}
               <span className="ao-actionbar-info">
                 {t('overview.clean.selPrefix')} <b>{selCount}</b> {t('overview.clean.selSuffix')} <b>{formatBytes(selBytes)}</b>
               </span>

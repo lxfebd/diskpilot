@@ -352,6 +352,15 @@
 }
 .ao-actionbar-info { font-size: 13px; color: var(--ink-2); font-weight: 700; }
 .ao-actionbar-info b { color: var(--ink); font-weight: 700; }
+.ao-actionbar-warn {
+  flex: 1 1 auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--warn-fg);
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+}
 .ao-clean-btn {
   min-width: 150px;
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));

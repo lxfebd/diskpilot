@@ -13,6 +13,7 @@ import { AssetOverview } from './components/AssetOverview';
 import { Toolbelt } from './components/Toolbelt';
 import { CleanupPage } from './components/cleanup/CleanupPage';
 import { HistoryPage } from './components/history/HistoryPage';
+import { OptimizerPage } from './components/OptimizerPage';
 import { useCleanupStore } from './useCleanupStore';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
@@ -115,6 +116,9 @@ export default function App() {
   // Holds the latest scan-stats event so we can merge it into ScanDiag once
   // api.scan() returns. Tauri emits the event right before the command resolves.
   const lastBackendStats = useRef(null as ScanStatsEvent | null);
+  // setRoot(rootNode)+select 的同步耗时：scan 完成后前端要把整棵树塞进 store，
+  // 大磁盘时这一步可能比后端 IO 还慢，单独计时喂给 diag（曾恒 0，诊断失真）。
+  const lastSetRootMs = useRef(0);
 
   // ── 全局 AI 侧栏（贯穿所有页面）──
   const [aiOpen, setAiOpen] = useState<boolean>(() => localStorage.getItem('diskpilot.aiOpen') !== '0');
@@ -124,6 +128,14 @@ export default function App() {
   });
   useEffect(() => { localStorage.setItem('diskpilot.aiOpen', aiOpen ? '1' : '0'); }, [aiOpen]);
   useEffect(() => { localStorage.setItem('diskpilot.aiWidth', String(aiWidth)); }, [aiWidth]);
+
+  // 关窗/刷新前归档活动对话：活动 turns 平时不逐条落盘，不归档会在
+  // 关闭后整段丢失。用 getState 取最新状态，避免 effect 闭包过期。
+  useEffect(() => {
+    const onUnload = () => useStore.getState().archiveActiveChat();
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, []);
 
   // ── 导航侧栏折叠三态（响应式 + 用户显式选择，见 nav.ts）──
   // 显式收起/展开跨会话记住（与 AI 栏 aiOpen 同款存储）；缺省展开。
@@ -247,6 +259,16 @@ export default function App() {
     api.listDrives().then(setDrives).catch(() => {});
   }, []);
 
+  // 托盘菜单文案：启动时按当前语言推一次（切语言时 Settings 会再推）。
+  useEffect(() => {
+    if (!isTauri) return;
+    api.traySync(
+      t('settings.general.trayShow'),
+      t('settings.general.trayQuit'),
+      t('settings.general.trayTooltip'),
+    ).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!isTauri) return;
     const unlisten = listen<ScanStatsEvent>('scan-stats', (e) => {
@@ -346,7 +368,7 @@ export default function App() {
         backend,
         ipcMs,
         scanCallMs: tScan1 - tScan0,
-        setRootMs: 0,
+        setRootMs: lastSetRootMs.current,
         totalMs,
       };
       setDiag(next);
@@ -354,6 +376,7 @@ export default function App() {
         backend,
         scanCallMs: next.scanCallMs.toFixed(1),
         ipcMs: ipcMs?.toFixed(1) ?? null,
+        setRootMs: lastSetRootMs.current.toFixed(1),
         totalMs: totalMs.toFixed(1),
       });
     } catch (e) {
@@ -395,8 +418,10 @@ export default function App() {
       children: multi ? nodes : nodes[0].children ?? [],
       top_extensions: [],
     };
+    const t0 = performance.now();
     setRoot(rootNode);
     select(rootNode.path);
+    lastSetRootMs.current = performance.now() - t0;
     // 只有真正跑了扫描（fresh 非空）才递增 scanSeq：缓存命中打开不触发，
     // ChatPanel 靠它区分「同路径的新扫描」与「切页导致的重挂载」。
     if (fresh.size > 0) useStore.getState().bumpScanSeq();
@@ -515,6 +540,16 @@ export default function App() {
             <CleanupPage />
           </ErrorBoundary>
         </main>
+      ) : view === 'privacy' ? (
+        <main className="cleanup-page">
+          <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
+            <CleanupPage tagFilter="privacy" />
+          </ErrorBoundary>
+        </main>
+      ) : view === 'optimizer' ? (
+        <ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>
+          <OptimizerPage />
+        </ErrorBoundary>
       ) : view === 'history' ? (
         <main className="history-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.historyFailed')}>
@@ -709,7 +744,6 @@ function FileDetailPanel() {
   );
 }
 
-// ── 扫描进度条 ──
 // ── 扫描进度条 ──
 // 高频状态（scan-progress 事件每 tick 一次）全部自持在组件内：滚动文件数/
 // 字节/当前路径只重渲这一条进度条，不再穿透 App 整树。App 只在扫描开始/

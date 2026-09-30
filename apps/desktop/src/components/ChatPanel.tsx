@@ -524,7 +524,10 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   // 确认硬件压测（L1 受控）：用户在确认面板里点「确认」后，回填 resolveStress()
   // 让 agentChat 的工具调用链继续往下走（工具结果会作为下一轮的 tool_result
   // 回给模型，由模型总结）。监控条由后端 hw-test-progress 事件驱动。
+  // 勾选「本次会话免确认」与会话确认同模式：grantSessionAuth('hw.stress')，
+  // 会话期内压测不再弹确认卡。
   const confirmStress = (action: { run: boolean; remember: boolean }) => {
+    if (action.remember) grantSessionAuth('hw.stress');
     setPendingStress(null);
     resolveStress(action);
   };

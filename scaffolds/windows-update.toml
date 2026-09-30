@@ -1,0 +1,36 @@
+id          = "windows-update"
+name        = "Windows 更新缓存"
+homepage    = "https://learn.microsoft.com/windows/deployment/update/windows-update-resources"
+risk        = "medium"
+disclaimer  = """\
+清理 Windows 更新已下载的安装包缓存（SoftwareDistribution\\Download）与\
+传递优化（Delivery Optimization）下载缓存。这些是更新安装完成后留下的旧副本，\
+删掉不影响系统更新功能，之后的更新会按需重新下载。\
+传递优化缓存默认会被系统自动清理，这里只在缓存明显偏大时手动回收。\
+清理走系统回收站，可还原；系统目录需管理员权限，无权限的部分会自动跳过。"""
+
+detect = [
+  "C:/Windows/SoftwareDistribution",
+  "C:/Windows/ServiceProfiles/NetworkService/AppData/Local/Microsoft/Windows/DeliveryOptimization",
+]
+
+[match]
+name_contains    = ["SoftwareDistribution", "DeliveryOptimization"]
+must_have_child  = []
+
+[[scope]]
+id       = "windows-update-download"
+label    = "Windows 更新安装包缓存（SoftwareDistribution\\Download）"
+glob     = "%WINDIR%/SoftwareDistribution/Download/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 1, label = "清理多少天前的更新缓存（已安装的旧包）" }
+recommended_selected = true
+
+[[scope]]
+id       = "delivery-optimization-cache"
+label    = "传递优化下载缓存（Delivery Optimization）"
+glob     = "%WINDIR%/ServiceProfiles/NetworkService/AppData/Local/Microsoft/Windows/DeliveryOptimization/Cache/**"
+mode     = "recycle"
+category = "cache"
+prompt   = { kind = "days", default = 7, label = "清理多少天前的传递优化缓存" }

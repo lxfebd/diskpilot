@@ -386,6 +386,7 @@ pub fn winapp2_to_scaffold(entry: &Winapp2Entry) -> Option<Scaffold> {
             must_have_child: Vec::new(),
         },
         scopes,
+        tags: Vec::new(),
     })
 }
 

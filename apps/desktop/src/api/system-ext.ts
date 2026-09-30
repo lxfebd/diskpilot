@@ -431,12 +431,23 @@ export const systemExtApi = {
   // ── 通用配置 ──
   generalConfig: () =>
     isTauri
-      ? invoke<{ hardware_accel: boolean }>('general_config')
-      : Promise.resolve({ hardware_accel: true }),
+      ? invoke<{ hardware_accel: boolean; close_to_tray: boolean; tools_root: string | null }>('general_config')
+      : Promise.resolve({ hardware_accel: true, close_to_tray: true, tools_root: null }),
 
   setGeneral: (hardwareAccel: boolean) =>
     isTauri
       ? invoke<void>('set_general', { hardwareAccel })
+      : Promise.resolve(),
+
+  // ── 托盘常驻（P4-2）──
+  setCloseToTray: (enabled: boolean) =>
+    isTauri
+      ? invoke<void>('set_close_to_tray', { enabled })
+      : Promise.resolve(),
+  // 语言切换后把托盘菜单文案推给后端（不传语言，传现成文案）。
+  traySync: (showLabel: string, quitLabel: string, tooltip: string) =>
+    isTauri
+      ? invoke<void>('tray_sync', { showLabel, quitLabel, tooltip })
       : Promise.resolve(),
 };
 

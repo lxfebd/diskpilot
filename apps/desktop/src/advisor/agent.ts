@@ -92,6 +92,21 @@ const TOOL_LABEL: Record<string, string> = {
   security_login_events: '登录事件',
 };
 
+/** 工具名反查中文标签；未收录的 snake_case id 转成可读形式（get_foo_bar → foo bar），
+ *  避免 60+ 新 MCP 工具在操作历史/trace 里直显裸 snake_case。 */
+function toolLabel(name: string): string {
+  return TOOL_LABEL[name] ?? prettifyToolName(name);
+}
+
+function prettifyToolName(name: string): string {
+  if (!name) return name;
+  const words = name
+    .replace(/^(get|run|list)_/, '')   // 去掉常见动词前缀，保留业务词干
+    .split('_')
+    .filter(Boolean);
+  return words.map((w) => (w.length <= 3 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1))).join(' ');
+}
+
 function safeParseArgs(raw: unknown): Record<string, unknown> {
   if (typeof raw === 'object' && raw !== null) return raw as Record<string, unknown>;
   if (typeof raw === 'string') {
@@ -141,8 +156,8 @@ export async function agentChat(o: AgentOpts): Promise<string> {
 4. 不要编造硬件数据，所有数值必须来自工具返回值。
 5. 弱机（hwProfile=weak）上，不要主动建议烤机/压测/深度扫描这类长时高负载操作。`;
   const system = cliIndex
-    ? `$${baseSystem}\n\n$${perfLine}\n\n$${hwSection}\n\n$${cliIndex}\n\n工具使用规则：要用 run_cli_tool 执行某个 CLI 工具前，必须先调用 get_cli_tool_usage 查看该工具的绝对路径、参数表和示例，确认参数无误后才能调用 run_cli_tool；中/高风险工具会自动弹确认框，确认后才真正执行。`
-    : `$${baseSystem}\n\n$${perfLine}\n\n$${hwSection}`;
+    ? `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${cliIndex}\n\n工具使用规则：要用 run_cli_tool 执行某个 CLI 工具前，必须先调用 get_cli_tool_usage 查看该工具的绝对路径、参数表和示例，确认参数无误后才能调用 run_cli_tool；中/高风险工具会自动弹确认框，确认后才真正执行。`
+    : `${baseSystem}\n\n${perfLine}\n\n${hwSection}`;
 
   let answer: string;
   if (settings.provider === 'anthropic') answer = await agentAnthropic(settings, system, o, tools.anthropic, emit, showThink);
@@ -217,7 +232,7 @@ async function agentOpenaiLike(
     for (const c of calls) {
       const name = c?.function?.name ?? '';
       const args = safeParseArgs(c?.function?.arguments);
-      const label = TOOL_LABEL[name] ?? name;
+      const label = toolLabel(name);
       emit({ kind: 'tool_call', text: `调用 ${label}`, detail: summarizeArgs(args) });
       const out = await execTool(name, args, o);
       emit({ kind: 'tool_result', text: `${label} 返回`, detail: out.slice(0, 1500) });
@@ -285,7 +300,7 @@ async function agentAnthropic(
     msgs.push({ role: 'assistant', content: blocks });
     const results: any[] = [];
     for (const u of uses) {
-      const label = TOOL_LABEL[u?.name ?? ''] ?? u?.name ?? '';
+      const label = toolLabel(u?.name ?? '');
       emit({ kind: 'tool_call', text: `调用 ${label}`, detail: summarizeArgs(u?.input ?? {}) });
       const out = await execTool(String(u?.name ?? ''), (u?.input ?? {}) as Record<string, unknown>, o);
       emit({ kind: 'tool_result', text: `${label} 返回`, detail: out.slice(0, 1500) });
@@ -348,7 +363,7 @@ async function agentGemini(
     contents.push({ role: 'model', parts: respParts });
     for (const fc of calls) {
       const name = String(fc?.name ?? '');
-      const label = TOOL_LABEL[name] ?? name;
+      const label = toolLabel(name);
       emit({ kind: 'tool_call', text: `调用 ${label}`, detail: summarizeArgs(fc?.args ?? {}) });
       const out = await execTool(name, (fc?.args ?? {}) as Record<string, unknown>, o);
       emit({ kind: 'tool_result', text: `${label} 返回`, detail: out.slice(0, 1500) });

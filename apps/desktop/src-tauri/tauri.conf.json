@@ -50,7 +50,7 @@
     "windows": {
       "wix": {
         "language": {
-          "en-US": {
+          "zh-CN": {
             "localePath": "locale-zh-CN.wxl"
           }
         }

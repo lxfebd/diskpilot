@@ -35,6 +35,7 @@ use rmcp::{
     schemars, tool, tool_handler, tool_router, ErrorData as McpError,
 };
 use serde::Deserialize;
+use diskpilot_toolbelt::Risk;
 
 fn text_result(s: String) -> CallToolResult {
     CallToolResult::success(vec![RawContent::text(s).no_annotation()])
@@ -1236,13 +1237,22 @@ impl AgentServer {
         &self,
         Parameters(p): Parameters<ToolbeltRunParams>,
     ) -> Result<CallToolResult, McpError> {
-        if let Err(e) = files::require_confirmed() {
-            return Ok(tool_error(e));
-        }
         let tool = p.tool.clone();
         let args = p.args.clone().unwrap_or_default();
         let confirmed = p.confirmed.unwrap_or(false);
         let timeout = p.timeout_secs;
+        // 反绕过确认门只对 write 类（medium/high 风险）生效——low 风险只读工具
+        // （CrystalDiskInfo/WizTree 等）本就无副作用、可按描述裸跑，不必过桥。
+        // L3 永禁 / medium/high 的 confirmed 校验仍由 run_tool 内二次兜底。
+        let needs_gate = diskpilot_toolbelt::find_manifest(&tool)
+            .and_then(|m| diskpilot_toolbelt::Risk::parse(&m.risk))
+            .map(|r| r >= Risk::Medium)
+            .unwrap_or(true); // 未知/无 manifest 一律从严过门
+        if needs_gate {
+            if let Err(e) = files::require_confirmed() {
+                return Ok(tool_error(e));
+            }
+        }
         match tokio::task::spawn_blocking(move || {
             toolbelt::run_tool(&tool, &args, confirmed, timeout)
         })

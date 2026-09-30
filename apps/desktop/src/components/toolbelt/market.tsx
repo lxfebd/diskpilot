@@ -12,6 +12,7 @@ import { RISK_COLORS } from '../../colors';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
+import { invalidateToolbeltCache } from '../../advisor/tools';
 
 export function MarketPanel() {
   const t = useT();
@@ -46,6 +47,8 @@ export function MarketPanel() {
   }>(null);
 
   const refresh = useCallback(() => {
+    // 安装/卸载/激活插件后工具集变化，AI 侧 toolbelt 索引缓存必须作废重拉。
+    invalidateToolbeltCache();
     api.pluginMarket().then(setMarket).catch(() => setMarket([]));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);

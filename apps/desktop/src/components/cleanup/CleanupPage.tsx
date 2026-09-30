@@ -3,7 +3,11 @@
 //
 // 从总览/Studio 跳进来时调 useCleanupStore.select(id)；磁盘树换盘或重扫
 // 后，下面的 effect 会按新 root 重建会话（rootRef 对比），保证不会
-// 拿着旧盘的命中去清新盘。
+// 拿着旧盘的命中清新盘。
+//
+// tagFilter（P4-3）：传 scaffold 级 tag（如 "privacy"）时只展示带该 tag 的
+// 脚本——隐私清理页复用同一个壳，只换过滤维度；select 仍按 id 全局查，
+// 切页后 effect 会因当前会话不在过滤集里而自动改选首个。
 import { useEffect, useMemo } from 'react';
 import { useStore } from '../../store';
 import { useCleanupStore } from '../../useCleanupStore';
@@ -13,14 +17,18 @@ import { RiskBadge } from './RiskBadge';
 import { CleanupBody } from './CleanupBody';
 import { useT } from '../../i18n';
 
-export function CleanupPage() {
+export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
   const t = useT();
   const root = useStore((s) => s.root);
   const scaffolds = useStore((s) => s.scaffolds);
   const session = useCleanupStore((s) => s.session);
   const select = useCleanupStore((s) => s.select);
 
-  const cards = useMemo(() => collectScaffoldCards(root, scaffolds), [root, scaffolds]);
+  const allCards = useMemo(() => collectScaffoldCards(root, scaffolds), [root, scaffolds]);
+  const cards = useMemo(
+    () => (tagFilter ? allCards.filter((c) => c.scaffold.tags?.includes(tagFilter)) : allCards),
+    [allCards, tagFilter],
+  );
 
   // 进页 / 换盘自动选中第一个命中脚本；正在执行时不打断。
   useEffect(() => {

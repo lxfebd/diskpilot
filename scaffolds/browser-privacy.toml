@@ -1,0 +1,39 @@
+id          = "browser-privacy"
+name        = "浏览器使用痕迹（历史 / 表单）"
+risk        = "medium"
+disclaimer  = """\
+清理 Chrome / Edge 的浏览历史与 Firefox 的表单填写记录。\
+这些记录会在这三个浏览器彻底关闭后才会完整写入磁盘，清理前请完全退出浏览器。\
+绝不触碰：书签、密码（Login Data）、Cookie、会话登录状态、扩展程序数据、\
+Local Storage、IndexedDB——Cookie 与登录数据属于项目安全红线，任何清理都不会触及。\
+Firefox 浏览历史与书签同库（places.sqlite），为安全起见同样不清理。\
+历史记录删除后不可在浏览器内找回。清理走系统回收站，可还原。"""
+tags        = ["privacy"]
+
+detect = [
+  "%LOCALAPPDATA%/Google/Chrome/User Data/Default/History",
+  "%LOCALAPPDATA%/Microsoft/Edge/User Data/Default/History",
+  "%APPDATA%/Mozilla/Firefox/Profiles",
+]
+
+[match]
+name_contains    = ["User Data", "Firefox"]
+must_have_child  = []
+
+[[scope]]
+id       = "chromium-history"
+label    = "Chrome / Edge 浏览历史"
+glob     = "{%LOCALAPPDATA%/Google/Chrome/User Data,%LOCALAPPDATA%/Microsoft/Edge/User Data}/**/{History,History-journal,History-journal-ms}*"
+mode     = "recycle"
+category = "privacy"
+prompt   = { kind = "none" }
+required_stopped_processes = ["chrome.exe", "msedge.exe"]
+
+[[scope]]
+id       = "firefox-formhistory"
+label    = "Firefox 表单填写记录"
+glob     = "%APPDATA%/Mozilla/Firefox/Profiles/*/formhistory.sqlite*"
+mode     = "recycle"
+category = "privacy"
+prompt   = { kind = "none" }
+required_stopped_processes = ["firefox.exe"]

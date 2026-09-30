@@ -127,8 +127,10 @@ export function Settings({ onClose, initialTab }: Props) {
   // 检查更新：null = 未查过；字符串 = 出错信息；对象 = 结果。
   const [update, setUpdate] = useState<import('../api').UpdateInfo | null | string | undefined>(undefined);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  // 一键更新：null = 未下载；'confirm' = 待两步确认；'downloading' = 下载中；'installed' = 装完待重启；字符串 = 出错。
-  const [updatePhase, setUpdatePhase] = useState<null | 'confirm' | 'downloading' | 'installed' | string>(null);
+  // 一键更新：null = 未下载；'confirm' = 待两步确认；'downloading' = 下载中；'installed' = 装完待重启。
+  const [updatePhase, setUpdatePhase] = useState<null | 'confirm' | 'downloading' | 'installed'>(null);
+  // 更新链路错误单独存放：与 updatePhase 互斥，避免字符串错误被等于 'confirm'/'installed' 等状态值吞掉。
+  const [updateErr, setUpdateErr] = useState<string | null>(null);
   const [updateProgress, setUpdateProgress] = useState(0);
 
   const checkUpdate = async () => {
@@ -144,6 +146,7 @@ export function Settings({ onClose, initialTab }: Props) {
 
   const installUpdate = async (u: Update) => {
     setUpdatePhase('downloading');
+    setUpdateErr(null);
     setUpdateProgress(0);
     let total = 0;
     let downloaded = 0;
@@ -158,7 +161,7 @@ export function Settings({ onClose, initialTab }: Props) {
       });
       setUpdatePhase('installed');
     } catch (e) {
-      setUpdatePhase(String(e instanceof Error ? e.message : e));
+      setUpdateErr(String(e instanceof Error ? e.message : e));
     }
   };
 
@@ -172,7 +175,7 @@ export function Settings({ onClose, initialTab }: Props) {
       }
       await installUpdate(u);
     } catch (e) {
-      setUpdatePhase(String(e instanceof Error ? e.message : e));
+      setUpdateErr(String(e instanceof Error ? e.message : e));
     }
   };
 
@@ -180,7 +183,7 @@ export function Settings({ onClose, initialTab }: Props) {
     try {
       await relaunch();
     } catch (e) {
-      setUpdatePhase(String(e instanceof Error ? e.message : e));
+      setUpdateErr(String(e instanceof Error ? e.message : e));
     }
   };
 
@@ -210,13 +213,14 @@ export function Settings({ onClose, initialTab }: Props) {
     return () => window.removeEventListener('diskpilot:theme-changed', onTheme);
   }, []);
 
-  // 硬件加速开关以后端 general.json 为权威（它决定 WebView2 是否 --disable-gpu），
-  // 打开设置页时同步一次，避免与 localStorage 漂移。
+  // 硬件加速 / 托盘常驻开关以后端 general.json 为权威（硬件加速决定 WebView2
+  // 是否 --disable-gpu，托盘决定点关闭按钮的行为），打开设置页时同步一次。
   useEffect(() => {
     if (!isTauri) return;
     api.generalConfig()
       .then((c) => {
         setPref('hardwareAccel', c.hardware_accel);
+        setPref('closeToTray', c.close_to_tray);
         bumpPrefs();
       })
       .catch(() => {});
@@ -298,9 +302,20 @@ export function Settings({ onClose, initialTab }: Props) {
   const togglePref = (name: PrefName, on: boolean) => {
     setPref(name, on);
     bumpPrefs();
+    // 硬件加速/托盘这两项的后端写失败不应静默：UI 已按新值渲染，
+    // 若后端没接住会脱节，必须把失败亮给用户。
+    const backendWrite = (p: Promise<unknown>, label: string) => {
+      p.catch((e) => {
+        setErr(`${label}: ${String(e instanceof Error ? e.message : e)}`);
+      });
+    };
     if (name === 'hardwareAccel') {
       // 硬件加速由后端 Rust 启动时读 general.json 决定，重启后生效。
-      api.setGeneral(on).catch(() => {});
+      backendWrite(api.setGeneral(on), t('settings.general.hardwareAccel'));
+    }
+    if (name === 'closeToTray') {
+      // 托盘常驻：写后端 general.json，窗口关闭按钮即刻按新值执行。
+      backendWrite(api.setCloseToTray(on), t('settings.general.closeToTray'));
     }
   };
 
@@ -352,6 +367,12 @@ export function Settings({ onClose, initialTab }: Props) {
                     onClick={() => {
                       setLang(l);
                       setLangState(l);
+                      // 托盘菜单文案随语言重推（后端菜单项 id 固定只换 text）。
+                      api.traySync(
+                        t('settings.general.trayShow'),
+                        t('settings.general.trayQuit'),
+                        t('settings.general.trayTooltip'),
+                      ).catch(() => {});
                     }}
                   >
                     {l === 'system' ? t('settings.language.follow') : l === 'zh' ? '中文' : 'English'} {/* @i18n-keep 语言名一律用原生书写，切语言时也保持不变 */}
@@ -560,7 +581,7 @@ export function Settings({ onClose, initialTab }: Props) {
 
         {tab === 'general' && (
           <div className="settings-pane">
-            <div className="settings-group-title">AI</div>
+            <div className="settings-group-title">{t('settings.general.ai')}</div>
             <div className="switch-row">
               <div>
                 <div className="switch-label">{t('settings.general.webEnabled')}</div>
@@ -592,6 +613,14 @@ export function Settings({ onClose, initialTab }: Props) {
                 <div className="switch-desc">{t('settings.general.hardwareAccelDesc')}</div>
               </div>
               <input type="checkbox" className="switch" checked={prefs.hardwareAccel} onChange={(e) => togglePref('hardwareAccel', e.target.checked)} />
+            </div>
+
+            <div className="switch-row">
+              <div>
+                <div className="switch-label">{t('settings.general.closeToTray')}</div>
+                <div className="switch-desc">{t('settings.general.closeToTrayDesc')}</div>
+              </div>
+              <input type="checkbox" className="switch" checked={prefs.closeToTray} onChange={(e) => togglePref('closeToTray', e.target.checked)} />
             </div>
 
             <label className="field">
@@ -659,8 +688,8 @@ export function Settings({ onClose, initialTab }: Props) {
                         <Download size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.general.updateInstall')}
                       </button>
                     )}
-                    {typeof updatePhase === 'string' && updatePhase !== 'confirm' && updatePhase !== 'installed' && (
-                      <span className="error-inline small" style={{ display: 'block', marginTop: 4 }}>{updatePhase}</span>
+                    {typeof updateErr === 'string' && updateErr && (
+                      <span className="error-inline small" style={{ display: 'block', marginTop: 4 }}>{updateErr}</span>
                     )}
                   </div>
                 )}

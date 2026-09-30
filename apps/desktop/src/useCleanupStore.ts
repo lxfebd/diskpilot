@@ -484,6 +484,10 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
             if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
           }
         }
+        // conda 的字节数走 computeSessionTotal：env 尺寸来自 listCondaEnvs 元数据
+        // （size_bytes），tarballs/unused-packages 走 scopeSizes 缓存，两者都是
+        // 「预估」口径，与普通脚本分支的 scopeBytes 预估一致，仅数据源不同；
+        // 真删后按实际 entries 计数、字节仍标「预估」（后端待补 per-path 实测）。
         totalBytes = computeSessionTotal(s).bytes;
       } else {
         scopeIds = [...s.selectedScopes].filter((id) => scopeBytes(s, id) > 0);
@@ -529,6 +533,13 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
         patchInSession(() => ({ err: t('cleanup.errPreviewEmpty') }));
         return;
       }
+      // 快照当前口径：真删复用这份，预览窗停留期间改 days/wxid/env 不会影响。
+      const daysSnapshot = { ...s.daysByScope };
+      const wxidSnapshot =
+        s.wxids.length > 0 && s.selectedWxids.size < s.wxids.length
+          ? [...s.selectedWxids]
+          : null;
+      const envSnapshot = [...s.selectedEnvs];
       patchInSession(() => ({
         preview: {
           scopeIds,
@@ -536,6 +547,9 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           totalFiles,
           samplePaths,
           truncated: totalFiles > samplePaths.length,
+          daysSnapshot,
+          wxidSnapshot,
+          envSnapshot,
         },
       }));
     } catch (e) {
@@ -574,13 +588,14 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           );
 
       if (s.isConda) {
-        const envFilterArg = [...s.selectedEnvs];
+        // 用预览时点快照的 env 列表，不用 runRealDelete 时的最新勾选。
+        const envFilterArg = preview.envSnapshot;
         const tasks: Promise<unknown>[] = [];
         for (const scopeId of preview.scopeIds) {
           if (scopeId === 'envs-stale') {
             tasks.push(runReal(scopeId, s.matches[0].path, { envFilter: envFilterArg }));
           } else {
-            const days = s.daysByScope[scopeId];
+            const days = preview.daysSnapshot[scopeId];
             for (const m of s.matches) {
               tasks.push(runReal(scopeId, m.path, { olderThanDays: days }));
             }
@@ -594,13 +609,11 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
         }));
         if (preview.scopeIds.some((id) => id !== 'envs-stale')) fetchSizesNow();
       } else {
-        const wxidFilter =
-          s.wxids.length > 0 && s.selectedWxids.size < s.wxids.length
-            ? [...s.selectedWxids]
-            : undefined;
+        // 快照口径：预览时勾选的账号过滤，预览窗停留期间改勾选不影响本次真删。
+        const wxidFilter = preview.wxidSnapshot ?? undefined;
         const tasks: Promise<unknown>[] = [];
         for (const scopeId of preview.scopeIds) {
-          const days = s.daysByScope[scopeId];
+          const days = preview.daysSnapshot[scopeId];
           for (const m of s.matches) {
             tasks.push(runReal(scopeId, m.path, { olderThanDays: days, wxidFilter }));
           }

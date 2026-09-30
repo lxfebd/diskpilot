@@ -7,7 +7,6 @@ export const perm = {
     'perm.center.reset': '恢复默认',
     'perm.center.resetTitle': '恢复默认',
     'perm.center.l0Title': 'L0 只读始终开启，不可关闭',
-    'perm.center.comingSoon': '即将上线',
     'perm.center.foot': '设置只存你本机 localStorage（diskpilot.perms.v1），重装或换电脑不会带到新环境。',
 
     'perm.level.l0.label': 'L0 · 只读（始终开，不可关）',
@@ -69,7 +68,6 @@ export const perm = {
     'perm.center.reset': 'Restore defaults',
     'perm.center.resetTitle': 'Restore defaults',
     'perm.center.l0Title': 'L0 read-only is always on and cannot be turned off',
-    'perm.center.comingSoon': 'Coming soon',
     'perm.center.foot': 'Settings live only in this machine\'s localStorage (diskpilot.perms.v1); reinstalling or switching computers will not carry them over.',
     
     'perm.level.l0.label': 'L0 · Read-only (always on, cannot be disabled)',

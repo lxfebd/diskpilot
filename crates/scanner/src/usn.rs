@@ -107,6 +107,7 @@ impl JournalState {
 pub(crate) const USN_REASON_FILE_CREATE: u32 = 0x100;
 pub(crate) const USN_REASON_FILE_DELETE: u32 = 0x200;
 pub(crate) const USN_REASON_RENAME_OLD_NAME: u32 = 0x1000;
+pub(crate) const USN_REASON_RENAME_NEW_NAME: u32 = 0x2000;
 
 /// Parse a raw `USN_RECORD_V2` byte buffer into `UsnChange` records.
 ///
@@ -251,6 +252,132 @@ fn node_size_at(tree: &crate::Node, rel: &Path) -> Option<u64> {
     Some(cur.size)
 }
 
+/// 递归重写子树所有节点的绝对 `path`（以节点自身 path 为基准）。目录整体
+/// 搬移后缓存里的绝对路径必须跟着新位置走，否则后端内存树与全量扫描不一致。
+fn rebase_subtree_paths(node: &mut crate::Node) {
+    let base = Path::new(&node.path).to_path_buf();
+    for c in &mut node.children {
+        c.path = base.join(&c.name).to_string_lossy().to_string();
+        rebase_subtree_paths(c);
+    }
+}
+
+/// RENAME_OLD_NAME 与同批次同 FRN 的 RENAME_NEW_NAME 配对：Windows 对目录
+/// 整体改名/移动会成对吐出这两个事件（实践中都在同一批 resolved 里）。配对
+/// 成功就把旧路径的整棵子树搬到新路径——否则 remove_node 只摘掉空壳节点，
+/// 子树内容不会掉到新路径，增量结果只剩 size=0 的空目录，与全量扫描不一致。
+/// 聚合沿祖先链滚动：旧链回滚 -(size, count)、新链补回，共享祖先净零。
+/// 返回 true 表示已搬移（调用方跳过删除分支）；false 走原删除语义。
+fn try_rename_move(
+    tree: &mut crate::Node,
+    resolved: &[ResolvedChange],
+    root: &Path,
+    old_rel: &Path,
+    old_parent_rel: &Path,
+    frn: u64,
+) -> bool {
+    // 同批次里找同 FRN 的 RENAME_NEW_NAME（事件顺序不定，全量搜索；排除
+    // 自己——本事件的 reason 可能同时带 RENAME_NEW_NAME 位但 path 仍是旧路径）。
+    let old_abs = root.join(old_rel);
+    let new_abs = match resolved.iter().find(|r| {
+        r.frn == frn && r.reason & USN_REASON_RENAME_NEW_NAME != 0 && r.path != old_abs
+    }) {
+        Some(r) => r.path.clone(),
+        None => return false,
+    };
+    let Ok(new_rel) = new_abs.strip_prefix(root).map(|p| p.to_path_buf()) else {
+        return false;
+    };
+    let Some(new_leaf) = new_rel.file_name().map(|s| s.to_string_lossy().to_string()) else {
+        return false;
+    };
+    let new_parent_rel = new_rel.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+
+    // 旧节点必须物化在树上且是目录（文件被移动时新路径会有独立的
+    // FILE_CREATE/RENAME_NEW_NAME 事件走 apply_upsert 重建，无需搬移）。
+    let mut cur = &mut *tree;
+    for seg in old_parent_rel.components() {
+        let name = seg.as_os_str().to_string_lossy().to_string();
+        match child_index(cur, &name) {
+            Some(i) => cur = &mut cur.children[i],
+            None => return false,
+        }
+    }
+    let Some(old_leaf) = old_rel.file_name().map(|s| s.to_string_lossy().to_string()) else {
+        return false;
+    };
+    let old_idx = match child_index(cur, &old_leaf) {
+        Some(i) => i,
+        None => return false,
+    };
+    if !cur.children[old_idx].is_dir {
+        return false;
+    }
+    let mut sub = cur.children.remove(old_idx);
+
+    // 子树根改名 + 刷成新绝对路径，再递归重写后代路径。
+    sub.name = new_leaf.clone();
+    sub.path = new_abs.to_string_lossy().to_string();
+    rebase_subtree_paths(&mut sub);
+
+    let ds = -(sub.size as i64);
+    let dc = -(sub.file_count as i64);
+    // 先沿旧父链回滚，旧分支的 size/file_count 不再重复计入。
+    propagate_delta(tree, old_parent_rel, ds, dc);
+
+    // 沿新父链（必要时建中间节点）把子树挂上；新叶子已有占位节点（如同批
+    // 较早的 new-name 事件建的空目录）则整体替换。
+    let mut insert_stale = None;
+    {
+        let mut cur = &mut *tree;
+        for seg in new_parent_rel.components() {
+            let name = seg.as_os_str().to_string_lossy().to_string();
+            match child_index(cur, &name) {
+                Some(i) => {
+                    // 与新路径冲突的“文件”节点做“文件→目录”晋升（同 apply_upsert）。
+                    if !cur.children[i].is_dir {
+                        cur.children[i].is_dir = true;
+                        cur.children[i].children = Vec::new();
+                    }
+                    cur = &mut cur.children[i];
+                }
+                None => {
+                    let path = child_abs_path(cur, &name);
+                    cur.children.push(crate::Node {
+                        name,
+                        path,
+                        is_dir: true,
+                        size: 0,
+                        file_count: 0,
+                        children: Vec::new(),
+                        scaffold_id: None,
+                        top_extensions: Vec::new(),
+                        children_truncated: None,
+                        mtime: None,
+                    });
+                    let last = cur.children.len() - 1;
+                    cur = &mut cur.children[last];
+                }
+            }
+        }
+        match child_index(cur, &new_leaf) {
+            Some(i) => {
+                insert_stale = Some((cur.children[i].size as i64, cur.children[i].file_count as i64));
+                cur.children[i] = sub;
+            }
+            None => cur.children.push(sub),
+        }
+    }
+    // 被替换掉的占位节点若有聚合，先回滚再补回搬来的子树聚合。
+    if let Some((s, c)) = insert_stale {
+        if s != 0 || c != 0 {
+            propagate_delta(tree, &new_parent_rel, -s, -c);
+        }
+    }
+    propagate_delta(tree, &new_parent_rel, -ds, -dc);
+    true
+}
+
 /// Apply the resolved changes to a cached tree in journal order. Returns the
 /// number of changes applied structurally (add / remove / size update).
 pub fn merge_changes(
@@ -270,16 +397,21 @@ pub fn merge_changes(
         }
         let parent_rel = rel.parent().map(|p| p.to_path_buf()).unwrap_or_default();
 
-        // RENAME_OLD_NAME：旧路径已不存在（改名/移动走了），但树的旧节点仍
-        // 挂在原路径，父目录聚合会把 ghost 算进 size/file_count。走删除分支
-        // 把旧节点摘掉——但删除前 stat 会失败（路径已消失），节点还在树上，
-        // 直接按缓存节点移除即可。
+        // RENAME_OLD_NAME：旧路径已不存在（改名/移动走了），同一个 FRN 会成对
+        // 出现 RENAME_NEW_NAME（目录整体移动时子目录内的文件不会逐条重放）。
+        // 先试配对：找到新路径就把整棵子树搬过去，避免新路径只剩空目录壳；
+        // 配对不上（纯删除语义的 rename_old）再走删除分支——删除前 stat 会失败
+        // （路径已消失），节点还在树上，直接按缓存节点移除即可。
         let rename_old = rc.reason & USN_REASON_RENAME_OLD_NAME != 0;
         if rename_old {
-            // 需要删除但路径已不在：用缓存节点的真实 size/count 回滚聚合。
-            let hint = node_size_at(tree, &rel);
-            if remove_node(tree, &rel, hint) {
+            if try_rename_move(tree, resolved, root, &rel, &parent_rel, rc.frn) {
                 applied += 1;
+            } else {
+                // 需要删除但路径已不在：用缓存节点的真实 size/count 回滚聚合。
+                let hint = node_size_at(tree, &rel);
+                if remove_node(tree, &rel, hint) {
+                    applied += 1;
+                }
             }
             continue;
         }
@@ -843,7 +975,7 @@ mod tests {
             mtime: None,
         };
         // A create + data change under root/dir.
-        let d = root.join("dir");
+        let d = root.join("merge_updates_dir");
         let _ = std::fs::create_dir_all(&d);
         let f = d.join("new.bin");
         std::fs::write(&f, vec![b'x'; 100]).unwrap();
@@ -865,7 +997,7 @@ mod tests {
         assert_eq!(applied, 2);
         assert_eq!(tree.file_count, 1);
         assert_eq!(tree.size, 100);
-        let dir = tree.children.iter().find(|c| c.name == "dir").unwrap();
+        let dir = tree.children.iter().find(|c| c.name == "merge_updates_dir").unwrap();
         assert!(dir.is_dir);
         assert_eq!(dir.size, 100);
         assert_eq!(dir.file_count, 1);
@@ -937,7 +1069,7 @@ mod tests {
             children_truncated: None,
             mtime: None,
         };
-        let d = root.join("dir");
+        let d = root.join("rm_dir_recursive");
         let _ = std::fs::create_dir_all(&d);
         let f1 = d.join("a.bin");
         let f2 = d.join("b.bin");
@@ -969,12 +1101,6 @@ mod tests {
 
         // 删除目录：file_count 是递归计数，dc 必须减子树自身计数（2），
         // 不是旧实现的 0（那样父目录 file_count 永久虚高）。
-        let del = ResolvedChange {
-            path: d.clone(),
-            is_dir: true,
-            reason: USN_REASON_FILE_DELETE,
-            frn: 1,
-        };
         // 目录删除时路径通常已消失，size_hint=None；remove_node 的目录分支
         // 靠缓存节点自身的 size/count 回滚。
         let applied = remove_node(&mut tree, &d.strip_prefix(&root).unwrap(), None);
@@ -1000,7 +1126,7 @@ mod tests {
             children_truncated: None,
             mtime: None,
         };
-        let d = root.join("dir");
+        let d = root.join("rm_topk_dir");
         let _ = std::fs::create_dir_all(&d);
         let big = d.join("big.bin");
         let small = d.join("small.bin");
@@ -1064,7 +1190,7 @@ mod tests {
             children_truncated: None,
             mtime: None,
         };
-        let d = root.join("dir");
+        let d = root.join("rename_ghost_dir");
         let _ = std::fs::create_dir_all(&d);
         let f = d.join("old.bin");
         std::fs::write(&f, vec![b'x'; 50]).unwrap();
@@ -1103,6 +1229,108 @@ mod tests {
         assert_eq!(tree.size, 0, "重命名旧路径应摘掉 ghost 节点");
         assert_eq!(tree.file_count, 0);
         assert_eq!(tree.children[0].children.len(), 0);
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn rename_old_pair_moves_subtree() {
+        // 目录整体改名（sub → new_dir）：USN 对同一 FRN 成对吐出 RENAME_OLD_NAME
+        // + RENAME_NEW_NAME。旧实现只摘旧空壳，子树不会掉到新路径 → 新路径只剩
+        // size=0 空目录。这里验证配对搬移：子树整体搬家、聚合沿祖先链滚动净零。
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target");
+        let mut tree = crate::Node {
+            name: root.file_name().unwrap().to_string_lossy().to_string(),
+            path: root.to_string_lossy().to_string(),
+            is_dir: true,
+            size: 0,
+            file_count: 0,
+            children: vec![],
+            scaffold_id: None,
+            top_extensions: vec![],
+            children_truncated: None,
+            mtime: None,
+        };
+                let d = root.join("rename_move_dir");
+        // 先清残留再建沙箱：失败运行会留下 new_dir 等残骸，下一次 rename 直接
+        // DirectoryNotEmpty（并行跑多个测试时残留更容易发生）。
+        let _ = std::fs::remove_dir_all(&d);
+        let _ = std::fs::create_dir_all(&d);
+        let sub = d.join("sub");
+        let _ = std::fs::create_dir_all(&sub);
+        let f = sub.join("old.bin");
+        std::fs::write(&f, vec![b'x'; 50]).unwrap();
+        // 两条 create 事件建树：dir + old.bin（apply_upsert 途经 parent 链时
+        // 会自动补建 sub 目录节点）。
+        merge_changes(
+            &mut tree,
+            &[
+                ResolvedChange {
+                    path: d.clone(),
+                    is_dir: true,
+                    reason: USN_REASON_FILE_CREATE,
+                    frn: 10,
+                },
+                ResolvedChange {
+                    path: f.clone(),
+                    is_dir: false,
+                    reason: USN_REASON_FILE_CREATE,
+                    frn: 20,
+                },
+            ],
+            &root,
+            None,
+        );
+        assert_eq!(tree.size, 50);
+        assert_eq!(tree.file_count, 1);
+        assert_eq!(
+            tree.children[0].children[0].name, "sub",
+            "树应已建好 sub 目录节点"
+        );
+
+        // 在真实 fs 上把整个 sub 目录搬走（USN 事件无法凭空产生，只能手工
+        // 构造 ResolvedChange；new 路径需要真实存在，否则配对后 stat 失败）。
+        let new_dir = d.join("new_dir");
+        std::fs::rename(&sub, &new_dir).unwrap();
+        let resolved = vec![
+            ResolvedChange {
+                path: sub.clone(),
+                is_dir: true,
+                reason: USN_REASON_RENAME_OLD_NAME,
+                frn: 1,
+            },
+            ResolvedChange {
+                path: new_dir.clone(),
+                is_dir: true,
+                reason: USN_REASON_RENAME_NEW_NAME,
+                frn: 1,
+            },
+        ];
+        let applied = merge_changes(&mut tree, &resolved, &root, None);
+        assert_eq!(applied, 2);
+
+        // 新路径下子树完整：new_dir/old.bin 存在且 size=50。
+        let dir = tree.children.iter().find(|c| c.name == "rename_move_dir").unwrap();
+        assert_eq!(dir.children.len(), 1, "旧 sub 摘走后 dir 下只剩 new_dir");
+        let new_dir_node = dir.children.iter().find(|c| c.name == "new_dir").unwrap();
+        assert!(new_dir_node.is_dir);
+        assert_eq!(new_dir_node.size, 50);
+        assert_eq!(new_dir_node.file_count, 1);
+        let bin = new_dir_node
+            .children
+            .iter()
+            .find(|c| c.name == "old.bin")
+            .unwrap();
+        assert_eq!(bin.size, 50, "搬移后子树内容必须完整（不能只剩空目录壳）");
+        assert_eq!(bin.path, new_dir.join("old.bin").to_string_lossy());
+
+        // 旧路径下 sub 节点不存在。
+        assert!(
+            dir.children.iter().all(|c| c.name != "sub"),
+            "旧路径 sub 节点应已消失"
+        );
+        // 根聚合不变：搬移是净零操作。
+        assert_eq!(tree.size, 50, "搬移后根 size 不变");
+        assert_eq!(tree.file_count, 1, "搬移后根 file_count 不变");
         let _ = std::fs::remove_dir_all(&d);
     }
 }

@@ -9,8 +9,10 @@ export const PAGE_IDS = {
   overview: 'overview',
   workspace: 'workspace',
   cleanup: 'cleanup',
+  privacy: 'privacy',
   history: 'history',
   tools: 'tools',
+  optimizer: 'optimizer',
   settings: 'settings',
 } as const;
 
@@ -39,13 +41,17 @@ export const PRIMARY_NAV_GROUPS: NavGroup[] = [
       { id: PAGE_IDS.overview, titleKey: 'shell.nav.overview', subtitleKey: 'shell.nav.overviewTitle' },
       { id: PAGE_IDS.workspace, titleKey: 'shell.nav.workspace', subtitleKey: 'shell.nav.workspaceTitle' },
       { id: PAGE_IDS.cleanup, titleKey: 'shell.nav.cleanup', subtitleKey: 'shell.nav.cleanupTitle' },
+      { id: PAGE_IDS.privacy, titleKey: 'shell.nav.privacy', subtitleKey: 'shell.nav.privacyTitle' },
       { id: PAGE_IDS.history, titleKey: 'shell.nav.history', subtitleKey: 'shell.nav.historyTitle' },
     ],
   },
   {
     id: 'system',
     titleKey: 'shell.sidebar.groups.system',
-    items: [{ id: PAGE_IDS.tools, titleKey: 'shell.nav.tools', subtitleKey: 'shell.nav.toolsTitle' }],
+    items: [
+      { id: PAGE_IDS.tools, titleKey: 'shell.nav.tools', subtitleKey: 'shell.nav.toolsTitle' },
+      { id: PAGE_IDS.optimizer, titleKey: 'shell.nav.optimizer', subtitleKey: 'shell.nav.optimizerTitle' },
+    ],
   },
 ];
 

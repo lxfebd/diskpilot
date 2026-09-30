@@ -528,6 +528,7 @@ export const PREF_KEYS = {
   autoOverview: 'diskpilot.general.autoOverview',
   parallelScan: 'diskpilot.general.parallelScan',
   hardwareAccel: 'diskpilot.general.hardwareAccel',
+  closeToTray: 'diskpilot.general.closeToTray',
   keepFilesPerDir: 'diskpilot.general.keepFilesPerDir',
 } as const;
 
@@ -559,5 +560,6 @@ export const prefs = {
   get autoOverview() { return prefGet('autoOverview'); },
   get parallelScan() { return prefGet('parallelScan'); },
   get hardwareAccel() { return prefGet('hardwareAccel'); },
+  get closeToTray() { return prefGet('closeToTray'); },
   get keepFilesPerDir() { return getKeepFiles(); },
 };

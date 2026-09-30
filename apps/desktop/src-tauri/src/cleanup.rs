@@ -896,6 +896,7 @@ mod tests {
             disclaimer: "可再生缓存".into(),
             detect: vec![],
             matcher: Default::default(),
+            tags: Vec::new(),
             scopes: vec![Scope {
                 id: "temp-files".into(),
                 label: "临时文件".into(),

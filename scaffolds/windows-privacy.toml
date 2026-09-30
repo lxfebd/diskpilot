@@ -1,0 +1,45 @@
+id          = "windows-privacy"
+name        = "Windows 活动与使用痕迹"
+tags        = ["privacy"]
+homepage    = "https://learn.microsoft.com/windows/win32/shell/known-folders"
+risk        = "medium"
+disclaimer  = """\
+清理 Windows 留下的个人使用痕迹：最近打开的文件列表、缩略图缓存、\
+IE/Edge 遗留的临时网络文件（INetCache）。这些是方便用途的索引与缓存，\
+删掉不影响文件和程序本身，只是系统会重新生成。\
+绝不触碰：浏览器书签、密码、登录信息、历史记录、Windows 账户凭据。\
+缩略图删除后资源管理器会按需重建。清理走系统回收站，可还原。"""
+
+detect = [
+  "%APPDATA%/Microsoft/Windows/Recent",
+  "%LOCALAPPDATA%/Microsoft/Windows/Explorer/thumbcache_*.db",
+  "%LOCALAPPDATA%/Microsoft/Windows/INetCache",
+]
+
+[match]
+name_contains    = ["Recent", "thumbcache", "INetCache"]
+must_have_child  = []
+
+[[scope]]
+id       = "recent-items"
+label    = "最近打开的文件列表（Recent / JumpList）"
+glob     = "%APPDATA%/Microsoft/Windows/Recent/**"
+mode     = "recycle"
+category = "privacy"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "thumbcache"
+label    = "资源管理器缩略图缓存（thumbcache）"
+glob     = "%LOCALAPPDATA%/Microsoft/Windows/Explorer/thumbcache_*.db"
+mode     = "recycle"
+category = "privacy"
+prompt   = { kind = "none" }
+
+[[scope]]
+id       = "inet-cache"
+label    = "IE / Edge 遗留临时网络文件（INetCache）"
+glob     = "%LOCALAPPDATA%/Microsoft/Windows/INetCache/**"
+mode     = "recycle"
+category = "privacy"
+prompt   = { kind = "days", default = 30, label = "清理多少天前的临时网络文件" }

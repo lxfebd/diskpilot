@@ -1,4 +1,4 @@
-import { History, LayoutGrid, ListTree, Loader2, PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Trash2, Wrench } from 'lucide-react';
+import { EyeOff, History, LayoutGrid, ListTree, Loader2, PanelLeftClose, PanelLeftOpen, Settings as SettingsIcon, Trash2, Zap, Wrench } from 'lucide-react';
 import { useT } from '../i18n';
 import { PRIMARY_NAV_GROUPS, SECONDARY_NAV_ITEMS, type NavItem, type PageId } from '../nav';
 import { Logo } from './Logo';
@@ -8,8 +8,10 @@ const ICONS: Record<PageId, typeof LayoutGrid> = {
   overview: LayoutGrid,
   workspace: ListTree,
   cleanup: Trash2,
+  privacy: EyeOff,
   history: History,
   tools: Wrench,
+  optimizer: Zap,
   settings: SettingsIcon,
 };
 

@@ -36,6 +36,11 @@ export interface DryRunPreview {
   samplePaths: string[];
   /** True when more paths exist than samplePaths shows. */
   truncated: boolean;
+  /** 预览时点各 scope 的应用口径快照：真删必须复用同一份 days/wxid/env，
+   *  不能取 runRealDelete 时的最新值——预览窗停留期间用户改设置会以新口径误删。 */
+  daysSnapshot: Record<string, number>;
+  wxidSnapshot: string[] | null;
+  envSnapshot: string[];
 }
 
 export const DRY_RUN_SAMPLE_CAP = 80;

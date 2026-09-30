@@ -194,11 +194,18 @@ fn load_driver() -> Option<&'static Driver> {
         .as_ref()
 }
 
-/// 端口读（断言驱动已加载）。
+/// 端口读（调用方必须先做驱动预检；这里 debug_assert 兜底，
+/// 未加载时读回 0xFF 而不是 panic——防未来调用路径绕过预检把主进程打崩）。
 #[cfg(windows)]
 #[inline]
 fn inp(port: u16) -> u8 {
-    let d = load_driver().expect("superio: 驱动未加载");
+    let d = match load_driver() {
+        Some(d) => d,
+        None => {
+            debug_assert!(false, "superio: 驱动未加载——调用方应先行预检");
+            return 0xFF;
+        }
+    };
     unsafe { (d.inp)(port) }
 }
 
@@ -206,7 +213,13 @@ fn inp(port: u16) -> u8 {
 #[cfg(windows)]
 #[inline]
 fn outp(port: u16, val: u8) {
-    let d = load_driver().expect("superio: 驱动未加载");
+    let d = match load_driver() {
+        Some(d) => d,
+        None => {
+            debug_assert!(false, "superio: 驱动未加载——调用方应先行预检");
+            return;
+        }
+    };
     unsafe { (d.out)(port, val) }
 }
 
