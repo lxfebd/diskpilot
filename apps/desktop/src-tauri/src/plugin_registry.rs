@@ -726,6 +726,40 @@ pub(crate) fn plugin_set_registry_url(
 
 // ── 写命令：刷新索引 ───────────────────────────────────────────────────
 
+/// 解析 + 校验远端索引信封：JSON 格式 → schema 版本 → 非空 → 可选验签 →
+/// 补上 `source_url`（实际拉取地址）与 `fetched_at`（拉取时刻）。返回校验
+/// 结果 `verified`（未签名 → false，有签名验签失败 → Err，永不静默放行）。
+///
+/// 抽成纯函数是因为 `plugin_registry_refresh` 的这五步原本与 AppHandle 绑定，
+/// 单测无法触达；契约层与实连冒烟都打这一条路径。
+pub(crate) fn parse_and_verify_envelope(
+    body: &str,
+    source_url: &str,
+    fetched_at: u64,
+) -> Result<(RegistryEnvelope, bool), String> {
+    let env: RegistryEnvelope =
+        serde_json::from_str(body).map_err(|e| format!("索引解析失败（JSON 格式错误）：{e}"))?;
+    if env.schema != REGISTRY_SCHEMA {
+        return Err(format!(
+            "索引 schema 版本不兼容（索引 {}，客户端 {}）。请升级 DiskPilot 或使用匹配的索引。",
+            env.schema, REGISTRY_SCHEMA
+        ));
+    }
+    if env.plugins.is_empty() {
+        return Err("索引为空（plugins 数组无条目）".into());
+    }
+    let verified = env.verify()?;
+    let env = RegistryEnvelope {
+        schema: REGISTRY_SCHEMA,
+        source_url: source_url.to_string(),
+        fetched_at,
+        signature: env.signature,
+        signer: env.signer,
+        plugins: env.plugins,
+    };
+    Ok((env, verified))
+}
+
 /// 从配置的索引 URL 拉取远端索引（写操作：confirmed + plugin.manage 双校验）。
 /// 校验链：https → schema 兼容 → 可选 Ed25519 验签（失败保留旧索引）→ 原子写。
 #[tauri::command]
@@ -758,30 +792,12 @@ pub(crate) async fn plugin_registry_refresh(
     let body = crate::ssrf_safe_get(url.trim(), 32 * 1024 * 1024, None).await?;
     let body = String::from_utf8_lossy(&body).to_string();
 
-    // 先验签再落盘：验签失败绝不覆盖本地索引。
-    let env: RegistryEnvelope =
-        serde_json::from_str(&body).map_err(|e| format!("索引解析失败（JSON 格式错误）：{e}"))?;
-    if env.schema != REGISTRY_SCHEMA {
-        return Err(format!(
-            "索引 schema 版本不兼容（索引 {}，客户端 {}）。请升级 DiskPilot 或使用匹配的索引。",
-            env.schema, REGISTRY_SCHEMA
-        ));
-    }
-    if env.plugins.is_empty() {
-        return Err("索引为空（plugins 数组无条目）".into());
-    }
-    let verified = env.verify()?;
+    // 解析 → schema 校验 → 验签 → 非空校验 → 补 source_url/fetched_at。
+    // 这五步收在纯函数里（不依赖 AppHandle），单测与实连冒烟都打这一条路径。
+    let (env, verified) = parse_and_verify_envelope(&body, url.trim(), now_secs())?;
 
     let Some(p) = registry_path(&app) else {
         return Err("无法定位数据目录".into());
-    };
-    let env = RegistryEnvelope {
-        schema: REGISTRY_SCHEMA,
-        source_url: url.clone(),
-        fetched_at: now_secs(),
-        signature: env.signature,
-        signer: env.signer,
-        plugins: env.plugins,
     };
     let text = serde_json::to_string_pretty(&env).map_err(|e| e.to_string())?;
     atomic_write(&p, &text).map_err(|e| e.to_string())?;
@@ -1462,5 +1478,64 @@ mod tests {
             })
             .collect::<String>();
         assert_eq!(safe, "1.0.0-betabuild.7");
+    }
+
+    /// 契约层：结构合法的远端索引（无签名占位态）→ Ok，verified=false 不报错，
+    /// 且 source_url/fetched_at 被补上（刷新落盘的是补齐后的信封）。
+    fn index_body_with_schema(schema: u32) -> String {
+        format!(
+            r#"{{"schema":{schema},"source_url":"","fetched_at":0,"signature":"","signer":"","plugins":[{{"id":"prime95","name":"Prime95","version":"1.0.0","author":"GIMPS","description":"CPU 烤机","category":"处理器工具","risk":"medium","tags":["CPU"],"url":"","sha256":"","signer":"","downloads":0,"versions":[],"license":"MIT","depends_on":[],"verified":false,"homepage":""}}]}}"#
+        )
+    }
+
+    #[test]
+    fn parse_accepts_unsigned_remote_index() {
+        let body = index_body_with_schema(REGISTRY_SCHEMA);
+        let (env, verified) =
+            parse_and_verify_envelope(&body, "https://cdn.example.org/index.json", 987).unwrap();
+        assert_eq!(env.schema, REGISTRY_SCHEMA);
+        assert_eq!(env.source_url, "https://cdn.example.org/index.json");
+        assert_eq!(env.fetched_at, 987);
+        assert_eq!(env.plugins.len(), 1);
+        assert!(!verified, "官方索引未签名 → Ok(false)，显示「未验签」而非报错");
+    }
+
+    #[test]
+    fn parse_rejects_unknown_schema() {
+        let err = parse_and_verify_envelope(&index_body_with_schema(2), "https://x/i.json", 0)
+            .unwrap_err();
+        assert!(err.contains("schema 版本不兼容"), "schema 不匹配必须拒绝: {err}");
+    }
+
+    #[test]
+    fn parse_rejects_empty_plugins() {
+        let body = r#"{"schema":1,"source_url":"","fetched_at":0,"signature":"","signer":"","plugins":[]}"#;
+        let err = parse_and_verify_envelope(body, "https://x/i.json", 0).unwrap_err();
+        assert!(err.contains("索引为空"), "空 plugins 必须拒绝: {err}");
+    }
+
+    /// 实连冒烟：用应用自己的 `ssrf_safe_get` + `parse_and_verify_envelope` 拉线上
+    /// 官方索引（jsDelivr CDN）。这是不启动 GUI 下最强的「闭环可正常使用」证据；
+    /// 本机网络/代理不可达公网时手动跑（`-- --ignored`），CI 默认跳过。
+    #[tokio::test]
+    #[ignore = "实连 jsDelivr CDN，需公网可达；CI 默认跳过"]
+    async fn real_official_index_refresh_chain() {
+        let url = "https://cdn.jsdelivr.net/gh/lxfebd/diskpilot-scaffolds-index@main/index.json";
+        let body = crate::ssrf_safe_get(url, 32 * 1024 * 1024, None)
+            .await
+            .expect("jsDelivr 拉取官方索引应成功（走系统代理）");
+        let text = String::from_utf8_lossy(&body).to_string();
+        let (env, verified) = parse_and_verify_envelope(&text, url, 1).unwrap();
+        assert_eq!(env.schema, REGISTRY_SCHEMA);
+        assert!(!env.plugins.is_empty(), "线上索引不应为空");
+        assert_eq!(env.source_url, url);
+        assert!(!verified, "官方占位索引未签名 → 合法「未验签」态");
+        assert!(
+            env.plugins.iter().all(|p| !p.id.is_empty() && !p.name.is_empty()),
+            "每条插件至少要有 id 与 name"
+        );
+        // 当前官方索引为全占位（url 全空）：与 CI 校验的「占位」合法态一致。
+        eprintln!("[实连] 官方索引 {} 条插件，占位 {} 条", env.plugins.len(),
+            env.plugins.iter().filter(|p| p.url.is_empty()).count());
     }
 }
