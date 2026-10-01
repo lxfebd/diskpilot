@@ -1341,7 +1341,7 @@ mod tests {
             signer: String::new(),
             plugins: Vec::new(),
         };
-        assert_eq!(env.verify().unwrap(), false, "未签名 → Ok(false)，不报错");
+        assert!(!env.verify().unwrap(), "未签名 → Ok(false)，不报错");
     }
 
     #[test]
@@ -1469,13 +1469,7 @@ mod tests {
         let safe = "1.0.0-beta+build.7"
             .trim()
             .chars()
-            .filter_map(|c| {
-                if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
-                    Some(c)
-                } else {
-                    None
-                }
-            })
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '-')
             .collect::<String>();
         assert_eq!(safe, "1.0.0-betabuild.7");
     }

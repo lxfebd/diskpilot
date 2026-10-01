@@ -2,17 +2,18 @@
 //!
 //! 前端 AI 工具（execTool）把 75 个 MCP 工具（磁盘/文件/进程/硬件/网络/
 //! 服务/安全审计/回收站/环境变量/工具箱/AIDA64 复刻/内存与 GPU 压测/蓝屏分析
-//! + 信息补全 4 个（Defender/用户账户/网卡明细/许可证）+ 自研 SuperIO 直读 + 8 个写操作）转到这里调用：
-//! 本模块用 `rmcp` client spawn `agent-server.exe` 子进程，走标准 MCP
-//! `tools/list` + `tools/call` 通道取真实数据。
+//! 与信息补全 4 个（Defender/用户账户/网卡明细/许可证）、自研 SuperIO 直读、
+//! 8 个写操作）转到这里调用：本模块用 `rmcp` client spawn `agent-server.exe`
+//! 子进程，走标准 MCP `tools/list` + `tools/call` 通道取真实数据。
 //!
-//! 传感器数据源（hw_temperature / hw_sensors）：
+//! 传感器数据源（hw_temperature / hw_sensors），按优先级回退：
+//!
 //! - 优先 HWiNFO 共享内存（`HWiNFO_SENS_SM2`，普通权限可读全部传感器——
 //!   CPU/GPU/主板温度、风扇、电压、功耗、频率、负载，无 Ring0/管理员依赖）；
-//! - HWiNFO 未运行/未启用共享内存 → 自研 SuperIO 直读（superio.rs，inpoutx64 驱动
-//!   已装则普通权限直读 ITE/Nuvoton/Winbond 环境寄存器——CPU/主板温度 + 风扇转速，
-//!   无需 HWiNFO/LHM）→ LibreHardwareMonitor（fancmd，需管理员读 CPU 温度）
-//!   → ACPI 热区 + nvidia-smi/ADL GPU + SMART 磁盘。
+//! - HWiNFO 未运行/未启用共享内存 → 自研 SuperIO 直读（superio.rs，inpoutx64
+//!   驱动已装则普通权限直读 ITE/Nuvoton/Winbond 环境寄存器——CPU/主板温度 +
+//!   风扇转速，无需 HWiNFO/LHM）→ LibreHardwareMonitor（fancmd，需管理员读 CPU
+//!   温度）→ ACPI 热区 + nvidia-smi/ADL GPU + SMART 磁盘。
 //!
 //! 安全模型：
 //! - 64 个只读工具对应主项目 L0 恒开；11 个写工具（process_kill / service_control /

@@ -144,12 +144,12 @@ fn load_driver() -> Option<&'static Driver> {
                 if h.is_null() {
                     return None;
                 }
-                let inp_ptr = unsafe { ffi::GetProcAddress(h, b"Inp32\0".as_ptr()) };
-                let out_ptr = unsafe { ffi::GetProcAddress(h, b"Out32\0".as_ptr()) };
+                let inp_ptr = unsafe { ffi::GetProcAddress(h, c"Inp32".as_ptr().cast()) };
+                let out_ptr = unsafe { ffi::GetProcAddress(h, c"Out32".as_ptr().cast()) };
                 let (inp, out) = if inp_ptr.is_null() || out_ptr.is_null() {
                     // 回退 ReadPort/WritePort（部分驱动命名不同）
-                    let i2 = unsafe { ffi::GetProcAddress(h, b"ReadPort\0".as_ptr()) };
-                    let o2 = unsafe { ffi::GetProcAddress(h, b"WritePort\0".as_ptr()) };
+                    let i2 = unsafe { ffi::GetProcAddress(h, c"ReadPort".as_ptr().cast()) };
+                    let o2 = unsafe { ffi::GetProcAddress(h, c"WritePort".as_ptr().cast()) };
                     (unsafe { ffi::to_fn::<ffi::InpFn>(i2) }, unsafe {
                         ffi::to_fn::<ffi::OutFn>(o2)
                     })
@@ -412,8 +412,8 @@ pub fn read_all() -> Result<(Vec<Reading>, String), String> {
     }
 
     // 风扇：16 位 TACH
-    for f in 0..6 {
-        let lo = read_env(sio.env_base, FAN_TACH_REG[f]);
+    for (f, reg) in FAN_TACH_REG.into_iter().enumerate() {
+        let lo = read_env(sio.env_base, reg);
         let hi = read_env(sio.env_base, FAN_TACH_EXT_REG[f]);
         let tach = (u16::from(hi) << 8) | u16::from(lo);
         let rpm = if tach > 0x3F && tach < 0xFFFF {
@@ -433,8 +433,8 @@ pub fn read_all() -> Result<(Vec<Reading>, String), String> {
     }
 
     // PWM：当前占空比（只读展示控制状态，绝不写入）
-    for f in 0..6 {
-        let pwm = read_env(sio.env_base, FAN_PWM_CTRL_REG[f]);
+    for (f, reg) in FAN_PWM_CTRL_REG.into_iter().enumerate() {
+        let pwm = read_env(sio.env_base, reg);
         if pwm != 0xFF {
             let pct = if pwm > 0 && pwm < 255 {
                 f64::from(pwm) * 100.0 / 255.0

@@ -81,11 +81,11 @@ pub fn verify_ed25519(
     if sig.is_empty() || signer.is_empty() {
         return Ok(()); // 未签名：交给调用方的 require_signed 策略决定
     }
-    let vk_bytes = decode_hex(signer, "签名者公钥").map_err(|e| e)?;
+    let vk_bytes = decode_hex(signer, "签名者公钥")?;
     if vk_bytes.len() != 32 {
         return Err("签名者公钥长度非法（应为 32 字节 hex）".into());
     }
-    let sig_bytes = decode_hex(sig, "签名").map_err(|e| e)?;
+    let sig_bytes = decode_hex(sig, "签名")?;
     if sig_bytes.len() != 64 {
         return Err("签名长度非法（应为 64 字节 hex）".into());
     }
@@ -127,7 +127,7 @@ pub fn generate_keypair() -> (String, String) {
 
 /// 用私钥（hex）对「签名对象」签名，返回签名 hex。仅打包工具/测试用。
 pub fn sign_entries(entries: &[(String, Vec<u8>)], secret_hex: &str) -> Result<String, String> {
-    let sk_bytes = decode_hex(secret_hex.trim(), "私钥").map_err(|e| e)?;
+    let sk_bytes = decode_hex(secret_hex.trim(), "私钥")?;
     if sk_bytes.len() != 32 {
         return Err("私钥长度非法（应为 32 字节 hex）".into());
     }
@@ -255,7 +255,7 @@ pub fn plugin_zip_has_ed25519(zip_path: &std::path::Path) -> Result<bool, String
 }
 
 fn decode_hex(s: &str, what: &str) -> Result<Vec<u8>, String> {
-    if s.len() % 2 != 0 || !s.chars().all(|c| c.is_ascii_hexdigit()) {
+    if !s.len().is_multiple_of(2) || !s.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err(format!("{what}格式非法（应为 hex）"));
     }
     hex::decode(s).map_err(|e| format!("{what}解码失败: {e}"))

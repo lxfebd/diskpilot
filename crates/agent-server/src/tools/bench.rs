@@ -82,7 +82,7 @@ pub fn bench_cpu(secs: Option<u64>, threads: Option<usize>) -> Result<String, St
             let mut prime = true;
             let mut d: u64 = 2;
             while d * d <= n {
-                if n % d == 0 {
+                if n.is_multiple_of(d) {
                     prime = false;
                     break;
                 }
@@ -165,7 +165,7 @@ pub fn bench_memory(secs: Option<u64>) -> Result<String, String> {
         secs,
         |b| {
             let mut acc = 0u64;
-            for chunk in b.chunks_exact_mut(4096) {
+            for chunk in b.as_chunks_mut::<4096>().0 {
                 let byte = (acc.wrapping_add(0x5A) & 0xFF) as u8;
                 chunk.fill(byte);
                 acc ^= 0xDEADBEEFCAFEBABEu64;
@@ -314,7 +314,6 @@ pub fn stress_test(
     let deadline = start + Duration::from_secs(secs);
     let handles: Vec<_> = (0..n_threads)
         .map(|tid| {
-            let deadline = deadline;
             std::thread::spawn(move || {
                 let mut n = 2u64 + tid as u64;
                 let mut k = tid as f64;
@@ -324,7 +323,7 @@ pub fn stress_test(
                     let mut prime = true;
                     let mut d = 2u64;
                     while d * d <= n {
-                        if n % d == 0 {
+                        if n.is_multiple_of(d) {
                             prime = false;
                             break;
                         }
@@ -354,9 +353,6 @@ pub fn stress_test(
     // 放后台线程的根因：采样本身（fancmd 4.4s）不能阻塞压测主循环，否则 3s 计划被拖成
     // 数倍（2026-09-14「stress_test 卡住」根因：采样在主线程 + 5s 超时被误杀）。
     let monitor = {
-        let start = start;
-        let max_temp = max_temp;
-        let secs = secs;
         std::thread::spawn(move || {
             let mut tripped = false;
             let mut trip_temp = 0.0f64;
@@ -379,19 +375,16 @@ pub fn stress_test(
                     break;
                 }
                 if last_sample.elapsed() >= s_interval {
-                    match hw_probe_temp() {
-                        Ok(t) => {
-                            samples.push((start.elapsed().as_secs_f64(), t));
-                            if t >= max_temp {
-                                tripped = true;
-                                trip_temp = t;
-                                set_cancel(true);
-                                break;
-                            }
+                    if let Ok(t) = hw_probe_temp() {
+                        samples.push((start.elapsed().as_secs_f64(), t));
+                        if t >= max_temp {
+                            tripped = true;
+                            trip_temp = t;
+                            set_cancel(true);
+                            break;
                         }
-                        // 采样失败不中断压测（降级：无熔断护栏运行，末尾如实提示）
-                        Err(_) => {}
                     }
+                    // 采样失败不中断压测（降级：无熔断护栏运行，末尾如实提示）
                     last_sample = Instant::now();
                 }
                 std::thread::sleep(Duration::from_millis(200));
@@ -507,11 +500,13 @@ pub fn stress_test(
     Ok(out)
 }
 
-/// 5) 内存稳定性测试（MemTest86 简化版）：进程内堆分配 size_mb，用 5 种数据
+/// 内存稳定性测试（MemTest86 简化版）：进程内堆分配 size_mb，用 5 种数据
 /// pattern 反复写入并读回校验，发现位翻转/不稳定内存。
 ///
 /// 纯只读（写自身堆内存，无磁盘/系统副作用）L0，但耗时稍长。
-/// `size_mb` 缓冲大小（默认 256，64-4096）；`rounds` 轮数（默认 1，1-10）。
+///
+/// - `size_mb` 缓冲大小（默认 256，64-4096）
+/// - `rounds` 轮数（默认 1，1-10）
 pub fn mem_test(size_mb: Option<u64>, rounds: Option<u32>) -> Result<String, String> {
     let size_mb = size_mb.unwrap_or(256).clamp(64, 4096);
     let rounds = rounds.unwrap_or(1).clamp(1, 10);
@@ -797,7 +792,6 @@ where
     let mut handles = Vec::with_capacity(n);
     for tid in 0..n {
         let barrier = barrier.clone();
-        let deadline = deadline;
         let f = f.clone();
         handles.push(std::thread::spawn(move || {
             barrier.wait(); // 齐射，公平计时
@@ -873,7 +867,7 @@ fn read_bench(path: &std::path::Path, size: u64, random: bool, block: usize) -> 
             rng = rng
                 .wrapping_mul(6364136223846793005)
                 .wrapping_add(1442695040888963407);
-            let pos = (rng as u64) % size.saturating_sub(block as u64);
+            let pos = rng % size.saturating_sub(block as u64);
             let _ = f.seek(std::io::SeekFrom::Start(pos));
         }
         match f.read(&mut buf) {
@@ -903,7 +897,7 @@ fn write_bench(path: &std::path::Path, size: u64, random: bool, block: usize) ->
             rng = rng
                 .wrapping_mul(6364136223846793005)
                 .wrapping_add(1442695040888963407);
-            let pos = (rng as u64) % size.saturating_sub(block as u64);
+            let pos = rng % size.saturating_sub(block as u64);
             let _ = f.seek(std::io::SeekFrom::Start(pos));
         }
         if f.write_all(&buf).is_err() {
@@ -927,12 +921,16 @@ fn hw_probe_temp() -> Result<f64, String> {
 
 /// 后台异步温度预取：fancmd 探测可能卡满 8s（非管理员/驱动加载慢），若在压测
 /// 主线程同步跑，压测线程根本没启动、任务管理器看不到占用就「卡住」。
+/// 后台异步温度预取槽：探测结果先写进共享槽（压测熔断循环可随时读），
+/// 线程句柄用于压测结束时 join 拿最终读数。
+type TempProbeSlot = Arc<std::sync::Mutex<Option<Result<f64, String>>>>;
+type TempProbe = (std::thread::JoinHandle<Result<f64, String>>, TempProbeSlot);
+
+/// 后台异步温度预取：fancmd 探测可能卡满 8s（非管理员/驱动加载慢），若在压测
+/// 主线程同步跑，压测线程根本没启动、任务管理器看不到占用就「卡住」。
 /// 用独立的探测器线程在压测跑的同时去拿温度：先给 3s 窗口抢出 pre_temp，
 /// 抢不到就丢给后台继续跑——压测自身的熔断循环会在后续采样里补上温度读数。
-fn probe_temp_async() -> (
-    std::thread::JoinHandle<Result<f64, String>>,
-    Arc<std::sync::Mutex<Option<Result<f64, String>>>>,
-) {
+fn probe_temp_async() -> TempProbe {
     let slot = Arc::new(std::sync::Mutex::new(None));
     let slot2 = Arc::clone(&slot);
     let handle = std::thread::spawn(move || {

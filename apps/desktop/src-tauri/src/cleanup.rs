@@ -32,27 +32,31 @@ pub(crate) fn norm_path_key(p: &Path) -> String {
 pub(crate) fn redact_home_path(p: &str) -> String {
     let s = p.replace('\\', "/");
     let parts: Vec<&str> = s.split('/').collect();
-    // 形如 `C:/Users/alice/...`
-    if parts.len() >= 3
-        && parts[0].len() == 2
-        && parts[0].ends_with(':')
-        && parts[1].eq_ignore_ascii_case("users")
+    // 定位用户名所在段：Windows 盘符或 POSIX 根后跟 Users → 段 2；
+    // 无盘符的裸 `Users/<名>` → 段 1；都不像则原样返回。
+    let user_idx = if parts
+        .get(1)
+        .map(|s| s.eq_ignore_ascii_case("users"))
+        .unwrap_or(false)
+        && ((parts[0].len() == 2 && parts[0].ends_with(':')) || parts[0].is_empty())
     {
-        let mut out = parts;
-        out[2] = "<USER>";
-        out.join("/")
-    // 形如 `/Users/alice/...`（macOS/Linux 布局，保守同样处理）
-    } else if parts.len() >= 3 && parts[0].is_empty() && parts[1].eq_ignore_ascii_case("users") {
-        let mut out = parts;
-        out[2] = "<USER>";
-        out.join("/")
-    // 无盘符的裸 `Users/<名>`
-    } else if parts.len() >= 2 && parts[0].eq_ignore_ascii_case("users") {
-        let mut out = parts;
-        out[1] = "<USER>";
-        out.join("/")
+        Some(2)
+    } else if parts
+        .first()
+        .map(|s| s.eq_ignore_ascii_case("users"))
+        .unwrap_or(false)
+    {
+        Some(1)
     } else {
-        s
+        None
+    };
+    match user_idx {
+        Some(i) if parts.len() > i => {
+            let mut out = parts;
+            out[i] = "<USER>";
+            out.join("/")
+        }
+        _ => s,
     }
 }
 
@@ -804,11 +808,9 @@ mod tests {
     fn covering_keys_drive_root_matches_subdir_entries() {
         // 清理 detect 根（`c:/users/x/appdata/...`）后，盘根 key `c:/` 的缓存条目
         // 必须被覆盖清除，否则 30 分钟 TTL 内建议仍返回已回收的旧字节。
-        let keys = vec![
-            "c:/".to_string(),
+        let keys = ["c:/".to_string(),
             "c:/users/x/appdata/local".to_string(),
-            "d:/".to_string(),
-        ];
+            "d:/".to_string()];
         let hit = covering_cache_keys(keys.iter(), "c:/users/x/appdata/local");
         assert!(
             hit.contains(&"c:/".to_string()),
@@ -820,7 +822,7 @@ mod tests {
 
     #[test]
     fn covering_keys_exact_match_wins() {
-        let keys = vec!["c:/users/x".to_string(), "c:/users/x/sub".to_string()];
+        let keys = ["c:/users/x".to_string(), "c:/users/x/sub".to_string()];
         let hit = covering_cache_keys(keys.iter(), "c:/users/x");
         assert_eq!(hit, vec!["c:/users/x".to_string()]);
     }
@@ -828,7 +830,7 @@ mod tests {
     #[test]
     fn covering_keys_trailing_slash_drive_root() {
         // 根 key 自带尾部斜杠（`c:/`），后代条目前缀也应命中，而不是拼出 `c://`。
-        let keys = vec!["c:/".to_string(), "c:/program files".to_string()];
+        let keys = ["c:/".to_string(), "c:/program files".to_string()];
         let hit = covering_cache_keys(keys.iter(), "c:/program files/edge");
         assert!(hit.contains(&"c:/".to_string()), "盘根应命中: {hit:?}");
     }

@@ -141,7 +141,7 @@ fn read_full_with(map_names: &[String]) -> Result<(HwSnapshot, Vec<u8>), String>
             Err(e) => last_err = e,
         }
     }
-    let (ptr, map_len) = mapped.ok_or_else(|| last_err)?;
+    let (ptr, map_len) = mapped.ok_or(last_err)?;
 
     // 头在映射头部（HWiNFO 段至少 64B），直接读。
     // 拷贝长度钳制到真实映射长度（map_len），防段头异常时越界读。

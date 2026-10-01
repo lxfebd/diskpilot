@@ -303,7 +303,7 @@ pub(crate) async fn ai_proxy(
         for (k, v) in h {
             if let (Ok(name), Ok(value)) = (
                 reqwest::header::HeaderName::from_bytes(k.as_bytes()),
-                reqwest::header::HeaderValue::from_str(&v),
+                reqwest::header::HeaderValue::from_str(v),
             ) {
                 req = req.header(name, value);
             }
@@ -555,7 +555,7 @@ fn ipv6_is_private(ip: &[u8; 16]) -> bool {
         return true;
     }
     // fe80::/10（链路本地）
-    if (ip[0] & 0xff) == 0xfe && (ip[1] & 0xc0) == 0x80 {
+    if ip[0] == 0xfe && (ip[1] & 0xc0) == 0x80 {
         return true;
     }
     // ::ffff:0:0/96 v4-mapped：内嵌 IPv4 按 v4 私网规则判

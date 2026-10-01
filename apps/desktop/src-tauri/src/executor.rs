@@ -555,7 +555,7 @@ fn running_required(wanted: &[String], snapshot: &[String]) -> Vec<String> {
         if key.is_empty() || !seen.insert(key.clone()) {
             continue;
         }
-        if snapshot.iter().any(|p| *p == key) {
+        if snapshot.contains(&key) {
             out.push(name.trim().to_string());
         }
     }

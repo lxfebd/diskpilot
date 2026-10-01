@@ -254,6 +254,7 @@ fn webview_heartbeat(app: AppHandle) {
 ///     reload 只是给已死的 controller 发命令，永远不生效（实测黑屏不恢复）；
 ///     正确动作是 destroy 旧窗口 + 按配置重建（根治「UI 假死、主进程空壳」）。
 ///  2. 心跳超时（>12s）→ 前端 JS 卡死（浏览器进程还活着）→ reload 自愈。
+///
 /// 重建后前端恢复心跳则自动解除；若重建也无用（进程起不来），主进程
 /// 不自杀，但日志会明确提示，避免「无声假死」。
 fn spawn_webview_watchdog(app: AppHandle) {
@@ -794,7 +795,7 @@ pub(crate) fn install_scaffold_inner(
     std::fs::write(&path, toml).map_err(|e| format!("写入失败：{e}"))?;
 
     // 热重载：用户目录脚本覆盖内嵌同名脚本。
-    *state.scaffolds.lock().unwrap() = load_all_scaffolds(&app);
+    *state.scaffolds.lock().unwrap() = load_all_scaffolds(app);
     tracing::info!("scaffold installed: {} -> {:?}", scaffold.id, path);
     Ok(scaffold.id)
 }
@@ -1261,7 +1262,7 @@ pub fn run() {
         // 托盘常驻：点窗口关闭按钮时查 close_to_tray 配置，开 → 隐藏到托盘。
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                let close_to_tray = general_config_at(&window.app_handle()).close_to_tray;
+                let close_to_tray = general_config_at(window.app_handle()).close_to_tray;
                 if close_to_tray {
                     api.prevent_close();
                     window.hide().ok();
@@ -1835,8 +1836,7 @@ mode = "delete"
         // 目标（含 302 后跳向私网）都无法到达。
         let err = ssrf_safe_get(&format!("http://127.0.0.1:{port}/ok"), 1024, None)
             .await
-            .err()
-            .expect("私网目标必须拒绝");
+            .expect_err("私网目标必须拒绝");
         assert!(
             err.contains("https") || err.contains("不可用"),
             "拒绝信息应说明协议/私网原因: {err}"
@@ -1849,8 +1849,7 @@ mode = "delete"
     async fn ssrf_http_scheme_is_rejected() {
         let err = ssrf_safe_get("http://127.0.0.1:1/a", 10, None)
             .await
-            .err()
-            .expect("http 私网必须拒绝");
+            .expect_err("http 私网必须拒绝");
         assert!(err.contains("https"), "http 应被协议白名单拦下: {err}");
     }
 

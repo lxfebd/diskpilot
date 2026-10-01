@@ -1388,10 +1388,8 @@ pub fn collect_sensors() -> Result<String, String> {
         let mut s = lines.join("\n");
         // 让 AI 知道这是来自 HWiNFO 的实时传感器，可信度高。
         let cnt = snapshot.lines().count().saturating_sub(1); // 首行是标题
-        s.push_str(&format!(
-            "\n说明：数据来自 HWiNFO 共享内存（普通权限，无 Ring0/管理员依赖），\n  \
-             读数界面与 HWiNFO 一致；HWiNFO 未运行时自动降级 LibreHardwareMonitor/fancmd 与 ACPI 通道。"
-        ));
+        s.push_str("\n说明：数据来自 HWiNFO 共享内存（普通权限，无 Ring0/管理员依赖），\n  \
+             读数界面与 HWiNFO 一致；HWiNFO 未运行时自动降级 LibreHardwareMonitor/fancmd 与 ACPI 通道。");
         if cnt > 120 {
             s.push_str(&format!(
                 "\n提示：本快照截断至 120 条（共 {cnt} 条），可单独询问某组详细读数。"
@@ -1457,7 +1455,7 @@ pub fn collect_sensors() -> Result<String, String> {
                         }
                         // 超时 / UAC 取消 / 无有效输出 → 降级
                         if started.elapsed() < timeout {
-                            return Ok(collect_temperature()?);
+                            return collect_temperature();
                         }
                         return Ok(s); // 超时：保留非提权快照，不阻塞
                     }
@@ -1749,10 +1747,8 @@ pub fn max_cpu_temp() -> Result<f64, String> {
     // 2) SuperIO / fancmd 都不可用时，快速回退 ACPI 热区 + SMART 磁盘温度（~3s），
     //    保证压测熔断护栏仍可用。
     if best.is_nan() {
-        if let Ok(txt) = collect_temperature_fast_parse() {
-            if let Some(t) = txt {
-                best = t;
-            }
+        if let Some(t) = collect_temperature_fast_parse().ok().flatten() {
+            best = t;
         }
     }
     if !best.is_nan() {
@@ -2416,10 +2412,7 @@ mod tests {
     #[test]
     fn gpu_temp_c_err_message_covers_both_vendors() {
         // gpu_temp_c（stress_test_gpu 熔断）两通道全失败的报错应提到 NVIDIA 与 AMD。
-        let nv_err: Option<String> = None;
-        let err = nv_err.unwrap_or_else(|| {
-            "未检测到 NVIDIA（nvidia-smi）或 AMD（atiadlxx ADL）GPU 温度".to_string()
-        });
+        let err = "未检测到 NVIDIA（nvidia-smi）或 AMD（atiadlxx ADL）GPU 温度";
         assert!(err.contains("NVIDIA"));
         assert!(err.contains("AMD"));
     }

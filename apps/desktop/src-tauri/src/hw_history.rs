@@ -192,7 +192,7 @@ pub(crate) fn get_hw_history(app: tauri::AppHandle) -> Vec<HwSnapshotMeta> {
         })
         .filter_map(|p| parse_meta(&p))
         .collect();
-    out.sort_by(|a, b| b.at.cmp(&a.at));
+    out.sort_by_key(|a| std::cmp::Reverse(a.at));
     out
 }
 
@@ -381,7 +381,7 @@ pub(crate) fn compare_hw_snapshots(
     }
     compares.retain(|c| !c.fields.is_empty());
     Ok(serde_json::json!({
-        "ok": compares.len() > 0,
+        "ok": !compares.is_empty(),
         "a": fa,
         "b": fb,
         "disks": compares,
@@ -458,7 +458,7 @@ mod tests {
         // get_hw_history 的排序逻辑：按 at 倒序（最新的在前）。read_dir 本身
         // 顺序任意，这里直接验证排序后结果。
         let mut sorted = metas.clone();
-        sorted.sort_by(|a, b| b.at.cmp(&a.at));
+        sorted.sort_by_key(|a| std::cmp::Reverse(a.at));
         let ats = sorted.iter().map(|m| m.at).collect::<Vec<_>>();
         assert_eq!(ats, vec![1_700_086_400, 1_700_000_000]);
         assert_eq!(sorted[0].machine, "TestBox · Windows Test");

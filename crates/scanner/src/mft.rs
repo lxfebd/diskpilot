@@ -107,9 +107,9 @@ impl<R: Read + Seek> AlignedVolumeReader<R> {
             return Ok(n);
         }
         // 对齐大读：偏移与长度都是 512 倍数 → 直接分块下发，无缓冲拷贝。
-        if self.pos % NTFS_BLOCK_SIZE as u64 == 0
+        if self.pos.is_multiple_of(NTFS_BLOCK_SIZE as u64)
             && out.len() >= NTFS_BLOCK_SIZE
-            && out.len() % NTFS_BLOCK_SIZE == 0
+            && out.len().is_multiple_of(NTFS_BLOCK_SIZE)
         {
             self.inner.seek(SeekFrom::Start(self.pos))?;
             let mut have = 0usize;
@@ -459,7 +459,7 @@ fn parse_record(rec: &[u8]) -> Option<(u64, String, u64, bool)> {
                 let name_bytes = &rec[name_off + 66..name_off + 66 + nlen * 2];
                 let name = String::from_utf16_lossy(
                     &name_bytes
-                        .chunks_exact(2)
+                        .as_chunks::<2>().0.iter()
                         .map(|c| u16::from_le_bytes([c[0], c[1]]))
                         .collect::<Vec<_>>(),
                 );
@@ -617,6 +617,7 @@ fn build_node_tree(
 }
 
 /// 慢路径（原实现）：逐条 `ntfs::file()` + seek。保留作快路径失败的回退。
+#[allow(clippy::too_many_arguments)] // 8 个同步参数原子传递，抽 struct 反而割裂调用点
 fn scan_volume_slow<R, F>(
     reader: &mut R,
     ntfs: &Ntfs,
@@ -640,7 +641,7 @@ where
     let mft_data_attribute = mft_data.to_attribute()?;
     let mft_data_value = mft_data_attribute.value(reader)?;
     let total_size = mft_data_value.len();
-    let total_records = (total_size / record_size as u64) as u64;
+    let total_records = total_size / record_size as u64;
     let _ = mft_data_value;
     let _ = mft_data_attribute;
     let _ = mft_file;
@@ -900,6 +901,7 @@ mod tests {
     ///   - FILE 签名 + USA fixup 数组（4 个扇区的记录 = 4 项，USA=0xABCD）
     ///   - 一个驻留 $FILE_NAME（Win32AndDos，含 parent FRN + 长度）
     ///   - 一个非驻留 $DATA（data_size=2048）
+    ///
     /// 返回 (record, usa_array, record_size)。USA 数组单独返回，方便测试
     /// 把 sector 尾部填成 USN 后再合成完整记录。
     fn synth_record() -> (Vec<u8>, Vec<u8>) {

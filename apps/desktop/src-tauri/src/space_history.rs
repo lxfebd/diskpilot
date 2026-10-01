@@ -88,7 +88,7 @@ fn last_same_root_within(p: &Path, root: &str, now: u64, within_secs: u64) -> bo
     let reader = BufReader::new(f);
     // 只倒查最后 ~64 行：jsonl 单行极短，倒查成本可忽略且避免全文件读。
     let mut lines: Vec<String> = Vec::new();
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         lines.push(line);
         if lines.len() > 64 {
             lines.remove(0);
@@ -120,7 +120,7 @@ fn read_history_at(p: &Path) -> HashMap<String, Vec<SpacePoint>> {
         return HashMap::new();
     };
     let mut out: HashMap<String, Vec<SpacePoint>> = HashMap::new();
-    for line in BufReader::new(f).lines().flatten() {
+    for line in BufReader::new(f).lines().map_while(Result::ok) {
         if let Ok(pt) = serde_json::from_str::<SpacePoint>(&line) {
             out.entry(pt.root.clone()).or_default().push(pt);
         }

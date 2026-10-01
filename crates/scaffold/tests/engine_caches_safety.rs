@@ -10,6 +10,7 @@
 //!   - Godot: %APPDATA%/Godot 下的 editor_cache/export_cache；红线是
 //!     editor_settings.cfg、editor_layout.cfg、app_userdata 下的每项目数据、
 //!     项目 .godot/editor 关键文件。
+//!
 //! 同时包含通用红线样本（.db / config / login / key / crypto / Favorite 等）。
 
 use std::path::PathBuf;

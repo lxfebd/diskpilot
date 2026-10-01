@@ -244,9 +244,9 @@ fn node_size_at(tree: &crate::Node, rel: &Path) -> Option<u64> {
     let mut cur = tree;
     for seg in rel.components() {
         let name = seg.as_os_str().to_string_lossy().to_string();
-        match child_index(cur, &name) {
-            Some(i) => cur = &cur.children[i],
-            None => return None,
+        {
+            let i = child_index(cur, &name)?;
+            cur = &cur.children[i]
         }
     }
     Some(cur.size)
@@ -1103,7 +1103,7 @@ mod tests {
         // 不是旧实现的 0（那样父目录 file_count 永久虚高）。
         // 目录删除时路径通常已消失，size_hint=None；remove_node 的目录分支
         // 靠缓存节点自身的 size/count 回滚。
-        let applied = remove_node(&mut tree, &d.strip_prefix(&root).unwrap(), None);
+        let applied = remove_node(&mut tree, d.strip_prefix(&root).unwrap(), None);
         assert!(applied);
         assert_eq!(tree.file_count, 0, "目录删除应回滚递归计数");
         assert_eq!(tree.size, 0);

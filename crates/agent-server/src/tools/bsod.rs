@@ -7,10 +7,10 @@
 //! ## 格式说明（Windows 内核转储 DUMP_HEADER，x64 自然对齐）
 //! 无论小内存转储（256KB）还是完整内核转储，文件头都是 `_DUMP_HEADER`（`PAGEDUMP`
 //! 签名），bugcheck 信息位于固定偏移：
-//! - `0x00` Signature = b"PAGE"（`PAGEDUMP` 前 4 字节）
-//! - `0x04` ValidDump = b"DUMP"
-//! - `0xDC` BugCheckCode（u32）
-//! - `0xE0..0xF8` BugCheckParameter1..4（u64 × 4）
+//!     - `0x00` Signature = b"PAGE"（`PAGEDUMP` 前 4 字节）
+//!     - `0x04` ValidDump = b"DUMP"
+//!     - `0xDC` BugCheckCode（u32）
+//!     - `0xE0..0xF8` BugCheckParameter1..4（u64 × 4）
 //! 崩溃时间取文件修改时间（内核不会改 dump 文件内容，mtime 即崩溃时间）。
 
 use std::io::Read;
@@ -174,7 +174,7 @@ pub fn analyze_bsod(
     for f in &files {
         let mtime = std::fs::metadata(f)
             .and_then(|m| m.modified())
-            .map(|t| iso_time(t))
+            .map(iso_time)
             .unwrap_or_else(|_| "时间未知".into());
         match parse_dump_header(f) {
             Some(h) => {

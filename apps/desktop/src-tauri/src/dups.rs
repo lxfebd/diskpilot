@@ -305,11 +305,11 @@ mod tests {
     fn clusters_by_hash_within_size_group() {
         let root = tmp_sub("hash");
         // 三份 200B 头部全同 → 一组；两份 200B 另一头部（CD）→ 另一组；没有杂物。
-        write(&root.join("a.bin"), &vec![0xAB; 200]);
-        write(&root.join("b.bin"), &vec![0xAB; 200]);
-        write(&root.join("c.bin"), &vec![0xAB; 200]);
-        write(&root.join("d.bin"), &vec![0xCD; 200]);
-        write(&root.join("e.bin"), &vec![0xCD; 200]);
+        write(&root.join("a.bin"), &[0xAB; 200]);
+        write(&root.join("b.bin"), &[0xAB; 200]);
+        write(&root.join("c.bin"), &[0xAB; 200]);
+        write(&root.join("d.bin"), &[0xCD; 200]);
+        write(&root.join("e.bin"), &[0xCD; 200]);
 
         let groups = scan_duplicate_files(&root, 0).unwrap();
         assert_eq!(groups.len(), 2, "两个头部各成一组");
@@ -332,9 +332,9 @@ mod tests {
     fn keep_shortest_path_then_oldest() {
         let root = tmp_sub("keep");
         // 深层副本（更短路径的"原件"保留；mtime 无法控，靠路径长度）
-        write(&root.join("orig.bin"), &vec![0x11; 100]);
-        write(&root.join("sub/dup.bin"), &vec![0x11; 100]);
-        write(&root.join("sub/deep/dup2.bin"), &vec![0x11; 100]);
+        write(&root.join("orig.bin"), &[0x11; 100]);
+        write(&root.join("sub/dup.bin"), &[0x11; 100]);
+        write(&root.join("sub/deep/dup2.bin"), &[0x11; 100]);
 
         let groups = scan_duplicate_files(&root, 0).unwrap();
         assert_eq!(groups.len(), 1);
@@ -366,8 +366,8 @@ mod tests {
     #[test]
     fn min_size_filters_tiny_files() {
         let root = tmp_sub("minsize");
-        write(&root.join("a.bin"), &vec![0x01; 50]);
-        write(&root.join("b.bin"), &vec![0x01; 50]);
+        write(&root.join("a.bin"), &[0x01; 50]);
+        write(&root.join("b.bin"), &[0x01; 50]);
         // min_size=100 → 都不进候选
         let groups = scan_duplicate_files(&root, 100).unwrap_err();
         assert!(

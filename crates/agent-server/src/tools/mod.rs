@@ -703,21 +703,21 @@ impl AgentServer {
         description = "读取 CPU 信息：型号/核心/线程数/基频与当前频率/缓存/实时占用率（只读，WMI，不需要管理员权限）。用户问『CPU 是什么/几个核/占用高不高』时调用。"
     )]
     async fn hw_cpu(&self, _p: Parameters<HwCpuParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || hw::collect_cpu(), "CPU 信息采集").await)
+        Ok(blocking_call(30, hw::collect_cpu, "CPU 信息采集").await)
     }
 
     #[tool(
         description = "读取显卡信息：型号/显存/驱动版本与日期/分辨率/刷新率，NVIDIA 卡附实时温度与占用（只读，不需要管理员权限）。用户问『什么显卡/显存多大/GPU 占用』时调用。"
     )]
     async fn hw_gpu(&self, _p: Parameters<HwGpuParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || hw::collect_gpu(), "显卡信息读取").await)
+        Ok(blocking_call(30, hw::collect_gpu, "显卡信息读取").await)
     }
 
     #[tool(
         description = "读取内存信息：每根内存条容量/频率/厂商/型号 + 总容量 + XMP/EXPO 是否生效诊断（只读，不需要管理员权限）。用户问『内存多大/频率多少/该不该开 XMP』时调用。"
     )]
     async fn hw_memory(&self, _p: Parameters<HwMemoryParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || hw::collect_memory(), "内存信息读取").await)
+        Ok(blocking_call(30, hw::collect_memory, "内存信息读取").await)
     }
 
     #[tool(
@@ -727,7 +727,7 @@ impl AgentServer {
         &self,
         _p: Parameters<HwMotherboardParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || hw::collect_motherboard(), "主板信息读取").await)
+        Ok(blocking_call(30, hw::collect_motherboard, "主板信息读取").await)
     }
 
     #[tool(
@@ -737,7 +737,7 @@ impl AgentServer {
         &self,
         _p: Parameters<HwTemperatureParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || hw::collect_temperature(), "温度读取").await)
+        Ok(blocking_call(45, hw::collect_temperature, "温度读取").await)
     }
 
     #[tool(
@@ -747,7 +747,7 @@ impl AgentServer {
         &self,
         _p: Parameters<HwSuperioParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || superio::read_text(), "SuperIO 直读").await)
+        Ok(blocking_call(30, superio::read_text, "SuperIO 直读").await)
     }
 
     #[tool(
@@ -783,7 +783,7 @@ impl AgentServer {
         &self,
         _p: Parameters<HwBatteryParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || hw::collect_battery(), "电池信息读取").await)
+        Ok(blocking_call(30, hw::collect_battery, "电池信息读取").await)
     }
 
     #[tool(
@@ -793,7 +793,7 @@ impl AgentServer {
         &self,
         _p: Parameters<HwDiskSmartParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || hw::collect_disk_smart(), "磁盘健康读取").await)
+        Ok(blocking_call(45, hw::collect_disk_smart, "磁盘健康读取").await)
     }
 
     // ── 网络（net.rs）─────────────────────────────────────────────
@@ -805,7 +805,7 @@ impl AgentServer {
         &self,
         _p: Parameters<NetStatusParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || net::collect_net_status(), "网络状态读取").await)
+        Ok(blocking_call(30, net::collect_net_status, "网络状态读取").await)
     }
 
     #[tool(
@@ -846,14 +846,14 @@ impl AgentServer {
         description = "读取本机共享文件夹（SMB 共享）列表：共享名/路径/权限类型（只读；会话/打开文件统计需要管理员权限，非管理员会明确降级说明）。用户问『电脑共享了什么文件夹/开了哪些共享』时调用。"
     )]
     async fn net_share(&self, _p: Parameters<NetShareParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || net::collect_net_share(), "共享文件夹读取").await)
+        Ok(blocking_call(30, net::collect_net_share, "共享文件夹读取").await)
     }
 
     #[tool(
         description = "读取无线网络信息：本机无线网卡状态 + 已保存的 WiFi 网络名称列表（绝不读取密码，只读）。用户问『WiFi 连的是什么/保存了哪些 WiFi』时调用；无无线网卡会明确说明。"
     )]
     async fn net_wifi(&self, _p: Parameters<NetWifiParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || net::collect_net_wifi(), "WiFi 信息读取").await)
+        Ok(blocking_call(30, net::collect_net_wifi, "WiFi 信息读取").await)
     }
 
     #[tool(
@@ -863,7 +863,7 @@ impl AgentServer {
         &self,
         _p: Parameters<NetAdapterDetailParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || net::collect_adapter_detail(), "网卡配置读取").await)
+        Ok(blocking_call(30, net::collect_adapter_detail, "网卡配置读取").await)
     }
 
     // ── 系统服务/驱动/启动（sys.rs）───────────────────────────────
@@ -991,7 +991,7 @@ impl AgentServer {
         &self,
         _p: Parameters<ProcessCpuUsageParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || process::collect_cpu_usage(), "CPU 占用采样").await)
+        Ok(blocking_call(45, process::collect_cpu_usage, "CPU 占用采样").await)
     }
 
     #[tool(
@@ -1001,7 +1001,7 @@ impl AgentServer {
         &self,
         _p: Parameters<UsbDevicesParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || hw::collect_usb_devices(), "USB 设备枚举").await)
+        Ok(blocking_call(45, hw::collect_usb_devices, "USB 设备枚举").await)
     }
 
     #[tool(
@@ -1011,7 +1011,7 @@ impl AgentServer {
         &self,
         _p: Parameters<DiskSmartRawParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || hw::collect_disk_smart_raw(), "磁盘可靠性计数读取").await)
+        Ok(blocking_call(45, hw::collect_disk_smart_raw, "磁盘可靠性计数读取").await)
     }
 
     // ── 安全/审计（sec.rs）─────────────────────────────────────────
@@ -1075,7 +1075,7 @@ impl AgentServer {
         &self,
         _p: Parameters<DefenderStatusParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || sec::collect_defender_status(), "Defender 状态读取").await)
+        Ok(blocking_call(45, sec::collect_defender_status, "Defender 状态读取").await)
     }
 
     #[tool(
@@ -1085,7 +1085,7 @@ impl AgentServer {
         &self,
         _p: Parameters<UserAccountsParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || sec::collect_user_accounts(), "用户账户枚举").await)
+        Ok(blocking_call(45, sec::collect_user_accounts, "用户账户枚举").await)
     }
 
     #[tool(
@@ -1095,7 +1095,7 @@ impl AgentServer {
         &self,
         _p: Parameters<RecycleBinStatsParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, || envx::collect_recycle_bin_stats(), "回收站状态查询").await)
+        Ok(blocking_call(30, envx::collect_recycle_bin_stats, "回收站状态查询").await)
     }
 
     #[tool(
@@ -1176,7 +1176,7 @@ impl AgentServer {
         &self,
         _p: Parameters<FanSelfhealDiagParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, || selfheal::selfheal_diag(), "风扇通道诊断").await)
+        Ok(blocking_call(45, selfheal::selfheal_diag, "风扇通道诊断").await)
     }
 
     #[tool(

@@ -607,8 +607,11 @@ fn parse_cdi_report(txt: &str) -> Vec<serde_json::Value> {
 /// 避免压测循环每 2 秒 spawn 一个 PowerShell（长测试最多 ~900 次进程风暴）。
 /// None（传感器不可读）也缓存：不可读的机器不会每轮都白 spawn 一遍。
 const THERMAL_TTL: Duration = Duration::from_secs(10);
-static THERMAL_CACHE: OnceLock<Mutex<Option<(std::time::Instant, Option<f32>)>>> = OnceLock::new();
-fn thermal_cache_lock() -> &'static Mutex<Option<(std::time::Instant, Option<f32>)>> {
+/// (采样时刻, 传感器温度)。温度可能读不到（None）。
+type ThermalEntry = (std::time::Instant, Option<f32>);
+type ThermalCache = Mutex<Option<ThermalEntry>>;
+static THERMAL_CACHE: OnceLock<ThermalCache> = OnceLock::new();
+fn thermal_cache_lock() -> &'static ThermalCache {
     THERMAL_CACHE.get_or_init(|| Mutex::new(None))
 }
 
@@ -1673,9 +1676,9 @@ fn wmi_fan_probe() -> serde_json::Value {
         "reason": "WMI 标准类（Win32_Fan / mssctree_faninformation）只暴露只读属性（DesiredSpeed / DesiredValue），没有通用的写入接口。",
         "fans": []
     });
-    if let Some(raw) = ps_capture(FAN_PS, Duration::from_secs(20)).ok() {
+    if let Ok(raw) = ps_capture(FAN_PS, Duration::from_secs(20)) {
         let raw = raw.trim().trim_start_matches('\u{feff}');
-        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(raw) {
             if let Some(fans) = v.get("fans").and_then(|x| x.as_array()) {
                 out["fans"] = serde_json::json!(fans);
             }
@@ -1686,8 +1689,10 @@ fn wmi_fan_probe() -> serde_json::Value {
 
 /// 厂商/第三方 CLI 外挂通道：在本机 PATH 与常见安装目录找可写调速 CLI。
 /// 探测顺序：
-///   1. fancmd（DiskPilot 自带 ITE SuperIO 写控桥，tools/fancmd —— 真实可写，无需第三方软件）
-///   2. nbfc（NoteBook FanControl：`nbfc set -s <0-100>` 写转速）
+///
+/// 1. fancmd（DiskPilot 自带 ITE SuperIO 写控桥，tools/fancmd —— 真实可写，无需第三方软件）
+/// 2. nbfc（NoteBook FanControl：`nbfc set -s <0-100>` 写转速）
+///
 /// 找不到就不编造，如实降级。
 fn cli_fan_probe() -> serde_json::Value {
     // (显示名, exe, 子命令模板, 是否按空格拆分参数, 是否有独立 reset 子命令)

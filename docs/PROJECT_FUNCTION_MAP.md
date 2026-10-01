@@ -166,7 +166,7 @@
 
 1. **G 账本已全量复核（2026-10-02 第二次）**：4 高 4 修 0 欠、16 中 16 修 0 欠、低 17 项 14 修 3 保留。上次复核误标的 8 项（G-中4/11/12、G-低5/11/14/15/16）经代码逐行核对确认 P4 已修，本次实修 4 项（G-中13 快照口径、G-中14 conda 字节、G-低1 死代码、G-低2 lint 规则）。真欠项全部清零，仅 G-低17 ⚪ 保留设计。
 2. **mocks.ts 与 TOML 对齐**：记忆里「幽灵 scaffold 整肃 17/17 对齐」，现在实际是 21 个顶层 id 全对齐（新增了 browser-privacy/windows-privacy/windows-update 三个），mocks.ts 注释已同步为「21 份」。
-3. **agent-server clippy「0 警告」已变 45 条存量噪音**（本次未动该 crate，CI 关 -D warnings，不影响门禁）。
+3. **agent-server clippy 存量噪音已清零（2026-10-02）**：原 45 条（agent-server）+ 5 条（toolbelt）+ desktop/scanner 若干，共 8 个 crate 的冗余闭包、match→if-let 折叠、`b"...\0"`→`c"..."` FFI、type alias 抽出、doc 列表缩进、`flatten()`→`map_while(Result::ok)` 等全部修复；`cargo clippy --workspace --all-targets` 现为 0 警告（仅剩 binrw v0.11.3 未来兼容提示，第三方依赖）。
 4. 记忆「75 工具」与本次核对一致（mod.rs 75 个 async fn）；`mcp_status`/`disk_space_trend` 不在 agent-server，在 Tauri 主进程（mcp.rs / space_history.rs）。
 
 ---

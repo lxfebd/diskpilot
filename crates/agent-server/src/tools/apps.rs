@@ -400,8 +400,7 @@ fn parse_activation_text(hay: &str) -> (bool, String) {
     } else if not_activated {
         // 尽量保留 slmgr 原始行（如「批量激活将于 2026/10/2 过期」），信息量最大
         let line = hay
-            .lines()
-            .filter(|l| {
+            .lines().find(|l| {
                 let ll = l.to_ascii_lowercase();
                 ll.contains("not activated")
                     || ll.contains("license is not")
@@ -409,8 +408,7 @@ fn parse_activation_text(hay: &str) -> (bool, String) {
                     || l.contains("未激活")
                     || l.contains("批量激活")
                     || l.contains("过期")
-            })
-            .next();
+            });
         match line {
             Some(l) if !l.trim().is_empty() => (false, format!("Windows 未永久激活：{}", l.trim())),
             _ => (

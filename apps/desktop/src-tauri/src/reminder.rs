@@ -244,9 +244,11 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("dp-reminder-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("reminder.json");
-        let mut cfg = ReminderConfig::default();
-        cfg.enabled = true;
-        cfg.interval_hours = 6;
+        let cfg = ReminderConfig {
+            enabled: true,
+            interval_hours: 6,
+            ..ReminderConfig::default()
+        };
         let text = serde_json::to_string_pretty(&cfg).unwrap();
         std::fs::write(&p, text).unwrap();
 
@@ -255,8 +257,10 @@ mod tests {
         assert!(loaded.enabled);
         assert_eq!(loaded.interval_hours, 6);
         // 合并写回保留 min_bytes 默认
-        let mut merged = loaded;
-        merged.interval_hours = 12;
+        let merged = ReminderConfig {
+            interval_hours: 12,
+            ..loaded
+        };
         let text = serde_json::to_string_pretty(&merged).unwrap();
         std::fs::write(&p, text).unwrap();
         let reloaded: ReminderConfig =
@@ -275,8 +279,10 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("dp-reminder-clamp-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("reminder.json");
-        let mut cfg = ReminderConfig::default();
-        cfg.interval_hours = 9999; // 超上限
+        let cfg = ReminderConfig {
+            interval_hours: 9999, // 超上限
+            ..ReminderConfig::default()
+        };
         let text = serde_json::to_string_pretty(&cfg).unwrap();
         std::fs::write(&p, text).unwrap();
         let loaded: ReminderConfig =

@@ -147,11 +147,10 @@ pub(crate) async fn translate_steam_names(
     let mut out: HashMap<u32, String> = HashMap::new();
     for id in &appids {
         match cache.get(&id.to_string()) {
-            Some(c) if cache_entry_usable(c, now) => {
-                if !c.name_cn.is_empty() {
+            Some(c) if cache_entry_usable(c, now)
+                && !c.name_cn.is_empty() => {
                     out.insert(*id, c.name_cn.clone());
                 }
-            }
             _ => {}
         }
     }
@@ -259,7 +258,7 @@ fn steam_cache_path(app: &tauri::AppHandle) -> PathBuf {
     app.path()
         .app_data_dir()
         .ok()
-        .or_else(|| dirs::data_dir().map(PathBuf::from))
+        .or_else(dirs::data_dir)
         .unwrap_or_else(|| PathBuf::from("."))
         .join(CACHE_FILE)
 }

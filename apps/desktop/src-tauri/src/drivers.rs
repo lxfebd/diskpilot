@@ -100,7 +100,7 @@ pub(crate) async fn check_driver_updates(
             "拒绝执行：未开启「驱动更新检查」权限（driver.check）。请先在权限中心开启。".into(),
         );
     }
-    tokio::task::spawn_blocking(|| check_driver_updates_blocking())
+    tokio::task::spawn_blocking(check_driver_updates_blocking)
         .await
         .map_err(|e| e.to_string())?
 }
@@ -153,6 +153,6 @@ ConvertTo-Json -InputObject $updates -Depth 4 -Compress
             is_driver: e["is_driver"].as_bool().unwrap_or(false),
         });
     }
-    out.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+    out.sort_by_key(|a| a.title.to_lowercase());
     Ok(out)
 }

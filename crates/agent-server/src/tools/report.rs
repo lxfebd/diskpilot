@@ -355,7 +355,7 @@ fn format_f1(v: f64) -> String {
 
 /// 从一行文本里提取第一个浮点数。
 fn extract_first_f64(line: &str) -> Option<f64> {
-    let cleaned = line.replace('℃', " ").replace('°', " ");
+    let cleaned = line.replace(['℃', '°'], " ");
     let mut num = String::new();
     for c in cleaned.chars() {
         if c.is_ascii_digit() || c == '.' || c == '-' {

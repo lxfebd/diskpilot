@@ -31,7 +31,7 @@ const FOLDER_REL: &str = r"\Microsoft\Windows\Start Menu\Programs\Startup";
 /// registry 部分用 PowerShell 读注册表（值名+值内容保真），文件夹部分直接读目录。
 #[tauri::command]
 pub(crate) async fn list_startup_items() -> Result<Vec<StartupItem>, String> {
-    tokio::task::spawn_blocking(|| list_startup_items_blocking())
+    tokio::task::spawn_blocking(list_startup_items_blocking)
         .await
         .map_err(|e| e.to_string())?
 }
@@ -262,9 +262,8 @@ fn set_startup_item_blocking(id: &str, enable: bool) -> Result<(), String> {
             }
             std::fs::rename(&path, &new_path).map_err(|e| {
                 format!(
-                    "{}{}",
-                    if enable { "恢复" } else { "禁用" },
-                    format!("启动项失败：{e}")
+                    "{}启动项失败：{e}",
+                    if enable { "恢复" } else { "禁用" }
                 )
             })?;
             Ok(())

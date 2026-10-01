@@ -451,7 +451,7 @@ pub fn install_plugin_zip(zip_path: &Path, tools_root: &Path) -> Result<String, 
             ));
         }
         signature::verify_ed25519(&entries, &meta.signature, &meta.signer)
-            .map_err(|e| ToolbeltError::BadArgs(e))?;
+            .map_err(ToolbeltError::BadArgs)?;
     }
 
     // id/category 净化（到期前是路径穿越的一半：它们直接拼进目录路径）。
