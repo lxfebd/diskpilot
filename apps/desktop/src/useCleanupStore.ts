@@ -16,6 +16,7 @@ import {
   collectWxids,
   computeCoverage,
   computeTotalSelected,
+  condaDryBytes,
   defaultDaysFor,
   detectVariants,
   mergeScopeDays,
@@ -64,7 +65,6 @@ export interface CleanupSession {
 interface CleanupStoreState {
   session: CleanupSession | null;
   select: (scaffoldId?: string, opts?: { force?: boolean }) => void;
-  open: (scaffoldId: string, matches: Node[]) => void;
   close: () => void;
   setDays: (scopeId: string, days: number) => void;
   toggleWxid: (wxid: string) => void;
@@ -310,23 +310,6 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
   },
 
   // Studio「配置清理…」直接带检测到的目录进来，跳过内部 DFS。
-  open: (scaffoldId, matches) => {
-    const cur = getCur();
-    if (cur && (cur.running || cur.previewing)) return;
-    const root = useStore.getState().root;
-    const scaffolds = useStore.getState().scaffolds;
-    const scaffold =
-      scaffolds.find((s) => s.id === scaffoldId) ?? scaffolds.find((s) => s.id === 'conda');
-    if (!scaffold) return;
-    clearAllTimers();
-    sizeSeq += 1;
-    const session = buildSession(root, scaffold, matches);
-    useCleanupStore.setState({ session });
-    if (session.isConda) loadCondaEnvs();
-    scheduleSizeFetch();
-    runPreflight(scaffold.id);
-  },
-
   close: () => {
     clearAllTimers();
     sizeSeq += 1;
@@ -448,6 +431,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           return;
         }
         const tasks: Promise<{ source: string }[]>[] = [];
+        const hitPaths: string[] = [];
         for (const scopeId of scopeIds) {
           if (scopeId === 'envs-stale') {
             tasks.push(
@@ -481,14 +465,15 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
         for (const list of lists) {
           for (const e of list) {
             totalFiles += 1;
+            hitPaths.push(e.source);
             if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
           }
         }
-        // conda 的字节数走 computeSessionTotal：env 尺寸来自 listCondaEnvs 元数据
-        // （size_bytes），tarballs/unused-packages 走 scopeSizes 缓存，两者都是
-        // 「预估」口径，与普通脚本分支的 scopeBytes 预估一致，仅数据源不同；
-        // 真删后按实际 entries 计数、字节仍标「预估」（后端待补 per-path 实测）。
-        totalBytes = computeSessionTotal(s).bytes;
+        // conda 字节走 condaDryBytes：只累加「后端 dry-run 实际命中的 env 目录」
+        // 的 size_bytes + 勾选的包缓存 scope（tarballs/unused-packages）——不能
+        // 把所有勾选 env 全算进去（envs-stale 只清未使用的，勾了 10 删 3 按 10
+        // 算会虚高）；与普通分支「按 scope 实际命中总量」口径一致。
+        totalBytes = condaDryBytes(hitPaths, s.condaEnvs, s.scopeSizes, s.selectedScopes).bytes;
       } else {
         scopeIds = [...s.selectedScopes].filter((id) => scopeBytes(s, id) > 0);
         if (scopeIds.length === 0) {
@@ -550,6 +535,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           daysSnapshot,
           wxidSnapshot,
           envSnapshot,
+          matchesPaths: s.matches.map((m) => m.path),
+          isCondaSnapshot: s.isConda,
         },
       }));
     } catch (e) {
@@ -587,35 +574,40 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
             },
           );
 
-      if (s.isConda) {
-        // 用预览时点快照的 env 列表，不用 runRealDelete 时的最新勾选。
+      if (preview.isCondaSnapshot) {
+        // 用预览时点快照的 env 列表 + matches 路径，不用 runRealDelete 时的最新勾选/换盘。
         const envFilterArg = preview.envSnapshot;
-        const tasks: Promise<unknown>[] = [];
-        for (const scopeId of preview.scopeIds) {
-          if (scopeId === 'envs-stale') {
-            tasks.push(runReal(scopeId, s.matches[0].path, { envFilter: envFilterArg }));
-          } else {
-            const days = preview.daysSnapshot[scopeId];
-            for (const m of s.matches) {
-              tasks.push(runReal(scopeId, m.path, { olderThanDays: days }));
+        const paths = preview.matchesPaths.length > 0 ? preview.matchesPaths : [s.matches[0]?.path];
+        const rootPath = preview.matchesPaths[0] ?? s.matches[0]?.path;
+        if (rootPath) {
+          const tasks: Promise<unknown>[] = [];
+          for (const scopeId of preview.scopeIds) {
+            if (scopeId === 'envs-stale') {
+              tasks.push(runReal(scopeId, rootPath, { envFilter: envFilterArg }));
+            } else {
+              const days = preview.daysSnapshot[scopeId];
+              for (const mPath of paths) {
+                tasks.push(runReal(scopeId, mPath, { olderThanDays: days }));
+              }
             }
           }
+          await Promise.all(tasks);
         }
-        await Promise.all(tasks);
-        const refreshed = await api.listCondaEnvs(s.matches[0].path).catch(() => [] as CondaEnv[]);
+        const refreshed = await api.listCondaEnvs(rootPath).catch(() => [] as CondaEnv[]);
         patchInSession(() => ({
           condaEnvs: refreshed,
           selectedEnvs: new Set(refreshed.filter((e) => e.default_checked).map((e) => e.name)),
         }));
         if (preview.scopeIds.some((id) => id !== 'envs-stale')) fetchSizesNow();
       } else {
-        // 快照口径：预览时勾选的账号过滤，预览窗停留期间改勾选不影响本次真删。
+        // 快照口径：预览时勾选的账号过滤 + 命中路径，预览窗停留期间改勾选/换盘不影响本次真删。
         const wxidFilter = preview.wxidSnapshot ?? undefined;
+        const paths = preview.matchesPaths.length > 0 ? preview.matchesPaths : s.matches.map((m) => m.path);
         const tasks: Promise<unknown>[] = [];
         for (const scopeId of preview.scopeIds) {
           const days = preview.daysSnapshot[scopeId];
-          for (const m of s.matches) {
-            tasks.push(runReal(scopeId, m.path, { olderThanDays: days, wxidFilter }));
+          for (const mPath of paths) {
+            tasks.push(runReal(scopeId, mPath, { olderThanDays: days, wxidFilter }));
           }
         }
         await Promise.all(tasks);

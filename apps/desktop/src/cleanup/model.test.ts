@@ -5,6 +5,7 @@ import {
   collectWxids,
   computeCoverage,
   computeTotalSelected,
+  condaDryBytes,
   defaultDaysFor,
   detectVariants,
   scopeDayOverrides,
@@ -158,6 +159,42 @@ describe('computeTotalSelected', () => {
       selectedEnvs: new Set(),
     });
     expect(r).toEqual({ count: 0, bytes: 0 });
+  });
+});
+
+describe('condaDryBytes', () => {
+  const envs = [
+    { name: 'env1', path: 'C:\\conda\\envs\\env1', size_bytes: 500, last_active_ts: null, is_base: false, default_checked: true },
+    { name: 'env2', path: 'C:\\conda\\envs\\env2', size_bytes: 800, last_active_ts: null, is_base: false, default_checked: true },
+  ];
+
+  it('只按 dry-run 命中的 env 累加，未命中的勾选 env 不计入', () => {
+    // 勾了 env1+env2，但 dry-run 只命中 env1（env2 未过期）→ 只算 env1 的 500
+    const r = condaDryBytes(['C:\\conda\\envs\\env1'], envs, [], new Set());
+    expect(r).toEqual({ bytes: 500, count: 1 });
+  });
+
+  it('尾部斜杠路径也匹配得上元数据', () => {
+    const r = condaDryBytes(['C:\\conda\\envs\\env1\\'], envs, [], new Set());
+    expect(r.bytes).toBe(500);
+  });
+
+  it('包缓存 scope（tarballs/unused-packages）按 scopeSizes 缓存计入', () => {
+    const sizes = [sz('tarballs', 200), sz('unused-packages', 80)];
+    const r = condaDryBytes(['C:\\conda\\envs\\env2'], envs, sizes, new Set(['tarballs', 'unused-packages']));
+    // env2(800) + tarballs(200) + unused-packages(80)
+    expect(r).toEqual({ bytes: 1080, count: 3 });
+  });
+
+  it('未勾选的包缓存 scope 不计入', () => {
+    const sizes = [sz('tarballs', 200)];
+    const r = condaDryBytes([], envs, sizes, new Set());
+    expect(r).toEqual({ bytes: 0, count: 0 });
+  });
+
+  it('命中路径对不上 envs 元数据（已消失/路径变了）→ 不计字节', () => {
+    const r = condaDryBytes(['C:\\conda\\envs\\gone'], envs, [], new Set());
+    expect(r).toEqual({ bytes: 0, count: 0 });
   });
 });
 

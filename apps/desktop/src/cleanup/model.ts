@@ -41,6 +41,11 @@ export interface DryRunPreview {
   daysSnapshot: Record<string, number>;
   wxidSnapshot: string[] | null;
   envSnapshot: string[];
+  /** 预览时点的命中目录路径数组快照：换盘/重扫会重建 session（matches 打散），
+   *  真删绝不能沿「当前 matches」的真删时刻快照跑——应按预览时的路径删。 */
+  matchesPaths: string[];
+  /** 预览时点是不是 conda 会话（conda 分支真删引 matches[0] 路径，需同步快照）。 */
+  isCondaSnapshot: boolean;
 }
 
 export const DRY_RUN_SAMPLE_CAP = 80;
@@ -215,6 +220,41 @@ export function computeTotalSelected(input: {
     }
   }
   return { count, bytes };
+}
+
+/** dry-run 命中目录 → 预估字节：把命中的 env 目录路径对回 listCondaEnvs 元数据
+ *  （size_bytes），按**实际命中**累加——不能把勾选但未过期的 env 也全算进去
+ *  （envs-stale 只清「未使用」的，勾了 10 个只删 3 个时按 10 个算会虚高）。
+ *  tarballs/unused-packages 走 scopeSizes 缓存（与普通脚本分支同源）。
+ *  返回 { bytes, count }：字节与 dry-run 真实命中对齐，预览口径才与普通分支一致。 */
+export function condaDryBytes(
+  hitPaths: string[],
+  envs: CondaEnv[] | null,
+  scopeSizes: ScopeSize[] | null,
+  selectedScopes: ReadonlySet<string>,
+): { bytes: number; count: number } {
+  const envBytes = (p: string) => {
+    const norm = p.replace(/[\\/]+$/, '').toLowerCase();
+    const e = (envs ?? []).find((x) => x.path.replace(/[\\/]+$/, '').toLowerCase() === norm);
+    return e?.size_bytes ?? 0;
+  };
+  let bytes = 0;
+  let count = 0;
+  for (const p of hitPaths) {
+    const b = envBytes(p);
+    if (b > 0) {
+      bytes += b;
+      count += 1;
+    }
+  }
+  for (const id of ['tarballs', 'unused-packages']) {
+    const b = sizeOfScope(scopeSizes, id)?.bytes ?? 0;
+    if (b > 0 && selectedScopes.has(id)) {
+      bytes += b;
+      count += 1;
+    }
+  }
+  return { bytes, count };
 }
 
 export interface CoverageBreakdown {
