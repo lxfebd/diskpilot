@@ -19,6 +19,7 @@ pub(crate) mod startup;
 pub(crate) mod steam;
 pub(crate) mod system;
 pub(crate) mod toolbelt;
+mod weekly_report;
 pub(crate) mod updates;
 
 use std::path::PathBuf;
@@ -1301,6 +1302,8 @@ pub fn run() {
             reminder::get_reminder_config,
             reminder::set_reminder_config,
             reminder::run_reminder_check_cmd,
+            weekly_report::generate_weekly_report_cmd,
+            weekly_report::get_weekly_reports,
             space_history::get_space_history,
             hw_history::get_hw_history,
             hw_history::compare_hw_snapshots,

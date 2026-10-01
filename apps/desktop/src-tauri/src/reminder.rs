@@ -31,6 +31,13 @@ pub(crate) struct ReminderConfig {
     pub interval_hours: u64,
     /// 至少多少字节才值得提醒（低于此数不打扰）。默认 200MB。
     pub min_bytes: u64,
+    /// 周巡检简报开关（health-butler P1）。独立于 enabled：可只开清理提醒
+    /// 或只开周报。后台线程按 weekly_interval_days 跑 `weekly_report::run_weekly_report`。
+    #[serde(default)]
+    pub weekly_report_enabled: bool,
+    /// 周报间隔天（1..=90，默认 7）。
+    #[serde(default)]
+    pub weekly_interval_days: u64,
 }
 
 impl Default for ReminderConfig {
@@ -39,6 +46,8 @@ impl Default for ReminderConfig {
             enabled: false,
             interval_hours: 24,
             min_bytes: 200 * 1024 * 1024,
+            weekly_report_enabled: false,
+            weekly_interval_days: 7,
         }
     }
 }
@@ -73,6 +82,8 @@ pub(crate) fn set_reminder_config(
     enabled: Option<bool>,
     interval_hours: Option<u64>,
     min_bytes: Option<u64>,
+    weekly_report_enabled: Option<bool>,
+    weekly_interval_days: Option<u64>,
 ) -> Result<ReminderConfig, String> {
     let Some(p) = config_path(&app) else {
         return Err("无法定位数据目录".into());
@@ -90,6 +101,12 @@ pub(crate) fn set_reminder_config(
     }
     if let Some(v) = min_bytes {
         cfg.min_bytes = v;
+    }
+    if let Some(v) = weekly_report_enabled {
+        cfg.weekly_report_enabled = v;
+    }
+    if let Some(v) = weekly_interval_days {
+        cfg.weekly_interval_days = v.clamp(1, 90);
     }
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
@@ -183,18 +200,26 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
     std::thread::spawn(move || {
         // 启动后先等一个间隔再首跑，避免应用刚开就全盘算一次（性能铁律）。
         let mut last_run = std::time::Instant::now();
+        let mut last_weekly = std::time::Instant::now();
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
-            if !cfg.enabled {
-                continue;
+            // 清理提醒（R3）：enabled 开才跑。
+            if cfg.enabled {
+                let interval = Duration::from_secs(cfg.interval_hours.saturating_mul(3600));
+                if last_run.elapsed() >= interval {
+                    last_run = std::time::Instant::now();
+                    let _ = run_reminder_check(&app);
+                }
             }
-            let interval = Duration::from_secs(cfg.interval_hours.saturating_mul(3600));
-            if last_run.elapsed() < interval {
-                continue;
+            // 周巡检简报（health-butler P1）：weekly_report_enabled 开才跑。
+            if cfg.weekly_report_enabled {
+                let interval = Duration::from_secs(cfg.weekly_interval_days.clamp(1, 90).saturating_mul(86400));
+                if last_weekly.elapsed() >= interval {
+                    last_weekly = std::time::Instant::now();
+                    let _ = crate::weekly_report::run_weekly_report(&app);
+                }
             }
-            last_run = std::time::Instant::now();
-            let _ = run_reminder_check(&app);
         }
     });
 }
@@ -209,6 +234,8 @@ mod tests {
         assert!(!c.enabled, "默认关闭，不打扰");
         assert_eq!(c.interval_hours, 24);
         assert_eq!(c.min_bytes, 200 * 1024 * 1024);
+        assert!(!c.weekly_report_enabled, "周报默认关");
+        assert_eq!(c.weekly_interval_days, 7);
     }
 
     #[test]
