@@ -1,7 +1,20 @@
 /* ── 系统优化整页（P4-4）───────────────────────────────────────────
    覆盖 layout.css 里 `main` 的默认三栏 grid + overflow:hidden：
    优化页是单列可滚动骨架，内部复用 settings.css 的 settings-group-title /
-   sys-list / sys-row 与系统工具同款外观。配色全走 tokens.css。 */
+   sys-list / sys-row 与系统工具同款外观。配色全走 tokens.css。
+   App.tsx 渲染 <main className="optimizer-page"> 壳（走此覆盖），
+   组件内部根 <div className="optimizer-page"> 复用同一套样式撑满。 */
+.app-content > main.optimizer-page {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  min-height: 0;
+}
+main.optimizer-page > .optimizer-page {
+  flex: 1;
+  min-height: 0;
+}
 .optimizer-page {
   display: flex;
   flex-direction: column;

@@ -9,12 +9,11 @@ import { PowerPlanCard } from './PowerPlanCard';
 export function OptimizerPage() {
   const t = useT();
   return (
-    <main className="optimizer-page">
+    <div className="optimizer-page">
       <ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>
         <StartupPanel />
-        <div style={{ height: 24 }} />
         <PowerPlanCard />
       </ErrorBoundary>
-    </main>
+    </div>
   );
 }

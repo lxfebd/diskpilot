@@ -561,9 +561,11 @@ export default function App() {
           </ErrorBoundary>
         </main>
       ) : view === 'optimizer' ? (
-        <ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>
-          <OptimizerPage />
-        </ErrorBoundary>
+        <main className="optimizer-page">
+          <ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>
+            <OptimizerPage />
+          </ErrorBoundary>
+        </main>
       ) : view === 'history' ? (
         <main className="history-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.historyFailed')}>

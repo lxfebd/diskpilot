@@ -53,7 +53,7 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
   }, [root, cards, select]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main className="cleanup-page">
+    <div className="cleanup-page">
       <div className="cp-shell">
         <aside className="cp-list">
           <div className="cp-list-head">
@@ -100,6 +100,6 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }

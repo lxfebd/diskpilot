@@ -3,12 +3,22 @@
    .cp-main / .selbar / .risk-badge / .sel-mode）是新加的。dark.css 的
    cleanup 覆盖项仍排在本文件之后加载，保持优先级。 */
 
-/* ── 整页壳 ── */
+/* ── 整页壳 ──
+   App.tsx 渲染 <main className="cleanup-page">（走 .app-content > main 覆盖），
+   组件内部根元素是 <div className="cleanup-page"> —— 内层 div 必须 flex:1
+   撑满外层 main，否则 .cp-shell 拿不到完整宽度（曾因组件内嵌套 <main>
+   命中全局 main 的 620px grid 列，右栏被压到 380px）。 */
 .app-content > main.cleanup-page {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   padding: 0;
+}
+main.cleanup-page > .cleanup-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .cp-shell {
   flex: 1;
@@ -105,11 +115,15 @@
 
 /* ── 吸底行动条（复用 .cleanup-footer 的内部结构，外层 .selbar 钉高度）── */
 .selbar {
-  height: var(--layout-action-bar-height);
+  /* min-height 而非 height：窄容器下摘要换行成两行时行动条要能长高，
+     钉死 44px 会把第二行裁掉（summary/actions 叠压） */
+  min-height: var(--layout-action-bar-height);
   margin-top: 0;
-  padding: 0 16px;
+  padding: 8px 16px;
   border-top: 2px dashed var(--ink-3);
   flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .selbar-summary { flex: 1; min-width: 0; }
 .selbar-actions { flex-shrink: 0; }

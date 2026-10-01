@@ -284,7 +284,8 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 
 /* 文件分类占用：水平柱状图 */
 .ao-bars { display: flex; flex-direction: column; gap: 10px; }
-.ao-bar-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+/* wrap 兜底：窄容器下 track 优先保留，reclaim/name 换行不挤掉柱条 */
+.ao-bar-row { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
 .ao-bar-dot { width: 10px; height: 10px; border-radius: calc(var(--radius-xs) * 0.75); border: 1px solid var(--border); flex-shrink: 0; }
 .ao-bar-name {
   font-size: 13px;
