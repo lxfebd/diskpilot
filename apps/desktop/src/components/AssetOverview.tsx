@@ -294,6 +294,12 @@ interface CleanItem {
   files: number;
 }
 
+/** 勾选的建议项里是否含微信缓存（G-高3）：微信多账号必须去清理页按账号清，
+ *  总览没有 wxid 选择器，一键清理会覆盖所有账号。纯函数便于回归测试。 */
+export function hasCheckedWechat(items: readonly CleanItem[], checked: Record<string, boolean>): boolean {
+  return items.some((i) => i.scaffoldId === 'wechat-pc' && !!checked[i.key]);
+}
+
 // ── 今日体检条（health-butler P0）──
 // 全只读把散点的健康信号汇总成一条横幅：红盘数、可回收合计、温度、启动项。
 // 温度走 fanCurveAdvice().temp_max_c（后端已归一化最高温，一次调用），
@@ -459,15 +465,22 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   // 在分类占用条的尺寸旁标注「可回收 X」，一眼看出哪些大块头还能清出空间。
   const reclaimByScaffold = useMemo(() => reclaimByScaffoldIds(cleanItems), [cleanItems]);
   // 微信缓存一旦勾选，从总览一键清理会覆盖本机所有微信账号（清理页才有账号筛选）。
-  // 这里不拦截，只在运行时如实提示，避免多账号场景误清其他账号却毫无预兆。
+  // G-高3 修复：总览没有 wxid 选择器，误清其他账号的代价不可逆，所以勾选微信项时
+  // 一键清理按钮改走「引导去清理页」——真实清理在那里按账号筛选执行。
   const wechatChecked = useMemo(
-    () => cleanItems.some((i) => i.scaffoldId === 'wechat-pc' && checked[i.key]),
+    () => hasCheckedWechat(cleanItems, checked),
     [cleanItems, checked],
   );
 
   const doClean = async () => {
     const sel = cleanItems.filter((i) => checked[i.key]);
     if (!sel.length || !selDrive) return;
+    // 微信项被勾选：不静默清所有账号，引导去清理页（那里能选账号）。
+    if (wechatChecked) {
+      toast(t('overview.clean.wechatRedirect'), 'err');
+      onOpenCleanup();
+      return;
+    }
     if (!armed) {
       // 第一步：进入预备态，5 秒内再点一次才真删。
       setArmed(true);

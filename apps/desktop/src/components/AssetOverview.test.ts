@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -155,5 +155,22 @@ describe('启动项禁用量 disabledStartupCount', () => {
   });
   it('禁用项计数（只认 enabled=false）', () => {
     expect(disabledStartupCount([{ enabled: true }, { enabled: false }, { enabled: true }, { enabled: false }])).toBe(2);
+  });
+});
+
+// G-高3：微信缓存勾选判定（总览没有 wxid 选择器，勾到就引导去清理页）
+describe('微信项勾选 hasCheckedWechat', () => {
+  const wechatItem = { key: 'w1', scaffoldId: 'wechat-pc', scopeId: 'chat-media', label: '', desc: '', bytes: 100, files: 1 };
+  const otherItem = { key: 'n1', scaffoldId: 'browser', scopeId: 'cache', label: '', desc: '', bytes: 200, files: 2 };
+
+  it('未勾选微信项 → false', () => {
+    expect(hasCheckedWechat([wechatItem, otherItem], { w1: false, n1: true })).toBe(false);
+  });
+  it('勾选了微信项 → true', () => {
+    expect(hasCheckedWechat([wechatItem, otherItem], { w1: true, n1: false })).toBe(true);
+  });
+  it('空列表 / 空勾选 → false', () => {
+    expect(hasCheckedWechat([], {})).toBe(false);
+    expect(hasCheckedWechat([wechatItem], {})).toBe(false);
   });
 });

@@ -82,6 +82,7 @@ export const overview = {
     'overview.clean.allFailed': '{n} 项清理失败：{err}（详见控制台）',
     'overview.clean.nothingMatched': '本次未匹配到可清理文件（可能刚清理过，或应用正在占用）',
     'overview.clean.wechatAll': '已勾选微信缓存：从总览一键清理会覆盖本机所有微信账号，如需仅清指定账号请到清理页勾选',
+    'overview.clean.wechatRedirect': '微信缓存涉及多账号，请到清理页勾选要清的账号后再清理，避免误清其他账号',
 
     // 红盘救援横幅（使用率 >=85%）
     'overview.rescue.title': '{drive} 盘已用 {pct}%，快满了',
@@ -226,6 +227,7 @@ export const overview = {
     'overview.clean.allFailed': 'Cleanup failed for {n} items: {err} (see console)',
     'overview.clean.nothingMatched': 'No matching files this time (maybe already cleaned, or the app is holding them)',
     'overview.clean.wechatAll': 'WeChat cache is checked: one-click clean from the overview covers every WeChat account on this machine. To clean only specific accounts, use the cleanup page',
+    'overview.clean.wechatRedirect': 'WeChat cache spans multiple accounts — pick the accounts on the cleanup page before cleaning, so other accounts are not touched accidentally',
 
     // Low-space banner (usage >= 85%)
     'overview.rescue.title': 'The {drive} drive is {pct}% full',
