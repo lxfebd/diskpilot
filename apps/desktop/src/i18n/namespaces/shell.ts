@@ -64,6 +64,7 @@ export const shell = {
     'shell.root.allDrives': '我的电脑（全部磁盘）',
     'shell.toast.openedFromCache': '已从上次扫描结果打开（点盘符上的刷新可重新扫描）',
     'shell.toast.cleanupReminder': '发现约 {size} 可清理空间（{n} 个盘），可在总览页查看并确认清理',
+    'shell.toast.healthWeekly': '本周巡检简报已生成：全盘可清理约 {size}。可在「操作历史」页查看详情',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': '目录树',
@@ -213,6 +214,7 @@ export const shell = {
     'shell.root.allDrives': 'My Computer (all drives)',
     'shell.toast.openedFromCache': 'Opened from the last scan result — click the refresh badge on a drive to rescan it.',
     'shell.toast.cleanupReminder': 'About {size} can be cleaned up on {n} drive(s) — review and confirm on the Overview page',
+    'shell.toast.healthWeekly': 'Weekly health report ready: about {size} can be cleaned across all drives. See details on the History page',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': 'Tree',

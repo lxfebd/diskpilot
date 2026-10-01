@@ -176,20 +176,36 @@ export const cleanApi = {
   getReminderConfig: () =>
     isTauri
       ? invoke<ReminderConfig>('get_reminder_config')
-      : Promise.resolve({ enabled: false, interval_hours: 24, min_bytes: 200 * 1024 * 1024 }),
+      : Promise.resolve({
+          enabled: false,
+          interval_hours: 24,
+          min_bytes: 200 * 1024 * 1024,
+          weekly_report_enabled: false,
+          weekly_interval_days: 7,
+        }),
 
   setReminderConfig: (patch: {
     enabled?: boolean;
     interval_hours?: number;
     min_bytes?: number;
+    weekly_report_enabled?: boolean;
+    weekly_interval_days?: number;
   }) =>
     isTauri
       ? invoke<ReminderConfig>('set_reminder_config', {
           enabled: patch.enabled ?? null,
           intervalHours: patch.interval_hours ?? null,
           minBytes: patch.min_bytes ?? null,
+          weeklyReportEnabled: patch.weekly_report_enabled ?? null,
+          weeklyIntervalDays: patch.weekly_interval_days ?? null,
         })
-      : Promise.resolve({ enabled: false, interval_hours: 24, min_bytes: 200 * 1024 * 1024 }),
+      : Promise.resolve({
+          enabled: false,
+          interval_hours: 24,
+          min_bytes: 200 * 1024 * 1024,
+          weekly_report_enabled: false,
+          weekly_interval_days: 7,
+        }),
 
   /** 手动触发一次提醒检查（只读，只出清单 + 通知，绝不执行）。 */
   runReminderCheck: () =>
@@ -204,6 +220,18 @@ export const cleanApi = {
     isTauri
       ? invoke<Record<string, SpacePoint[]>>('get_space_history')
       : Promise.resolve({}),
+
+  // ── 周巡检简报（health-butler P1）──
+  /** 手动生成一份本周健康简报（只读 L0：扫建议 + 温度 + 硬件快照对比，绝不清理）。 */
+  generateWeeklyReport: () =>
+    isTauri
+      ? invoke<WeeklyReport>('generate_weekly_report_cmd')
+      : Promise.resolve(emptyWeeklyReport()),
+  /** 读最近 N 份周报（只读，历史页回显）。 */
+  getWeeklyReports: (limit?: number) =>
+    isTauri
+      ? invoke<WeeklyReport[]>('get_weekly_reports', { limit: limit ?? 5 })
+      : Promise.resolve([]),
 };
 
 // 清理域内部类型（节点正由 types.ts 提供；此处为本域独立形状，语义同 rust 端
@@ -256,6 +284,10 @@ export interface ReminderConfig {
   interval_hours: number;
   /** 至少多少字节才值得提醒（默认 200MB） */
   min_bytes: number;
+  /** 周巡检简报开关（health-butler P1，默认关） */
+  weekly_report_enabled: boolean;
+  /** 周报间隔天（1..=90，默认 7） */
+  weekly_interval_days: number;
 }
 
 /** 单盘可清字节（只读统计） */
@@ -269,6 +301,29 @@ export interface ReminderPayload {
   drives: DriveCleanup[];
   total_bytes: number;
   ts: number;
+}
+
+// ── 周巡检简报（health-butler P1，后端 weekly_report.rs 返回形状）──
+
+/** 单份周报：只读健康快照，绝不带任何清理动作。 */
+export interface WeeklyReport {
+  /** 生成时间（unix 秒） */
+  ts: number;
+  /** 各盘建议可清合计（只读统计） */
+  drives: DriveCleanup[];
+  /** 全部盘可清合计 */
+  total_bytes: number;
+  /** 本轮最高温（无则 null） */
+  temp_max_c: number | null;
+  /** 本周有归档的硬件快照数 */
+  hw_snapshots: number;
+  /** 周内硬件变化简要（温度 / 通电差），无则空 */
+  hw_delta: string[];
+}
+
+/** 非 Tauri/清空态兜底：字段类型齐全但不产生真实数据。 */
+export function emptyWeeklyReport(): WeeklyReport {
+  return { ts: 0, drives: [], total_bytes: 0, temp_max_c: null, hw_snapshots: 0, hw_delta: [] };
 }
 
 // ── 磁盘空间历史（R6，后端 space_history.rs 返回形状）──

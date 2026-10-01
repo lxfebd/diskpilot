@@ -7,6 +7,7 @@ import { api } from '../../api';
 import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
 import type { UndoEntry } from '../../types';
+import { WeeklyHealthCard } from './WeeklyHealthCard';
 import {
   dayGroupLabel,
   filterUndoEntries,
@@ -83,8 +84,9 @@ export function HistoryPage() {
   const backendIndex = (e: UndoEntry): number => (entries ?? []).indexOf(e);
 
   return (
-    <div className="hp-shell">
-      <div className="hp-head">
+      <div className="hp-shell">
+        <WeeklyHealthCard />
+        <div className="hp-head">
         <span className="hp-title"><History size={15} /> {t('history.title')}</span>
         <span className="muted small">{t('history.total', { n: summary.total })}</span>
         {summary.bytesFreed != null && (

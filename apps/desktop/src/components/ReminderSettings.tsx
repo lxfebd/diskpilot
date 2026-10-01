@@ -113,6 +113,39 @@ export function ReminderSettings() {
         </div>
       </label>
 
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.weeklyLabel')}</div>
+      <div className="switch-row">
+        <div>
+          <div className="switch-label">{t('system.reminder.weeklyLabel')}</div>
+          <div className="switch-desc">
+            {t('system.reminder.weeklyDescA')}
+            <b>{t('system.reminder.weeklyDescB')}</b>
+          </div>
+        </div>
+        <input
+          type="checkbox"
+          className="switch"
+          checked={cfg.weekly_report_enabled}
+          onChange={(e) => save({ weekly_report_enabled: e.target.checked })}
+        />
+      </div>
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.weeklyIntervalTitle')}</div>
+      <div className="seg seg-4 auto">
+        {[7, 14, 30, 90].map((d) => (
+          <button
+            key={d}
+            type="button"
+            className={`seg-opt${cfg.weekly_interval_days === d ? ' active' : ''}`}
+            onClick={() => save({ weekly_interval_days: d })}
+          >
+            {t('system.reminder.weeklyDays', { n: d })}
+          </button>
+        ))}
+      </div>
+      <div className="muted small" style={{ marginTop: 6 }}>
+        {t('system.reminder.weeklyIntervalHint')}
+      </div>
+
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.runNowTitle')}</div>
       <button className="ghost" onClick={runNow} disabled={busy || !cfg.enabled}>
         <Play size={13} /> {busy ? t('system.reminder.checking') : t('system.reminder.checkNow')}

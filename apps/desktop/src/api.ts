@@ -74,7 +74,7 @@ export type {
   LedgerEntry,
 } from './api/system-ext';
 export type { ChatScanContext, WebSearchHit } from './api/ai';
-export type { DupFile, DupGroup, ExecuteScopeOpts, ReminderConfig, DriveCleanup, ReminderPayload, SpacePoint, RegistryScaffold, ScaffoldRegistryOut } from './api/clean';
+export type { DupFile, DupGroup, ExecuteScopeOpts, ReminderConfig, DriveCleanup, ReminderPayload, SpacePoint, RegistryScaffold, ScaffoldRegistryOut, WeeklyReport } from './api/clean';
 export type { AgentToolMeta, AgentToolCall } from './api/agent';
 export type {
   McpTransportPayload,

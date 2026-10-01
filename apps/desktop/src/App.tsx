@@ -292,6 +292,20 @@ export default function App() {
     // t 进依赖：切语言后重订阅，事件 toast 才不会用旧语言的文案函数。
   }, [t]);
 
+  // 周巡检简报（health-butler P1）：后台定时生成后 emit。同样是只读聚合，
+  // 只通知「本周快照已生成」，不含任何清理动作；详情在操作历史页。
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = listen<import('./api').WeeklyReport>('health-weekly', (e) => {
+      const p = e.payload;
+      useStore.getState().toast(
+        t('shell.toast.healthWeekly', { size: formatBytes(p.total_bytes) }),
+        'ok',
+      );
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [t]);
+
   const pickDirectory = async () => {
     if (!isTauri) {
       // 提示语走文案表；默认值 'C:\\' 是数据，保持原样。

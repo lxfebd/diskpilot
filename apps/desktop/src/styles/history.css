@@ -133,3 +133,108 @@
 .hp-msg {
   font-size: 12px;
 }
+
+/* ── 周巡检简报卡（health-butler P1）──────────────────────────────── */
+/* 历史页顶部的只读健康快照：配色全走 tokens.css 变量（守卫禁止硬编码色值）。 */
+.wh-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+}
+
+.wh-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wh-icon {
+  color: var(--accent);
+}
+
+.wh-gen {
+  margin-left: auto;
+}
+
+.wh-loading,
+.wh-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+.wh-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wh-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.wh-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+}
+
+.wh-stat.danger {
+  color: var(--risk-danger);
+}
+
+.wh-drives {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wh-drive {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.wh-drive-path {
+  color: var(--ink);
+}
+
+.wh-drive-size {
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+
+.wh-delta-title {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.wh-delta-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}

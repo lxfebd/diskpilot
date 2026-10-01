@@ -116,6 +116,14 @@ export const system = {
     'system.reminder.toastSaveFailed': '保存清理提醒配置失败：{err}',
     'system.reminder.toastCheckFailed': '检查失败：{err}',
     'system.reminder.toastNoItems': '本次检查无可清项或提醒未开启（阈值未达）',
+
+    // ── 周巡检简报（health-butler P1）──
+    'system.reminder.weeklyLabel': '每周生成体检简报',
+    'system.reminder.weeklyDescA': '按周在后台生成一份诊断快照（扫描建议 + 温度 + 硬件变化）。',
+    'system.reminder.weeklyDescB': '只读统计，绝不删除任何文件',
+    'system.reminder.weeklyIntervalTitle': '简报间隔',
+    'system.reminder.weeklyDays': '{n} 天',
+    'system.reminder.weeklyIntervalHint': '生成简报会跑一次各盘扫描统计，可能持续数十秒，且尽量落在空闲时段。可以在「操作历史」页随时手动生成。',
   },
   en: {
     // ── Shared short words ──
@@ -230,5 +238,13 @@ export const system = {
     'system.reminder.toastSaveFailed': 'Failed to save reminder settings: {err}',
     'system.reminder.toastCheckFailed': 'Check failed: {err}',
     'system.reminder.toastNoItems': 'Nothing worth cleaning this run, or reminders are off (threshold not reached)',
+
+    // ── Weekly health report (health-butler P1) ──
+    'system.reminder.weeklyLabel': 'Generate a weekly health report',
+    'system.reminder.weeklyDescA': 'Creates a read-only health snapshot every week (scan suggestions + temperature + hardware changes).',
+    'system.reminder.weeklyDescB': 'Read-only statistics — never deletes any files',
+    'system.reminder.weeklyIntervalTitle': 'Report interval',
+    'system.reminder.weeklyDays': '{n} days',
+    'system.reminder.weeklyIntervalHint': 'Generating a report runs a scan pass over every drive and may take tens of seconds; it is scheduled for idle times when possible. You can also generate one manually on the History page.',
   },
 };
