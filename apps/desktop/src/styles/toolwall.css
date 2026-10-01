@@ -54,9 +54,12 @@
 .toolbelt-market-tabs { display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
 .toolbelt-market-tabs button {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 14px; border: none; background: transparent; cursor: pointer;
+  padding: 0 14px; border: none; background: transparent; cursor: pointer;
   font-size: 13px; font-weight: 600; color: var(--ink-2);
   border-bottom: 2px solid transparent; margin-bottom: -1px;
+  /* 与旁排的 ghost/primary 操作按钮 32px 一致，避免「大小不一」参差 */
+  height: 32px;
+  box-sizing: border-box;
 }
 .toolbelt-market-tabs button.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
 .toolbelt-market-warn { padding: 8px 12px; border-radius: 8px; background: var(--warn-bg, #fef3c7); color: var(--warn-strong, #92400e); font-size: 13px; margin-bottom: 10px; }
@@ -64,10 +67,10 @@
 .toolbelt-market-head h3 { margin: 0 0 4px; font-size: 16px; }
 .toolbelt-market-count { font-size: 12px; font-weight: 700; color: var(--ink-2); background: var(--paper-2); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .toolbelt-market-search { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.toolbelt-market-search input { flex: 1; }
+.toolbelt-market-search input { flex: 1; height: 32px; box-sizing: border-box; }
 /* B2 远程安装（URL）输入行 + 下载进度条 */
 .toolbelt-market-url { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.toolbelt-market-url input { flex: 1; }
+.toolbelt-market-url input { flex: 1; height: 32px; box-sizing: border-box; }
 .toolbelt-market-progress {
   display: flex; align-items: center; gap: 8px; margin: 0 0 10px;
   font-size: 12px; color: var(--ink-2);

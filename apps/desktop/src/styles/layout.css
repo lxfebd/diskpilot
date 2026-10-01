@@ -179,6 +179,9 @@ button.ghost {
   box-shadow: var(--shadow-sm);
   font-weight: 600;
   transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
+  /* 防止在 overflow 的 flex column 容器（如设置页长 tab）里被压缩成「扁条」：
+     flex-shrink 默认 1 会把无包裹的按钮压到内容高度（21px），造成忽高忽低 */
+  flex-shrink: 0;
 }
 button.ghost:hover:not(:disabled) {
   background: var(--accent-bg);
