@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -128,5 +128,32 @@ describe('可回收潜力按 scaffold 聚合 reclaimByScaffoldIds（R11）', () 
 
   it('空列表 → 空表（分类卡不显示可回收标注）', () => {
     expect(reclaimByScaffoldIds([]).size).toBe(0);
+  });
+});
+
+// 今日体检条纯函数（health-butler P0）
+describe('温度档位判定 isTempHigh', () => {
+  it('null/undefined → 不偏高', () => {
+    expect(isTempHigh(null)).toBe(false);
+    expect(isTempHigh(undefined)).toBe(false);
+  });
+  it('低于阈值 → 不偏高', () => {
+    expect(isTempHigh(60)).toBe(false);
+    expect(isTempHigh(79)).toBe(false);
+  });
+  it('等于/高于阈值 → 偏高', () => {
+    expect(isTempHigh(80)).toBe(true);
+    expect(isTempHigh(95)).toBe(true);
+  });
+});
+
+describe('启动项禁用量 disabledStartupCount', () => {
+  it('null/undefined/空 → 0', () => {
+    expect(disabledStartupCount(null)).toBe(0);
+    expect(disabledStartupCount(undefined)).toBe(0);
+    expect(disabledStartupCount([])).toBe(0);
+  });
+  it('禁用项计数（只认 enabled=false）', () => {
+    expect(disabledStartupCount([{ enabled: true }, { enabled: false }, { enabled: true }, { enabled: false }])).toBe(2);
   });
 });

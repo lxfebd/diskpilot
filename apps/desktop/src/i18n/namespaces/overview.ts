@@ -92,6 +92,22 @@ export const overview = {
     'overview.rescue.scanNow': '立即扫描',
     'overview.rescue.viewClean': '查看可清理项',
 
+    // 今日体检条（health-butler P0）：全只读汇总，每项可点进对应流程
+    'overview.checkup.title': '今日体检',
+    'overview.checkup.subtitle': '只读汇总 · 点各项进对应处理',
+    'overview.checkup.redDrive': '{n} 块盘已用 ≥85%',
+    'overview.checkup.redDriveNone': '无红盘',
+    'overview.checkup.reclaimable': '可清理 {size}',
+    'overview.checkup.reclaimableNone': '暂无可回收项',
+    'overview.checkup.temp': '最高温 {temp}℃',
+    'overview.checkup.tempNone': '未读到温度',
+    'overview.checkup.tempHigh': '温度偏高（≥{warn}℃）',
+    'overview.checkup.startup': '启动项 {n} 个',
+    'overview.checkup.startupDisabled': '已禁用 {n}',
+    'overview.checkup.startupNone': '未检测',
+    'overview.checkup.goRescue': '查看红盘',
+    'overview.checkup.goClean': '去清理',
+
     // 重复文件查找 → 清理提案（提案四件套：是什么 / 干什么用 / 删了影响）
     'overview.dup.noneFound': '未发现 ≥1MB 的重复文件（按大小 + 头部哈希）',
     'overview.dup.allRunning': '重复组都只有运行中的文件（跳过），无可回收项',
@@ -219,6 +235,22 @@ export const overview = {
     'overview.rescue.scanning': 'Scanning…',
     'overview.rescue.scanNow': 'Scan now',
     'overview.rescue.viewClean': 'See cleanup items',
+
+    // Today's health checkup banner (health-butler P0): read-only digest, each item is a shortcut
+    'overview.checkup.title': 'Today checkup',
+    'overview.checkup.subtitle': 'Read-only digest — click an item to open its flow',
+    'overview.checkup.redDrive': '{n} drives ≥85% full',
+    'overview.checkup.redDriveNone': 'No red drives',
+    'overview.checkup.reclaimable': '{size} reclaimable',
+    'overview.checkup.reclaimableNone': 'Nothing to reclaim',
+    'overview.checkup.temp': 'Peak temp {temp}℃',
+    'overview.checkup.tempNone': 'No temperature read',
+    'overview.checkup.tempHigh': 'Temp high (≥{warn}℃)',
+    'overview.checkup.startup': '{n} startup items',
+    'overview.checkup.startupDisabled': '{n} disabled',
+    'overview.checkup.startupNone': 'Not detected',
+    'overview.checkup.goRescue': 'See drives',
+    'overview.checkup.goClean': 'Clean up',
 
     // Duplicate scan → cleanup proposal (what / purpose / impact)
     'overview.dup.noneFound': 'No duplicates ≥1MB found (by size + header hash)',

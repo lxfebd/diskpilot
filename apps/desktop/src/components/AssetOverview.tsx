@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle } from 'lucide-react';
-import { api, type SpacePoint } from '../api';
+import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket } from 'lucide-react';
+import { api, type SpacePoint, type StartupItem } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple } from '../format';
 import { useStore, type CleanupProposalItem } from '../store';
@@ -176,6 +176,22 @@ export function reclaimByScaffoldIds(
   return m;
 }
 
+// ── 今日体检（health-butler P0）：把散点的健康信号汇总成一页横幅 ──
+// 全只读：红盘/可回收来自 drives 与建议清单缓存，温度/启动项来自后端一次查询，
+// 不为展示新造任何磁盘扫描。纯函数便于单测，组件只负责装配与跳转。
+
+/** 温度档位判定：是否达到「偏高」阈值（健康管家口径，可单测）。 */
+export function isTempHigh(tempC: number | null | undefined, warnC = 80): boolean {
+  return tempC != null && tempC >= warnC;
+}
+
+/** 启动项里「已禁用」条数（禁用算低风险健康项，展示用）。
+ * 传 enabled 字段数组（缺省按 true 处理），返回禁用量。 */
+export function disabledStartupCount(items: readonly { enabled: boolean }[] | null | undefined): number {
+  if (!items) return 0;
+  return items.filter((it) => !it.enabled).length;
+}
+
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
 // 纯只读展示：数据来自每次扫描后追加的 space-history.jsonl，绝不触盘 IO。
 function SpaceTrendCard({ selPath, onGoWorkspace }: { selPath: string | null; onGoWorkspace: () => void }) {
@@ -276,6 +292,81 @@ interface CleanItem {
   desc: string;
   bytes: number;
   files: number;
+}
+
+// ── 今日体检条（health-butler P0）──
+// 全只读把散点的健康信号汇总成一条横幅：红盘数、可回收合计、温度、启动项。
+// 温度走 fanCurveAdvice().temp_max_c（后端已归一化最高温，一次调用），
+// 启动项走 listStartupItems。不为展示新造任何磁盘扫描。
+const TEMP_WARN_C = 80;
+
+function HealthCheckupCard({
+  drives,
+  reclaimTotal,
+  scanning,
+  onScanAll,
+  onGoCleanup,
+}: {
+  drives: readonly DriveInfo[];
+  reclaimTotal: number;
+  scanning: boolean;
+  onScanAll: () => void;
+  onGoCleanup: () => void;
+}) {
+  const t = useT();
+  // 温度 / 启动项每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
+  const [tempC, setTempC] = useState<number | null>(null);
+  const [startup, setStartup] = useState<StartupItem[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
+    api.listStartupItems().then((r) => { if (alive) setStartup(r); }).catch(() => { setStartup([]); });
+    return () => { alive = false; };
+  }, []);
+
+  const redCount = drives.filter((d) => isDriveCritical(d.used_bytes, d.total_bytes)).length;
+  const disabledCount = disabledStartupCount(startup);
+  const tempHigh = isTempHigh(tempC, TEMP_WARN_C);
+
+  return (
+    <section className="ao-checkup">
+      <div className="ao-checkup-head">
+        <Sparkles size={14} className="ao-checkup-icon" />
+        <b>{t('overview.checkup.title')}</b>
+        <span className="muted small">{t('overview.checkup.subtitle')}</span>
+      </div>
+      <div className="ao-checkup-grid">
+        {/* 红盘 */}
+        <button className={'ao-checkup-item' + (redCount > 0 ? ' danger' : '')} onClick={onScanAll} disabled={scanning} title={t('overview.checkup.goRescue')}>
+          <HardDrive size={14} />
+          <span>
+            {redCount > 0 ? t('overview.checkup.redDrive', { n: redCount }) : t('overview.checkup.redDriveNone')}
+          </span>
+        </button>
+        {/* 可回收 */}
+        <button className={'ao-checkup-item' + (reclaimTotal > 0 ? ' accent' : '')} onClick={onGoCleanup} title={t('overview.checkup.goClean')}>
+          <Zap size={14} />
+          <span>
+            {reclaimTotal > 0 ? t('overview.checkup.reclaimable', { size: formatBytes(reclaimTotal) }) : t('overview.checkup.reclaimableNone')}
+          </span>
+        </button>
+        {/* 温度 */}
+        <div className={'ao-checkup-item' + (tempHigh ? ' danger' : '')} title={tempHigh ? t('overview.checkup.tempHigh', { warn: TEMP_WARN_C }) : undefined}>
+          <Thermometer size={14} />
+          <span>{tempC != null ? t('overview.checkup.temp', { temp: Math.round(tempC) }) : t('overview.checkup.tempNone')}</span>
+        </div>
+        {/* 启动项 */}
+        <div className="ao-checkup-item">
+          <Rocket size={14} />
+          <span>
+            {startup
+              ? t('overview.checkup.startup', { n: startup.length }) + (disabledCount > 0 ? ` · ${t('overview.checkup.startupDisabled', { n: disabledCount })}` : '')
+              : t('overview.checkup.startupNone')}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup }: Props) {
@@ -552,6 +643,15 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
   return (
     <div className="asset-overview">
+      {/* ---- 今日体检条：全只读汇总（红盘 / 可回收 / 温度 / 启动项）---- */}
+      <HealthCheckupCard
+        drives={drives}
+        reclaimTotal={reclaimTotal}
+        scanning={scanning}
+        onScanAll={onScanAll}
+        onGoCleanup={onOpenCleanup}
+      />
+
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}
       {drives.length > 0 && (
         <DriveStrip

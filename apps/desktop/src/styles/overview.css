@@ -96,6 +96,43 @@
 .ao-strip-danger + .ao-strip-done { margin-left: 0; }
 .ao-spin { animation: spin 1s linear infinite; }
 
+/* ── 今日体检条：全只读汇总，一行四格（红盘/可回收/温度/启动项）── */
+.ao-checkup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 10px;
+}
+.ao-checkup-head { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ao-checkup-icon { color: var(--accent-strong); }
+.ao-checkup-head b { font-size: 13px; font-weight: 800; color: var(--ink); }
+.ao-checkup-grid { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; }
+.ao-checkup-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+button.ao-checkup-item { cursor: pointer; }
+button.ao-checkup-item:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-strong); }
+button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
+.ao-checkup-item svg { flex-shrink: 0; color: var(--muted); }
+.ao-checkup-item.danger { color: var(--risk-danger); border-color: currentColor; }
+.ao-checkup-item.danger svg { color: currentColor; }
+.ao-checkup-item.accent { color: var(--accent-strong); border-color: currentColor; }
+.ao-checkup-item.accent svg { color: currentColor; }
+
 /* ── 低配救援横幅：红盘时提示一键救急 ── */
 .ao-rescue {
   display: flex;
