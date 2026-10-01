@@ -14,6 +14,11 @@ import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 
+/** 索引是否"全占位"：有条目但无一提供下载地址（发布者填 URL 前展示引导）。 */
+export function communityComingSoon(community: readonly RegistryPlugin[], indexed: boolean): boolean {
+  return indexed && community.length > 0 && community.every((p) => !p.url);
+}
+
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
@@ -575,6 +580,14 @@ export function MarketPanel() {
           ) : community.length === 0 ? (
             <p className="muted">{t('toolbelt.mkt.communityEmpty')}</p>
           ) : (
+            <>
+              {/* 索引已接入但全部条目尚未提供下载地址：引导用户这是「等待上架」而非空市场 */}
+              {communityComingSoon(community, !!regInfo?.indexed) && (
+                <p className="toolbelt-market-warn" style={{ marginTop: 6 }}>
+                  <Info size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
+                  {t('toolbelt.mkt.communityAllComingSoon', { n: community.length })}
+                </p>
+              )}
             <div className="toolbelt-market-list">
               {community.map((p) => (
                 <div key={p.id} className="toolbelt-market-item">
@@ -615,6 +628,7 @@ export function MarketPanel() {
                 </div>
               ))}
             </div>
+            </>
           )}
         </>
       )}
