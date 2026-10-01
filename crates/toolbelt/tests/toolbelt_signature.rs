@@ -166,3 +166,80 @@ fn install_accepts_unsigned_plugin_when_verify_none() {
     let installed = diskpilot_toolbelt::install_plugin_zip(&zip, &tools_root).unwrap();
     assert_eq!(installed, "其他工具/no-sig");
 }
+
+// ── 发布方式 B：目录 → sign_plugin_dir → export_plugin_zip → install_plugin_zip ──
+// 完整 round-trip：导出包在安装端验签通过，且解出来的插件与源目录一致。
+
+fn make_unpacked_plugin(dir: &std::path::Path, id: &str) {
+    let pdir = dir.join(id);
+    fs::create_dir_all(pdir.join("data")).unwrap();
+    fs::write(pdir.join("run.bat"), "@echo hi").unwrap();
+    fs::write(pdir.join("data/cfg.toml"), "x=1").unwrap();
+    fs::write(
+        pdir.join("tool.plugin.json"),
+        format!(
+            r#"{{"id":"{id}","name":"发布测试","version":"1.0.0","entry":"run.bat",
+                 "category":"其他工具"}}"#
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+fn signdir_export_install_roundtrip() {
+    let dir = tempdir("roundtrip");
+    let tools_root = dir.join("Tools");
+    fs::create_dir_all(tools_root.join("其他工具")).unwrap();
+
+    let (_, sec_hex) = generate_keypair();
+    make_unpacked_plugin(&dir, "pub-rt");
+
+    // 1) 目录签名：补全清单的 signature/signer/digest/verify。
+    diskpilot_toolbelt::signature::sign_plugin_dir(&dir.join("pub-rt"), &sec_hex).unwrap();
+    let meta_json = fs::read_to_string(dir.join("pub-rt/tool.plugin.json")).unwrap();
+    let meta: serde_json::Value = serde_json::from_str(&meta_json).unwrap();
+    assert_eq!(meta["verify"], "ed25519");
+    assert_eq!(meta["signer"].as_str().unwrap().len(), 64);
+    assert_eq!(meta["signature"].as_str().unwrap().len(), 128);
+    assert_eq!(meta["digest"].as_str().unwrap().len(), 64);
+
+    // 2) 导出 zip。
+    let zip = dir.join("pub-rt.zip");
+    diskpilot_toolbelt::export_plugin_zip(&dir.join("pub-rt"), &zip).unwrap();
+    assert!(zip.is_file());
+
+    // 3) 安装端：验签 + 解压都能通过（验证签名对象口径一致）。
+    let installed = diskpilot_toolbelt::install_plugin_zip(&zip, &tools_root).unwrap();
+    assert_eq!(installed, "其他工具/pub-rt");
+    assert_eq!(
+        fs::read_to_string(tools_root.join("其他工具/pub-rt/data/cfg.toml")).unwrap(),
+        "x=1"
+    );
+
+    // 4) 篡改导出包的内容 → 安装必须拒绝。用「已签名的清单 + 改过的 run.bat」
+    //    重建一个 zip：安装端按清单里的 digest/signature 验签必须失败。
+    let meta_json = fs::read_to_string(dir.join("pub-rt/tool.plugin.json")).unwrap();
+    make_plugin_zip(&dir, &meta_json, &[("run.bat", b"@echo EVIL"), ("data/cfg.toml", b"x=1")]);
+    let evil2 = dir.join("evil2.zip");
+    fs::rename(dir.join("plugin.zip"), &evil2).unwrap();
+    let err = diskpilot_toolbelt::install_plugin_zip(&evil2, &tools_root).unwrap_err();
+    assert!(
+        err.to_string().contains("签名校验失败") || err.to_string().contains("digest"),
+        "篡改导出包应被拒绝，实际错误: {err}"
+    );
+}
+
+#[test]
+fn export_unsigned_dir_installs_without_signature() {
+    let dir = tempdir("unsigned_export");
+    let tools_root = dir.join("Tools");
+    fs::create_dir_all(tools_root.join("其他工具")).unwrap();
+
+    make_unpacked_plugin(&dir, "plain");
+    let zip = dir.join("plain.zip");
+    diskpilot_toolbelt::export_plugin_zip(&dir.join("plain"), &zip).unwrap();
+
+    // 无签名本地 zip 直装仍放行（verify 缺省 = none）。
+    let installed = diskpilot_toolbelt::install_plugin_zip(&zip, &tools_root).unwrap();
+    assert_eq!(installed, "其他工具/plain");
+}

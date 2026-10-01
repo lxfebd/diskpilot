@@ -148,6 +148,83 @@ pub fn sign_entries(entries: &[(String, Vec<u8>)], secret_hex: &str) -> Result<S
     Ok(hex::encode(sig.to_bytes()))
 }
 
+/// 由私钥（hex）派生公钥（hex）。发布工具用：`sign_entries` 只签不回键，
+/// 清单里要写 `signer` 必须从这里取（`generate_keypair` 生成的是随机新对，
+/// 这里是从既有私钥推出同一密钥对的公钥）。
+pub fn public_key_from_secret(secret_hex: &str) -> Result<String, String> {
+    let sk_bytes = decode_hex(secret_hex.trim(), "私钥")?;
+    if sk_bytes.len() != 32 {
+        return Err("私钥长度非法（应为 32 字节 hex）".into());
+    }
+    let sk = SigningKey::from_bytes(
+        &sk_bytes
+            .try_into()
+            .map_err(|_| "私钥字节长度错误".to_string())?,
+    );
+    Ok(hex::encode(sk.verifying_key().to_bytes()))
+}
+
+/// 给插件目录补签名后写回 `tool.plugin.json`（signature + signer + digest + verify）。
+/// 签名对象 = 目录内除 `tool.plugin.json` 自身外的所有普通文件，按 zip 内路径
+/// （相对目录、正斜杠）字典序拼接——与 [`crate::export_plugin_zip`] 打出的包、
+/// [`crate::install_plugin_zip`] 验签点同一口径。清单用 `serde_json::Value`
+/// 原位改动，保留作者手写的其余字段不重排。私钥只在调用方手里，永不落盘。
+pub fn sign_plugin_dir(plugin_dir: &std::path::Path, secret_hex: &str) -> Result<(), String> {
+    use std::io::Read;
+
+    let manifest_path = plugin_dir.join("tool.plugin.json");
+    let mut text = String::new();
+    std::fs::File::open(&manifest_path)
+        .and_then(|mut f| f.read_to_string(&mut text))
+        .map_err(|e| format!("读取插件清单失败: {e}"))?;
+    let mut meta: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("插件清单解析失败: {e}"))?;
+
+    // 收集签名对象（与 export_plugin_zip 同口径：普通文件、跳过清单自身）。
+    let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut stack = vec![plugin_dir.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for ent in rd.flatten() {
+            let p = ent.path();
+            let Ok(meta) = ent.metadata() else { continue };
+            if meta.is_dir() {
+                stack.push(p);
+                continue;
+            }
+            if !meta.is_file() {
+                continue; // 符号链接等：与 export 一致，不纳入签名对象
+            }
+            let rel = p
+                .strip_prefix(plugin_dir)
+                .map_err(|_| "路径越界".to_string())?;
+            let rel_str = rel.to_string_lossy().replace('\\', "/");
+            if rel_str.is_empty() || rel_str == "tool.plugin.json" {
+                continue;
+            }
+            let Ok(bytes) = std::fs::read(&p) else {
+                continue;
+            };
+            entries.push((rel_str, bytes));
+        }
+    }
+
+    let sig = sign_entries(&entries, secret_hex)?;
+    let pub_hex = public_key_from_secret(secret_hex)?;
+    let digest = sha256_hex(&entries);
+    if let Some(obj) = meta.as_object_mut() {
+        obj.insert("signature".into(), serde_json::Value::String(sig));
+        obj.insert("signer".into(), serde_json::Value::String(pub_hex));
+        obj.insert("digest".into(), serde_json::Value::String(digest));
+        obj.insert("verify".into(), serde_json::Value::String("ed25519".into()));
+    }
+    let out = serde_json::to_string_pretty(&meta).map_err(|e| format!("序列化清单失败: {e}"))?;
+    std::fs::write(&manifest_path, out).map_err(|e| format!("写回清单失败: {e}"))?;
+    Ok(())
+}
+
 /// 预检 zip 内 `tool.plugin.json` 是否带完整 Ed25519 签名（signature + signer 齐备，
 /// 且 verify 字段不是 "none"）。只读解压清单，不解压内容。URL 安装强制要求
 /// 签名（本地 zip 直装才允许无签名）。
