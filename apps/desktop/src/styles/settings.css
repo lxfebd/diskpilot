@@ -141,6 +141,40 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 
 /* 颜色选择 */
 .swatch-grid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ── 设置页表单控件统一 ──
+   输入框/普通按钮/分段选项在同一弹窗里混排，高度必须一致（32px），
+   否则 31/32/37/26 四档高度造成「按钮大小不一、上下起伏」。
+   作用域限定在 settings-pane，不影响其他页面（chat/overview 等）。 */
+.settings-pane .field input:not([type="color"]):not([type="range"]),
+.settings-pane .field input:not([type="color"]):not([type="range"])[style] {
+  height: 32px;
+  box-sizing: border-box;
+}
+/* API 密钥行的 input + 眼睛按钮组合：input 撑满剩余、按钮 32px 等高 */
+.settings-pane .field > div {
+  align-items: center;
+}
+.settings-pane .field > div > input:not([type="color"]):not([type="range"]) {
+  height: 32px;
+  box-sizing: border-box;
+}
+.settings-pane button.ghost.icon {
+  height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* 普通 ghost / primary 按钮与输入框同高 32px：测试连接/保存/关闭等 */
+.settings-pane button.ghost:not(.icon),
+.settings-pane button.primary {
+  height: 32px;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .swatch {
   width: 26px; height: 26px;
   border-radius: 50%;

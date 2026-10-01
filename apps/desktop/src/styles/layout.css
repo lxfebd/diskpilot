@@ -928,6 +928,13 @@ footer {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  /* 固定高度 + 内容垂直居中：中/英文混排时纯拉丁字符行高不同
+     会产生 31px/32px 的 1px 起伏，钉死高度消除 */
+  height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .seg-opt:last-child { border-right: 0; }
 .seg-opt:hover { background: var(--accent-bg); }
