@@ -9,6 +9,7 @@ import { openDiskpilotMenu } from '../tooltree';
 import { useStore } from '../store';
 import { api } from '../api';
 import { useT } from '../i18n';
+import { usePerfScale } from '../perfHooks';
 
 type Props = {
   root: Node;
@@ -77,11 +78,15 @@ export function TreeView({ root, selectedPath, onSelect }: Props) {
     [root, openPaths, lazy, loadingPaths],
   );
 
+  // 低配降载：弱机裁小离屏渲染量（overscan 14→6），省 CPU/内存。
+  const perf = usePerfScale();
+  const overscan = useMemo(() => perf.overscan, [perf]);
+
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_H,
-    overscan: 14,
+    overscan,
   });
 
   const toggle = useCallback((path: string) => {

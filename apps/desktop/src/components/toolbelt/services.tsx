@@ -9,6 +9,7 @@ import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
 import { useStore } from '../../store';
 import { ensureSysProbe } from '../../hwCache';
+import { usePerfScale, pollIntervalMs } from '../../perfHooks';
 import type { NetworkProbe, SystemProbe } from '../../types';
 import type { ToolContext, TFunc } from './shared';
 
@@ -84,6 +85,9 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
   const [probe, setProbe] = useState<SystemProbe | null>(null);
   const [loading, setLoading] = useState(true);
   const timerRef = useRef<number | null>(null);
+  // 低配降载：弱机轮询 5s→10s，减少后端采样与渲染频率。
+  const perf = usePerfScale();
+  const pollMs = pollIntervalMs(perf, 5000);
 
   const refresh = useCallback(() => {
     if (!isTauri) return;
@@ -96,7 +100,7 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
     const visible = () => document.visibilityState === 'visible';
     const startTimer = () => {
       if (timerRef.current !== null) return;
-      timerRef.current = window.setInterval(refresh, 5000);
+      timerRef.current = window.setInterval(refresh, pollMs);
     };
     const stopTimer = () => {
       if (timerRef.current !== null) {
@@ -122,7 +126,7 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
       stopTimer();
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [refresh]);
+  }, [refresh, pollMs]);
 
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
   const plat = ua.match(/Windows NT (\d+\.\d+)/)?.[1] ?? '';
