@@ -6,7 +6,7 @@
 //! 只是把"复制模板 + 手填 + 手工 lint"压缩成一次问答。
 //!
 //! 用法：
-//!   cargo run -p diskpilot-scaffold-gen
+//!   cargo run -p diskpilot-scaffold --bin diskpilot-scaffold-gen
 //!
 //! 生成的文件：
 //!   - scaffolds/<id>.toml            （新清理脚本）
@@ -254,6 +254,9 @@ fn extract_globs(toml: &str) -> Vec<String> {
 // ── safety test 骨架 ──────────────────────────────────────────────────────
 
 fn render_safety_test(id: &str) -> String {
+    // id 是 kebab-case（wechat-pc），拼进 Rust 函数名必须把 `-` 换成 `_`，
+    // 否则生成 `fn wechat-pc_globs_are_safe()` 直接编译不过。
+    let fn_suffix = id.replace('-', "_");
     format!(
         r#"//! 由 diskpilot-scaffold-gen 生成的 safety 测试骨架。
 //! 按 development.md 的 14-phase 流程 Phase 10 补完：
@@ -319,7 +322,7 @@ fn matching_scopes<'a>(scopes: &'a [(String, globset::GlobSet)], path: &str) -> 
 }}
 
 #[test]
-fn {id}_globs_are_safe() {{
+fn {fn_suffix}_globs_are_safe() {{
     std::env::set_var("USERPROFILE", "C:/Users/test");
     std::env::set_var("APPDATA", "C:/Users/test/AppData/Roaming");
     std::env::set_var("LOCALAPPDATA", "C:/Users/test/AppData/Local");

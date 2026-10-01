@@ -224,6 +224,19 @@ pnpm -C apps/desktop exec vitest run   # 前端测试
 
 目录速览：`apps/desktop`（Tauri 前端 + 后端）、`crates/`（7 个 Rust crate）、`scaffolds/`（18 份清理脚本 TOML）。
 
+### 自制清理脚本（脚手架 CLI）
+
+想要"这个应用也能一键清理"？用交互式生成器起稿，同一套红线校验当场把关：
+
+```bash
+cargo run -p diskpilot-scaffold --bin diskpilot-scaffold-gen   # 交互问答 → 生成 scaffolds/<id>.toml
+                                                               #            + crates/scaffold/tests/<id>_safety.rs 骨架
+cargo run -p diskpilot-scaffold-lint -- scaffolds/<id>.toml   # 静态校验（红线零命中才过）
+cargo test -p diskpilot-scaffold --test <id>_safety           # 补正向/红线断言后跑安全测试
+```
+
+生成器复用与 CI、运行时同一份 `red_line_violations` 红线清单——任何命中都是硬错误，收紧 glob，不要放宽清单。补完安全测试后按下方「贡献」流程提 PR 即可并入官方集合；后续会接社区索引仓库，做成应用内插件市场的一键分享。
+
 ## 贡献
 
 最有价值的贡献是**为新的应用写清理脚本**。每份脚本要求：

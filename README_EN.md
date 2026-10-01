@@ -159,7 +159,17 @@ All deletes go to the **system Recycle Bin** by default — recoverable. Every a
 The most valuable contribution is **writing a new cleanup scaffold**. Each app is one PR (open for public contribution once the public repo is up; you can still run the full flow locally to self-verify):
 
 1. Actually run the app on your machine, use `Glob` to enumerate the real directory tree, find the cache-vs-user-data boundary
-2. Copy [`scaffolds/_templates/scaffold.toml`](scaffolds/_templates/scaffold.toml) and write the TOML
+2. Run the interactive generator to draft the scaffold, then tighten the globs by hand:
+
+```bash
+cargo run -p diskpilot-scaffold --bin diskpilot-scaffold-gen   # Q&A → scaffolds/<id>.toml
+                                                               #      + tests/<id>_safety.rs skeleton
+cargo run -p diskpilot-scaffold-lint -- scaffolds/<id>.toml   # static check (zero red-line hits)
+cargo test -p diskpilot-scaffold --test <id>_safety     # fill positives + red lines, then run
+```
+
+The generator shares the same `red_line_violations` list as CI and the runtime — any hit is a hard error; tighten the glob, don't widen the list.
+
 3. Copy [`crates/scaffold/tests/_templates/scaffold_safety.rs`](crates/scaffold/tests/_templates/scaffold_safety.rs) and write the safety test (**positive + red-line assertions**, CI runs this — no test, no merge)
 4. `pnpm tauri dev` to verify the card renders
 5. Open the PR — the template walks you through 14 checklist items
