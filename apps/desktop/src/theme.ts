@@ -484,6 +484,10 @@ export function applyTheme(t: ThemeSettings) {
   const scale = Math.max(0.8, Math.min(1.3, t.fontScale || 1));
   el.setProperty('--font-scale', String(scale));
   document.documentElement.setAttribute('data-theme', t.id);
+  // 统一的深浅模式标记：dark.css 的深色补丁选择器全部挂在 [data-mode="dark"]
+  // 上，而不是逐一枚举单个深色主题 id——这样 5 个深色主题共用一份适配，
+  // 之后新增深色主题只要加进 DARK_IDS 即自动生效。
+  document.documentElement.setAttribute('data-mode', DARK_IDS.has(t.id) ? 'dark' : 'light');
   // Fonts follow the kit's type voice.
   const fonts = THEME_FONTS[t.id] ?? THEME_FONTS.vercel;
   el.setProperty('--font-sans', fonts.ui);

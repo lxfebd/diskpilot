@@ -1000,12 +1000,12 @@ footer {
   font-size: 11px;
   border-radius: calc(var(--radius-xs) * 0.75);
 }
-/* 语义色横幅：只换背景/左边条，文字颜色沿用 --ink-2（深色主题由 dark.css 反相，
-   不内联浅色 hex，避免深色下浅底浅字不可读） */
-.hint-warn { background: #fff8e6; border-left: 4px solid #f0b429; }
-.hint-info { background: #e8f4fd; border-left: 4px solid #4aa8e0; }
-.hint-ok { background: #eaf7ec; border-left: 4px solid #34a853; }
-.hint-danger { background: #fdeeee; border-left: 4px solid #e05252; }
+/* 语义色横幅：背景用 color-mix soft token（当前主题反相），左边条用语义色，
+   不内联浅色 hex —— 否则深色主题下出现「浅底 + 浅灰字」的低对比组合。 */
+.hint-warn { background: var(--warn-soft); border-left: 4px solid var(--risk-caution); }
+.hint-info { background: var(--accent-bg); border-left: 4px solid var(--accent-strong); }
+.hint-ok { background: var(--risk-soft); border-left: 4px solid var(--risk-safe); }
+.hint-danger { background: var(--err-soft); border-left: 4px solid var(--risk-danger); }
 .modal-actions {
   display: flex; gap: 8px; justify-content: flex-end;
   /* 作为 modal 直子的固定底部时不被内容压缩、始终可见；多余空间归滚动主体 */
@@ -1037,8 +1037,8 @@ footer {
   display: flex; align-items: center; gap: 8px;
 }
 .ctxmenu-item:hover { background: var(--accent-bg); }
-.ctxmenu-item.danger { color: #c43358; }
-.ctxmenu-item.danger:hover { background: #ffd9e3; }
+.ctxmenu-item.danger { color: var(--risk-danger); }
+.ctxmenu-item.danger:hover { background: var(--err-soft); }
 .ctxmenu-icon { display: inline-flex; align-items: center; color: var(--accent-strong); }
 
 ::selection { background: var(--accent); color: var(--ink); }

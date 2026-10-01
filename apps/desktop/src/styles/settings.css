@@ -535,7 +535,7 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 }
 .fv-ext-bar {
   height: 8px;
-  background: #f0e0e9;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface));
   border-radius: var(--radius-xs);
   overflow: hidden;
 }

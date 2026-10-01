@@ -1,79 +1,49 @@
    上方散落的硬编码浅色值（白底、浅粉/浅蓝/浅黄块、白字按钮）只在
    浅色预设下成立。深色预设把 --ink 反相成浅色、--card/--paper 变成深色，
    这些硬编码就会变成「白底 + 浅灰字」的不可读组合。这里用
-   html[data-theme="dark"] 选择器统一改成深底 + 亮文字/亮边框。 */
-html[data-theme="dark"] .modal-bg { background: rgba(14, 12, 18, 0.78); }
-html[data-theme="pro"] .modal-bg { background: rgba(14, 12, 18, 0.78); }
+   html[data-mode="dark"] 选择器统一改成深底 + 亮文字/亮边框。 */
+html[data-mode="dark"] .modal-bg { background: rgba(14, 12, 18, 0.78); }
 
 /* AI 气泡：原来那层近乎透明的深色边框在深底上不可见，换成主题线色。 */
-html[data-theme="dark"] .chat-turn.assistant .chat-bubble,
-html[data-theme="pro"] .chat-turn.assistant .chat-bubble {
+html[data-mode="dark"] .chat-turn.assistant .chat-bubble {
   border: 1px solid var(--line);
   box-shadow: 0 1px 0 var(--line), 0 6px 18px -10px rgba(0, 0, 0, 0.55);
 }
 
 /* 树 / 文件视图的行分隔线：浅粉线在深底上刺眼，换主题线色。 */
-html[data-theme="dark"] .tree-row,
-html[data-theme="dark"] .fileview-row { border-bottom: 1px solid var(--line); }
-html[data-theme="pro"] .fileview-row { border-bottom: 1px solid var(--line); }
-html[data-theme="dark"] .fileview-stats { border-bottom: 1px solid var(--line); }
-html[data-theme="pro"] .fileview-stats { border-bottom: 1px solid var(--line); }
+html[data-mode="dark"] .tree-row,
+html[data-mode="dark"] .fileview-row { border-bottom: 1px solid var(--line); }
+html[data-mode="dark"] .fileview-stats { border-bottom: 1px solid var(--line); }
 
-/* 右键菜单的危险项：深色下 #c43358 太暗，用主题 --err（深色下为亮红）。 */
-html[data-theme="dark"] .ctxmenu-item.danger { color: var(--err); }
-html[data-theme="pro"] .ctxmenu-item.danger { color: var(--err); }
-html[data-theme="dark"] .ctxmenu-item.danger:hover { background: var(--accent-bg); }
-html[data-theme="pro"] .ctxmenu-item.danger:hover { background: var(--accent-bg); }
+/* 右键菜单的危险项：基础样式已 token 化（--risk-danger / --err-soft 随主题反相），无需深色覆盖。 */
 
 /* 清理提案：免责声明（琥珀）、覆盖率面板、保留期行、预览区 */
-html[data-theme="dark"] .cleanup-coverage,
-html[data-theme="dark"] .cleanup-preview-list { background: var(--card); }
-html[data-theme="pro"] .cleanup-preview-list { background: var(--card); }
-html[data-theme="dark"] .cleanup-preview-summary { background: var(--card); }
-html[data-theme="pro"] .cleanup-preview-summary { background: var(--card); }
-html[data-theme="dark"] .cleanup-row.within-retention,
-html[data-theme="pro"] .cleanup-row.within-retention {
-  background: #171f33;
-  border-color: #3b5aa6;
-}
-html[data-theme="dark"] .cleanup-row.within-retention .cleanup-row-meta { color: #9db6ea; }
-html[data-theme="pro"] .cleanup-row.within-retention .cleanup-row-meta { color: #9db6ea; }
-
-/* 图片挂件关闭按钮 hover：浅粉底换主题深粉。 */
-html[data-theme="dark"] .chat-image-pill button:hover { background: var(--accent-bg); }
-html[data-theme="pro"] .chat-image-pill button:hover { background: var(--accent-bg); }
-
+html[data-mode="dark"] .cleanup-coverage,
+html[data-mode="dark"] .cleanup-preview-list { background: var(--card); }
+html[data-mode="dark"] .cleanup-preview-summary { background: var(--card); }
 /* Steam：错误块现在走 --err-soft（color-mix 自动适配深浅主题），
    ghost 行/横幅走 --warn-soft；排序按钮与主操作按钮的白字 */
 /* --pink 在深色下是浅粉，白字没有对比度 → 文字改用主题 ink（浅色），
    边框用深一点的 pink-deep 保持按钮轮廓。 */
-html[data-theme="dark"] .steam-workshop-sortbtn.active,
-html[data-theme="dark"] .steam-action-primary,
-html[data-theme="dark"] .lefttab.active { color: var(--ink); border-color: var(--accent-strong); }
-html[data-theme="pro"] .lefttab.active { color: var(--ink); border-color: var(--accent-strong); }
-html[data-theme="dark"] .steam-action-primary .steam-kbd { background: var(--paper-3); color: var(--ink); }
-html[data-theme="pro"] .steam-action-primary .steam-kbd { background: var(--paper-3); color: var(--ink); }
+html[data-mode="dark"] .steam-workshop-sortbtn.active,
+html[data-mode="dark"] .steam-action-primary,
+html[data-mode="dark"] .lefttab.active { color: var(--ink); border-color: var(--accent-strong); }
+html[data-mode="dark"] .steam-action-primary .steam-kbd { background: var(--paper-3); color: var(--ink); }
 
 /* 概览（AssetOverview）：选中卡（蓝）、快速操作按钮（蓝） */
-html[data-theme="dark"] .ao-strip-card.sel,
-html[data-theme="dark"] .ao-strip-card.sel.scanned,
-html[data-theme="pro"] .ao-strip-card.sel.scanned {
+html[data-mode="dark"] .ao-strip-card.sel,
+html[data-mode="dark"] .ao-strip-card.sel.scanned,
+html[data-mode="dark"] .ao-strip-card.sel.scanned {
   border-color: #5b8df0;
   box-shadow: var(--shadow);
   background: #1b2a4d;
 }
-html[data-theme="dark"] .ao-quick-btn,
-html[data-theme="pro"] .ao-quick-btn {
+html[data-mode="dark"] .ao-quick-btn,
+html[data-mode="dark"] .ao-quick-btn {
   background: #1c2740;
 }
-html[data-theme="dark"] .ao-quick-btn:hover { background: var(--accent-bg); }
-html[data-theme="pro"] .ao-quick-btn:hover { background: var(--accent-bg); }
-html[data-theme="dark"] .ao-quick-btn svg { color: var(--accent); }
-html[data-theme="pro"] .ao-quick-btn svg { color: var(--accent); }
-
-/* 扩展名占比条：浅粉轨道换深色底。 */
-html[data-theme="dark"] .fv-ext-bar { background: var(--paper-3); }
-html[data-theme="pro"] .fv-ext-bar { background: var(--paper-3); }
+html[data-mode="dark"] .ao-quick-btn:hover { background: var(--accent-bg); }
+html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 
 /* 磁盘体检：bad 卡现在走 --err-soft + --risk-danger 文字，
    color-mix 在深浅主题下自动适配，无需补丁。 */
@@ -410,18 +380,13 @@ html[data-theme="pro"] .fv-ext-bar { background: var(--paper-3); }
 /* 确认启动 modal（复用 modal 骨架） */
 .confirm-modal { width: 400px; }
 
-html[data-theme="dark"] .toolwall-nav-item:hover,
-html[data-theme="pro"] .toolwall-nav-item:hover { background: rgba(255,255,255,.05); }
-html[data-theme="dark"] .toolwall-card { background: var(--paper); }
-html[data-theme="pro"] .toolwall-card { background: var(--paper); }
-html[data-theme="dark"] .toolwall-icon { background: rgba(255,255,255,.06); }
-html[data-theme="pro"] .toolwall-icon { background: rgba(255,255,255,.06); }
-html[data-theme="dark"] .tdm-perm { background: rgba(255,255,255,.08); }
-html[data-theme="pro"] .tdm-perm { background: rgba(255,255,255,.08); }
-html[data-theme="dark"] .tdm-params code, html[data-theme="dark"] .tdm-example-args { background: rgba(255,255,255,.08); }
-html[data-theme="pro"] .tdm-params code, html[data-theme="dark"] .tdm-example-args { background: rgba(255,255,255,.08); }
-html[data-theme="dark"] .toolwall-nav-count,
-html[data-theme="pro"] .toolwall-nav-count { background: rgba(255,255,255,.08); color: var(--ink-2); }
+html[data-mode="dark"] .toolwall-nav-item:hover,
+html[data-mode="dark"] .toolwall-nav-item:hover { background: rgba(255,255,255,.05); }
+html[data-mode="dark"] .toolwall-card { background: var(--paper); }
+html[data-mode="dark"] .toolwall-icon { background: rgba(255,255,255,.06); }
+html[data-mode="dark"] .tdm-perm { background: rgba(255,255,255,.08); }
+html[data-mode="dark"] .tdm-params code, .tdm-example-args { background: rgba(255,255,255,.08); }
+html[data-mode="dark"] .toolwall-nav-count { background: rgba(255,255,255,.08); color: var(--ink-2); }
 /* 含推广徽标 / 广告提示：--risk-caution 在深色预设下自动提亮为亮琥珀，
    color-mix 以 transparent 为底即可在深浅主题下同时成立，无需补丁。 */
 
@@ -450,8 +415,7 @@ html[data-theme="pro"] .toolwall-nav-count { background: rgba(255,255,255,.08); 
 .toolwall-ai-badge-write {
   background: color-mix(in srgb, var(--warn, #f59e0b) 16%, transparent); color: var(--warn, #f59e0b);
 }
-html[data-theme="dark"] .toolwall-ai-card,
-html[data-theme="pro"] .toolwall-ai-card { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1); }
-html[data-theme="dark"] .toolwall-ai-desc,
-html[data-theme="pro"] .toolwall-ai-desc { color: var(--ink-2); }
-
+html[data-mode="dark"] .toolwall-ai-card,
+html[data-mode="dark"] .toolwall-ai-card { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.1); }
+html[data-mode="dark"] .toolwall-ai-desc,
+html[data-mode="dark"] .toolwall-ai-desc { color: var(--ink-2); }

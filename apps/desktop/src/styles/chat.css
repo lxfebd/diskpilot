@@ -511,7 +511,7 @@
   cursor: pointer;
   padding: 0;
 }
-.chat-image-pill button:hover { background: #ffd5e1; }
+.chat-image-pill button:hover { background: var(--err-soft); }
 
 
 /* ── 通用两步确认面板（ConfirmDialog）：遮罩 + 复用 cli-confirm 卡片 ── */

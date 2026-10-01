@@ -299,11 +299,11 @@
 
 /* "Within retention" rows: distinct from "empty" — content exists, just protected. */
 .cleanup-row.within-retention {
-  background: #f3f6ff;
-  border-color: #b9c6e8;
+  background: var(--accent-bg);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 .cleanup-row.within-retention .cleanup-row-label { color: var(--ink-2); }
-.cleanup-row.within-retention .cleanup-row-meta { color: #4a5b87; }
+.cleanup-row.within-retention .cleanup-row-meta { color: var(--ink-2); }
 
 /* Dry-run preview dialog. */
 .cleanup-preview-modal {
@@ -315,7 +315,7 @@
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--card);
 }
 .cleanup-preview-summary strong { font-weight: 600; color: var(--ink); }
 .cleanup-preview-list {

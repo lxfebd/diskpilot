@@ -389,7 +389,7 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ao-clean-size { flex-shrink: 0; font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: #e05252; }
+.ao-clean-size { flex-shrink: 0; font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--risk-danger); }
 
 /* 底部操作栏（固定不随列表滚动） */
 .ao-actionbar {
@@ -724,19 +724,19 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   border: 1.5px solid transparent;
 }
 .proposal-group-head.risk-safe {
-  color: #1c7a4d;
-  background: #e3f6ec;
-  border-color: #9fdcc0;
+  color: var(--risk-safe);
+  background: var(--risk-soft);
+  border-color: color-mix(in srgb, var(--risk-safe) 45%, var(--border));
 }
 .proposal-group-head.risk-caution {
-  color: #8a6100;
-  background: #fdf3d6;
-  border-color: #e8cf8a;
+  color: var(--risk-caution);
+  background: var(--warn-soft);
+  border-color: color-mix(in srgb, var(--risk-caution) 45%, var(--border));
 }
 .proposal-group-head.risk-danger {
-  color: #a12436;
-  background: #fbe4e7;
-  border-color: #f0aab4;
+  color: var(--risk-danger);
+  background: var(--err-soft);
+  border-color: color-mix(in srgb, var(--risk-danger) 45%, var(--border));
 }
 .proposal-sublist {
   list-style: none;
@@ -779,21 +779,21 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   align-items: center;
   gap: 6px;
   font-size: 11.5px;
-  color: #a12436;
+  color: var(--risk-danger);
   font-weight: 700;
 }
 .proposal-danger-input {
   width: 56px;
   padding: 3px 6px;
   font-size: 12px;
-  border: 1.5px solid #f0aab4;
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-xs);
-  background: #fff;
+  background: var(--card);
   color: var(--ink);
 }
 .proposal-danger-input:focus {
   outline: none;
-  border-color: #a12436;
+  border-color: var(--risk-danger);
 }
 
 /* ── 磁盘空间趋势（R6）：扫描历史迷你曲线 ── */
