@@ -49,12 +49,15 @@ export const overview = {
     'overview.quick.junk': '系统垃圾清理',
     'overview.quick.junkTip': '打开清理页：按脚本勾选要清的目录再预览',
 
-    // 文件分类占用
+    // 文件分类占用（按选中盘聚合，柱条可回收潜力与建议清理同源）
     'overview.cat.title': '文件分类占用',
     'overview.cat.noHit': '未命中已知分类，可扫其他盘',
     'overview.cat.needScan': '扫描后显示文件分类占用',
     'overview.cat.collapse': '收起分类',
     'overview.cat.expand': '展开其余 {n} 个分类',
+    'overview.cat.reclaim': '可回收 {size}',
+    'overview.cat.reclaimTip': '该分类在这些目录里可清理的预计空间（进系统回收站）',
+    'overview.cat.reclaimNote': '{size} 可回收',
 
     // 建议清理项目（两步确认 + 结果三态，措辞不许软化）
     'overview.clean.title': '建议清理项目',
@@ -173,12 +176,16 @@ export const overview = {
     'overview.quick.junk': 'System junk cleanup',
     'overview.quick.junkTip': 'Open the cleanup page: tick scopes per script, then preview',
 
-    // Space by category
+    // Space by category (aggregated over the selected drive; the reclaim tag shares
+// the same source as Suggested cleanup)
     'overview.cat.title': 'Space by file category',
     'overview.cat.noHit': 'No known categories here — try another drive',
     'overview.cat.needScan': 'Scan a drive to see space by category',
     'overview.cat.collapse': 'Collapse categories',
     'overview.cat.expand': 'Show {n} more categories',
+    'overview.cat.reclaim': '{size} reclaimable',
+    'overview.cat.reclaimTip': 'Estimated space cleanable from this category via these folders (goes to the Recycle Bin)',
+    'overview.cat.reclaimNote': '{size} reclaimable',
 
     // Suggested cleanup (two-step confirm + three-state result; wording must stay explicit)
     'overview.clean.title': 'Suggested cleanup',

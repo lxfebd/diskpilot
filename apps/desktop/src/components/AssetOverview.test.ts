@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
+import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -74,5 +75,58 @@ describe('红盘救援阈值（低配救援横幅）', () => {
     expect(isDriveCritical(849, 1000)).toBe(false); // 84.9%
     expect(isDriveCritical(60, 100)).toBe(false);
     expect(isDriveCritical(100, 0)).toBe(false); // 无容量数据不误报
+  });
+});
+
+// ── 分类占用聚合 + 可回收潜力（R11：按选中盘同口径，与建议清理对齐） ──
+function nd(size: number, files: number, scaffoldId: string | null, children: Node[] = []): Node {
+  return {
+    name: scaffoldId ?? 'plain',
+    path: 'C:\\x',
+    is_dir: true,
+    size,
+    file_count: files,
+    children,
+    scaffold_id: scaffoldId,
+    top_extensions: [],
+  };
+}
+
+describe('分类占用聚合 aggregateByScaffold（R11 按选中盘）', () => {
+  it('父节点已打标则子节点不重复累计（同 scaffold 深嵌套只算最外层）', () => {
+    const root = nd(100, 10, 'wechat-pc', [nd(60, 6, 'wechat-pc', [nd(40, 4, 'wechat-pc')])]);
+    const m = aggregateByScaffold(root);
+    expect(m.get('wechat-pc')).toEqual({ bytes: 100, files: 10 });
+  });
+
+  it('不同 scaffold 嵌套各自计入（子 scaffold 不吞掉父的字节）', () => {
+    const root = nd(100, 10, 'game-cache', [nd(60, 6, 'wechat-pc')]);
+    const m = aggregateByScaffold(root);
+    expect(m.get('game-cache')).toEqual({ bytes: 100, files: 10 });
+    expect(m.get('wechat-pc')).toEqual({ bytes: 60, files: 6 });
+  });
+
+  it('未打标路径下的打标子树正常计入；root 为 null 返回空表', () => {
+    const root = nd(200, 20, null, [nd(30, 3, 'qq-pc')]);
+    const m = aggregateByScaffold(root);
+    expect(m.size).toBe(1);
+    expect(m.get('qq-pc')).toEqual({ bytes: 30, files: 3 });
+    expect(aggregateByScaffold(null).size).toBe(0);
+  });
+});
+
+describe('可回收潜力按 scaffold 聚合 reclaimByScaffoldIds（R11）', () => {
+  it('同 scaffold 多 scope 字节加总；不同 scaffold 分开', () => {
+    const m = reclaimByScaffoldIds([
+      { scaffoldId: 'wechat-pc', bytes: 10 },
+      { scaffoldId: 'wechat-pc', bytes: 5 },
+      { scaffoldId: 'qq-pc', bytes: 7 },
+    ]);
+    expect(m.get('wechat-pc')).toBe(15);
+    expect(m.get('qq-pc')).toBe(7);
+  });
+
+  it('空列表 → 空表（分类卡不显示可回收标注）', () => {
+    expect(reclaimByScaffoldIds([]).size).toBe(0);
   });
 });

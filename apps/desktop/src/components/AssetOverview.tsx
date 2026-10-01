@@ -144,6 +144,38 @@ export function spaceSparkPath(pts: SpacePoint[]): string {
     .join(' ');
 }
 
+// ── 分类占用纯逻辑（R11）：抽成可测函数，组件只负责渲染 ──────────────
+
+/** 按 scaffold 聚合占用：父节点已打标则子节点不再重复累计（同 scaffold
+ *  嵌套时外层算一次、内层不再加；不同 scaffold 嵌套各自计入）。 */
+export function aggregateByScaffold(root: Node | null): Map<string, { bytes: number; files: number }> {
+  const m = new Map<string, { bytes: number; files: number }>();
+  if (!root) return m;
+  const walk = (n: Node, parentSid: string | null) => {
+    const sid = n.scaffold_id ?? null;
+    if (sid && sid !== parentSid) {
+      const cur = m.get(sid) ?? { bytes: 0, files: 0 };
+      cur.bytes += n.size || 0;
+      cur.files += n.file_count || 0;
+      m.set(sid, cur);
+    }
+    for (const c of n.children ?? []) walk(c, sid ?? parentSid);
+  };
+  walk(root, null);
+  return m;
+}
+
+/** 按 scaffold 聚合「可回收潜力」（选中盘建议清理项加总）。 */
+export function reclaimByScaffoldIds(
+  items: readonly { scaffoldId: string; bytes: number }[],
+): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const it of items) {
+    m.set(it.scaffoldId, (m.get(it.scaffoldId) ?? 0) + it.bytes);
+  }
+  return m;
+}
+
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
 // 纯只读展示：数据来自每次扫描后追加的 space-history.jsonl，绝不触盘 IO。
 function SpaceTrendCard({ selPath, onGoWorkspace }: { selPath: string | null; onGoWorkspace: () => void }) {
@@ -259,23 +291,19 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [selPath, setSelPath] = useState<string | null>(drives[0]?.path ?? null);
   const selDrive = useMemo(() => drives.find((d) => d.path === selPath) ?? drives[0] ?? null, [drives, selPath]);
 
+  // ── 分类占用（R11 复盘）：根换源为「选中盘」─ 与建议清理/空间大头同一数据维度 ──
+  // 原本遍历全局 root（可能是"我的电脑"全部磁盘虚拟根）：切盘后卡片仍显示全盘
+  // 数据，与按选中盘的 cleanItems 对不上。现在按选中盘树聚合（顶层只认
+  // scanCache 命中，盘没扫过宁可显示「扫描后显示分类」也不拿别的盘数顶缸），
+  // 避免「分类占用显示 D 盘、可清理项算的是 C 盘」的错位。
+  const selScanned = selDrive ? !!scanCache[normKey(selDrive.path)] : false;
+  const catBase = useMemo(() => {
+    if (selDrive) return scanCache[normKey(selDrive.path)] ?? null;
+    return root;
+  }, [selDrive, scanCache, root]);
+
   // 分类占用聚合（父节点已打标则子节点不再重复累计）
-  const byScaffold = useMemo(() => {
-    const m = new Map<string, { bytes: number; files: number }>();
-    if (!root) return m;
-    const walk = (n: Node, parentSid: string | null) => {
-      const sid = n.scaffold_id ?? null;
-      if (sid && sid !== parentSid) {
-        const cur = m.get(sid) ?? { bytes: 0, files: 0 };
-        cur.bytes += n.size || 0;
-        cur.files += n.file_count || 0;
-        m.set(sid, cur);
-      }
-      for (const c of n.children ?? []) walk(c, sid ?? parentSid);
-    };
-    walk(root, null);
-    return m;
-  }, [root]);
+  const byScaffold = useMemo(() => aggregateByScaffold(catBase), [catBase]);
 
   const scaffoldStats = useMemo(() => {
     const items: { scaffold: Scaffold; bytes: number; files: number }[] = [];
@@ -334,6 +362,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
   const selCount = useMemo(() => cleanItems.filter((i) => checked[i.key]).length, [cleanItems, checked]);
   const selBytes = useMemo(() => cleanItems.filter((i) => checked[i.key]).reduce((s, i) => s + i.bytes, 0), [cleanItems, checked]);
+  // 分类占用卡标题上的「可回收潜力合计」：全部建议项加总（不依赖勾选状态）。
+  const reclaimTotal = useMemo(() => cleanItems.reduce((s, i) => s + i.bytes, 0), [cleanItems]);
+  // 可回收潜力按 scaffold 聚合（选中盘建议清理项，与 cleanItems 同源）：
+  // 在分类占用条的尺寸旁标注「可回收 X」，一眼看出哪些大块头还能清出空间。
+  const reclaimByScaffold = useMemo(() => reclaimByScaffoldIds(cleanItems), [cleanItems]);
   // 微信缓存一旦勾选，从总览一键清理会覆盖本机所有微信账号（清理页才有账号筛选）。
   // 这里不拦截，只在运行时如实提示，避免多账号场景误清其他账号却毫无预兆。
   const wechatChecked = useMemo(
@@ -405,7 +438,6 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
   const usedTotal = drives.reduce((s, d) => s + (d.used_bytes || 0), 0);
   const scannedCount = drives.filter((d) => scanCache[normKey(d.path)]).length;
-  const selScanned = selDrive ? !!scanCache[normKey(selDrive.path)] : false;
 
   // 扫描完成自动刷新可清理项：cachedOnly=true 只读内存树，秒回；
   // 兑现「扫描后直接给可安全清理 Top 榜」，低配用户少点一次。
@@ -601,8 +633,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         <div className="ao-right">
           {/* 文件分类占用统计 */}
           <section className="ao-card">
-            <h2 className="ao-card-title"><BarChart3 size={16} /> {t('overview.cat.title')}</h2>
-            {root ? (
+            <h2 className="ao-card-title">
+              <BarChart3 size={16} /> {t('overview.cat.title')}
+              {reclaimTotal > 0 && <span className="ao-card-note">{t('overview.cat.reclaimNote', { size: formatBytes(reclaimTotal) })}</span>}
+            </h2>
+            {catBase ? (
               scaffoldStats.length === 0 ? (
                 <div className="ao-empty"><Info size={16} />{t('overview.cat.noHit')}</div>
               ) : (
@@ -611,12 +646,16 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                     const color = catColor(scaffold.id);
                     const max = scaffoldStats[0]?.bytes || 1;
                     const pct = Math.max(3, Math.min(100, (bytes / max) * 100));
+                    const reclaim = reclaimByScaffold.get(scaffold.id) ?? 0;
                     return (
                       <div key={scaffold.id} className="ao-bar-row">
                         <span className="ao-bar-dot" style={{ background: color }} />
                         <span className="ao-bar-name">{scaffold.name}</span>
                         <span className="ao-bar-track"><i style={{ width: `${pct}%`, background: color }} /></span>
                         <span className="ao-bar-size">{formatBytes(bytes)}</span>
+                        <span className="ao-bar-reclaim" title={reclaim > 0 ? t('overview.cat.reclaimTip') : undefined}>
+                          {reclaim > 0 ? `↳ ${t('overview.cat.reclaim', { size: formatBytes(reclaim) })}` : ''}
+                        </span>
                       </div>
                     );
                   })}
@@ -628,7 +667,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                 </div>
               )
             ) : (
-              <div className="ao-empty"><FolderOpen size={16} />{t('overview.cat.needScan')}</div>
+              <div className="ao-empty"><FolderOpen size={16} />{selDrive ? t('overview.cat.needScan') : t('overview.noDrive')}</div>
             )}
           </section>
 
