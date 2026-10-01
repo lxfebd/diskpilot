@@ -415,6 +415,17 @@ pub fn scaffold_red_line_violations(sc: &Scaffold) -> Vec<(String, Vec<String>)>
         .collect()
 }
 
+/// 目录粒度 scope 的 mode 会被执行层静默忽略（一律走 Recycle，见
+/// `desktop/executor.rs` "Directory granularity is locked to Recycle"）——
+/// TOML 里写 quarantine/delete 是不生效的陷阱。返回需要 lint FAIL 的 scope。
+pub fn directory_scope_recycle_violations(sc: &Scaffold) -> Vec<(String, Mode)> {
+    sc.scopes
+        .iter()
+        .filter(|s| s.recycle_granularity == RecycleGranularity::Directory && s.mode != Mode::Recycle)
+        .map(|s| (s.id.clone(), s.mode))
+        .collect()
+}
+
 /// Pre-compiled form of a `Scaffold` for hot-path matching. Holds the union of
 /// all `detect` globs as a single `GlobSet`, plus lower-cased copies of the
 /// fragment lists. Callers that need to detect against many paths (e.g. tag

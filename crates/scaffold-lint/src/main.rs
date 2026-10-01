@@ -6,6 +6,9 @@
 //!  3. **Scope glob 红线（CLAUDE.md Hard rule #1）**: no scope glob may match
 //!     conversation/account DBs, login config, favorites, or crypto material.
 //!     Any hit is a hard error — tighten the glob, don't widen the check.
+//!  4. **目录粒度强制 Recycle**: `recycle_granularity = "directory"` 的 scope
+//!     mode 恒被执行层忽略（一律走 Recycle，见 desktop/executor.rs），TOML 里
+//!     写 quarantine/delete 是静默不生效的陷阱——lint 必须 FAIL 拦住。
 //!
 //! 红线校验走 `diskpilot_scaffold::red_line_violations` —— 与 `scaffold-gen`、
 //! 运行时 scaffold 安装/装载共用同一入口、同一份样本，杜绝「CI 一把尺、
@@ -68,6 +71,15 @@ fn main() -> anyhow::Result<()> {
                     let hits = red_line_violations(&scope.glob);
                     for sample in &hits {
                         violations.push(format!("  `{}` hits red line: {sample}", scope.glob));
+                    }
+                    // 目录粒度 scope 的 mode 会被执行层忽略（强制 Recycle，见
+                    // desktop/executor.rs `Directory granularity is locked to Recycle`）：
+                    // TOML 写 quarantine/delete 是静默不生效的陷阱，lint 直接拦下。
+                    // （规则实现抽在 diskpilot_scaffold 便于单测，两处共用一把尺。）
+                    for (sid, mode) in diskpilot_scaffold::directory_scope_recycle_violations(&s) {
+                        violations.push(format!(
+                            "  scope `{sid}`: recycle_granularity=directory 时 mode={mode:?} 会被忽略（目录粒度恒走 Recycle），请改为 mode=\"recycle\""
+                        ));
                     }
                 }
                 for v in &violations {

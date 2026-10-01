@@ -127,45 +127,45 @@
 | G-中1 | USN 增量扫描目录 rename 子树不搬移，增量与全量不一致 | ✅ 已修（`scanner/src/usn.rs` `try_rename_move` + `rebase_subtree_paths`） |
 | G-中2 | 红线反查锚定边界未写明 | ✅ 已修（`scaffold/src/lib.rs:238-252` 注释已写明锚定与环境变量映射） |
 | G-中3 | executor dry_run 不返回 per-path 字节 | ✅ 已修（`executor/src/lib.rs:129-137` 补 `path_bytes_before`） |
-| G-中4 | selfheal run_fancmd 同步读管道有死锁隐患 | 🔴 真欠（`selfheal.rs:76` 仍先 wait 后读）——低优先，输出膨胀场景罕见 |
+| G-中4 | selfheal run_fancmd 同步读管道有死锁隐患 | ✅ 已修（`selfheal.rs:94-106` 后台线程先读 stdout，输出膨胀不会与等退出互锁） |
 | G-中5 | MSI locale Culture + TauriLanguage 组合错 | ✅ 已修（`locale-zh-CN.wxl` 现为 Culture="zh-cn" + TauriLanguage=2052） |
 | G-中6 | toolbelt_run 无条件 require_confirmed 与描述矛盾 | ✅ 已修（`agent-server/src/tools/mod.rs:1242` 按 manifest risk ≥ Medium 才过门） |
 | G-中7 | settings 通用 tab 硬编码 "AI" 未走 i18n | ✅ 已修（`Settings.tsx:584` `t('settings.general.ai')`） |
 | G-中8 | PermissionCenter comingSoon 死分支 | ✅ 已修（无 comingSoon 命中，权限 desc 已清标记） |
 | G-中9 | 三个新文件未登记 MIGRATED_FILES | ✅ 已修（`migrated-files.ts:36/39/45` 已登记 OptimizerPage/PowerPlanCard/StartupPanel） |
 | G-中10 | general_config 前端类型缺 tools_root | ✅ 已修（`api/system-ext.ts:468` ToolbeltStatus 含 tools_root；设置页入口未做，待产品决策） |
-| G-中11 | mocks.ts 注释「17 份」过期 | 🔴 真欠（小）——注释仍写 17 份，实际 21 个顶层 id 已对齐；补注释 + mock↔TOML 守卫测试未做 |
-| G-中12 | aiRecyclePaths dry-run 空返回仍真删 | 🔴 真欠（小）——无命中守卫未加，需核对 `store.ts` recyclePaths |
-| G-中13 | runRealDelete 用最新口径而非预览快照 | 🔴 真欠（中）——预览停留期间改设置会以新口径真删，涉安全口径，值得修 |
-| G-中14 | conda dry-run 字节口径与普通脚本不一致 | 🔴 真欠（小）`useCleanupStore.ts:487` |
+| G-中11 | mocks.ts 注释「17 份」过期 | ✅ 已修（`mocks.ts:154` 注释已改「21 份」） |
+| G-中12 | aiRecyclePaths dry-run 空返回仍真删 | ✅ 已修（`store.ts:391-416` 先 dry-run 探测，空则逐项再试、仍空计 failed 不真删） |
+| G-中13 | runRealDelete 用最新口径而非预览快照 | ✅ 已修（`DryRunPreview` 补 `matchesPaths`/`isCondaSnapshot`，真删一律用预览快照路径与 conda 判定，换盘/重扫不再串路） |
+| G-中14 | conda dry-run 字节口径与普通脚本不一致 | ✅ 已修（`model.ts` 新增 `condaDryBytes`：只按 dry-run 实际命中的 env 目录对回 size_bytes，不再把勾选但未过期的 env 全算进虚高） |
 | G-中15 | TOOL_LABEL 只 58 条，trace 直显英文名 | ✅ 已修（`agent.ts:98` 有 `prettifyToolName` 兜底回退友好名） |
 | G-中16 | cliIndexPromise 装插件后旧索引永久生效 | ✅ 已修（`tools.ts:1343` `invalidateToolbeltCache`） |
 
 ### 低
 | # | 问题 | 状态（2026-10-02） |
 |---|------|------|
-| G-低1 | useCleanupStore.open() 死代码 | 🔴 真欠（小） |
-| G-低2 | 目录粒度强制 Recycle 但 lint 不告警 | 🔴 真欠（小）`executor.rs:279` 强制在，lint 告警没加 |
+| G-低1 | useCleanupStore.open() 死代码 | ✅ 已修（无调用方，接口+实现已删） |
+| G-低2 | 目录粒度强制 Recycle 但 lint 不告警 | ✅ 已修（`scaffold` 新增 `directory_scope_recycle_violations` 共用规则 + scaffold-lint 规则 4 + 5 单测；34 份真实 TOML 全量零误伤） |
 | G-低3 | Treemap 注释「d3 树图」实为矩形树图 | ✅ 已修（`Treemap.tsx` 已是 treemapSquarify） |
 | G-低4 | App setRootMs 恒 0 诊断失真 | ✅ 已修（模块级自增计数替代随机，见 `AssetOverview.tsx:206`） |
-| G-低5 | FileView MAX=60000 生产同样生效无提示 | 🔴 真欠（小） |
+| G-低5 | FileView MAX=60000 生产同样生效无提示 | ✅ 已修（`FileView.tsx:149` truncated 时显示「文件过多被截断」提示） |
 | G-低6 | SpaceTrendCard 渐变 id 随机多行共享 | ✅ 已修（`AssetOverview.tsx:206` 自增计数 id） |
 | G-低7 | App 重复注释行 | ✅ 已修 |
 | G-低8 | PowerPlanCard toast 直显 GUID | ✅ 已修（`PowerPlanCard.tsx:22` 标准 GUID→可读名映射） |
 | G-低9 | 硬件加速/托盘开关后端写失败静默 | ✅ 已修（`Settings.tsx:312` backendWrite + 失败提示） |
 | G-低10 | updatePhase 复用字符串存错误被吞 | ✅ 已修（`Settings.tsx:131-132` 拆字段） |
-| G-低11 | nav 宽度常量与 tokens 无守卫 | 🔴 真欠（小，`nav.test.ts` 已测部分） |
+| G-低11 | nav 宽度常量与 tokens 无守卫 | ✅ 已修（`nav.test.ts:105-120` 以 ?raw 读 tokens.css 钉死展开/折叠宽度常量） |
 | G-低12 | optimizer.css padding fallback 不一致 | ✅ 已修（`.optimizer` 用 `var(--layout-page-padding-inline)`） |
 | G-低13 | stress 记住被丢弃 | ✅ 已修（`ChatPanel.tsx:529` confirmStress 处理 remember） |
-| G-低14 | mcp_smoke_newline.py 路径写死 | 🔴 真欠（小） |
-| G-低15 | ci.yml --frozen-lockfile=false | 🔴 真欠（小，CI 收紧） |
-| G-低16 | superio.rs inp/outp expect 建议改 debug_assert | 🔴 真欠（小） |
+| G-低14 | mcp_smoke_newline.py 路径写死 | ✅ 已修（`scripts/mcp_smoke_newline.py:13` `_REPO_ROOT` 相对路径） |
+| G-低15 | ci.yml --frozen-lockfile=false | ✅ 已修（`ci.yml:109` `pnpm install --frozen-lockfile`） |
+| G-低16 | superio.rs inp/outp expect 建议改 debug_assert | ✅ 已修（`superio.rs:205/219` 已改 `debug_assert!` 兜底） |
 | G-低17 | sensor_trend/alert L0 却写自有数据文件 | ⚪ 保留（文档已声明，设计如此） |
 
 ## H. 与记忆的差异点（重要）
 
-1. **G 账本已全量复核（2026-10-02）**：4 高 3 修 1 欠、16 中 11 修 5 欠、低 8 修。真欠项见 G 表 🔴，里面对应建议已替换为当前状态与位置。
-2. **mocks.ts 与 TOML 对齐**：记忆里「幽灵 scaffold 整肃 17/17 对齐」，现在实际是 21 个顶层 id 全对齐（新增了 browser-privacy/windows-privacy/windows-update 三个），但 mocks.ts 注释仍写「17 份」——文档过期，id 集合本身没缺（G-中11 真欠，待补注释）。
+1. **G 账本已全量复核（2026-10-02 第二次）**：4 高 4 修 0 欠、16 中 16 修 0 欠、低 17 项 14 修 3 保留。上次复核误标的 8 项（G-中4/11/12、G-低5/11/14/15/16）经代码逐行核对确认 P4 已修，本次实修 4 项（G-中13 快照口径、G-中14 conda 字节、G-低1 死代码、G-低2 lint 规则）。真欠项全部清零，仅 G-低17 ⚪ 保留设计。
+2. **mocks.ts 与 TOML 对齐**：记忆里「幽灵 scaffold 整肃 17/17 对齐」，现在实际是 21 个顶层 id 全对齐（新增了 browser-privacy/windows-privacy/windows-update 三个），mocks.ts 注释已同步为「21 份」。
 3. **agent-server clippy「0 警告」已变 45 条存量噪音**（本次未动该 crate，CI 关 -D warnings，不影响门禁）。
 4. 记忆「75 工具」与本次核对一致（mod.rs 75 个 async fn）；`mcp_status`/`disk_space_trend` 不在 agent-server，在 Tauri 主进程（mcp.rs / space_history.rs）。
 
