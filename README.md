@@ -183,6 +183,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 ## 文档
 
 - [docs/](docs/README.md) — 架构详解、使用说明书、清理脚本编写指南
+- [docs/plugin-market-index.md](docs/plugin-market-index.md) — 插件市场社区索引契约（建官方索引仓库时照此执行）
 - [website/index.html](website/index.html) — 项目宣传站（本地浏览器直接打开即可预览）
 
 ---
