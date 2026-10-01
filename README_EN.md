@@ -147,10 +147,11 @@ All deletes go to the **system Recycle Bin** by default — recoverable. Every a
 - [x] Steam shader cache cleanup (SteamInspector read-only scan + shader scaffold)
 - [x] Scan-tree persistence across restarts (recent drives reopen instantly)
 - [x] Low-end machine tuning (tier-based overscan / poll-frequency downscaling)
-- [ ] Support more common apps: Discord, Teams, game engines, QQ, Zoom, security suites…
+- [x] Support more common apps: Discord, Teams, game engines, QQ, Zoom, security suites, browser caches…
 - [ ] Linux real-hardware validation (macOS ships community-built, no signing/notarization)
 - [ ] Let users write and share their own cleanup scripts (`scaffold new` CLI + community repo)
-- [ ] Home "disk asset overview" redesign (per-scaffold usage heatmap + reclaimable potential)
+- [x] Home "disk asset overview" redesign (per-scaffold usage heatmap + reclaimable potential)
+- [x] Today checkup banner on overview (health-butler P0: red drives / reclaimable / temp / startup digest)
 
 ---
 
