@@ -145,8 +145,10 @@ All deletes go to the **system Recycle Bin** by default — recoverable. Every a
 - [x] Eighteen cleanup scaffolds: WeChat, Teams, game engines, Zoom, Discord, dev caches, QQ, browser cache, IDE caches, Conda, crash dumps, Firefox, HuggingFace, Docker buildx, OBS, security suites, Steam shader, system temp
 - [x] An "undo" button: recover anything you deleted from Recycle Bin / quarantine in one click (`~/.diskpilot/undo.jsonl` + "Recent cleanups" panel)
 - [x] Steam shader cache cleanup (SteamInspector read-only scan + shader scaffold)
+- [x] Scan-tree persistence across restarts (recent drives reopen instantly)
+- [x] Low-end machine tuning (tier-based overscan / poll-frequency downscaling)
 - [ ] Support more common apps: Discord, Teams, game engines, QQ, Zoom, security suites…
-- [ ] Ship prebuilt macOS / Linux binaries (need signing cert + real-hardware validation first)
+- [ ] Linux real-hardware validation (macOS ships community-built, no signing/notarization)
 - [ ] Let users write and share their own cleanup scripts (`scaffold new` CLI + community repo)
 - [ ] Home "disk asset overview" redesign (per-scaffold usage heatmap + reclaimable potential)
 
