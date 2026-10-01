@@ -19,6 +19,15 @@ export function communityComingSoon(community: readonly RegistryPlugin[], indexe
   return indexed && community.length > 0 && community.every((p) => !p.url);
 }
 
+/**
+ * 空列表是否源于「内置去重」：索引里所有条目都与内置工具重复，被 filter_builtin_dupes
+ * 过滤后 community 为空。区别于「真没条目」——此时应给用户"索引接入成功但全是内置项"的
+ * 引导，而不是冷冰冰的「社区注册表为空」。
+ */
+export function emptiedAllDedupe(community: readonly RegistryPlugin[], skippedBuiltin: number, indexed: boolean): boolean {
+  return indexed && community.length === 0 && skippedBuiltin > 0;
+}
+
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
@@ -578,7 +587,16 @@ export function MarketPanel() {
           {community === null ? (
             <p className="muted">{t('toolbelt.mkt.loading')}</p>
           ) : community.length === 0 ? (
-            <p className="muted">{t('toolbelt.mkt.communityEmpty')}</p>
+            // 索引接入成功但列表空：区分「全被内置去重」与「真没条目」。
+            // 前者给引导，后者才用冷冰冰的空态文案。
+            emptiedAllDedupe(community, skippedBuiltin, !!regInfo?.indexed) ? (
+              <p className="toolbelt-market-warn" style={{ marginTop: 6 }}>
+                <Info size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
+                {t('toolbelt.mkt.allDedupeHint', { n: skippedBuiltin })}
+              </p>
+            ) : (
+              <p className="muted">{t('toolbelt.mkt.communityEmpty')}</p>
+            )
           ) : (
             <>
               {/* 索引已接入但全部条目尚未提供下载地址：引导用户这是「等待上架」而非空市场 */}
