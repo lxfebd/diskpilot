@@ -121,6 +121,22 @@ function summarizeArgs(args: Record<string, unknown>): string {
 
 const MAX_ROUNDS = 6;
 
+// 周巡检编排章节：用户说「看这周电脑怎么样 / 周巡检 / 体检」时，按序调用只读
+// MCP 工具拿当前时刻真实数据汇总。全程只读，绝不触碰写类/高负载工具。
+export const healthRoutineSection = `## 整机健康巡检（周报向导）
+用户说「帮我看看这周怎么样 / 周巡检 / 体检 / 电脑状态总结」时，按以下顺序调用只读工具（零风险，无需用户确认；每个工具最多调一次，结果为空就跳过继续）：
+1. disk_health —— 各盘容量与剩余空间，找出快满的盘
+2. hw_sensors 或 hw_temperature —— CPU / GPU / 主板 / 磁盘温度（两个都可用时用 hw_sensors）
+3. sys_boot_items —— 开机自启动项数量，点名体积大或可疑的项
+4. cleanup_suggestions —— 从 C:\\ 开始的可清理空间与项目数，算出总共能释放多少
+5. system_report —— 汇总生成体检报告（可选；与上面数据重复时可跳过）
+
+### 巡检行为准则
+1. 全程只用上面的只读工具表：disk_health / hw_sensors / hw_temperature / sys_boot_items / cleanup_suggestions / system_report；绝不调用写类工具（process_kill、file_recycle、fan_control、service_control、toolbelt_run、stress_test、adjust_fan_curve 等）或高负载工具（bench_*、mem_test、stress_test*），也不调用 propose_cleanup_plan —— 巡检只报告现状，不生成清理清单。
+2. 工具不可用就逐级降级到最小组合：至少 disk_health + 任一温度工具；其余各项如实说明「该项暂不可用 / 未采集」。
+3. 结论必须声明「这是当前时刻的实时数据」，不是预计算报表；所有数字只来自工具返回值，禁止编造。
+4. 中文总结 2-5 行：空间（哪块盘剩多少、是否快满）→ 温度（有无超温）→ 自启动（几条、有无可疑）→ 可清理（能释放多少）；发现异常给出下一步建议。`;
+
 export async function agentChat(o: AgentOpts): Promise<string> {
   const settings = loadSettings();
   if (!isConfigured(settings)) throw new Error('AI 未配置 — 在右上角的设置里填一个 API key');
@@ -156,8 +172,8 @@ export async function agentChat(o: AgentOpts): Promise<string> {
 4. 不要编造硬件数据，所有数值必须来自工具返回值。
 5. 弱机（hwProfile=weak）上，不要主动建议烤机/压测/深度扫描这类长时高负载操作。`;
   const system = cliIndex
-    ? `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${cliIndex}\n\n工具使用规则：要用 run_cli_tool 执行某个 CLI 工具前，必须先调用 get_cli_tool_usage 查看该工具的绝对路径、参数表和示例，确认参数无误后才能调用 run_cli_tool；中/高风险工具会自动弹确认框，确认后才真正执行。`
-    : `${baseSystem}\n\n${perfLine}\n\n${hwSection}`;
+    ? `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${healthRoutineSection}\n\n${cliIndex}\n\n工具使用规则：要用 run_cli_tool 执行某个 CLI 工具前，必须先调用 get_cli_tool_usage 查看该工具的绝对路径、参数表和示例，确认参数无误后才能调用 run_cli_tool；中/高风险工具会自动弹确认框，确认后才真正执行。`
+    : `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${healthRoutineSection}`;
 
   let answer: string;
   if (settings.provider === 'anthropic') answer = await agentAnthropic(settings, system, o, tools.anthropic, emit, showThink);
