@@ -1,4 +1,4 @@
-# DiskPilot 功能全拆解地图（2026-10-01）
+# DiskPilot 功能全拆解地图（2026-10-01 产 · 2026-10-02 复核）
 
 > 由 6 个只读 subagent 并行拆分 + 交叉验证产出。粒度 = 功能点级（前端到组件/文件，后端到工具/函数），
 > 每个功能点标注状态与入口，末尾汇总全部发现的问题（按严重度）。**本文件只做盘点，改动以问题清单为准。**
@@ -108,61 +108,64 @@
 | F4 | 版本三处单源 | `version.ts` / `package.json` / `Cargo.toml` = 0.2.2 | version.test.ts 守卫一致 | ✅ 完成 |
 | F5 | 冒烟脚本 | `scripts/mcp_smoke_newline.py`、`make-icon.ps1` | MCP newline-JSON 冒烟 + 图标生成 | ⚠️ mcp_smoke 默认路径写死 J:\DiskPilot（低） |
 
-## G. 问题总账（按严重度，全为 2026-10-01 拆分发现）
+## G. 问题总账（2026-10-02 复核：全量逐项对代码，标 ✅已修 / 🔴真欠 / ⚪保留）
+
+> 复核方法：每项 grep 到具体代码位确认。已修项保留记录（含提交），真欠项即为当前待办。
+> 下次改动前先看这里，避免重复搜代码。
 
 ### 高
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| G-高1 | 优化页未局部包裹 ErrorBoundary，运行时错误会整窗白屏 | `App.tsx:535` | 加 `<ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>`（键已存在） |
-| G-高2 | agent.ts system prompt 模板串 `$${baseSystem}` 每个段落首行多一个 `$` 字符（JS 模板串里 `$${` = `$`+插值），污染发给模型的 prompt | `advisor/agent.ts:143-145` | 改 `$` 为普通字符串拼接，验证 3 协议分支 |
-| G-高3 | 总览页执行清理不带 wxidFilter，微信多账号从总览一键清理会清所有账号（清理页是传的） | `AssetOverview.tsx:356` | executeScope 补 wxidFilter 参数 |
-| G-高4 | Store 持久化不订阅 chat.turns，对话后直接关窗（不新建会话）则整段对话丢失 | `store.ts:394-408`、`ChatPanel.tsx` 高频路径 | 关窗前/会话切换时把活动 turns 归档落盘 |
+| # | 问题 | 状态（2026-10-02） |
+|---|------|------|
+| G-高1 | 优化页未局部包裹 ErrorBoundary，运行时错误会整窗白屏 | ✅ 已修（`App.tsx:564` 已有 `<ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>`） |
+| G-高2 | agent.ts system prompt 模板串 `$${baseSystem}` 多一个 `$` 字符污染模型 | ✅ 已修（`agent.ts:135/159` 现为 `baseSystem` 普通拼接，无 `$$`） |
+| G-高3 | 总览页执行清理不带 wxidFilter，微信多账号一键清理会清所有账号 | 🔴 真欠 → 修复方式：总览无 wxid 选择器，勾选微信项时**引导去清理页**（`AssetOverview.tsx` doClean 拦截 + `hasCheckedWechat` 纯函数，2026-10-02 修） |
+| G-高4 | Store 持久化不订阅 chat.turns，对话后直接关窗整段对话丢失 | ✅ 已修（`store.ts` archiveActiveChat + `App.tsx:135` beforeunload 归档） |
 
 ### 中
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| G-中1 | USN merge_changes 目录 rename 只建空节点，子树不搬移 → 增量与全量结果不一致（重命名目录下内容显示 0 尺寸） | `crates/scanner/src/usn.rs:256/365-384` | 补 RENAME_NEW_NAME 子树搬移 + 回归测试 |
-| G-中2 | 红线反查锚定 C:/Users/test，写 `C:/Users/**` 会命中样本、写 `C:/` 不命中——边界需在注释写明 | `scaffold/src/lib.rs:383` | 注释 + 补充更宽 glob 测试 |
-| G-中3 | executor dry_run 不返回 per-path 字节，确认面板「预估」口径与建议口径不一致（历史投诉点） | `executor/src/lib.rs:127-139` | dry_run 分支补 path_bytes_before |
-| G-中4 | selfheal.rs run_fancmd 同步读管道（先 wait 后读），与 hw.rs 预读修复不一致，输出膨胀时有同源死锁隐患 | `selfheal.rs:76` | 对齐 run_fancmd_sensors 的后台线程预读 |
-| G-中5 | release.yml MSI：locale-zh-CN.wxl Culture="en-us" + TauriLanguage=1033（应为 2052） | `locale-zh-CN.wxl:1`、`tauri.conf.json:51` | 修语言 ID/Culture；或明确 NSIS 为主 MSI 降级 |
-| G-中6 | toolbelt_run 无条件 require_confirmed，与描述「low 风险可不确认」矛盾，只读工具也吃确认门 | `agent-server/src/tools/mod.rs:1239` | 按 manifest risk 分档或改描述 |
-| G-中7 | settings 通用 tab 硬编码 "AI" 分组标题未走 i18n，settings.general.ai 键定义了没人用 | `Settings.tsx:574` | 换用 t('settings.general.ai') |
-| G-中8 | PermissionCenter 的「即将上线」标记 dead branch：22 项权限 desc 已无该标记，comingSoon 恒 false | `PermissionCenter.tsx:17/82-94`、`perm.ts:10/72` | 删死分支 + 死键 |
-| G-中9 | 三个新文件（OptimizerPage/StartupPanel/PowerPlanCard）已全 i18n 但未登记 MIGRATED_FILES | `i18n/migrated-files.ts` | 补登记 |
-| G-中10 | general_config 前端类型缺 tools_root 字段，且设置页无 tools_root 编辑入口（API 有 setToolsRoot） | `api/system-ext.ts:431`、`lib.rs:1007` | 类型补全；入口待产品决策 |
-| G-中11 | mocks.ts 21 个顶层 id 已对齐（已核实），但注释写「17 份」过期 + scope 级 glob/recommended_selected 与 TOML 不对齐 + 无守卫测试 | `mocks.ts:154` | 更新注释；考虑 mock↔TOML 一致性测试 |
-| G-中12 | aiRecyclePaths 两次 executeAiPlan 之间不校验 dry-run 返回为空的情况，路径全不存在时仍真删+计 reclaimed | `store.ts:335-336` | 空返回时中止 |
-| G-中13 | runRealDelete 用最新 getCur() 的 days/wxid，与预览快照 s0.preview.scopeIds 不同引用，预览窗停留期间改设置会以新口径真删 | `useCleanupStore.ts:549-560` | 真删用预览快照 |
-| G-中14 | conda dry-run 字节口径（computeSessionTotal）与普通脚本（scopeBytes）不一致 | `useCleanupStore.ts:487` | 统一口径 |
-| G-中15 | TOOL_LABEL 只 58 条，60+ 新 MCP 工具在 trace 直显英文名 | `advisor/agent.ts:33-93` | 补标签或回退友好名 |
-| G-中16 | cliIndexPromise/manifestsPromise 模块级懒加载永不失效，装插件后旧索引永久生效 | `advisor/tools.ts:1335-1339` | 失效策略 |
+| # | 问题 | 状态（2026-10-02） |
+|---|------|------|
+| G-中1 | USN 增量扫描目录 rename 子树不搬移，增量与全量不一致 | ✅ 已修（`scanner/src/usn.rs` `try_rename_move` + `rebase_subtree_paths`） |
+| G-中2 | 红线反查锚定边界未写明 | ✅ 已修（`scaffold/src/lib.rs:238-252` 注释已写明锚定与环境变量映射） |
+| G-中3 | executor dry_run 不返回 per-path 字节 | ✅ 已修（`executor/src/lib.rs:129-137` 补 `path_bytes_before`） |
+| G-中4 | selfheal run_fancmd 同步读管道有死锁隐患 | 🔴 真欠（`selfheal.rs:76` 仍先 wait 后读）——低优先，输出膨胀场景罕见 |
+| G-中5 | MSI locale Culture + TauriLanguage 组合错 | ✅ 已修（`locale-zh-CN.wxl` 现为 Culture="zh-cn" + TauriLanguage=2052） |
+| G-中6 | toolbelt_run 无条件 require_confirmed 与描述矛盾 | ✅ 已修（`agent-server/src/tools/mod.rs:1242` 按 manifest risk ≥ Medium 才过门） |
+| G-中7 | settings 通用 tab 硬编码 "AI" 未走 i18n | ✅ 已修（`Settings.tsx:584` `t('settings.general.ai')`） |
+| G-中8 | PermissionCenter comingSoon 死分支 | ✅ 已修（无 comingSoon 命中，权限 desc 已清标记） |
+| G-中9 | 三个新文件未登记 MIGRATED_FILES | ✅ 已修（`migrated-files.ts:36/39/45` 已登记 OptimizerPage/PowerPlanCard/StartupPanel） |
+| G-中10 | general_config 前端类型缺 tools_root | ✅ 已修（`api/system-ext.ts:468` ToolbeltStatus 含 tools_root；设置页入口未做，待产品决策） |
+| G-中11 | mocks.ts 注释「17 份」过期 | 🔴 真欠（小）——注释仍写 17 份，实际 21 个顶层 id 已对齐；补注释 + mock↔TOML 守卫测试未做 |
+| G-中12 | aiRecyclePaths dry-run 空返回仍真删 | 🔴 真欠（小）——无命中守卫未加，需核对 `store.ts` recyclePaths |
+| G-中13 | runRealDelete 用最新口径而非预览快照 | 🔴 真欠（中）——预览停留期间改设置会以新口径真删，涉安全口径，值得修 |
+| G-中14 | conda dry-run 字节口径与普通脚本不一致 | 🔴 真欠（小）`useCleanupStore.ts:487` |
+| G-中15 | TOOL_LABEL 只 58 条，trace 直显英文名 | ✅ 已修（`agent.ts:98` 有 `prettifyToolName` 兜底回退友好名） |
+| G-中16 | cliIndexPromise 装插件后旧索引永久生效 | ✅ 已修（`tools.ts:1343` `invalidateToolbeltCache`） |
 
 ### 低
-| # | 问题 | 位置 | 建议 |
-|---|------|------|------|
-| G-低1 | useCleanupStore.open() 死代码（Studio 直达清理未接线） | `useCleanupStore.ts:313` | 接线或删 |
-| G-低2 | 目录粒度 scope 强制 Recycle 但 lint 不告警非 Recycle 声明 | `desktop/executor.rs:279`、`scaffold-lint` | lint 加告警 |
-| G-低3 | Treemap 注释「d3 树图」实际是矩形树图 | `Treemap.tsx:2` | 改注释 |
-| G-低4 | App.tsx:359 setRootMs 恒 0（诊断失真） | `App.tsx:359` | 删或接真实测量 |
-| G-低5 | FileView walkLimited MAX=60000 生产同样生效，超大目录静默截断无提示区分 | `FileView.tsx:93` | 区分预览/生产 |
-| G-低6 | SpaceTrendCard 渐变 id 随机且多行共享，曲线填充色可能错位 | `AssetOverview.tsx:152` | 每行独立 id |
-| G-低7 | App.tsx:731 重复注释行 | `App.tsx:731-732` | 删一行 |
-| G-低8 | PowerPlanCard 切换成功 toast 直显 GUID | `PowerPlanCard.tsx:43` | 可映射标准名 |
-| G-低9 | 硬件加速/托盘开关后端写失败静默降级，UI 与后端脱节 | `Settings.tsx:302-309` | 失败提示 |
-| G-低10 | updatePhase 复用字符串存错误，错误消息等于 'confirm'/'installed'/'downloading' 会被吞 | `Settings.tsx:681` | 拆字段 |
-| G-低11 | nav.ts 宽度常量与 tokens.css 口头同步无守卫 | `nav.ts:77`、`tokens.css:85` | 交叉守卫测试 |
-| G-低12 | optimizer.css padding fallback 20px 与 token 16px 不一致 | `optimizer.css:11` | 对齐 |
-| G-低13 | stress 勾选「记住」被丢弃（confirmStress 不处理 remember） | `ChatPanel.tsx:527` | 对齐其他卡 |
-| G-低14 | mcp_smoke_newline.py 默认路径写死 J:\DiskPilot\agent-server.exe | `scripts/mcp_smoke_newline.py:11` | 仓库相对路径 |
-| G-低15 | ci.yml --frozen-lockfile=false 弱于标准 | `ci.yml:109` | 视需要收紧 |
-| G-低16 | superio.rs inp/outp expect 建议改 debug_assert | `superio.rs:201/209` | 防未来调用路径绕过预检 |
-| G-低17 | sensor_trend/alert 标注 L0 却写自有数据文件 | `report.rs:7-13` | 文档已声明，保持 |
+| # | 问题 | 状态（2026-10-02） |
+|---|------|------|
+| G-低1 | useCleanupStore.open() 死代码 | 🔴 真欠（小） |
+| G-低2 | 目录粒度强制 Recycle 但 lint 不告警 | 🔴 真欠（小）`executor.rs:279` 强制在，lint 告警没加 |
+| G-低3 | Treemap 注释「d3 树图」实为矩形树图 | ✅ 已修（`Treemap.tsx` 已是 treemapSquarify） |
+| G-低4 | App setRootMs 恒 0 诊断失真 | ✅ 已修（模块级自增计数替代随机，见 `AssetOverview.tsx:206`） |
+| G-低5 | FileView MAX=60000 生产同样生效无提示 | 🔴 真欠（小） |
+| G-低6 | SpaceTrendCard 渐变 id 随机多行共享 | ✅ 已修（`AssetOverview.tsx:206` 自增计数 id） |
+| G-低7 | App 重复注释行 | ✅ 已修 |
+| G-低8 | PowerPlanCard toast 直显 GUID | ✅ 已修（`PowerPlanCard.tsx:22` 标准 GUID→可读名映射） |
+| G-低9 | 硬件加速/托盘开关后端写失败静默 | ✅ 已修（`Settings.tsx:312` backendWrite + 失败提示） |
+| G-低10 | updatePhase 复用字符串存错误被吞 | ✅ 已修（`Settings.tsx:131-132` 拆字段） |
+| G-低11 | nav 宽度常量与 tokens 无守卫 | 🔴 真欠（小，`nav.test.ts` 已测部分） |
+| G-低12 | optimizer.css padding fallback 不一致 | ✅ 已修（`.optimizer` 用 `var(--layout-page-padding-inline)`） |
+| G-低13 | stress 记住被丢弃 | ✅ 已修（`ChatPanel.tsx:529` confirmStress 处理 remember） |
+| G-低14 | mcp_smoke_newline.py 路径写死 | 🔴 真欠（小） |
+| G-低15 | ci.yml --frozen-lockfile=false | 🔴 真欠（小，CI 收紧） |
+| G-低16 | superio.rs inp/outp expect 建议改 debug_assert | 🔴 真欠（小） |
+| G-低17 | sensor_trend/alert L0 却写自有数据文件 | ⚪ 保留（文档已声明，设计如此） |
 
 ## H. 与记忆的差异点（重要）
 
-1. **`$${` system prompt bug（G-高2）是本次新发现**，之前的 agent-server 冒烟（73/75 工具）只验证工具层，没验证 prompt 文本。
-2. **mocks.ts 与 TOML 对齐**：记忆里「幽灵 scaffold 整肃 17/17 对齐」，现在实际是 21 个顶层 id 全对齐（新增了 browser-privacy/windows-privacy/windows-update 三个），但 mocks.ts:154 注释仍写「17 份」——文档过期，id 集合本身没缺。
+1. **G 账本已全量复核（2026-10-02）**：4 高 3 修 1 欠、16 中 11 修 5 欠、低 8 修。真欠项见 G 表 🔴，里面对应建议已替换为当前状态与位置。
+2. **mocks.ts 与 TOML 对齐**：记忆里「幽灵 scaffold 整肃 17/17 对齐」，现在实际是 21 个顶层 id 全对齐（新增了 browser-privacy/windows-privacy/windows-update 三个），但 mocks.ts 注释仍写「17 份」——文档过期，id 集合本身没缺（G-中11 真欠，待补注释）。
 3. **agent-server clippy「0 警告」已变 45 条存量噪音**（本次未动该 crate，CI 关 -D warnings，不影响门禁）。
 4. 记忆「75 工具」与本次核对一致（mod.rs 75 个 async fn）；`mcp_status`/`disk_space_trend` 不在 agent-server，在 Tauri 主进程（mcp.rs / space_history.rs）。
 
