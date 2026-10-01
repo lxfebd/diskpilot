@@ -69,6 +69,51 @@ function touchCacheKey(key: string) {
   cacheOrder.unshift(key);
 }
 
+// ── 扫描树持久化（重启不丢）：scanCache 是内存里最大的结构，整盘树
+// 序列化后可达数 MB。localStorage 配额 5MB，全量持久化 6 盘必然爆掉——
+// 所以只把「最近使用的 2 个盘」落盘，且超过预算跳过（静默，不影响扫描主流程）。
+const SCAN_CACHE_KEY = 'diskpilot.scanCache';
+/** 落盘时最多保留的盘树数（够重启秒开常用盘，又不撑爆配额）。 */
+const PERSISTED_DRIVES = 2;
+/** 落盘子集序列化超过该字节数就不写（整盘树巨大时占配额不值）。 */
+const PERSIST_MAX_BYTES = 4 * 1024 * 1024;
+
+/** 启动时从 localStorage 恢复上次的扫描树缓存。结构校验 + 预算裁剪：只认
+ *  合法盘根（name/path 字符串 + children 数组），坏数据整体丢弃不影响启动。 */
+function loadPersistedScanCache(): Record<string, Node> {
+  try {
+    const raw = localStorage.getItem(SCAN_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, Node>;
+    const out: Record<string, Node> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      if (typeof v !== 'object' || v === null) continue;
+      if (typeof v.name !== 'string' || typeof v.path !== 'string' || !Array.isArray(v.children)) continue;
+      out[k] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** 把 scanCache 里最近使用的 N 个盘树序列化落盘。容量预算内才写；
+ *  localStorage 满/不可用/超预算一律静默丢弃（与 persistChatSessions 同策略）。 */
+function persistScanCache(cache: Record<string, Node>) {
+  try {
+    // 最近使用序 = cacheOrder 最前；只取前 N 个仍存在的 key。
+    const top = cacheOrder.slice(0, PERSISTED_DRIVES).filter((k) => k in cache);
+    if (top.length === 0) return;
+    const subset: Record<string, Node> = {};
+    for (const k of top) subset[k] = cache[k];
+    const text = JSON.stringify(subset);
+    if (text.length > PERSIST_MAX_BYTES) return;
+    localStorage.setItem(SCAN_CACHE_KEY, text);
+  } catch {
+    /* 静默：持久化失败不影响扫描与缓存 */
+  }
+}
+
 // AI agent 每一步（思考 / 工具调用 / 工具结果 / 提示）沉淀在 turn.trace，
 // ChatPanel 渲染成可折叠的「思考过程」区。
 export interface TraceItem {
@@ -228,7 +273,12 @@ export const useStore = create<AppState>((set, get) => {
 
   return {
   root: null,
-  scanCache: {},
+  // 启动时恢复上次落盘的扫描树（最近使用的盘）；无则空缓存。
+  scanCache: (() => {
+    const saved = loadPersistedScanCache();
+    for (const k of Object.keys(saved)) touchCacheKey(k);
+    return saved;
+  })(),
   scanSeq: 0,
   scaffolds: [],
   selectedPath: null,
@@ -259,6 +309,7 @@ export const useStore = create<AppState>((set, get) => {
         const evict = cacheOrder.pop();
         if (evict !== undefined) delete next[evict];
       }
+      persistScanCache(next);
       return { scanCache: next };
     }),
   takeDrive: (key) => {

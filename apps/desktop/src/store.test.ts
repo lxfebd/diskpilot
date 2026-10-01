@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Node } from './types';
 
 // C3 改动：selectPath 增带 node 引用（TreeView/Treemap 点击直传），store 其余
@@ -83,5 +83,65 @@ describe('recycle prune clears selection', () => {
     expect(s.selectedPath).toBeNull();
     expect(s.selectedNode).toBeNull(); // C3：剪枝后引用必须随 path 一起清，防 FileDetailPanel 读到已删节点
     expect(s.root!.children!.map((c) => c.name)).toEqual(['Windows']);
+  });
+});
+
+describe('扫描树持久化（重启不丢）', () => {
+  const storage = new Map<string, string>();
+
+  beforeEach(() => {
+    storage.clear();
+    vi.clearAllMocks();
+    // 提供内存版 localStorage，验证落盘/恢复逻辑；缺失时 load/persist 均应静默。
+    const fake: Storage = {
+      getItem: (k) => storage.get(k) ?? null,
+      setItem: (k, v) => { storage.set(k, String(v)); },
+      removeItem: (k) => { storage.delete(k); },
+      clear: () => storage.clear(),
+      key: (i) => [...storage.keys()][i] ?? null,
+      get length() { return storage.size; },
+    };
+    vi.stubGlobal('localStorage', fake);
+    useStore.setState({
+      root: null,
+      scanCache: {},
+      selectedPath: null,
+      selectedNode: null,
+      chat: { node: null, scaffoldId: null, turns: [], busy: false },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('cacheDrives 落盘最近使用的盘树（重启后恢复的数据源）', () => {
+    const D_ROOT = mk('D:', 'D:\\', 700, 70);
+    useStore.getState().cacheDrives({ 'C:': ROOT, 'D:': D_ROOT });
+    const raw = storage.get('diskpilot.scanCache');
+    expect(raw).toBeTruthy();
+    const parsed = JSON.parse(raw!);
+    // 最近使用序：D: 后写入在前，C: 次之（cacheDrives 逐个 touch）
+    expect(Object.keys(parsed)).toEqual(['D:', 'C:']);
+    expect(parsed['D:'].name).toBe('D:');
+    expect(parsed['C:'].name).toBe('C:');
+  });
+
+  it('超过预算（4MB）不落盘，静默跳过', () => {
+    const huge: Node = { name: 'E:', path: 'E:\\', is_dir: true, size: 0, file_count: 0, top_extensions: [], children: [] };
+    // 构造一个序列化后超预算的树：children 里放深递归会爆栈，改用超大字符串节点名。
+    const big: Node = {
+      name: 'x'.repeat(5 * 1024 * 1024),
+      path: 'E:\\x', is_dir: false, size: 1, file_count: 0, top_extensions: [], children: [],
+    };
+    useStore.getState().cacheDrives({ 'E:': { ...huge, children: [big] } });
+    expect(storage.get('diskpilot.scanCache')).toBeUndefined();
+  });
+
+  it('localStorage 不可用（node 无全局）时读写均静默，不抛错', () => {
+    vi.unstubAllGlobals(); // 移除 fake → localStorage 引用即抛 ReferenceError
+    expect(() => useStore.getState().cacheDrives({ 'C:': ROOT })).not.toThrow();
+    // 恢复路径同样静默返回空
+    expect(useStore.getState().scanCache['C:']).toBe(ROOT); // 内存缓存不受影响
   });
 });
