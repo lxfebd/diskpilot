@@ -38,18 +38,10 @@ use serde_json::Value;
 use std::io::Read;
 
 use crate::ps::{json_array_of, ps_capture};
+use crate::tools::v_str;
 
 // ── JSON 取值小工具（与主项目 hw.rs 的 v_str / arr 同语义）─────────────────
-
-/// 取一个 JSON 字段的可读文本：数字/布尔转字符串，缺失/异常一律空串。
-fn v_str(v: &Value, k: &str) -> String {
-    match v.get(k) {
-        Some(Value::String(s)) => s.clone(),
-        Some(Value::Number(n)) => n.to_string(),
-        Some(Value::Bool(b)) => b.to_string(),
-        _ => String::new(),
-    }
-}
+// v_str 已在 tools/mod.rs 共享，此处不再复刻。
 
 /// 取数组字段；缺失返回空 Vec（配合下面的 `arr().iter()` 直接用）。
 fn v_arr<'a>(v: &'a Value, k: &str) -> &'a [Value] {

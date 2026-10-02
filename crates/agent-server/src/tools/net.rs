@@ -53,6 +53,7 @@
 use serde_json::Value;
 
 use crate::ps::{json_array_of, ps_capture};
+use crate::tools::v_str;
 #[cfg(windows)]
 use crate::tools::process;
 
@@ -100,16 +101,6 @@ fn fmt_rate(bytes_per_sec: f64) -> String {
         format!("{:.*} KB/s", 0, v / 1024.0)
     } else {
         format!("{:.*} B/s", 0, v)
-    }
-}
-
-/// 取 JSON 字段的可读文本：数字/布尔转字符串，缺失/异常一律空串。
-fn v_str(v: &Value, k: &str) -> String {
-    match v.get(k) {
-        Some(Value::String(s)) => s.clone(),
-        Some(Value::Number(n)) => n.to_string(),
-        Some(Value::Bool(b)) => b.to_string(),
-        _ => String::new(),
     }
 }
 

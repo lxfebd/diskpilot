@@ -6,6 +6,11 @@
 
 > **2026-10-02 落地更新**：阶段 1（删 3 死接口+修注释）、阶段 2（normKey×4/driveLetter×2/日期格式化收敛）、阶段 2b（合并 scheduleSizeFetch/fetchSizesNow）、阶段 4（改 bytes_freed 记账）、阶段 6（后台 cached_only=true）**已完成**，前端 tsc + 212 测试 + 后端 cargo check 全绿。阶段 3 评估为有意保留不合并。阶段 5（agent-server 采集收敛）待确认后做。
 
+> **2026-10-03 落地更新（阶段 5 完成）**：
+> - **5-2 agent-server 内部去重**：`parallel_walker`×3（files/diskx → tools/mod.rs 共享，disk.rs 的 max_depth(20) 刻意差异保留）、`v_str`×4（hw/net/sec/sys → 共享）、注册表读×2（apps.rs/sys.rs 的 read_str/read_dword 对 → `reg_read_str`/`reg_read_dword` 共享）。原"抽公共 crate"（跨 crate 双实现合流）评估为**不做**——主进程与 agent-server 各自进化中，强行合并是高风险大改，文档 §6 建议"先 (a) 后 (b)"调整为"agent-server 内部先去重 + 加缓存"。
+> - **5-3 agent-server TTL 缓存**：常驻进程用 `OnceLock<Mutex<Option<TtlSlot>>>` 对齐主进程三层 TTL——`HW_STATIC_TTL=300s` 套 hw_cpu/hw_memory/hw_motherboard（静态硬件不再每次重跑 PS）、`HW_DISK_TTL=300s` 套 hw_disk_smart。温度**不缓存**（HWiNFO/SuperIO 直读毫秒级，且"烫不烫"要最新值；主进程 10s THERMAL_TTL 是为压测循环防进程风暴，agent-server 无此循环）。错误不缓存，`None`（读不到）也缓存。
+> - **回归全绿**：workspace cargo check + clippy（0 警告）+ agent-server release 冒烟 70 OK / 8 ERR（全为预期守卫拒绝）/ 4 SKIP / 0 超时 + 前端 tsc + vitest 212/212。
+
 ---
 
 ## 〇、先回答用户关心的核心问题

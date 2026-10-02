@@ -4,6 +4,9 @@
 
 use serde::Serialize;
 
+#[cfg(windows)]
+use crate::tools::{reg_read_dword, reg_read_str};
+
 #[derive(Debug, Clone, Serialize)]
 pub struct InstalledApp {
     pub name: String,
@@ -21,51 +24,6 @@ fn wide(s: &str) -> Vec<u16> {
         .encode_wide()
         .chain(std::iter::once(0))
         .collect()
-}
-
-/// 读 REG_SZ 字符串值（带 NUL 自动截断）。
-#[cfg(windows)]
-fn read_str(key: windows_sys::Win32::System::Registry::HKEY, value: &[u16]) -> String {
-    use windows_sys::Win32::System::Registry::RegQueryValueExW;
-    let mut buf = [0u16; 2048];
-    let mut len = (buf.len() * 2) as u32;
-    let r = unsafe {
-        RegQueryValueExW(
-            key,
-            value.as_ptr(),
-            std::ptr::null(),
-            std::ptr::null_mut(),
-            buf.as_mut_ptr() as *mut u8,
-            &mut len,
-        )
-    };
-    if r != 0 || len < 2 {
-        return String::new();
-    }
-    let n = (len as usize / 2 - 1).min(buf.len()); // 去结尾 NUL
-    String::from_utf16_lossy(&buf[..n])
-}
-
-/// 读 REG_DWORD 值（EstimatedSize 单位 KB）。
-#[cfg(windows)]
-fn read_dword(key: windows_sys::Win32::System::Registry::HKEY, value: &[u16]) -> Option<u32> {
-    use windows_sys::Win32::System::Registry::RegQueryValueExW;
-    let mut buf = 0u32;
-    let mut len = 4u32;
-    let r = unsafe {
-        RegQueryValueExW(
-            key,
-            value.as_ptr(),
-            std::ptr::null(),
-            std::ptr::null_mut(),
-            &mut buf as *mut u32 as *mut u8,
-            &mut len,
-        )
-    };
-    if r != 0 {
-        return None;
-    }
-    Some(buf)
 }
 
 /// 枚举某个 Uninstall 键（含 flags 控制 32/64 视图）下的已安装程序。
@@ -115,17 +73,17 @@ fn enum_uninstall_key(
             continue;
         }
         // 过滤系统组件与 AppX 注册残余
-        let sys_comp = read_dword(sub_key, &wide("SystemComponent")).unwrap_or(0);
-        let parent = read_str(sub_key, &wide("ParentKeyName"));
-        let name = read_str(sub_key, &wide("DisplayName"));
+        let sys_comp = reg_read_dword(sub_key, &wide("SystemComponent")).unwrap_or(0);
+        let parent = reg_read_str(sub_key, &wide("ParentKeyName"));
+        let name = reg_read_str(sub_key, &wide("DisplayName"));
         if sys_comp == 0 && parent.is_empty() && !name.is_empty() {
             out.push(InstalledApp {
-                version: read_str(sub_key, &wide("DisplayVersion")),
-                publisher: read_str(sub_key, &wide("Publisher")),
-                install_location: read_str(sub_key, &wide("InstallLocation")),
-                estimated_size_mb: read_dword(sub_key, &wide("EstimatedSize"))
+                version: reg_read_str(sub_key, &wide("DisplayVersion")),
+                publisher: reg_read_str(sub_key, &wide("Publisher")),
+                install_location: reg_read_str(sub_key, &wide("InstallLocation")),
+                estimated_size_mb: reg_read_dword(sub_key, &wide("EstimatedSize"))
                     .map(|kb| (kb / 1024) as u64),
-                uninstall_string: read_str(sub_key, &wide("UninstallString")),
+                uninstall_string: reg_read_str(sub_key, &wide("UninstallString")),
                 name,
             });
         }
@@ -519,7 +477,7 @@ fn office_activation() -> String {
         return "未检测到 Office（ClickToRun 配置键不存在，可能未安装）".into();
     }
     // 读 Platform / ProductReleaseIds 判断订阅版还是永久版
-    let platform = read_str(hkey, &wide("Platform"));
+    let platform = reg_read_str(hkey, &wide("Platform"));
     if platform.is_empty() {
         // 无 ClickToRun → 尝试传统 MSI 安装键
         let legacy = r"SOFTWARE\Microsoft\Office";
@@ -541,7 +499,7 @@ fn office_activation() -> String {
         return "检测到传统 MSI 版 Office（激活状态需用 ospp.vbs 查询，未自动读取）".into();
     }
     // 订阅版（Microsoft 365）：ProductReleaseIds 含 'O365' 或 'ProPlus' 表示订阅
-    let prod = read_str(hkey, &wide("ProductReleaseIds"));
+    let prod = reg_read_str(hkey, &wide("ProductReleaseIds"));
     let is_o365 = prod.to_ascii_uppercase().contains("O365");
     let _ = unsafe { RegCloseKey(hkey) };
     if is_o365 {

@@ -26,20 +26,10 @@ use std::path::Path;
 use crate::ps::{json_array_of, ps_capture};
 
 use super::files::PathGuard;
-
-/// 递归遍历公共 walker（与 `files.rs` / `disk.rs` 同款语义）：
-/// skip_hidden(false) 进 httpd dotted 缓存目录 / 不跟随符号链接防环 / max_depth(48)。
-///
-/// 注：`files::parallel_walker` 是模块内 private，无法跨模块复用，故此处复刻一份。
-/// 未来若把 files::parallel_walker 提为 pub，可把本函数删掉并改用。
-fn parallel_walker(root: &Path) -> jwalk::WalkDir {
-    jwalk::WalkDir::new(root)
-        .skip_hidden(false)
-        .follow_links(false)
-        .max_depth(48)
-}
+use crate::tools::parallel_walker;
 
 // ── 常量与本地格式化 ──────────────────────────────────────────────────────
+
 
 /// 大文件扫描的硬上限：单次遍历最多看这么多文件（超过就 break 并标 truncated）。
 const MAX_FILES_WALK: usize = 500_000;

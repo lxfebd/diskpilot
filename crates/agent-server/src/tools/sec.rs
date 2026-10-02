@@ -51,22 +51,13 @@
 use serde_json::Value;
 
 use crate::ps::{ps_capture, ps_capture_timeout};
+use crate::tools::v_str;
 
 #[cfg(not(windows))]
 #[allow(dead_code)] // 跨平台降级文案：Windows 构建不引用
 const NOT_WINDOWS: &str = "当前平台不是 Windows，安全信息不可用";
 
 // ── 通用小工具 ─────────────────────────────────────────────────────────
-
-#[cfg(windows)]
-fn v_str(v: &Value, k: &str) -> String {
-    match v.get(k) {
-        Some(Value::String(s)) => s.clone(),
-        Some(Value::Number(n)) => n.to_string(),
-        Some(Value::Bool(b)) => b.to_string(),
-        _ => String::new(),
-    }
-}
 
 #[cfg(windows)]
 fn v_arr<'a>(v: &'a Value, k: &str) -> &'a [Value] {

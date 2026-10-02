@@ -44,8 +44,12 @@ use std::time::Duration;
 #[cfg(windows)]
 use crate::ps::{json_array_of, ps_capture, ps_capture_timeout};
 
+#[cfg(windows)]
+use crate::tools::{reg_read_dword, reg_read_str, v_str};
+
 // ── Windows 平台专用工具 ────────────────────────────────────────────────
 
+/// UTF-16 宽字符串（注册表 API 输入用）。
 #[cfg(windows)]
 fn wide(s: &str) -> Vec<u16> {
     use std::os::windows::ffi::OsStrExt;
@@ -54,67 +58,6 @@ fn wide(s: &str) -> Vec<u16> {
         .chain(std::iter::once(0))
         .collect()
 }
-
-/// 读 REG_SZ / REG_EXPAND_SZ 字符串值（`RegQueryValueExW` 手动处理 `len` + NUL 截断）。
-/// `REG_EXPAND_SZ` 的 `%VAR%` 由本工具在调用侧再展开，这里原样返回。
-#[cfg(windows)]
-fn read_str_val(key: windows_sys::Win32::System::Registry::HKEY, value: &[u16]) -> String {
-    use windows_sys::Win32::System::Registry::RegQueryValueExW;
-    let mut buf = [0u16; 2048];
-    let mut len = (buf.len() * 2) as u32;
-    let r = unsafe {
-        RegQueryValueExW(
-            key,
-            value.as_ptr(),
-            std::ptr::null(),
-            std::ptr::null_mut(),
-            buf.as_mut_ptr() as *mut u8,
-            &mut len,
-        )
-    };
-    if r != 0 || len < 2 {
-        return String::new();
-    }
-    // len 是字节数（含结尾 NUL）；转成 u16 计数并去结尾 NUL。
-    let n = ((len as usize) / 2 - 1).min(buf.len());
-    String::from_utf16_lossy(&buf[..n])
-}
-
-/// 读 REG_DWORD。缺失返回 `None`。
-#[cfg(windows)]
-fn read_dword_val(key: windows_sys::Win32::System::Registry::HKEY, value: &[u16]) -> Option<u32> {
-    use windows_sys::Win32::System::Registry::RegQueryValueExW;
-    let mut buf = 0u32;
-    let mut len = 4u32;
-    let r = unsafe {
-        RegQueryValueExW(
-            key,
-            value.as_ptr(),
-            std::ptr::null(),
-            std::ptr::null_mut(),
-            &mut buf as *mut u32 as *mut u8,
-            &mut len,
-        )
-    };
-    if r != 0 {
-        return None;
-    }
-    Some(buf)
-}
-
-// ── JSON 取值小工具（同 `hw.rs`） ───────────────────────────────────────
-
-/// 取一个 JSON 字段的可读文本：数字/布尔转字符串，缺失/异常一律空串。
-fn v_str(v: &Value, k: &str) -> String {
-    match v.get(k) {
-        Some(Value::String(s)) => s.clone(),
-        Some(Value::Number(n)) => n.to_string(),
-        Some(Value::Bool(b)) => b.to_string(),
-        _ => String::new(),
-    }
-}
-
-// ── 1. 服务枚举 ─────────────────────────────────────────────────────────
 
 /// 一次性拿所有服务的运行状态（PowerShell `Win32_Service`）。
 /// **不用 PS 逐键查 `ImagePath`**——那会跑几百次 PS 进程，注册表用原生 API 才毫秒级。
@@ -299,9 +242,9 @@ pub fn collect_services(
             if rc2 != 0 {
                 continue;
             }
-            let image = read_str_val(sub_key, &wide("ImagePath"));
-            let start = read_dword_val(sub_key, &wide("Start"));
-            let typ = read_dword_val(sub_key, &wide("Type"));
+            let image = reg_read_str(sub_key, &wide("ImagePath"));
+            let start = reg_read_dword(sub_key, &wide("Start"));
+            let typ = reg_read_dword(sub_key, &wide("Type"));
             unsafe { RegCloseKey(sub_key) };
 
             // 服务名：从 u16 buffer 转 String（无 NUL）。

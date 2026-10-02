@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
+use crate::tools::parallel_walker;
+
 #[cfg(windows)]
 mod win_path {
     /// 把路径展开为 Windows 真实长路径：
@@ -458,15 +460,6 @@ pub fn file_tree(
         });
     }
     Ok((nodes, truncated))
-}
-
-/// 递归遍历公共 walker：与主项目 scanner 行为一致
-/// （skip_hidden(false) 进 httpd dotted 缓存目录 / 不跟随符号链接防环）。
-fn parallel_walker(root: &Path) -> jwalk::WalkDir {
-    jwalk::WalkDir::new(root)
-        .skip_hidden(false)
-        .follow_links(false)
-        .max_depth(48)
 }
 
 /// undo.jsonl 条目（与主项目 diskpilot-executor 的 `UndoEntry` serde 同构，

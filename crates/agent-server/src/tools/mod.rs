@@ -36,6 +36,7 @@ use rmcp::{
 };
 use serde::Deserialize;
 use diskpilot_toolbelt::Risk;
+use std::sync::Mutex;
 
 fn text_result(s: String) -> CallToolResult {
     CallToolResult::success(vec![RawContent::text(s).no_annotation()])
@@ -84,6 +85,132 @@ pub fn fmt_bytes(n: u64) -> String {
         format!("{v:.1} {}", UNITS[u])
     }
 }
+
+/// 统一目录遍历器：files/diskx 等模块复刻过同一份 jwalk 配置，收敛到这里。
+pub(crate) fn parallel_walker(root: &std::path::Path) -> jwalk::WalkDir {
+    jwalk::WalkDir::new(root)
+        .skip_hidden(false)
+        .follow_links(false)
+        .max_depth(48)
+}
+
+/// JSON 取值转字符串：hw/net/sec/sys 四个模块各复刻了一份，收敛到这里。
+pub(crate) fn v_str(v: &serde_json::Value, k: &str) -> String {
+    match v.get(k) {
+        Some(serde_json::Value::String(s)) => s.clone(),
+        Some(serde_json::Value::Number(n)) => n.to_string(),
+        Some(serde_json::Value::Bool(b)) => b.to_string(),
+        _ => String::new(),
+    }
+}
+
+/// 读 REG_SZ / REG_EXPAND_SZ 字符串值（`RegQueryValueExW` 手动处理 `len` + NUL 截断）。
+/// `REG_EXPAND_SZ` 的 `%VAR%` 由调用侧再展开，这里原样返回。
+/// apps.rs / sys.rs 各复刻了一份 `read_str` / `read_str_val`，收敛到这里。
+#[cfg(windows)]
+pub(crate) fn reg_read_str(
+    key: windows_sys::Win32::System::Registry::HKEY,
+    value: &[u16],
+) -> String {
+    use windows_sys::Win32::System::Registry::RegQueryValueExW;
+    let mut buf = [0u16; 2048];
+    let mut len = (buf.len() * 2) as u32;
+    let r = unsafe {
+        RegQueryValueExW(
+            key,
+            value.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null_mut(),
+            buf.as_mut_ptr() as *mut u8,
+            &mut len,
+        )
+    };
+    if r != 0 || len < 2 {
+        return String::new();
+    }
+    // len 是字节数（含结尾 NUL）；转成 u16 计数并去结尾 NUL。
+    let n = ((len as usize) / 2 - 1).min(buf.len());
+    String::from_utf16_lossy(&buf[..n])
+}
+
+/// 读 REG_DWORD。缺失返回 `None`。
+/// apps.rs / sys.rs 各复刻了一份 `read_dword` / `read_dword_val`，收敛到这里。
+#[cfg(windows)]
+pub(crate) fn reg_read_dword(
+    key: windows_sys::Win32::System::Registry::HKEY,
+    value: &[u16],
+) -> Option<u32> {
+    use windows_sys::Win32::System::Registry::RegQueryValueExW;
+    let mut buf = 0u32;
+    let mut len = 4u32;
+    let r = unsafe {
+        RegQueryValueExW(
+            key,
+            value.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null_mut(),
+            &mut buf as *mut u32 as *mut u8,
+            &mut len,
+        )
+    };
+    if r != 0 {
+        return None;
+    }
+    Some(buf)
+}
+
+// ── 静态硬件 TTL 缓存（对齐主进程 hw.rs 三层） ──────────────────────────
+// 主进程：HW_SNAPSHOT_TTL=300s / HW_DISK_TTL=300s / THERMAL_TTL=10s。
+// agent-server 是常驻进程（无共享状态的历史原因在 agent.rs:28），
+// 静态硬件（CPU/内存/主板/BIOS）5 分钟内直接复用，不再每次重跑 PowerShell。
+
+/// 静态硬件（CPU/内存/主板）TTL：基本不变，5 分钟复用。
+const HW_STATIC_TTL: std::time::Duration = std::time::Duration::from_secs(300);
+/// 磁盘健康（SMART）TTL：通电时间/磨损不会秒变，5 分钟复用。
+const HW_DISK_TTL: std::time::Duration = std::time::Duration::from_secs(300);
+
+/// 通用 TTL 缓存槽：存 `(采集时刻, 结果文本)`，TTL 内命中直接复用。
+struct TtlSlot {
+    at: std::time::Instant,
+    value: String,
+}
+type TtlCache = Mutex<Option<TtlSlot>>;
+
+/// 创建/复用静态硬件缓存槽（与主进程 `hw_snapshot_lock` 同手法）。
+fn ttl_slot(cell: &'static std::sync::OnceLock<TtlCache>) -> &'static TtlCache {
+    cell.get_or_init(|| Mutex::new(None))
+}
+
+/// 静态硬件 TTL 缓存：TTL 内直接返回缓存，过期则跑 `f` 并把结果写回缓存。
+/// 错误不缓存（采集失败下次再试），`None` 值（读不到）也缓存——对齐主进程
+/// `sample_thermal_c` 的「不可读也缓存」行为，避免每轮白 spawn。
+fn ttl_cached(
+    cache: &'static std::sync::OnceLock<TtlCache>,
+    ttl: std::time::Duration,
+    f: impl FnOnce() -> Result<String, String>,
+) -> Result<String, String> {
+    let now = std::time::Instant::now();
+    let guard = ttl_slot(cache);
+    if let Ok(slot) = guard.lock() {
+        if let Some(entry) = slot.as_ref() {
+            if now.duration_since(entry.at) < ttl {
+                return Ok(entry.value.clone());
+            }
+        }
+    }
+    let v = f()?;
+    if let Ok(mut slot) = guard.lock() {
+        *slot = Some(TtlSlot {
+            at: std::time::Instant::now(),
+            value: v.clone(),
+        });
+    }
+    Ok(v)
+}
+
+// 三个静态硬件缓存槽 + 一个磁盘 SMART 槽。
+static HW_STATIC_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
+static HW_DISK_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
 
 #[derive(Debug, Clone)]
 pub struct AgentServer;
@@ -703,7 +830,14 @@ impl AgentServer {
         description = "读取 CPU 信息：型号/核心/线程数/基频与当前频率/缓存/实时占用率（只读，WMI，不需要管理员权限）。用户问『CPU 是什么/几个核/占用高不高』时调用。"
     )]
     async fn hw_cpu(&self, _p: Parameters<HwCpuParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, hw::collect_cpu, "CPU 信息采集").await)
+        // CPU 静态信息 5 分钟缓存（对齐主进程 HW_SNAPSHOT_TTL=300s）。
+        // 实时占用/频率字段随整包缓存，最多滞后 5 分钟——与主进程缓存整包同口径。
+        Ok(blocking_call(
+            30,
+            || ttl_cached(&HW_STATIC_CACHE, HW_STATIC_TTL, hw::collect_cpu),
+            "CPU 信息采集",
+        )
+        .await)
     }
 
     #[tool(
@@ -717,7 +851,13 @@ impl AgentServer {
         description = "读取内存信息：每根内存条容量/频率/厂商/型号 + 总容量 + XMP/EXPO 是否生效诊断（只读，不需要管理员权限）。用户问『内存多大/频率多少/该不该开 XMP』时调用。"
     )]
     async fn hw_memory(&self, _p: Parameters<HwMemoryParams>) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, hw::collect_memory, "内存信息读取").await)
+        // 内存是静态硬件，5 分钟缓存（对齐 HW_SNAPSHOT_TTL）。
+        Ok(blocking_call(
+            30,
+            || ttl_cached(&HW_STATIC_CACHE, HW_STATIC_TTL, hw::collect_memory),
+            "内存信息读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -727,7 +867,13 @@ impl AgentServer {
         &self,
         _p: Parameters<HwMotherboardParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, hw::collect_motherboard, "主板信息读取").await)
+        // 主板/BIOS 是静态硬件，5 分钟缓存（对齐 HW_SNAPSHOT_TTL）。
+        Ok(blocking_call(
+            30,
+            || ttl_cached(&HW_STATIC_CACHE, HW_STATIC_TTL, hw::collect_motherboard),
+            "主板信息读取",
+        )
+        .await)
     }
 
     #[tool(
@@ -793,7 +939,13 @@ impl AgentServer {
         &self,
         _p: Parameters<HwDiskSmartParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, hw::collect_disk_smart, "磁盘健康读取").await)
+        // SMART 通电时间/温度/磨损不会秒变，5 分钟缓存（对齐 HW_DISK_TTL）。
+        Ok(blocking_call(
+            45,
+            || ttl_cached(&HW_DISK_CACHE, HW_DISK_TTL, hw::collect_disk_smart),
+            "磁盘健康读取",
+        )
+        .await)
     }
 
     // ── 网络（net.rs）─────────────────────────────────────────────
