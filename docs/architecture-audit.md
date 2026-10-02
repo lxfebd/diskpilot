@@ -11,6 +11,8 @@
 > - **5-3 agent-server TTL 缓存**：常驻进程用 `OnceLock<Mutex<Option<TtlSlot>>>` 对齐主进程三层 TTL——`HW_STATIC_TTL=300s` 套 hw_cpu/hw_memory/hw_motherboard（静态硬件不再每次重跑 PS）、`HW_DISK_TTL=300s` 套 hw_disk_smart。温度**不缓存**（HWiNFO/SuperIO 直读毫秒级，且"烫不烫"要最新值；主进程 10s THERMAL_TTL 是为压测循环防进程风暴，agent-server 无此循环）。错误不缓存，`None`（读不到）也缓存。
 > - **回归全绿**：workspace cargo check + clippy（0 警告）+ agent-server release 冒烟 70 OK / 8 ERR（全为预期守卫拒绝）/ 4 SKIP / 0 超时 + 前端 tsc + vitest 212/212。
 
+> **2026-10-03 补全（阶段 5 清单 100% 完成）**：fmt_bytes×6（cleanup/steam/diskx/hw/process/net → mod.rs 公共版，bsod 的 Path 签名版保留，KB 精度统一 1 位）；温度假值过滤收敛为 `hw::thermal_ready`（27.31℃ 标记值排除，两处内联→共享）；SMART 脚本二合一（删 `DISK_SMART_RAW_PS`，raw 复用 `DISK_SMART_PS`）。**过程中发现并修复 TTL 缓存污染 bug**：hw_cpu/hw_memory/hw_motherboard 原共用一个缓存槽，冒烟实锤互相返回错误结果（memory/motherboard 输出 CPU 文本），改每工具独立槽。提交 c47d278。
+
 ---
 
 ## 〇、先回答用户关心的核心问题
