@@ -4,6 +4,7 @@
 use serde::Serialize;
 
 use super::files::realpath_or_lexical;
+use crate::tools::fmt_bytes;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ProcessInfo {
@@ -455,19 +456,6 @@ pub fn start_process(command: &str, args: &[String], cwd: &str) -> Result<String
 #[cfg(not(windows))]
 pub fn start_process(_command: &str, _args: &[String], _cwd: &str) -> Result<String, String> {
     Ok("当前平台不是 Windows，进程启动不可用".into())
-}
-
-/// 字节数人类可读（同 `mod.rs::fmt_bytes` 语义；rustc 1.98 用 `{:.*}`）。
-fn fmt_bytes(n: u64) -> String {
-    if n >= 1024 * 1024 * 1024 {
-        format!("{:.*} GB", 1, n as f64 / 1024.0 / 1024.0 / 1024.0)
-    } else if n >= 1024 * 1024 {
-        format!("{:.*} MB", 1, n as f64 / 1024.0 / 1024.0)
-    } else if n >= 1024 {
-        format!("{:.*} KB", 0, n as f64 / 1024.0)
-    } else {
-        format!("{n} B")
-    }
 }
 
 #[cfg(all(test, windows))]

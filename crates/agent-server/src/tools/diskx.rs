@@ -26,7 +26,7 @@ use std::path::Path;
 use crate::ps::{json_array_of, ps_capture};
 
 use super::files::PathGuard;
-use crate::tools::parallel_walker;
+use crate::tools::{fmt_bytes, parallel_walker};
 
 // ── 常量与本地格式化 ──────────────────────────────────────────────────────
 
@@ -37,19 +37,6 @@ const MAX_FILES_WALK: usize = 500_000;
 const MAX_FILES_WALK_DUP: usize = 200_000;
 /// 头部哈希读取的字节数：64 KB。够抓绝大多数真实重复，又不会因为扫到几个大文件而拖死。
 const HEAD_HASH_BYTES: usize = 64 * 1024;
-
-/// 字节数人类可读（与 `hw.rs::fmt_bytes` 同语义；rustc 1.98 安全写法 `{:.*}`，不用 `{:.1f}`）。
-fn fmt_bytes(n: u64) -> String {
-    if n >= 1024 * 1024 * 1024 {
-        format!("{:.*} GB", 1, n as f64 / 1024.0 / 1024.0 / 1024.0)
-    } else if n >= 1024 * 1024 {
-        format!("{:.*} MB", 1, n as f64 / 1024.0 / 1024.0)
-    } else if n >= 1024 {
-        format!("{:.*} KB", 0, n as f64 / 1024.0)
-    } else {
-        format!("{n} B")
-    }
-}
 
 // ── 1. 大文件 Top N ──────────────────────────────────────────────────────
 

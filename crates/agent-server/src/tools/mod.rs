@@ -208,8 +208,11 @@ fn ttl_cached(
     Ok(v)
 }
 
-// 三个静态硬件缓存槽 + 一个磁盘 SMART 槽。
-static HW_STATIC_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
+// 每个静态硬件工具独立缓存槽（共用一个槽会被不同工具互相污染）：
+// hw_cpu / hw_memory / hw_motherboard / hw_disk_smart 各一个。
+static HW_CPU_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
+static HW_MEM_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
+static HW_MB_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
 static HW_DISK_CACHE: std::sync::OnceLock<TtlCache> = std::sync::OnceLock::new();
 
 #[derive(Debug, Clone)]
@@ -834,7 +837,7 @@ impl AgentServer {
         // 实时占用/频率字段随整包缓存，最多滞后 5 分钟——与主进程缓存整包同口径。
         Ok(blocking_call(
             30,
-            || ttl_cached(&HW_STATIC_CACHE, HW_STATIC_TTL, hw::collect_cpu),
+            || ttl_cached(&HW_CPU_CACHE, HW_STATIC_TTL, hw::collect_cpu),
             "CPU 信息采集",
         )
         .await)
@@ -854,7 +857,7 @@ impl AgentServer {
         // 内存是静态硬件，5 分钟缓存（对齐 HW_SNAPSHOT_TTL）。
         Ok(blocking_call(
             30,
-            || ttl_cached(&HW_STATIC_CACHE, HW_STATIC_TTL, hw::collect_memory),
+            || ttl_cached(&HW_MEM_CACHE, HW_STATIC_TTL, hw::collect_memory),
             "内存信息读取",
         )
         .await)
@@ -870,7 +873,7 @@ impl AgentServer {
         // 主板/BIOS 是静态硬件，5 分钟缓存（对齐 HW_SNAPSHOT_TTL）。
         Ok(blocking_call(
             30,
-            || ttl_cached(&HW_STATIC_CACHE, HW_STATIC_TTL, hw::collect_motherboard),
+            || ttl_cached(&HW_MB_CACHE, HW_STATIC_TTL, hw::collect_motherboard),
             "主板信息读取",
         )
         .await)

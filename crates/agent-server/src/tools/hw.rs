@@ -38,7 +38,7 @@ use serde_json::Value;
 use std::io::Read;
 
 use crate::ps::{json_array_of, ps_capture};
-use crate::tools::v_str;
+use crate::tools::{fmt_bytes, v_str};
 
 // ── JSON 取值小工具（与主项目 hw.rs 的 v_str / arr 同语义）─────────────────
 // v_str 已在 tools/mod.rs 共享，此处不再复刻。
@@ -58,17 +58,11 @@ fn get_f64(v: &Value, k: &str) -> Option<f64> {
     v.get(k).and_then(Value::as_f64)
 }
 
-/// 字节数人类可读（与主项目 `fmt_gb` 同语义；单位用 GB/MB/KB/B，小数 `{:.*}`）。
-fn fmt_bytes(n: u64) -> String {
-    if n >= 1024 * 1024 * 1024 {
-        format!("{:.*} GB", 1, n as f64 / 1024.0 / 1024.0 / 1024.0)
-    } else if n >= 1024 * 1024 {
-        format!("{:.*} MB", 1, n as f64 / 1024.0 / 1024.0)
-    } else if n >= 1024 {
-        format!("{:.*} KB", 0, n as f64 / 1024.0)
-    } else {
-        format!("{n} B")
-    }
+/// 温度是否真实可用：落在 `0..=120℃` 合理区间，且排除 MSACPI 未就绪的
+/// 标记值 2731（= 27.31 ℃ 的假值，恰好落入合理区间，须单独排除）。
+/// 五条温度采集路径共用同一判定，收敛到这里。
+fn thermal_ready(c: f64) -> bool {
+    (0.0..=120.0).contains(&c) && !(27.0..=27.6).contains(&c)
 }
 
 /// 大整数千分位（`1,234,567`），避免累计错误数挤成一团。
@@ -1260,9 +1254,8 @@ pub fn collect_temperature() -> Result<String, String> {
         let raw = get_f64(t, "CurrentTemperature").unwrap_or(0.0);
         let c = raw / 10.0 - 273.15;
         // 热区未就绪时 MSACPI 报标记值 2731（= 27.31 ℃）或 0，落在 0~120 区间内会被当成
-        // 真实温度——这正是「电脑温度=室温」假象的来源。必须单独排除该标记值区间。
-        let not_ready = (27.0..=27.6).contains(&c);
-        if (0.0..=120.0).contains(&c) && !not_ready {
+        // 真实温度——这正是「电脑温度=室温」假象的来源。`thermal_ready` 统一排除。
+        if thermal_ready(c) {
             out.push(format!(
                 "- {}：{:.*} ℃",
                 if v_str(t, "InstanceName").is_empty() {
@@ -1765,8 +1758,7 @@ fn collect_temperature_fast_parse() -> Result<Option<f64>, String> {
     for t in &arr {
         let raw = get_f64(t, "CurrentTemperature").unwrap_or(0.0);
         let c = raw / 10.0 - 273.15;
-        let not_ready = (27.0..=27.6).contains(&c);
-        if (0.0..=120.0).contains(&c) && !not_ready && c > best {
+        if thermal_ready(c) && c > best {
             best = c;
         }
     }
@@ -2198,36 +2190,16 @@ pub fn collect_usb_devices() -> Result<String, String> {
 /// Windows 普通权限拿不到标准 SMART 属性表（ID 0x05 重分配扇区等），
 /// 需要 smartctl（smartmontools，第三方，默认未装）——这里先给能拿到的
 /// 可靠性计数，并明确标注不是完整 SMART 表，避免误导。
-const DISK_SMART_RAW_PS: &str = r#"
-$ErrorActionPreference='SilentlyContinue'
-$disks=Get-PhysicalDisk
-$out=@($disks | ForEach-Object {
-  $rc=$_ | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue
-  [ordered]@{
-    friendly=[string]$_.FriendlyName
-    health=[string]$_.HealthStatus
-    operational=[string]$_.OperationalStatus
-    temperature=if($rc){$rc.Temperature}else{$null}
-    wear=if($rc){$rc.Wear}else{$null}
-    read_errors=if($rc){$rc.ReadErrorsTotal}else{$null}
-    write_errors=if($rc){$rc.WriteErrorsTotal}else{$null}
-    start_stop=if($rc){$rc.StartStopCycleCount}else{$null}
-    load_unload=if($rc){$rc.LoadUnloadCycleCount}else{$null}
-    power_on_hours=if($rc){$rc.PowerOnHours}else{$null}
-    temperature_max=if($rc){$rc.TemperatureMax}else{$null}
-  }
-})
-$out | ConvertTo-Json -Depth 4 -Compress
-"#;
-
 /// SMART 可靠性计数器（只读，普通权限）。
 ///
 /// **已知限制**：输出的是 `Get-StorageReliabilityCounter` 的可靠性计数，
 /// **不是**标准 SMART 属性表 ID 0x01~0xE6。要完整 SMART 表需要 smartctl
 /// （第三方可选，本工具不自动装）。标注清楚，避免误读。
+///
+/// 复用 `DISK_SMART_PS`（字段是其超集），不单独维护脚本。
 #[cfg(windows)]
 pub fn collect_disk_smart_raw() -> Result<String, String> {
-    let raw = ps_capture(DISK_SMART_RAW_PS)?;
+    let raw = ps_capture(DISK_SMART_PS)?;
     let arr: Vec<Value> =
         serde_json::from_str(&json_array_of(raw.trim().trim_start_matches('\u{feff}')))
             .map_err(|e| format!("解析磁盘可靠性计数失败：{e}"))?;

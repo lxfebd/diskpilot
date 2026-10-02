@@ -33,6 +33,7 @@ use std::path::{Path, PathBuf};
 use diskpilot_scaffold::{compile_all, detect_compiled, expand_env, load_dir, Scope};
 
 use super::files::PathGuard;
+use crate::tools::fmt_bytes;
 
 /// 单次遍历的文件硬上限：C 盘几十万文件也够（与 diskx 大文件扫描同量级）。
 const MAX_FILES_WALK: usize = 500_000;
@@ -283,18 +284,3 @@ pub fn collect_cleanup_suggestions(_root: String, _top_n: usize) -> Result<Strin
     Ok("当前平台不是 Windows，清理建议不可用".into())
 }
 
-/// 字节数人类可读（同 `mod.rs::fmt_bytes` 语义；rustc 1.98 用 `{:.*}`）。
-fn fmt_bytes(n: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
-    let mut v = n as f64;
-    let mut u = 0;
-    while v >= 1024.0 && u < UNITS.len() - 1 {
-        v /= 1024.0;
-        u += 1;
-    }
-    if u == 0 {
-        format!("{n} B")
-    } else {
-        format!("{:.*} {}", 1, v, UNITS[u])
-    }
-}

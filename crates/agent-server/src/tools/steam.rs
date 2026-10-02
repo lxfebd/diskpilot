@@ -15,6 +15,8 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::tools::fmt_bytes;
+
 /// 盘点本机 Steam 游戏库（只读）。
 ///
 /// `top_n`：每库最多列多少个游戏（按大小降序截断），默认 20、钳 1..=100。
@@ -124,20 +126,4 @@ pub fn collect_steam_games(top_n: usize) -> Result<String, String> {
 #[cfg(not(windows))]
 pub fn collect_steam_games(_top_n: usize) -> Result<String, String> {
     Ok("当前平台不是 Windows，Steam 游戏库盘点不可用".into())
-}
-
-/// 字节数人类可读（同 `mod.rs::fmt_bytes` 语义；rustc 1.98 用 `{:.*}`）。
-fn fmt_bytes(n: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
-    let mut v = n as f64;
-    let mut u = 0;
-    while v >= 1024.0 && u < UNITS.len() - 1 {
-        v /= 1024.0;
-        u += 1;
-    }
-    if u == 0 {
-        format!("{n} B")
-    } else {
-        format!("{:.*} {}", 1, v, UNITS[u])
-    }
 }

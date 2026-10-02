@@ -53,24 +53,11 @@
 use serde_json::Value;
 
 use crate::ps::{json_array_of, ps_capture};
-use crate::tools::v_str;
+use crate::tools::{fmt_bytes, v_str};
 #[cfg(windows)]
 use crate::tools::process;
 
 // ── 通用小工具（不依赖平台）────────────────────────────────────────────
-
-/// 字节数人类可读。
-fn fmt_bytes(n: u64) -> String {
-    if n >= 1024 * 1024 * 1024 {
-        format!("{:.*} GB", 1, n as f64 / 1024.0 / 1024.0 / 1024.0)
-    } else if n >= 1024 * 1024 {
-        format!("{:.*} MB", 1, n as f64 / 1024.0 / 1024.0)
-    } else if n >= 1024 {
-        format!("{:.*} KB", 0, n as f64 / 1024.0)
-    } else {
-        format!("{n} B")
-    }
-}
 
 /// 位速率（bps）人类可读：`1.2 Gbps` / `800 Mbps` / `未上报`。
 fn fmt_bps(bps: u64) -> String {
