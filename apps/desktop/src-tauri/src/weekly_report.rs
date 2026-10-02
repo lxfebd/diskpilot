@@ -1,9 +1,9 @@
 //! 周巡检简报（health-butler P1）：每周一次只读打包体检，产出「本周健康简报」。
 //!
 //! 设计对齐 reminder（R3）：复用 `std::thread::spawn + loop + sleep` 调度、
-//! `cleanup_suggestions` 引擎（cached_only=false 真算，但**只读**）、
-//! `app.emit` 通知通道。巡检本身绝不写盘、绝不清理——写路径仍由总览
-//! 确认窗（user_confirmed 硬校验）独占。
+//! `cleanup_suggestions` 引擎（cached_only=true，只读缓存树、**绝不为未扫描盘
+//! 触发全盘 walk**，后台高频必须轻量）、`app.emit` 通知通道。巡检本身绝不
+//! 写盘、绝不清理——写路径仍由总览确认窗（user_confirmed 硬校验）独占。
 //!
 //! - **数据**：各盘建议可清合计（cleanup_suggestions）+ 最高温（fan_curve_advice
 //!   TTL 缓存）+ 本周硬件快照（hw_history 归档，首尾对比 temperature/通电）。
@@ -93,7 +93,7 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
             state.clone(),
             root.clone(),
             None,
-            Some(false),
+            Some(true),
         ))?;
         let bytes: u64 = suggs.iter().map(|s| s.bytes).sum();
         if bytes > 0 {

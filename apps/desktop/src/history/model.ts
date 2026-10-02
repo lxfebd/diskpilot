@@ -1,6 +1,7 @@
 // 操作历史纯逻辑（P2c）：动作过滤 / 关键词过滤 / 汇总 / 按天分组。
 // 无 React、无模块级 t()——文案键由组件在渲染点求值（i18n 铁律）。
 import type { UndoEntry } from '../types';
+import { formatDateKey } from '../format';
 
 export type UndoActionFilter = 'all' | UndoEntry['action'];
 
@@ -52,10 +53,7 @@ export interface UndoDayGroup {
 }
 
 function dayKeyOf(ts: string): string {
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return formatDateKey(new Date(ts));
 }
 
 /** 按本地日期分组；输入须是「最新在前」的列表（后端 list_undo 已倒序），组保持出现顺序。 */

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, Flame, Loader2, Sparkles, Thermometer } from 'lucide-react';
 import { api } from '../../api';
 import type { WeeklyReport } from '../../api';
-import { formatBytes } from '../../format';
+import { formatBytes, formatDateKey } from '../../format';
 import { useStore } from '../../store';
 import { useT } from '../../i18n';
 
@@ -19,8 +19,7 @@ export function reportAgeLabel(ts: number, nowSec: number, t: ReturnType<typeof 
   const days = Math.floor((nowSec - ts) / DAY_SECS);
   if (days <= 0) return t('history.weekly.justNow');
   if (days <= 30) return t('history.weekly.daysAgo', { n: days });
-  const d = new Date(ts * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return formatDateKey(new Date(ts * 1000));
 }
 
 export function WeeklyHealthCard({ onGenerated }: { onGenerated?: () => void }) {

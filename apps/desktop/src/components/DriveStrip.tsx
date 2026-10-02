@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, HardDrive, RefreshCw, ScanSearch } from 'lucide-react';
 import { useStore } from '../store';
-import { formatBytes } from '../format';
+import { formatBytes, normKey, driveLetter } from '../format';
 import { useT } from '../i18n';
 
 interface DriveInfo {
@@ -11,12 +11,6 @@ interface DriveInfo {
   free_bytes: number;
 }
 
-function normKey(p: string): string {
-  return p.replace(/[\\/]+$/, '').toUpperCase();
-}
-function driveLetter(p: string): string {
-  return p.replace(/\\$/, '').replace(/:$/, '');
-}
 
 type Props = {
   drives: DriveInfo[];

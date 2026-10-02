@@ -10,11 +10,11 @@ import { mcpApi } from './api/mcp';
 /**
  * api.ts —— 前端唯一后端入口（聚合层）。
  *
- * 68 个 Tauri 命令按「树干」域拆到 api/ 子模块，本文件只做聚合与再导出，
+ * Tauri 命令按「域」拆到 api/ 子模块，本文件只做聚合与再导出，
  * 保证调用面 `api.scan()` / `import type { HwInfo } from './api'` 完全不变。
  * 域文件：api/scan.ts（扫描） · api/clean.ts（清理/撤销/scaffold）
  *          api/ai.ts（AI 搜索/代理/上下文） · api/system-ext.ts（Steam/硬件/工具墙/插件/系统工具）
- *          api/agent.ts（agent-server MCP 工具集）
+ *          api/agent.ts（agent-server MCP 工具集） · api/mcp.ts（用户自定义 MCP 服务器）
  */
 export const api = {
   // ── 扫描域 ──

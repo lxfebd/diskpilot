@@ -1285,7 +1285,6 @@ pub fn run() {
             scaffold_source,
             scaffold_registry::scaffold_registry_list,
             scaffold_registry::scaffold_registry_install,
-            cleanup::scope_sizes,
             cleanup::scope_sizes_batch,
             cleanup::cleanup_suggestions,
             cleanup::chat_scan_context,

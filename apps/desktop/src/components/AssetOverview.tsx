@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket } from 'lucide-react';
 import { api, type SpacePoint, type StartupItem } from '../api';
 import { CAT_COLORS } from '../colors';
-import { formatBytes, formatBytesTriple } from '../format';
+import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
 import { useStore, type CleanupProposalItem } from '../store';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
@@ -33,14 +33,6 @@ type Props = {
   onGoWorkspace: () => void;
   onOpenCleanup: () => void;
 };
-
-function normKey(p: string): string {
-  return p.replace(/[\\/]+$/, '').toUpperCase();
-}
-
-function driveLetter(p: string): string {
-  return p.replace(/\\$/, '').replace(/:$/, '');
-}
 
 function catColor(seed: string): string {
   let h = 0;
@@ -90,9 +82,9 @@ function DriveGauge({ usedBytes, totalBytes }: { usedBytes: number; totalBytes: 
 
 // ── 磁盘空间趋势纯逻辑（R6）：抽成可测函数，组件只负责渲染 ──────────
 
-/** 路径规范化比较键：C:\ 与 C:\Users 视为同盘（取盘根两字符）。 */
-export function spaceNormKey(p: string): string {
-  return p.replace(/[\\/]+$/, '').toUpperCase();
+/** 路径规范化比较键：C:\ 与 C:\Users 视为同盘（取盘根两字符）。复用 format.normKey。 */
+function spaceNormKey(p: string): string {
+  return normKey(p);
 }
 
 /** 把 {root -> 快照} 聚合到盘级序列：按时间排序、每盘保留最新 14 条。 */

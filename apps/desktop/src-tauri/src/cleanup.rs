@@ -261,44 +261,6 @@ pub(crate) struct ScopeSize {
     total_files: u64,
 }
 
-/// Walk `root_path` and tally how many bytes / files each `[[scope]]` glob
-/// in `scaffold_id` would match. Used by the Studio panel to show per-scope
-/// occupancy alongside the generic "largest sub-items" view. Files matching
-/// multiple scopes are counted once per matching scope (the same physical
-/// bytes — overlap means cleaning either scope reclaims them).
-#[tauri::command]
-pub(crate) async fn scope_sizes(
-    state: State<'_, AppState>,
-    scaffold_id: String,
-    root_path: String,
-    scope_days: Option<HashMap<String, u32>>,
-    wxid_filter: Option<Vec<String>>,
-    env_filter: Option<Vec<String>>,
-) -> Result<Vec<ScopeSize>, String> {
-    let scaffold = state
-        .scaffolds
-        .lock()
-        .unwrap()
-        .iter()
-        .find(|s| s.id == scaffold_id)
-        .cloned()
-        .ok_or_else(|| format!("scaffold not found: {scaffold_id}"))?;
-    let builds = build_scope_builds(&scaffold)?;
-
-    let root = PathBuf::from(&root_path);
-    tokio::task::spawn_blocking(move || {
-        tally_scope_sizes(
-            &root,
-            &builds,
-            scope_days.as_ref(),
-            wxid_filter.as_deref(),
-            env_filter.as_deref(),
-        )
-    })
-    .await
-    .map_err(|e| e.to_string())
-}
-
 #[derive(Clone, Debug)]
 pub(crate) struct ScopeBuild {
     pub(crate) id: String,

@@ -5,14 +5,9 @@ import { api } from './api';
 import type { HwInfo } from './api';
 import { pruneMany, treeMayContain } from './tooltree';
 import { isPermEnabled } from './permissions';
-import { formatBytes } from './format';
+import { formatBytes, normKey } from './format';
 import { t } from './i18n';
 import { common } from './i18n/namespaces/common';
-
-// 盘符/路径归一化，作为 scanCache 的 key：C:\\ → C:、统一大小写。
-function normKey(p: string): string {
-  return p.replace(/[\\/]+$/, '').toUpperCase();
-}
 
 const CHAT_SESSIONS_KEY = 'diskpilot.chatSessions';
 const ACTIVE_CHAT_KEY = 'diskpilot.activeChatId';

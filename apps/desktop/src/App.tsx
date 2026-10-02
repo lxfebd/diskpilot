@@ -22,7 +22,7 @@ import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CleanupProposalDialog } from './components/CleanupProposalDialog';
 import Disclaimer from './components/Disclaimer';
-import { formatBytes, ellipsizePath } from './format';
+import { formatBytes, ellipsizePath, normKey } from './format';
 import { loadSettings, isConfigured } from './advisorClient';
 import { prefs } from './theme';
 import { APP_VERSION } from './version';
@@ -38,10 +38,6 @@ import {
   type PageId,
 } from './nav';
 import type { Node } from './types';
-
-function normKey(p: string): string {
-  return p.replace(/[\\/]+$/, '').toUpperCase();
-}
 
 interface ScanStatsEvent {
   mode: string;

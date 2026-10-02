@@ -1,6 +1,6 @@
 // AI 可操作工具集（agent-server MCP）—— 前端接入层。
 // agent-server 是独立进程（stdio MCP），后端 agent.rs 负责 spawn + rmcp client，
-// 这里只暴露 3 个调用面：列工具清单 / 调工具 / 探活。
+// 这里只暴露 2 个调用面：列工具清单 / 调工具。
 
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '../env';
@@ -29,6 +29,4 @@ export const agentApi = {
     isTauri
       ? invoke<AgentToolCall>('agent_call_tool', { name, arguments: args, confirmed })
       : Promise.reject(new Error(t('errors.agentDesktopOnly'))),
-  /** 探活：agent-server.exe 是否已构建/可定位（前端据此显示「工具集未就绪」提示）。 */
-  ready: () => (isTauri ? invoke<boolean>('agent_server_ready') : Promise.resolve(false)),
 };

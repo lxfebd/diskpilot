@@ -235,14 +235,6 @@ export const systemExtApi = {
     isTauri
       ? invoke<{ installed: InstalledPlugin[]; total_events: number }>('plugin_list_installed')
       : Promise.resolve({ installed: [], total_events: 0 }),
-  pluginRegistryInstallVersion: (id: string, version: string | undefined, confirmed: boolean) =>
-    requirePluginManage(() =>
-      requireConfirmed(confirmed).then(() =>
-        isTauri
-          ? invoke<RegistryInstallOut>('plugin_registry_install', { id, version: version ?? null, confirmed })
-          : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_registry_install' }))),
-      ),
-    ),
   pluginRegistryUpdate: (id: string, version: string | undefined, confirmed: boolean) =>
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>

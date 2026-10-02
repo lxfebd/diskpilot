@@ -3,8 +3,9 @@
 //! 硬校验），本模块没有任何写操作。
 //!
 //! 设计对齐：
-//! - **引擎复用**：直接调 `cleanup::cleanup_suggestions`（带 `cached_only=false`
-//!   真算，但只读——与总览页 cached_only=true 的「展示口径」区分：提醒要真数）。
+//! - **引擎复用**：直接调 `cleanup::cleanup_suggestions`（带 `cached_only=true`，
+//!   只读最近一次扫描/缓存树，**绝不因未扫描盘而触发全盘 walk**——后台定时
+//!   高频跑，必须与总览页「主动查建议」区分：后台只要当前已知的建议量）。
 //! - **配置持久化**：`app_data_dir()/reminder.json`（仿 general_config 读→合并→
 //!   写；读失败静默 default）。
 //! - **通知通道**：`app.emit("cleanup-reminder", …)` → 前端 listen → toast /
@@ -167,7 +168,7 @@ fn compute_reminder(
             state.clone(),
             root.clone(),
             None,
-            Some(false),
+            Some(true),
         ))?;
         let bytes: u64 = suggs.iter().map(|s| s.bytes).sum();
         if bytes > 0 {

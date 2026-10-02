@@ -43,3 +43,20 @@ export function ellipsizePath(p: string, maxLen = 48): string {
   const tailLen = maxLen - headLen - 1; // 1 个 … 占位
   return `${p.slice(0, headLen)}…${p.slice(-tailLen)}`;
 }
+
+/** 路径归一化：去掉尾部分隔符、统一大写，用作按盘符/路径做 Map key。 */
+export function normKey(p: string): string {
+  return p.replace(/[\\/]+$/, '').toUpperCase();
+}
+
+/** 从盘符路径取盘号字母，如 `C:\` → `C`、`C:\Users` → `C`。 */
+export function driveLetter(p: string): string {
+  return p.replace(/\\$/, '').replace(/:$/, '');
+}
+
+/** Date → `YYYY-MM-DD`（地区中立）。用于按天分组/展示日期，与 `toLocaleDateString` 时区语义一致。 */
+export function formatDateKey(d: Date): string {
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

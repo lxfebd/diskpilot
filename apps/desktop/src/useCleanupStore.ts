@@ -114,14 +114,13 @@ function patchInSession(fn: (s: CleanupSession) => Partial<CleanupSession>): voi
   useCleanupStore.setState({ session: { ...cur, ...fn(cur) } });
 }
 
-/** 保留期 / 账号筛选变了 → 300ms 防抖后重测大小（避免逐字输入打爆后端）。 */
-function scheduleSizeFetch() {
+/** 重测当前会话的每个 scope 大小。debounceMs>0 时防抖（保留期/账号筛选变了重测），否则立即（手动刷新余量/真删后）。 */
+function fetchScopeSizes(debounceMs: number): void {
   const cur = getCur();
   if (!cur || cur.matches.length === 0 || (cur.scaffold.scopes ?? []).length === 0) return;
   clearSizeTimer();
   const seq = ++sizeSeq;
-  sizeTimer = window.setTimeout(() => {
-    sizeTimer = null;
+  const run = () => {
     if (seq !== sizeSeq) return;
     const s = getCur();
     if (!s) return;
@@ -134,49 +133,35 @@ function scheduleSizeFetch() {
     api
       .scopeSizesBatch(s.scaffold.id, paths, s.daysByScope, wxidFilter)
       .then((batch) => {
+        if (seq !== sizeSeq) return;
         patchInSession(() => ({
           scopeSizes: aggregateScopeSizes(batch.map((b) => b.sizes)),
           scopeLoading: false,
         }));
       })
       .catch((e) => {
+        if (seq !== sizeSeq) return;
         patchInSession(() => ({
           scopeLoading: false,
           err: t('cleanup.errScopeSizes', { msg: String(e) }),
         }));
       });
-  }, 300);
+  };
+  if (debounceMs > 0) {
+    sizeTimer = window.setTimeout(run, debounceMs);
+  } else {
+    run();
+  }
+}
+
+/** 保留期 / 账号筛选变了 → 300ms 防抖后重测大小（避免逐字输入打爆后端）。 */
+function scheduleSizeFetch() {
+  fetchScopeSizes(300);
 }
 
 /** 手动重测（真删成功后刷新余量、conda 清完环境后）。 */
 function fetchSizesNow(): void {
-  const cur = getCur();
-  if (!cur || cur.matches.length === 0) return;
-  clearSizeTimer();
-  const seq = ++sizeSeq;
-  const s = cur;
-  const paths = s.matches.map((m) => m.path);
-  const wxidFilter =
-    s.wxids.length > 0 && s.selectedWxids.size < s.wxids.length
-      ? [...s.selectedWxids]
-      : undefined;
-  patchInSession(() => ({ scopeLoading: true }));
-  api
-    .scopeSizesBatch(s.scaffold.id, paths, s.daysByScope, wxidFilter)
-    .then((batch) => {
-      if (seq !== sizeSeq) return;
-      patchInSession(() => ({
-        scopeSizes: aggregateScopeSizes(batch.map((b) => b.sizes)),
-        scopeLoading: false,
-      }));
-    })
-    .catch((e) => {
-      if (seq !== sizeSeq) return;
-      patchInSession(() => ({
-        scopeLoading: false,
-        err: t('cleanup.errScopeSizes', { msg: String(e) }),
-      }));
-    });
+  fetchScopeSizes(0);
 }
 
 /** conda 环境列表：默认勾选 default_checked（stale 90d 推荐）。 */
@@ -556,6 +541,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       const preview = s0.preview;
       if (!s || !preview) return;
       let totalEntries = 0;
+      let totalFreedBytes = 0;
       const failures: string[] = [];
       const runReal = (scopeId: string, path: string, opts: ExecuteScopeOpts) =>
         api
@@ -563,6 +549,9 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           .then(
             (entries) => {
               totalEntries += entries.length;
+              // 后端已返回每项实际释放字节（UndoEntry.bytes_freed），据此累加，
+              // 不再用预览预估值记账（True/False 干删口径见后端）。
+              for (const e of entries) totalFreedBytes += e.bytes_freed ?? 0;
             },
             (e) => {
               // 诊断串（scope @ 路径: 后端原文），全 ASCII 分隔符便于拼进文案表。
@@ -615,10 +604,10 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
         patchInSession(() => ({ selectedScopes: new Set() }));
       }
 
-      // 只有真清掉东西才累加「已回收」；字节数标「（预估）」——UndoEntry 不带
-      // 每项实际字节，实测口径待后端补字段。全败时不记账（失败不能算成功）。
+      // 只有真清掉东西才累加「已回收」。字节数用后端实测（bytes_freed 累计），
+      // 而非预览预估值——后端已返 actual，不再标「预估」。全败时不记账（失败不能算成功）。
       const allFailed = failures.length > 0 && totalEntries === 0;
-      if (!allFailed) useStore.getState().addReclaimed(preview.totalBytes);
+      if (!allFailed) useStore.getState().addReclaimed(totalFreedBytes);
       if (allFailed) {
         patchInSession(() => ({
           err: t('cleanup.allFailed', {
@@ -630,7 +619,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       } else {
         patchInSession(() => ({
           msg:
-            t('cleanup.done', { n: totalEntries, size: formatBytes(preview.totalBytes) }) +
+            t('cleanup.done', { n: totalEntries, size: formatBytes(totalFreedBytes) }) +
             (failures.length > 0
               ? t('cleanup.partialFail', {
                   n: failures.length,
