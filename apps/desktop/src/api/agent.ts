@@ -29,4 +29,11 @@ export const agentApi = {
     isTauri
       ? invoke<AgentToolCall>('agent_call_tool', { name, arguments: args, confirmed })
       : Promise.reject(new Error(t('errors.agentDesktopOnly'))),
+  /** 掐断当前所有在飞工具调用（用户点「停止」）。后端 agent_call_tool 的
+   *  select 分支收到取消信号立即返回错误，AI 回路随之收尾——此前停止按钮
+   *  对已在飞的工具调用无效（挂死 12h 的根因之一）。 */
+  cancelToolCalls: () =>
+    isTauri
+      ? invoke<boolean>('agent_tool_cancel')
+      : Promise.resolve(false),
 };
