@@ -146,12 +146,27 @@ async function aiRequest(url: string, init: RequestInit): Promise<HttpResponseLi
         for (const k of Object.keys(h)) headers[k] = String(h[k]);
       }
       const bodyStr = typeof init.body === 'string' ? init.body : '';
+      // 前端超时兜底必须在这里（Tauri 分支）：`timer` abort 只对浏览器 fetch
+      // 分支生效，`api.aiProxy` 的 promise 不理会那个 controller——若后端
+      // reqwest 挂起（网络黑洞/上游不响应），invoke 可以无限 pending，pending
+      // 气泡永不复位。Promise.race 让本地 120s 定时器强制 reject，保证 catch
+      // 一定能走到、`patchTurn(pending:false)` 一定执行。后端收到 aiCancel 会
+      // 顺手掐掉在飞 reqwest，双保险。
       const promise = api.aiProxy(url, init.method ?? 'POST', headers, bodyStr, timeoutMs / 1000, cancelKey);
       // 外部 abort（用户点停止）→ 后端掐断请求，与浏览器版行为对齐
       const stopCancel = () => { void api.aiCancel(cancelKey).catch(() => {}); };
       origSignal?.addEventListener('abort', stopCancel, { once: true });
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        const res = await promise;
+        const res = await Promise.race([
+          promise,
+          new Promise<never>((_, rej) => {
+            timer = setTimeout(() => {
+              void api.aiCancel(cancelKey).catch(() => {});
+              rej(new Error(`AI 请求超时（${timeoutMs / 1000}s）或已取消`));
+            }, timeoutMs);
+          }),
+        ]);
         return {
           ok: res.status >= 200 && res.status < 300,
           status: res.status,
@@ -159,6 +174,7 @@ async function aiRequest(url: string, init: RequestInit): Promise<HttpResponseLi
           json: async () => parseFirstJson(res.body),
         };
       } finally {
+        if (timer) clearTimeout(timer);
         origSignal?.removeEventListener('abort', stopCancel);
       }
     }
@@ -205,11 +221,12 @@ export function extractAnthropicText(data: unknown): string {
 // 聊天主 system prompt：freeChat（本文件）与 agentChat（agent.ts 的默认
 // system）共用，所以放 provider 层导出。
 export const CHAT_SYSTEM = `你是 DiskPilot 的 AI 磁盘顾问，帮用户搞清楚磁盘上的文件夹是什么、能不能删。
-实事求是原则（最重要）：
-- 只根据提供的元数据和工具返回的结果下结论；绝对不编造文件名、路径、软件行为或网络信息。
-- 拿不准就先调用工具核实，再回答：list_dir / path_size 查本机真实情况，get_disk_health 读实时磁盘容量，get_cleanup_suggestions 看后端算好的清理建议，get_system_info 查系统配置，web_search 查不确定或较新的客观事实（软件是什么、缓存机制、最新版本行为等）。
+实事求是原则（最重要，违反等于失职）：
+- 只根据工具返回的结果和用户提供的元数据下结论。绝对禁止编造文件名、路径、大小、软件行为或网络信息。
+- 工具返回什么就说什么：列目录（list_dir）返回的条目清单是唯一事实来源。**清单里没有的条目一律视为不存在，不得凭印象补充、拼凑或联想**——比如列过某个目录后，清单里没有的子目录（哪怕名字听起来合理）绝不能写进回答。
+- 每条路径必须来自工具返回或用户明说；拿不准就先调用工具核实：list_dir / path_size 查本机真实情况，get_disk_health 读实时磁盘容量，get_cleanup_suggestions 看后端算好的清理建议，get_system_info 查系统配置，web_search 查不确定或较新的客观事实（软件是什么、缓存机制、最新版本行为等）。
 - 问"磁盘还剩多少空间 / 哪块盘满了 / 该清理什么"时，先调 get_disk_health / get_cleanup_suggestions 拿真实数字，再回答。
-- 引用联网结果时给出来源链接；把「已核实的事实」和「你的推测」分开说。
+- 引用联网结果时给出来源链接；把「已核实的事实」和「你的推测」分开说，推测必须明确标注"这是推测"。
 - 建议删除时说清楚删哪个范围、用什么方式（回收站 / 手动整理 / 卸载应用）；绝不建议对系统路径跑 rm -rf。
 - 你不能直接删除、回收、移动任何文件。你的职责是分析并输出清理建议清单（propose_cleanup_plan），由用户逐项确认后才执行。用户明确想清理 / 释放空间时，先核实路径，再调用 propose_cleanup_plan 生成清单。清单里每项必须写清：是什么 / 干什么用的 / 删了会怎样，并标注风险等级（safe/caution/danger）。危险路径（盘根、Windows、Program Files、用户主目录）后端会拦截，切勿尝试规避；系统目录、软件安装目录、用户文档/照片/下载一律不要列入。
 - 中文回答，简洁（2-5 句），列表优先。
@@ -225,7 +242,9 @@ const OVERVIEW_SYSTEM = `You are DiskPilot's AI advisor. The user just finished 
 
 【不要动】 简短提一下扫描里看到的不该动的东西（系统目录 / 用户文档），一行带过。
 
-口语化中文，不要 markdown bullet（用纯文本换行就行），不要客套话。`;
+口语化中文，不要 markdown bullet（用纯文本换行就行），不要客套话。
+
+事实约束（同样重要）：JSON 摘要里的路径和大小是唯一事实来源。目录名、大小、软件归属只能来自摘要；摘要里没有的目录不得出现，大小不得改动或发挥。不知道的软件归属就写"未识别"，不要猜。`;
 
 export async function overviewChat(summary: object, signal?: AbortSignal): Promise<string> {
   return runChatRaw(OVERVIEW_SYSTEM, JSON.stringify(summary, null, 2), undefined, signal);

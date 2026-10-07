@@ -126,6 +126,10 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   const stopAi = () => {
     if (inflight.current > 0 && cancelRef.current) {
       cancelRef.current.abort();
+      // 掐断后端在飞的工具调用：abort 只能掐前端 fetch/LLM 请求，对已在飞
+      // 的 invoke('agent_call_tool') 无效——工具挂死时循环永不收尾（挂 12h
+      // 实测）。agent_tool_cancel 让后端 select 分支立即返回取消错误。
+      void api.cancelToolCalls?.().catch(() => {});
       // 通知后端停止正在跑的压测（stress_test / stress_test_gpu）：AI 可能在
       // 对话里启动了长压测，停止按钮一并掐掉。stress_cancel 写跨进程停止文件
       // （%TEMP%/diskpilot-stress-stop.flag），压测进程（哪怕不是本次调用 spawn
@@ -197,15 +201,24 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   // Auto-fire overview the moment scan finishes, once per scan.
   // key 里带 scanSeq：同一路径被强制重扫（scanSeq 递增）时允许重新分析；
   // 纯切页（root.path/scanSeq 都不变）则跳过，不再重复生成总览。
+  // 恢复续跑优先：若活动 turns 里有「上次没跑完的总览解析」（sanitizeTurns
+  // 打的 needsResume 标记，含旧数据迁移）且目标路径就是当前 root，复用旧
+  // 回合补跑（existingTurnId）——而不是再推一条重复解析。都占住 key 防重。
   useEffect(() => {
     if (!root) return;
+    if (!prefs.autoOverview) return;
     const key = `${root.path}:${scanSeq}`;
     if (analyzedScanKey === key) return;
+    const pendingResume = turns.find((x) => x.needsResume && x.overviewPath === root.path);
+    if (pendingResume) {
+      analyzedScanKey = key;
+      runOverview(root, pendingResume.id);
+      return;
+    }
     analyzedScanKey = key;
-    if (!prefs.autoOverview) return;
     runOverview(root);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [root?.path, scanSeq]);
+  }, [turns, root?.path, scanSeq]);
 
   // No more auto-advice on node change — the user runs ONE conversation,
   // dropped items become pending pills until they send.
@@ -317,15 +330,23 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
     }
   };
 
-  const runOverview = async (r: Node) => {
+  // r: 目标路径树。existingTurnId 用于「续跑」：恢复时发现上次没跑完的
+  // 总览解析，复用原回合（重新置 pending + 清 needsResume），分析结果
+  // 填回同一条气泡——而不是再推一条重复解析。
+  const runOverview = async (r: Node, existingTurnId?: string) => {
     beginReq();
-    const turnId = uid();
-    pushTurn({
-      id: turnId,
-      role: 'assistant',
-      text: t('chat.overview.scanned', { path: r.path, size: formatBytes(r.size), count: r.file_count.toLocaleString() }),
-      pending: true,
-    });
+    const turnId = existingTurnId ?? uid();
+    if (existingTurnId) {
+      patchTurn(turnId, { pending: true, needsResume: false });
+    } else {
+      pushTurn({
+        id: turnId,
+        role: 'assistant',
+        text: t('chat.overview.scanned', { path: r.path, size: formatBytes(r.size), count: r.file_count.toLocaleString() }),
+        pending: true,
+        overviewPath: r.path,
+      });
+    }
     try {
       // 优先走 Rust 侧 chat_scan_context（后端缓存的扫描树直接算 Top 条目 +
       // 可回收字节），只有非 Tauri/后端无树时才回退浏览器侧 JS 遍历。
@@ -350,11 +371,23 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
         summary = buildOverviewSummary(r);
       }
       const reply = await overviewChat(summary, cancelRef.current?.signal);
-      patchTurn(turnId, { text: reply, pending: false });
+      // patch 整段替换正文：续跑/迁移的旧回合里「（上次的分析被中断，未完成）」
+      // 残留随之清掉，气泡只留完整的解析结果。
+      patchTurn(turnId, {
+        text: reply,
+        pending: false,
+        needsResume: false,
+        ...(existingTurnId ? {} : { overviewPath: r.path }),
+      });
     } catch (e) {
+      // 补跑失败保留 needsResume（下次进应用可重试），首次失败同样保留
+      // overviewPath——正文被错误文案覆盖前先把旧的中断残留清掉，避免
+      // 「中断文案 + 错误文案」叠在一起。
       patchTurn(turnId, {
         text: errText(e) + '\n' + t('chat.overview.dragHint'),
         pending: false,
+        needsResume: !!existingTurnId,
+        overviewPath: r.path,
       });
     } finally {
       endReq();
@@ -928,6 +961,7 @@ const TurnRow = memo(function TurnRow({ turn, node, recycleNode }: TurnRowProps)
         <TraceBlock trace={turn.trace} live={!!turn.pending} />
       )}
       <div className="chat-bubble">
+        {turn.pending && <span className="chat-spinner" aria-label="loading" />}
         {turn.role === 'assistant'
           ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.text}</ReactMarkdown>
           : turn.text}

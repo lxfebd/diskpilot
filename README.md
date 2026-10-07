@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v0.2.1-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.1)
+[![Release](https://img.shields.io/badge/Release-v0.2.3-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.3)
 
 [下载](#下载) · [看效果](#看效果) · [功能一览](#功能一览) · [安全模型](#安全模型) · [隐私](#隐私) · [架构](#架构) · [文档](#文档) · [路线图](#路线图) · [开发](#开发) · [贡献](#贡献)
 
@@ -23,15 +23,31 @@
 
 ## 下载
 
-当前版本 **v0.2.1**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
+当前版本 **v0.2.3**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
 
 | 平台 | 安装包 | 说明 |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_0.2.1_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
-| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.1_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
+| Windows 10/11 x64 | `DiskPilot_0.2.3_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
+| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.3_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI 产物，**未在真实 Linux 机器上验证过**，欢迎反馈 |
 
 所有安装包附 `.sig` 签名，内置自动更新（tauri-plugin-updater），发新版后应用内会提示升级。
+
+## 更新日志
+
+- **v0.2.3（2026-10-07）**
+  - **AI 实事求是约束**：system prompt 强制「工具返回是唯一事实来源、清单里没有的条目一律视为不存在、推测必须标注」，根除 AI 编造不存在的路径 / 文件名
+  - **路径守卫只读/写双口径**：只读工具放行盘根枚举（`list_dir C:\` 是 AI 分析全盘空间分布的必要入口），写操作仍拒绝盘根 / 系统目录 / 用户主目录根
+  - **会话续跑**：被中断的扫描总览持久化为 `needsResume`，下次扫描同盘自动补跑填回原气泡（不丢、不重开、不再误标"被中断"）
+  - 修复「AI 说盘根本身进不去」：旧 agent-server 守卫把只读 `list_dir` 盘根也拦了，已统一为只读放行 / 写拒绝双口径
+
+- **v0.2.2（2026-09-26 发布）**
+  - 外壳 2.0：侧栏重构 / 清理页六组件 / 优化页（启动项 + 电源计划）/ 操作历史 / preflight 预检
+  - 75 个 MCP 工具的 AI agent 操作层（64 只读 + 11 写，写操作确认门）+ 通用 MCP 服务器接入
+  - 工具墙 90+ 系统工具 + 插件市场（Ed25519 校验 + URL/注册表安装 + 更新回滚）
+  - 硬件中心：基准 / 压测 / 甜甜圈满载 / 传感器趋势与告警 / 体检报告；风扇写入控制（自研 SuperIO 直读）
+  - 扫描与渲染性能专项、扫描结果落盘持久化、低配机器优化
+  - 清理脚本扩到 18 份（QQ / Discord / 游戏引擎 / Teams / Zoom / 安全套装等）
 
 也可以自行编译（约 10-15 分钟）：
 
@@ -137,7 +153,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 2. **操作日志**：每一次删除写 `~/.diskpilot/undo.jsonl`，"最近清理"面板支持一键撤销（回收站 / 隔离区两条找回路径），可选 7 天隔离区（quarantine）模式
 3. **清理脚本红线**：`scaffold-lint` 在 CI 上强制校验每份 TOML 的 glob 不许命中用户数据目录；每份脚本配套的安全测试包含**红线反向断言**（例如微信脚本必须断言聊天 DB 永不被命中），没有测试的脚本进不了仓库
 4. **写操作确认门**：11 个 MCP 写工具在协议层要求确认参数，桌面 UI 两步确认后才下发；agent 模式下 AI 拿到工具也越不过这道门
-5. **路径守卫**：拒绝盘根、系统目录、用户主目录根这类"删了就完蛋"的路径
+5. **路径守卫（只读/写双口径）**：写操作拒绝盘根、系统目录、用户主目录根这类"删了就完蛋"的路径；**只读工具对盘根放行**（`list_dir C:\` 这类枚举是 AI 分析全盘空间分布的必要入口），系统目录 / 主目录根只读同样拒绝。守卫从环境变量推导，与运行时同一份 `red_line_violations` 红线逻辑共享锚定空间。
 
 原则就一句话：**宁可错放 1000GB，不可错删一个文件。**
 
@@ -206,6 +222,9 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 - [x] v0.2.2 发布管线：CI 构建 + 签名 + 应用内自动更新
 - [x] 总览「分类占用 + 可回收潜力」同口径改版 + 今日体检条（健康管家 P0：红盘 / 可回收 / 温度 / 启动项汇总）
 - [x] 插件市场闭环：官方/社区索引（Ed25519 校验） + URL/注册表安装 + 更新回滚 + 已装台账
+- [x] 外壳 2.0：侧栏重构 / 清理页六组件 / 优化页（启动项 + 电源计划）/ 操作历史 / preflight 预检
+- [x] AI 实事求是约束 + 守卫只读盘根放行：CHAT_SYSTEM 强制「工具返回是唯一事实来源、清单外一律视为不存在、推测必须标注」，AI 列盘根分析全盘不再被旧守卫误拦
+- [x] 会话续跑：被中断的扫描总览持久化为 `needsResume`，下次扫描同盘自动补跑填回原气泡（不丢、不重开）
 
 进行中 / 计划：
 
@@ -222,11 +241,14 @@ cd diskpilot
 pnpm install
 pnpm tauri dev            # 桌面 app（首次编译 Rust 依赖 5-15 分钟）
 pnpm -C apps/desktop dev  # 仅前端，浏览器调试
-cargo test --workspace    # Rust 全工作空间测试（Windows 上 MFT 相关用例需管理员权限终端）
+cargo test --workspace    # Rust 全工作空间测试（Windows 上 MFT 相关用例需管理员权限终端；
+                           # 用 Git Bash 跑会因 TEMP=/tmp 污染原生二进制的临时目录而误报失败，请用原生 cmd/PowerShell）
 pnpm -C apps/desktop exec vitest run   # 前端测试
 ```
 
 目录速览：`apps/desktop`（Tauri 前端 + 后端）、`crates/`（7 个 Rust crate）、`scaffolds/`（18 份清理脚本 TOML）。
+
+> 改了 `crates/agent-server` 的守卫 / 工具逻辑后，必须 `cargo build -p agent-server` 重编 `target/debug|release/agent-server.exe` —— 前端 agent.rs 测试 spawn 的是这个产物，源码改了不重编，测试跑的还是旧守卫（历史上曾因"改源码没重编"让 `list_dir C:\` 盘根被旧 exe 误拦）。
 
 ### 自制清理脚本（脚手架 CLI）
 

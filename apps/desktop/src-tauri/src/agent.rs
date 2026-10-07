@@ -30,10 +30,46 @@
 //! 换来进程隔离 + 崩溃自愈天然成立（一次调用失败不影响下一次）。
 
 use std::process::Stdio;
+use std::sync::OnceLock;
+use std::time::Duration;
 
 use rmcp::{model::CallToolRequestParams, service::ServiceExt, transport::TokioChildProcess};
 use tauri::State;
 use tokio::process::Command;
+use tokio::sync::watch;
+
+/// 工具调用取消广播（generation 计数）：`agent_tool_cancel` 命令把计数 +1，
+/// 所有在飞的 `agent_call_tool_core` 通过 `watch::changed()` 察觉并立即中断。
+/// 用户点「停止」的真正后端闸——此前停止只 abort 前端 fetch / ai_cancel 掐
+/// LLM 请求，对已在飞的 `invoke('agent_call_tool')` 无效（promise 永不落定，
+/// AI 回路永久卡死，实测挂过 12 小时）。
+static TOOL_CANCEL: OnceLock<watch::Sender<u64>> = OnceLock::new();
+
+fn tool_cancel_tx() -> &'static watch::Sender<u64> {
+    TOOL_CANCEL.get_or_init(|| watch::channel(0u64).0)
+}
+
+/// 用户点「停止」：掐断当前所有在飞 AI 工具调用。无调用在飞时也是安全空操作。
+#[tauri::command]
+pub fn agent_tool_cancel() -> bool {
+    tool_cancel_tx().send_modify(|g| *g += 1);
+    true
+}
+
+/// 单次工具调用总预算（覆盖 spawn agent-server + MCP 握手 + 执行全程）。
+/// agent-server 内部多数工具有 `blocking_call` 兜底（30–120s），但握手/传输层
+/// 挂死时响应永远到不了桌面侧；且 stress_test / bench_disk 是裸 spawn_blocking
+/// 无服务端超时。桌面侧这条总闸保证任何工具调用都有限时结局。
+fn tool_budget(name: &str) -> Duration {
+    match name {
+        // 压测上限 600s（服务端参数硬顶）+ 握手裕量
+        "stress_test" => Duration::from_secs(660),
+        // 真实磁盘基准（大文件读写）可能数分钟
+        "bench_disk" => Duration::from_secs(600),
+        // 其余全部：服务端最长 blocking_call(120)（uninstall_app）+ 裕量
+        _ => Duration::from_secs(180),
+    }
+}
 
 /// 在某目录下找 agent-server：优先标准名，兜底兼容旧安装包的 `.exe.exe` 畸形名
 /// （tauri 曾把 externalBin 配置名 `agent-server.exe` 再拼一次 `.exe`）。
@@ -149,7 +185,10 @@ async fn connect(
     let mut cmd = Command::new(&bin);
     cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        // stderr 必须 null 而非 piped：管道无人读，agent-server 的 tracing 日志
+        // 写满 64KB 缓冲后子进程会永久阻塞在 stderr 写上（工具/握手随之挂死，
+        // 会话越长越易命中——AI 挂 12h 的最可能真凶）。本来也没人消费它。
+        .stderr(Stdio::null());
     // 注入 scaffolds 目录，否则 agent-server 的 cleanup_suggestions 在运行时
     // 找不到清单（编译期 CARGO_MANIFEST_DIR 兜底在打包场景不存在）。
     if let Some(dir) = resolve_scaffolds_dir() {
@@ -216,10 +255,31 @@ pub async fn agent_list_tools() -> Result<Vec<AgentToolMeta>, String> {
 }
 
 /// 调用单个 MCP 工具，返回文本结果（isError 时仍返回文本，由前端展示原因）。
+/// 外层三路 select：正常完成 / 总预算超时 / 用户取消——保证任何工具调用都有
+/// 限时结局（2026-10-05 实测：scheduled_task_manage 挂死 12h，停止按钮无效）。
 /// 写工具（`process_kill` / `service_control`）要求 confirmed==Some(true) 硬校验：
 /// AI 无法绕过确认门直接改变系统状态（铁律：清理/控制必须先确认）。
 /// `undo_log` 为 `None` 时不向子进程注入 `DISKPILOT_UNDO_LOG`（只读调用）。
 pub async fn agent_call_tool_core(
+    name: String,
+    arguments: serde_json::Value,
+    confirmed: Option<bool>,
+    undo_log: Option<&std::path::Path>,
+) -> Result<AgentToolCall, String> {
+    let budget = tool_budget(&name);
+    let mut cancel_rx = tool_cancel_tx().subscribe();
+    tokio::select! {
+        r = agent_call_tool_inner(name.clone(), arguments, confirmed, undo_log) => r,
+        _ = tokio::time::sleep(budget) => Err(format!(
+            "agent:timeout: 工具 {name} 超过 {}s 未返回（含 agent-server 启动/握手），已中断防止永久挂起。可重试，或改用其他工具。",
+            budget.as_secs()
+        )),
+        _ = cancel_rx.changed() => Err("agent:cancel: 已由用户停止。".to_string()),
+    }
+}
+
+/// 内层：确认门校验 + spawn agent-server + MCP tools/call（无超时，由外层 select 兜底）。
+async fn agent_call_tool_inner(
     name: String,
     arguments: serde_json::Value,
     confirmed: Option<bool>,
@@ -458,12 +518,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn agent_call_tool_path_guard_rejects_drive_root() {
+    async fn agent_call_tool_list_dir_drive_root_readonly_allowed() {
         if !has_binary() {
             eprintln!("skip: agent-server.exe 未构建");
             return;
         }
-        // list_dir C:\ 应被 PathGuard 拒绝（isError=true + 中文原因）
+        // list_dir C:\ 属只读枚举，PathGuard 只读口径（check_read）放行盘根：
+        // AI 分析空间分布的必要入口。写工具（file_recycle 等）仍拒绝盘根。
+        // 用 C:\ 盘根实测（读不到完整内容也不应报「安全守卫」错，最多报
+        // 读取失败/权限），断言不出现守卫拦截文案即可。
         let r = agent_call_tool_core(
             "list_dir".into(),
             serde_json::json!({ "path": "C:\\" }),
@@ -472,10 +535,72 @@ mod tests {
         )
         .await
         .expect("call_tool 应成功");
-        assert!(r.is_error, "盘根必须被拒绝");
         assert!(
-            r.text.contains("安全守卫"),
-            "拒绝原因应含「安全守卫」，got: {}",
+            !r.text.contains("安全守卫"),
+            "只读 list_dir 盘根不应被守卫拦，got: {}",
+            r.text
+        );
+    }
+
+    #[tokio::test]
+    async fn agent_call_tool_list_dir_real_subdir_readonly_allowed() {
+        if !has_binary() {
+            eprintln!("skip: agent-server.exe 未构建");
+            return;
+        }
+        // 用户真实场景：AI 列某个非系统子目录（项目目录）。只读枚举真实存在的
+        // 子目录本就该放行；曾因 check 拒绝非白名单路径而误杀（AI 编造路径与
+        // 守卫拒绝叠加成「进不去」）。断言不出现守卫文案。用环境变量探测一个
+        // 真实非系统目录（用户目录子项）；目录不存在时报「路径不存在」是正确
+        // 行为，不在本用例断言范围。
+        let home = std::env::var_os("USERPROFILE").map(std::path::PathBuf::from);
+        let probe = home.as_deref().and_then(|h| {
+            std::fs::read_dir(h)
+                .ok()?
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .find(|p| p.is_dir() && !p.to_string_lossy().contains("AppData"))
+        });
+        let Some(real_dir) = probe else {
+            eprintln!("skip: 找不到可用的真实非系统目录，跳过");
+            return;
+        };
+        let r = agent_call_tool_core(
+            "list_dir".into(),
+            serde_json::json!({ "path": real_dir.to_string_lossy().into_owned() }),
+            None,
+            None,
+        )
+        .await
+        .expect("call_tool 应成功");
+        assert!(
+            !r.text.contains("安全守卫"),
+            "只读 list_dir 真实子目录不应被守卫拦，got: {}",
+            r.text
+        );
+    }
+
+    #[tokio::test]
+    async fn agent_call_tool_disk_top_directories_drive_root_readonly_allowed() {
+        if !has_binary() {
+            eprintln!("skip: agent-server.exe 未构建");
+            return;
+        }
+        // disk_top_directories 有双层守卫（mod.rs check_read + diskx.rs 内部第二层
+        // PathGuard）。两侧都必须放行盘根，否则 AI 分析全盘空间分布会被拦在门外。
+        // 断言不出现守卫拦截文案即可（C:\ 全盘遍历可能较慢，45s blocking_call
+        // 上限内正常返回或报「读取失败」都算放行）。
+        let r = agent_call_tool_core(
+            "disk_top_directories".into(),
+            serde_json::json!({ "path": "C:\\", "top_n": 5 }),
+            None,
+            None,
+        )
+        .await
+        .expect("call_tool 应成功");
+        assert!(
+            !r.text.contains("安全守卫"),
+            "只读 disk_top_directories 盘根不应被守卫拦，got: {}",
             r.text
         );
     }

@@ -12,13 +12,52 @@ import { common } from './i18n/namespaces/common';
 const CHAT_SESSIONS_KEY = 'diskpilot.chatSessions';
 const ACTIVE_CHAT_KEY = 'diskpilot.activeChatId';
 
+// 会话恢复时把遗留的 pending 回合净化掉：pending 只代表「有请求在飞」，
+// 持久化恢复（重启/切会话）时不可能还有对应的在飞请求——原样保留会让
+// 「AI 正在生成整体解析…」的气泡永久卡在 pending，看起来像扫描死锁。
+// 对总览解析回合（overviewPath 有值）置为「待续跑」：保留路径元数据，
+// ChatPanel 恢复 root 后自动补跑，而不是简单标一句「中断」就完事。
+// 其余 pending 回合（用户主动停掉的自由对话）置为中断提示 + pending:false。
+// 旧数据迁移：历史会话里「已扫完 X:\ · …（上次的分析被中断，未完成）」
+// 这类旧版残留（pending:false + 无 overviewPath）同样识别成待续跑——
+// 把路径从文案还原，让新版能对它们补跑，而不是永远停在中断文案。
+export function sanitizeTurns(turns: ChatTurn[]): ChatTurn[] {
+  return turns.map((turn) => {
+    if (!turn.pending) {
+      // 旧版总览中断残留迁移（一次性）：文案含「已扫完 <盘> · 」+ 中断标记
+      if (!turn.overviewPath && turn.needsResume !== true) {
+        const m = /已扫完\s*([A-Za-z]:\\|[^·\n]+?)\s*·/.exec(turn.text || ''); // @i18n-keep 持久化数据匹配，保持中文原文
+        if (m && (turn.text || '').includes('（上次的分析被中断，未完成）')) { // @i18n-keep 持久化数据匹配，保持中文原文
+          const path = m[1].trim();
+          if (/^[A-Za-z]:\\$/.test(path)) {
+            return { ...turn, overviewPath: path, needsResume: true };
+          }
+        }
+      }
+      return turn;
+    }
+    if (turn.overviewPath) {
+      return { ...turn, pending: false, needsResume: true };
+    }
+    return {
+      ...turn,
+      pending: false,
+      text: (turn.text || '') + '\n\n（上次的分析被中断，未完成）', // @i18n-keep 持久化数据，保持中文原文
+    };
+  });
+}
+
 // 历史会话持久化：localStorage 存元数据+turns（有容量上限，防无限增长撑爆）。
 function loadChatSessions(): ChatSessionMeta[] {
   try {
     const raw = localStorage.getItem(CHAT_SESSIONS_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw) as ChatSessionMeta[];
-    return Array.isArray(arr) ? arr.filter((s) => s && typeof s.id === 'string' && Array.isArray(s.turns)) : [];
+    return Array.isArray(arr)
+      ? arr
+          .filter((s) => s && typeof s.id === 'string' && Array.isArray(s.turns))
+          .map((s) => ({ ...s, turns: sanitizeTurns(s.turns) }))
+      : [];
   } catch {
     return [];
   }
@@ -64,49 +103,144 @@ function touchCacheKey(key: string) {
   cacheOrder.unshift(key);
 }
 
-// ── 扫描树持久化（重启不丢）：scanCache 是内存里最大的结构，整盘树
-// 序列化后可达数 MB。localStorage 配额 5MB，全量持久化 6 盘必然爆掉——
-// 所以只把「最近使用的 2 个盘」落盘，且超过预算跳过（静默，不影响扫描主流程）。
+// ── 扫描树持久化（IndexedDB）：整盘树序列化后可达数十 MB（60 万文件 ≈ 100MB），
+// localStorage 4MB 配额永远存不下大树——曾导致「重启/刷新后扫描全丢，点盘符
+// 全部重扫」反复复现。IndexedDB 配额数百 MB 起，每盘一条记录整树落盘；
+// localStorage v2/legacy 旧数据启动时一次性迁移进 IDB 后清除。
+const IDB_NAME = 'diskpilot';
+const IDB_STORE = 'scanTrees';
+// localStorage 保底（IDB 打不开时的小树恢复）与迁移源。
 const SCAN_CACHE_KEY = 'diskpilot.scanCache';
-/** 落盘时最多保留的盘树数（够重启秒开常用盘，又不撑爆配额）。 */
-const PERSISTED_DRIVES = 2;
-/** 落盘子集序列化超过该字节数就不写（整盘树巨大时占配额不值）。 */
-const PERSIST_MAX_BYTES = 4 * 1024 * 1024;
+const SCAN_CACHE_V2_PREFIX = 'diskpilot.scanCache.v2.';
 
-/** 启动时从 localStorage 恢复上次的扫描树缓存。结构校验 + 预算裁剪：只认
- *  合法盘根（name/path 字符串 + children 数组），坏数据整体丢弃不影响启动。 */
-function loadPersistedScanCache(): Record<string, Node> {
-  try {
-    const raw = localStorage.getItem(SCAN_CACHE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, Node>;
-    const out: Record<string, Node> = {};
-    for (const [k, v] of Object.entries(parsed)) {
-      if (typeof v !== 'object' || v === null) continue;
-      if (typeof v.name !== 'string' || typeof v.path !== 'string' || !Array.isArray(v.children)) continue;
-      out[k] = v;
+function openScanTreeDb(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof indexedDB === 'undefined') { resolve(null); return; }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch {
+      resolve(null);
     }
-    return out;
+  });
+}
+
+/** 把内存缓存里的全部盘树写进 IDB（每盘一条），并清掉已不在内存缓存里的
+ *  旧记录（与内存淘汰同步）。fire-and-forget：失败静默，不影响扫描主流程。 */
+async function persistScanCacheIdb(cache: Record<string, Node>) {
+  const db = await openScanTreeDb();
+  if (!db) return;
+  try {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    const keys = Object.keys(cache);
+    const existing = await new Promise<IDBValidKey[]>((res) => {
+      const r = store.getAllKeys();
+      r.onsuccess = () => res(r.result as IDBValidKey[]);
+      r.onerror = () => res([]);
+    });
+    for (const k of keys) store.put(cache[k], k);
+    for (const k of existing) if (!keys.includes(String(k))) store.delete(k);
+    await new Promise<void>((res) => {
+      tx.oncomplete = () => res();
+      tx.onerror = () => res();
+      tx.onabort = () => res();
+    });
+  } catch { /* 静默 */ }
+  db.close();
+}
+
+/** 启动恢复：IDB 全量读回。结构校验：只认合法盘根，坏记录跳过。 */
+async function loadScanCacheIdb(): Promise<Record<string, Node>> {
+  const db = await openScanTreeDb();
+  if (!db) return {};
+  const out: Record<string, Node> = {};
+  try {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const [keys, vals] = await Promise.all([
+      new Promise<IDBValidKey[]>((res) => {
+        const r = store.getAllKeys();
+        r.onsuccess = () => res(r.result as IDBValidKey[]);
+        r.onerror = () => res([]);
+      }),
+      new Promise<unknown[]>((res) => {
+        const r = store.getAll();
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => res([]);
+      }),
+    ]);
+    keys.forEach((k, i) => {
+      const v = vals[i] as Node;
+      if (typeof v === 'object' && v !== null && typeof v.name === 'string'
+        && typeof v.path === 'string' && Array.isArray(v.children)) {
+        out[String(k)] = v;
+      }
+    });
+  } catch { /* 静默 */ }
+  db.close();
+  return out;
+}
+
+/** 启动时从 localStorage 同步恢复（IDB 打不开/尚未 hydrate 时的保底）：
+ *  v2 每盘一条 + 旧版单 key 一包，坏数据整体跳过不影响启动。 */
+function loadPersistedScanCache(): Record<string, Node> {
+  const out: Record<string, Node> = {};
+  try {
+    const v2Keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(SCAN_CACHE_V2_PREFIX)) v2Keys.push(k);
+    }
+    for (const k of v2Keys) {
+      try {
+        const v = JSON.parse(localStorage.getItem(k) ?? '') as Node;
+        if (typeof v === 'object' && v !== null && typeof v.name === 'string'
+          && typeof v.path === 'string' && Array.isArray(v.children)) {
+          out[k.slice(SCAN_CACHE_V2_PREFIX.length)] = v;
+        }
+      } catch { /* 单盘坏数据跳过，不影响其他盘 */ }
+    }
+    const legacy = localStorage.getItem(SCAN_CACHE_KEY);
+    if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy) as Record<string, Node>;
+        for (const [k, v] of Object.entries(parsed)) {
+          if (typeof v !== 'object' || v === null) continue;
+          if (typeof v.name !== 'string' || typeof v.path !== 'string' || !Array.isArray(v.children)) continue;
+          if (!(k in out)) out[k] = v;
+        }
+      } catch { /* ignore */ }
+    }
   } catch {
     return {};
   }
+  return out;
 }
 
-/** 把 scanCache 里最近使用的 N 个盘树序列化落盘。容量预算内才写；
- *  localStorage 满/不可用/超预算一律静默丢弃（与 persistChatSessions 同策略）。 */
-function persistScanCache(cache: Record<string, Node>) {
-  try {
-    // 最近使用序 = cacheOrder 最前；只取前 N 个仍存在的 key。
-    const top = cacheOrder.slice(0, PERSISTED_DRIVES).filter((k) => k in cache);
-    if (top.length === 0) return;
-    const subset: Record<string, Node> = {};
-    for (const k of top) subset[k] = cache[k];
-    const text = JSON.stringify(subset);
-    if (text.length > PERSIST_MAX_BYTES) return;
-    localStorage.setItem(SCAN_CACHE_KEY, text);
-  } catch {
-    /* 静默：持久化失败不影响扫描与缓存 */
+/** 启动异步恢复：IDB 里的整盘树 merge 进内存缓存（同步初始化只读得到
+ *  localStorage 小树；IDB 大树稍后到，merge 时用户新扫的优先）。随后把
+ *  localStorage 旧数据全量迁进 IDB 并清掉——此后 IDB 是唯一持久层。 */
+async function hydrateScanCache() {
+  const entries = await loadScanCacheIdb();
+  const keys = Object.keys(entries);
+  if (keys.length > 0) {
+    useStore.setState((s) => ({ scanCache: { ...entries, ...s.scanCache } }));
+    for (const k of keys) touchCacheKey(k);
   }
+  await persistScanCacheIdb(useStore.getState().scanCache);
+  try {
+    localStorage.removeItem(SCAN_CACHE_KEY);
+    const stale: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(SCAN_CACHE_V2_PREFIX)) stale.push(k);
+    }
+    for (const k of stale) localStorage.removeItem(k);
+  } catch { /* ignore */ }
 }
 
 // AI agent 每一步（思考 / 工具调用 / 工具结果 / 提示）沉淀在 turn.trace，
@@ -131,6 +265,12 @@ export interface ChatTurn {
   hw?: HwInfo;
   pending?: boolean;
   trace?: TraceItem[];
+  // 总览解析回合的目标路径：扫描完成后自动触发的整体解析带上它，
+  // 供恢复时识别「这条解析没跑完，重启后自动补跑」（needsResume）。
+  overviewPath?: string;
+  // sanitizeTurns 对残留的总览解析回合置位：恢复 root 后 ChatPanel 据此
+  // 自动重跑 overview，把上次没生成的补上。
+  needsResume?: boolean;
 }
 
 export interface ChatSession {
@@ -304,7 +444,7 @@ export const useStore = create<AppState>((set, get) => {
         const evict = cacheOrder.pop();
         if (evict !== undefined) delete next[evict];
       }
-      persistScanCache(next);
+      void persistScanCacheIdb(next);
       return { scanCache: next };
     }),
   takeDrive: (key) => {
@@ -468,11 +608,13 @@ export const useStore = create<AppState>((set, get) => {
   newChat: () =>
     set((s) => {
       const id = `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-      // 把当前活动会话（非空）归档进列表
+      // 把当前活动会话（非空）归档进列表。落盘前先净化：在飞的 pending
+      // 回合转成 needsResume 标记（保留 overviewPath），恢复后自动补跑，
+      // 而不是把「正在生成…」原样写进历史、下次打一句「中断」就完事。
       let list = s.chatSessions;
       if (s.chat.turns.length > 0) {
         const title = s.chat.turns.find((turn) => turn.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 24) || t('common.chat.untitled');
-        const meta: ChatSessionMeta = { id: s.activeChatId ?? id, title, ts: Date.now(), turns: s.chat.turns };
+        const meta: ChatSessionMeta = { id: s.activeChatId ?? id, title, ts: Date.now(), turns: sanitizeTurns(s.chat.turns) };
         list = [meta, ...list.filter((x) => x.id !== meta.id)];
       }
       persistChatSessions(list);
@@ -481,12 +623,13 @@ export const useStore = create<AppState>((set, get) => {
     }),
   // 关窗前归档：与 newChat 的归档逻辑同源，但不换会话、不清活动 turns。
   // 高频路径不逐条落盘的设计不变，只是补上「结束前」这个落盘点。
+  // 同样先净化再落盘：在飞回合转 needsResume，重启后自动补跑。
   archiveActiveChat: () =>
     set((s) => {
       if (s.chat.turns.length === 0) return {};
       const id = s.activeChatId ?? `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
       const title = s.chat.turns.find((turn) => turn.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 24) || t('common.chat.untitled');
-      const meta: ChatSessionMeta = { id, title, ts: Date.now(), turns: s.chat.turns };
+      const meta: ChatSessionMeta = { id, title, ts: Date.now(), turns: sanitizeTurns(s.chat.turns) };
       const list = [meta, ...s.chatSessions.filter((x) => x.id !== meta.id)];
       persistChatSessions(list);
       return { chatSessions: list };
@@ -498,7 +641,7 @@ export const useStore = create<AppState>((set, get) => {
       persistActiveChatId(id);
       return {
         activeChatId: id,
-        chat: { node: null, scaffoldId: null, turns: meta.turns, busy: false },
+        chat: { node: null, scaffoldId: null, turns: sanitizeTurns(meta.turns), busy: false },
       };
     }),
   deleteChat: (id) =>
@@ -534,3 +677,6 @@ export function buildWalkQueue(root: Node, thresholdBytes: number): { node: Node
   out.sort((a, b) => b.node.size - a.node.size);
   return out;
 }
+
+// 启动异步恢复 IDB 里的整盘树（模块加载即触发；失败静默，不阻塞首屏）。
+void hydrateScanCache();
