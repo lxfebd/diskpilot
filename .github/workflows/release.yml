@@ -81,7 +81,7 @@ jobs:
             fi
           done
 
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # 更新签名私钥：updater 只认持此私钥签名的安装包。私钥由
