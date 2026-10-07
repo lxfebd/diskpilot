@@ -445,9 +445,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     }
   }, []);
 
+  // 触发条件 = 选盘变化 + 扫描完成（scanSeq 递增）：扫描开始前 selDrive 就已
+  // 选中，首次 loadClean(cachedOnly) 拿到空列表；扫完不重拉的话红盘会一直
+  // 显示「暂无可清理项目」，用户以为扫描没有后续动作。cachedOnly=true 秒回，
+  // 多拉一次无成本；selDrive 与 scanSeq 同帧变化时 React 自动批处理只跑一次。
+  const scanSeq = useStore((s) => s.scanSeq);
   useEffect(() => {
     if (selDrive) void loadClean(selDrive.path);
-  }, [selDrive, loadClean]);
+  }, [selDrive, scanSeq, loadClean]);
 
   const selCount = useMemo(() => cleanItems.filter((i) => checked[i.key]).length, [cleanItems, checked]);
   const selBytes = useMemo(() => cleanItems.filter((i) => checked[i.key]).reduce((s, i) => s + i.bytes, 0), [cleanItems, checked]);

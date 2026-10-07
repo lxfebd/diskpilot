@@ -101,6 +101,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
   padding: 8px 16px;
   border-radius: var(--radius-card);
   background: var(--surface-2);
@@ -108,7 +109,10 @@
   box-shadow: var(--shadow-sm);
   margin-bottom: 10px;
 }
-.ao-checkup-head { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+/* 窄窗降级：头部原本 flex-shrink:0 且不换行，长副标题会把整条横向撑溢出
+   （左侧页头「磁盘资产总览」随之被顶出可视区）；允许掉行后标题行独立、
+   徽章网格换到下一行。 */
+.ao-checkup-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .ao-checkup-icon { color: var(--accent-strong); }
 .ao-checkup-head b { font-size: 13px; font-weight: 800; color: var(--ink); }
 .ao-checkup-grid { display: flex; align-items: center; gap: 10px; flex: 1; flex-wrap: wrap; }

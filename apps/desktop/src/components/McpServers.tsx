@@ -287,49 +287,47 @@ function McpServersInner() {
         <span>{t('mcp.hint')}</span>
       </p>
 
-      <div className="settings-group-title" style={{ marginTop: 12 }}>
-        {t('mcp.serverCount', { n: servers?.length ?? 0 })}
-        <button
-          className="ghost small"
-          style={{ float: 'right' }}
-          onClick={() => setEditing('new')}
-          disabled={!manageOk}
-          title={manageOk ? t('mcp.addTitle') : t('mcp.needPermTitle')}
-        >
-          <Plus size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
-          {t('mcp.add')}
-        </button>
-        <button
-          className="ghost small"
-          style={{ float: 'right', marginRight: 8 }}
-          onClick={() => setShowJson((v) => !v)}
-          disabled={!manageOk}
-          title={t('mcp.jsonImportTitle')}
-        >
-          <Code2 size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
-          {t('mcp.jsonImport')}
-        </button>
-        <button
-          className="ghost small"
-          style={{ float: 'right', marginRight: 8 }}
-          onClick={() => void load()}
-          disabled={busy}
-          title={t('mcp.reloadTitle')}
-        >
-          <RefreshCw size={12} className={busy ? 'spin' : undefined} />
-        </button>
-        <button
-          className="ghost small"
-          style={{ float: 'right', marginRight: 8 }}
-          onClick={() => {
-            setShowAudit((v) => !v);
-            if (!showAudit) void loadAudit();
-          }}
-          title={t('mcp.auditTitle')}
-        >
-          <FileClock size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
-          {t('mcp.audit')}
-        </button>
+      <div className="settings-group-title mcp-head-row" style={{ marginTop: 12 }}>
+        <span className="mcp-head-label">{t('mcp.serverCount', { n: servers?.length ?? 0 })}</span>
+        <div className="mcp-head-actions">
+          <button
+            className="ghost small"
+            onClick={() => void load()}
+            disabled={busy}
+            title={t('mcp.reloadTitle')}
+          >
+            <RefreshCw size={12} className={busy ? 'spin' : undefined} />
+          </button>
+          <button
+            className="ghost small"
+            onClick={() => setShowJson((v) => !v)}
+            disabled={!manageOk}
+            title={t('mcp.jsonImportTitle')}
+          >
+            <Code2 size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
+            {t('mcp.jsonImport')}
+          </button>
+          <button
+            className="ghost small"
+            onClick={() => {
+              setShowAudit((v) => !v);
+              if (!showAudit) void loadAudit();
+            }}
+            title={t('mcp.auditTitle')}
+          >
+            <FileClock size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
+            {t('mcp.audit')}
+          </button>
+          <button
+            className="ghost small"
+            onClick={() => setEditing('new')}
+            disabled={!manageOk}
+            title={manageOk ? t('mcp.addTitle') : t('mcp.needPermTitle')}
+          >
+            <Plus size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
+            {t('mcp.add')}
+          </button>
+        </div>
       </div>
 
       {showAudit && (
@@ -434,7 +432,7 @@ function McpServersInner() {
 
       {servers === null && <p className="muted small">{t('mcp.loading')}</p>}
       {servers !== null && servers.length === 0 && (
-        <p className="muted small" style={{ marginTop: 8 }}>
+        <p className="muted small mcp-empty-hint" style={{ marginTop: 8 }}>
           {t('mcp.emptyServers')}
           <code> npx -y @modelcontextprotocol/server-filesystem </code>{t('mcp.emptyServersTail')}
         </p>

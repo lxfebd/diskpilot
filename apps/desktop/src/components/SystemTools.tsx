@@ -142,7 +142,6 @@ function SystemToolsInner() {
   useEffect(() => {
     if (fanPerm) loadFan();
     if (driverPerm) loadDrivers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fanPerm, driverPerm]);
 
   // 风扇控制状态轮询：仅当 fan.control 权限开启且本页可见时跑（5s 门控）。
@@ -166,7 +165,7 @@ function SystemToolsInner() {
       void loadFanStatus();
     }).then((fn) => { un = fn; });
     return () => un?.();
-  }, [fanCtrlPerm]);
+  }, [fanCtrlPerm, t]);
 
   return (
     <div className="settings-pane sys-tools">

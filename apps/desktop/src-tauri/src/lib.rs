@@ -27,7 +27,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-use diskpilot_scaffold::{parse_toml, Scaffold};
+use diskpilot_scaffold::{parse_toml, Risk, Scaffold};
 use diskpilot_scanner::Node;
 use include_dir::{include_dir, Dir};
 use tauri::{AppHandle, Manager, State};
@@ -745,6 +745,56 @@ fn install_scaffold(
     install_scaffold_inner(&app, &state, toml)
 }
 
+/// Winapp2.ini 规则导入预览（情报取长补短：借 BleachBit 社区规则生态）。
+/// 把社区 winapp2.ini 文本解析成可清理 scaffold 列表，**只预览不写盘**——
+/// 用户看完（哪些可装、哪些被红线拒绝）再逐条走 install_scaffold 入库。
+/// 纯解析，不触碰任何系统状态，安全铁律通过。
+#[tauri::command]
+fn parse_winapp2(content: String) -> Result<Vec<ParseWinapp2Item>, String> {
+    let entries = diskpilot_scaffold::winapp2::parse_winapp2(&content);
+    let scaffolds = diskpilot_scaffold::winapp2::winapp2_to_scaffolds(&entries);
+    if scaffolds.is_empty() {
+        return Err("未能从该 Winapp2.ini 解析出任何文件清理规则（可能只含注册表项，或内容为空）。".into());
+    }
+    Ok(scaffolds
+        .into_iter()
+        .map(|sc| {
+            let red_line = scaffold_red_line_reject(&sc);
+            // 序列化成 toml 文本：UI 勾选后直接走 install_scaffold 入库（同一
+            // 条解析→入库管线，无二次转换漂移；未勾选的不产生任何 syscall）。
+            let toml_text = toml::to_string(&sc).unwrap_or_default();
+            ParseWinapp2Item {
+                id: sc.id,
+                name: sc.name,
+                risk: sc.risk,
+                scope_count: sc.scopes.len(),
+                scopes: sc
+                    .scopes
+                    .iter()
+                    .map(|s| format!("{} → {}", s.label, s.glob))
+                    .collect(),
+                disclaimer: sc.disclaimer,
+                toml: if toml_text.is_empty() { None } else { Some(toml_text) },
+                red_line,
+            }
+        })
+        .collect())
+}
+
+/// Winapp2 预览项（前端展示用，含红线标注）。
+#[derive(serde::Serialize)]
+struct ParseWinapp2Item {
+    id: String,
+    name: String,
+    risk: Risk,
+    scope_count: usize,
+    scopes: Vec<String>,
+    disclaimer: String,
+    /// 序列化好的 toml（勾选后直接 installScaffold 入库）。红线被拒项为 None。
+    toml: Option<String>,
+    red_line: Option<String>,
+}
+
 /// 红线拒绝理由：任一 scope 命中红线样本即返回可读原因（中文，直接进 UI）。
 /// 与 CI 的 `scaffold-lint` 共用 `scaffold_red_line_violations`，也就是共用同一
 /// 个**锚定空间**（`C:/Users/test`）——旧实现把未展开的原始 glob 送去比样本，
@@ -1281,6 +1331,7 @@ pub fn run() {
             list_scaffolds,
             detect_scaffold,
             install_scaffold,
+            parse_winapp2,
             uninstall_scaffold,
             scaffold_source,
             scaffold_registry::scaffold_registry_list,
@@ -1319,6 +1370,7 @@ pub fn run() {
             ai::ai_cancel,
             agent::agent_list_tools,
             agent::agent_call_tool,
+            agent::agent_tool_cancel,
             agent::agent_server_ready,
             mcp::mcp_list_servers,
             mcp::mcp_test_server,
@@ -1448,6 +1500,46 @@ fn load_all_scaffolds(handle: &AppHandle) -> Vec<Scaffold> {
 mod tests {
     use super::*;
     use std::fs;
+
+    /// winapp2 社区规则导入预览：危险条目（Chrome Autofill → `*Web Data`）
+    /// 必须被红线标注拒绝，干净缓存条目不误伤。钉死「社区规则红线标注真实
+    /// 生效」，防止以后加样本/改 canonicalize 把这条缝口堵死又松开。
+    #[test]
+    fn parse_winapp2_marks_red_line_and_passes_clean() {
+        let ini = r#"
+[Chrome Autofill Community *]
+LangSecRef=3029
+DetectFile=%LocalAppData%\Google\Chrome*
+FileKey1=%LocalAppData%\Google\Chrome*\User Data\*|*Web Data
+
+[Clean Temp Cache *]
+LangSecRef=3025
+DetectFile=%LocalAppData%\Temp
+FileKey1=%LocalAppData%\Temp|*.tmp
+"#;
+        let items = parse_winapp2(ini.to_string()).expect("样例应能解析出条目");
+        assert_eq!(items.len(), 2, "2 条文件规则都要落地");
+
+        let autofill = items
+            .iter()
+            .find(|i| i.name.contains("Autofill"))
+            .expect("Chrome Autofill 条目存在");
+        assert!(
+            autofill.red_line.is_some(),
+            "`*Web Data`（表单自动填充库）必须被红线拒绝：{:?}",
+            autofill.red_line
+        );
+
+        let clean = items
+            .iter()
+            .find(|i| i.name.contains("Temp Cache"))
+            .expect("Temp Cache 条目存在");
+        assert!(
+            clean.red_line.is_none(),
+            "纯临时文件缓存不该被误伤：{:?}",
+            clean.red_line
+        );
+    }
 
     /// 运行时红线闸必须与 CI lint 同尺。旧实现把未展开的原始 glob 送去比样本，
     /// 而样本全锚在 `C:/Users/test`，于是 `%USERPROFILE%/**`（开发机上展开成真实

@@ -81,7 +81,8 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
 /// 返回最新周报；后台线程里调用时用 `tauri::async_runtime::block_on` 包 async 调用。
 pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, String> {
     let state = app.state::<AppState>();
-    // 1) 各盘建议可清合计（复用 cleanup_suggestions，cached_only=false 真算）。
+    // 1) 各盘建议可清合计（复用 cleanup_suggestions，cached_only=true：
+    //    只读缓存/扫描树，未命中返回空，绝不全盘 walk）。
     let mut drives: Vec<DriveCleanupBrief> = Vec::new();
     let mut total: u64 = 0;
     for letter in b'C'..=b'Z' {

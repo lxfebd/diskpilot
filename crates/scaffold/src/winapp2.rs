@@ -312,12 +312,13 @@ pub fn winapp2_to_scaffold(entry: &Winapp2Entry) -> Option<Scaffold> {
         return None;
     }
     let id = slugify(&entry.name);
-    // 探测面：DetectFile 转 glob（展开 %ENV%）；SpecialDetect 映射常见目录；
+    // 探测面：DetectFile 转 glob（只规范化不展开，红线/执行期才展开变量）；
+    // SpecialDetect 映射常见目录；
     // 只有注册表探测的条目靠 match.name_contains 兜底。
     let mut detect: Vec<String> = entry
         .detect_files
         .iter()
-        .map(|d| expand_env_glob(d))
+        .map(|d| norm_winapp2_path(d))
         .filter(|d| !d.is_empty())
         .collect();
     let mut name_contains: Vec<String> = Vec::new();
@@ -339,7 +340,7 @@ pub fn winapp2_to_scaffold(entry: &Winapp2Entry) -> Option<Scaffold> {
 
     let mut scopes: Vec<Scope> = Vec::new();
     for (i, fk) in entry.file_keys.iter().enumerate() {
-        let base = expand_env_glob(&fk.path);
+        let base = norm_winapp2_path(&fk.path);
         if base.is_empty() {
             continue;
         }
@@ -428,11 +429,13 @@ fn slugify(name: &str) -> String {
     }
 }
 
-/// 展开 `%EnvVar%` 与 `$VAR`（winapp2 里的路径都用 `%X%`），
-/// 并把反斜杠统一成正斜杠（与 detect_for 的 norm() 一致）。
-/// 未知变量原样保留，不 panic。
-fn expand_env_glob(s: &str) -> String {
-    crate::expand_env(s).replace('\\', "/")
+/// 规范化 winapp2 路径：反斜杠统一成正斜杠（与 detect_for 的 norm() 一致）。
+/// **不展开环境变量**——与内嵌 scaffold 的 detect/glob 约定一致：变量留到
+/// 执行/红线校验时才展开（scaffold crate 的 expand_env 读真实本机 env，若在
+/// 转换期就展开成 `C:/Users/<真名>`，红线 canonicalize 锚定空间
+/// `C:/Users/test` 将永远 miss，社区规则会绕过红线装进来）。
+fn norm_winapp2_path(s: &str) -> String {
+    s.replace('\\', "/")
 }
 
 /// FileKey → Scaffold glob：目录基 + 模式，按 flag 决定是否前缀 `**/`。
@@ -571,9 +574,15 @@ RegKey1=HKCU\Software\Foo|Value
         assert_eq!(chrome.scopes.len(), 3);
         assert_eq!(chrome.scopes[0].mode, Mode::Recycle);
         assert_eq!(chrome.scopes[0].category.as_deref(), Some("cache"));
-        // DetectFile → detect glob（%LocalAppData% 已展开成真实路径前缀）
+        // DetectFile → detect glob（只规范化不展开：红线 canonicalize 需要
+        // 原始 %VAR% 形态才能还原到锚定空间，展开成真实路径会绕过红线）
         assert_eq!(chrome.detect.len(), 1);
         assert!(chrome.detect[0].ends_with("Google/Chrome*"));
+        assert!(
+            chrome.detect[0].contains("%LocalAppData%"),
+            "变量必须保留未展开形态：{}",
+            chrome.detect[0]
+        );
         // REMOVESELF → glob 带 **/
         assert!(chrome.scopes[1].glob.contains("**/"));
         // 标签非空

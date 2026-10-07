@@ -361,6 +361,10 @@ pub fn red_line_samples() -> &'static [&'static str] {
         "C:/Users/test/AppData/Local/Google/Chrome/User Data/Default/Login Data",
         "C:/Users/test/AppData/Local/Google/Chrome/User Data/Default/Cookies",
         "C:/Users/test/AppData/Local/Google/Chrome/User Data/Default/Bookmarks",
+        // Chromium 表单自动填充库（winapp2 社区规则 `*Web Data` 只认文件名后缀，
+        // 补样本把该绕过封死：Form Data 同样是存地址/卡号的 SQLite）
+        "C:/Users/test/AppData/Local/Google/Chrome/User Data/Default/Web Data",
+        "C:/Users/test/AppData/Local/Google/Chrome/User Data/Default/Form Data",
         "C:/Users/test/AppData/Roaming/Mozilla/Firefox/Profiles/abc.default/cookies.sqlite",
         "C:/Users/test/AppData/Roaming/Mozilla/Firefox/Profiles/abc.default/places.sqlite",
         "C:/Users/test/AppData/Roaming/Mozilla/Firefox/Profiles/abc.default/logins.json",
@@ -567,6 +571,16 @@ mod tests {
             "Favorite"
         );
         assert!(!glob_hits_red_line("**/key/**").is_empty(), "key");
+        // winapp2 社区规则 `*Web Data` / `*Form Data` 只认文件名后缀——
+        // 表单自动填充库也是红线，补样本后这类绕过必须命中
+        assert!(
+            !glob_hits_red_line("*Web Data").is_empty(),
+            "*Web Data"
+        );
+        assert!(
+            !glob_hits_red_line("*Form Data").is_empty(),
+            "*Form Data"
+        );
     }
 
     #[test]

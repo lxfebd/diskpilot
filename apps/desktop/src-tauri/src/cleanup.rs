@@ -117,7 +117,6 @@ pub(crate) fn suggestions_from_tree(root: &Node, scaffolds: &[Scaffold]) -> Vec<
         is_dir: bool,
         pattern: String,
         path: String,
-        set: globset::GlobSet,
     }
     let mut rows: Vec<Row> = Vec::new();
     for sc in scaffolds {
@@ -139,7 +138,6 @@ pub(crate) fn suggestions_from_tree(root: &Node, scaffolds: &[Scaffold]) -> Vec<
                 is_dir: b.granularity == RecycleGranularity::Directory,
                 pattern,
                 path,
-                set: b.set,
             });
         }
     }
@@ -148,23 +146,20 @@ pub(crate) fn suggestions_from_tree(root: &Node, scaffolds: &[Scaffold]) -> Vec<
     }
     let mut tally: Vec<(u64, u64)> = vec![(0, 0); rows.len()];
 
-    // 文件粒度 scope 合并进一个 GlobSet：一次 `matches(path)` 拿到全部命中的
-    // scope 下标，避免「每个文件 × 每个文件粒度 scope」的 N 次独立 glob 匹配
-    // （190 万文件 × 48 scope 会到 9000 万次 is_match，实测占建议统计大头）。
-    // 目录粒度 scope 的 `set` 仍各自独立（目录节点数量级远小于文件，逐行
-    // is_match 可接受，且 directory 语义靠 claims 去重不适用合并集）。
+    // 全部 scope（目录+文件粒度）合并进一个 GlobSet：每个节点一次
+    // `matches(path)` 拿到全部命中的 scope 下标，替代「目录节点 × 目录粒度
+    // scope 的逐行 is_match」（60 万文件的大树上 10 万目录 × 40 scope 曾实测
+    // 50 秒，是总览建议卡「正在检查」卡半分钟的元凶）。两种粒度的 glob 构造
+    // 参数一致（build_scope_builds 与下方重建均 literal_separator(false) +
+    // case_insensitive(true)），合并后匹配语义逐条等价。
     let mut merged_builder = globset::GlobSetBuilder::new();
-    let mut file_scope_offsets: Vec<usize> = Vec::new(); // merged 下标 → rows 下标
-    for (i, r) in rows.iter().enumerate() {
-        if !r.is_dir {
-            file_scope_offsets.push(i);
-            let g = globset::GlobBuilder::new(&r.pattern)
-                .literal_separator(false)
-                .case_insensitive(true)
-                .build()
-                .expect("pattern 已由 build_scope_builds 验证，重建不应失败");
-            merged_builder.add(g);
-        }
+    for r in &rows {
+        let g = globset::GlobBuilder::new(&r.pattern)
+            .literal_separator(false)
+            .case_insensitive(true)
+            .build()
+            .expect("pattern 已由 build_scope_builds 验证，重建不应失败");
+        merged_builder.add(g);
     }
     let merged = merged_builder.build().expect("合并 GlobSet 构建失败");
 
@@ -179,13 +174,13 @@ pub(crate) fn suggestions_from_tree(root: &Node, scaffolds: &[Scaffold]) -> Vec<
         tally: &mut [(u64, u64)],
         claims: &mut Vec<usize>,
         merged: &globset::GlobSet,
-        file_scope_offsets: &[usize],
     ) {
         if node.is_dir {
             let path_str = node.path.replace('\\', "/");
             let mut newly = Vec::new();
-            for (i, r) in rows.iter().enumerate() {
-                if r.is_dir && !claims.contains(&i) && r.set.is_match(&path_str) {
+            for mi in merged.matches(&path_str) {
+                let i = mi; // 合并集下标 = rows 下标（add 顺序即 rows 顺序）
+                if rows[i].is_dir && !claims.contains(&i) {
                     tally[i].0 = tally[i].0.saturating_add(node.size);
                     tally[i].1 = tally[i].1.saturating_add(1);
                     newly.push(i);
@@ -193,36 +188,29 @@ pub(crate) fn suggestions_from_tree(root: &Node, scaffolds: &[Scaffold]) -> Vec<
             }
             claims.extend_from_slice(&newly);
             for c in &node.children {
-                walk(c, rows, tally, claims, merged, file_scope_offsets);
+                walk(c, rows, tally, claims, merged);
             }
             claims.truncate(claims.len() - newly.len());
         } else {
-            // 文件节点：一次合并集匹配拿到全部命中的文件粒度 scope 下标，
-            // 再映射回 tally 行——避免「每个文件 × 每个文件粒度 scope」的
-            // 9000 万次独立 glob 匹配。目录粒度 scope 由祖先目录承担
-            // （DFS 在目录节点上已命中，不在文件节点重复）；文件粒度每个
-            // 文件独立匹配，各 scope 各行其是，不参与 claims（无祖先归属）。
+            // 文件节点：一次合并集匹配拿到全部命中的文件粒度 scope。
+            // 目录粒度 scope 由祖先目录承担（DFS 在目录节点上已命中，不在
+            // 文件节点重复）；文件粒度每个文件独立匹配，不参与 claims。
             if node.size == 0 {
                 return;
             }
             let path_str = node.path.replace('\\', "/");
             for mi in merged.matches(&path_str) {
-                let i = file_scope_offsets[mi];
-                tally[i].0 = tally[i].0.saturating_add(node.size);
-                tally[i].1 = tally[i].1.saturating_add(1);
+                let i = mi;
+                if !rows[i].is_dir {
+                    tally[i].0 = tally[i].0.saturating_add(node.size);
+                    tally[i].1 = tally[i].1.saturating_add(1);
+                }
             }
         }
     }
     // 与 walk 版一致：跳过 root 自身的命中，只统计其子树。
     for child in &root.children {
-        walk(
-            child,
-            &rows,
-            &mut tally,
-            &mut Vec::new(),
-            &merged,
-            &file_scope_offsets,
-        );
+        walk(child, &rows, &mut tally, &mut Vec::new(), &merged);
     }
 
     let mut out: Vec<CleanupSuggestion> = Vec::new();
@@ -461,6 +449,18 @@ pub(crate) async fn cleanup_suggestions(
             node.map(|t| suggestions_from_tree(t, &scaffolds))
         };
         if let Some(s) = tree_suggestions {
+            // 回写 cleanup_cache：树命中结果与 commit_scan 写入的口径一致，
+            // 30 分钟 TTL 内重复请求秒回（大树重算要秒级到几十秒，不回写的话
+            // 每次切页/重进总览都要全量重算，总览建议卡会长时间停在「正在检查」）。
+            if let Ok(mut cache) = state.cleanup_cache.lock() {
+                cache.insert(
+                    req_key.clone(),
+                    CleanupCacheEntry {
+                        at: std::time::Instant::now(),
+                        suggestions: s.clone(),
+                    },
+                );
+            }
             return Ok(s);
         }
     }

@@ -64,13 +64,18 @@
 .toolbelt-market-tabs button.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
 .toolbelt-market-warn { padding: 8px 12px; border-radius: 8px; background: var(--warn-bg, #fef3c7); color: var(--warn-strong, #92400e); font-size: 13px; margin-bottom: 10px; }
 .toolbelt-market-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+/* 窄容器防线：头部/URL 行按钮禁竖排折行、禁被压缩（此前「刷新索引」被挤成
+   竖排单字 + 整行横向溢出出滚动条），空间不够时按钮整体换行而不是压扁。 */
+.toolbelt-market-head button,
+.toolbelt-market-url button,
+.toolbelt-market-search button { white-space: nowrap; flex-shrink: 0; }
 .toolbelt-market-head h3 { margin: 0 0 4px; font-size: 16px; }
 .toolbelt-market-count { font-size: 12px; font-weight: 700; color: var(--ink-2); background: var(--paper-2); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
 .toolbelt-market-search { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .toolbelt-market-search input { flex: 1; height: 32px; box-sizing: border-box; }
 /* B2 远程安装（URL）输入行 + 下载进度条 */
-.toolbelt-market-url { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.toolbelt-market-url input { flex: 1; height: 32px; box-sizing: border-box; }
+.toolbelt-market-url { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.toolbelt-market-url input { flex: 1; min-width: 160px; height: 32px; box-sizing: border-box; }
 .toolbelt-market-progress {
   display: flex; align-items: center; gap: 8px; margin: 0 0 10px;
   font-size: 12px; color: var(--ink-2);

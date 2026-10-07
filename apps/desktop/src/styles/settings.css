@@ -283,6 +283,21 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   border-bottom: 1px solid var(--paper-3);
 }
 
+/* MCP 分组头：标题 + 动作按钮两端布局。旧实现用 float:right，窄容器下
+   浮动按钮换行后叠到标题文字上；flex + wrap 让按钮整体掉行而非重叠。 */
+.mcp-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mcp-head-label { flex-shrink: 0; }
+.mcp-head-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mcp-head-actions button { white-space: nowrap; flex-shrink: 0; }
+/* 空态示例命令是长 code 芯片：禁跨行断裂（断裂时背景盒碎片会压在文字上） */
+.mcp-empty-hint code { white-space: nowrap; }
+
 /* ── AI 思考过程 / 工具调用 trace ────────────────────────────── */
 .chat-trace {
   align-self: stretch;

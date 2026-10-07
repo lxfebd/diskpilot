@@ -29,6 +29,9 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
     () => (tagFilter ? allCards.filter((c) => c.scaffold.tags?.includes(tagFilter)) : allCards),
     [allCards, tagFilter],
   );
+  // 空态归因：没扫描树（root=null）时脚本无从匹配，引导先去扫描；有扫描树
+  // 仍无卡片才是「没装脚本/没有该类脚本」。两种情况文案不同，避免误导。
+  const emptyText = root === null ? t('cleanup.needScan') : t('cleanup.noScripts');
 
   // 进页 / 换盘自动选中第一个命中脚本；正在执行时不打断。
   useEffect(() => {
@@ -50,7 +53,7 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
     if (!cards.some((c) => c.scaffold.id === cur.scaffold.id)) {
       select(cards[0].scaffold.id, { force: true });
     }
-  }, [root, cards, select]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [root, cards, select]);
 
   return (
     <div className="cleanup-page">
@@ -62,7 +65,7 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
           </div>
           <div className="cp-list-rows">
             {cards.length === 0 ? (
-              <div className="cp-empty">{t('cleanup.noScripts')}</div>
+              <div className="cp-empty">{emptyText}</div>
             ) : (
               cards.map((c) => {
                 const active = session?.scaffold.id === c.scaffold.id;
@@ -92,7 +95,7 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
             </div>
           )}
           {cards.length === 0 ? (
-            <div className="cp-empty">{t('cleanup.noScripts')}</div>
+            <div className="cp-empty">{emptyText}</div>
           ) : session ? (
             <CleanupBody />
           ) : (

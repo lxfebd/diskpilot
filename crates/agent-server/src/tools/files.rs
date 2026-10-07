@@ -295,6 +295,23 @@ impl PathGuard {
         }
         Ok(())
     }
+
+    /// 只读工具专用校验：盘根**放行**（`list_dir("D:\")` 这类只读枚举盘根本身
+    /// 不修改任何东西，是 AI 分析空间分布的必要入口；且 list_dir 有 limit
+    /// 截断，不会刷屏）。系统目录 / 用户主目录根 / 不存在路径仍照常拦截——
+    /// 那些位置列出内容同样可能泄漏敏感信息，只读也不放行。
+    pub fn check_read(&self, p: &Path) -> Result<(), GuardError> {
+        if !p.exists() {
+            return Err(GuardError::Missing);
+        }
+        if is_system_dir(p) {
+            return Err(GuardError::SystemDir);
+        }
+        if is_home_root(p) {
+            return Err(GuardError::HomeRoot);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -751,6 +768,35 @@ mod tests {
                     Err(e) => panic!("unexpected: {e}"),
                 }
             }
+        }
+    }
+
+    /// 只读守卫（check_read）语义：盘根放行、系统目录/主目录根仍拒绝。
+    /// 这是「AI 列盘根」功能的安全边界——只读枚举盘根不修改任何东西，
+    /// 但系统目录内容泄漏照样敏感。
+    #[test]
+    fn check_read_allows_drive_root_but_blocks_system() {
+        let g = PathGuard;
+        // 盘根：只读放行（路径不存在时按 Missing 处理，属存在性前置而非守卫拒绝）
+        #[cfg(windows)]
+        for root in ["C:\\", "C:", "D:\\"] {
+            let r = g.check_read(Path::new(root));
+            assert!(
+                matches!(r, Ok(()) | Err(GuardError::Missing)),
+                "只读盘根 {root} 应放行或仅报不存在，got: {r:?}"
+            );
+        }
+        // 系统目录：只读也不放行（防系统文件内容泄漏）
+        #[cfg(windows)]
+        for sys in ["C:\\Windows", "C:\\Windows\\System32"] {
+            if !Path::new(sys).exists() {
+                continue;
+            }
+            let r = g.check_read(Path::new(sys));
+            assert!(
+                matches!(r, Err(GuardError::SystemDir)),
+                "只读系统目录 {sys} 应拒绝，got: {r:?}"
+            );
         }
     }
 

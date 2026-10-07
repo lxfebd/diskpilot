@@ -838,8 +838,8 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
         </div>
       )}
       {!scanning && progress && (
-        <div className="scan-bar">
-          <div className="scan-bar-fill determinate" style={{ width: '100%' }} />
+        <div className="scan-bar scan-bar-done">
+          <div className="scan-bar-fill done" style={{ width: '100%' }} />
           <div className="scan-bar-label" title={pathLabel ?? undefined}>
             {`${t('shell.scanbar.done', { files: progress.files.toLocaleString(), bytes: formatBytes(progress.bytes) })}${pathLabel ? ` · ${ellipsizePath(pathLabel)}` : ''}`}
           </div>

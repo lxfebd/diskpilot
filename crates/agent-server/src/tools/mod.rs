@@ -335,7 +335,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         let top_n = p.top_n.unwrap_or(20).clamp(1, 100);
@@ -383,7 +383,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         let max_depth = p.max_depth.unwrap_or(3).clamp(1, 10);
@@ -471,7 +471,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         let limit = p.limit.unwrap_or(100).clamp(1, 500);
@@ -525,7 +525,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         let path_str = p.path.clone();
@@ -558,7 +558,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let root = std::path::PathBuf::from(&p.root);
-        if let Err(e) = guard.check(&root) {
+        if let Err(e) = guard.check_read(&root) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         let max_hits = p.max_hits.unwrap_or(50).clamp(1, 500);
@@ -1128,7 +1128,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         Ok(blocking_call(
@@ -1275,7 +1275,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         Ok(blocking_call(
@@ -1295,7 +1295,7 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
-        if let Err(e) = guard.check(&path) {
+        if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
         Ok(blocking_call(

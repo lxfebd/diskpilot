@@ -146,7 +146,9 @@ pub(crate) fn run_reminder_check(app: &AppHandle) -> Result<Option<ReminderPaylo
     Ok(payload)
 }
 
-/// 真算各盘可清字节（复用 cleanup_suggestions 引擎，cached_only=false）。
+/// 只读统计各盘可清字节（复用 cleanup_suggestions 引擎，cached_only=true：
+/// 只读最近扫描/缓存树，未命中返回空而非全盘 walk——后台定时高频跑，
+/// 与总览页「主动查建议」的默认真算区分）。
 /// 只读：返回建议量，不做任何清理。
 /// 后台线程（无 tokio runtime）里调用时用 `tauri::async_runtime::block_on`
 /// 包一层——cleanup_suggestions 内部有 spawn_blocking await。

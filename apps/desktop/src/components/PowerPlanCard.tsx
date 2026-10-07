@@ -63,7 +63,6 @@ export function PowerPlanCard() {
 
   useEffect(() => {
     if (perm) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perm]);
 
   return (

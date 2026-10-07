@@ -258,6 +258,16 @@ input:focus, select:focus {
   0%   { left: -28%; }
   100% { left: 100%; }
 }
+/* 完成态：不用扫描中的深色斜纹（铺满 100% 时像黑色警示条且压得文字看不清），
+   换成主题色的安静淡底 + 细实线，文字用正文色保证可读。 */
+.scan-bar-fill.done {
+  background: var(--accent-soft);
+  border-right: none;
+}
+.scan-bar-done .scan-bar-label {
+  color: var(--text);
+  text-shadow: none;
+}
 .scan-bar-label {
   position: absolute;
   inset: 0;
@@ -898,6 +908,73 @@ footer {
   border-radius: var(--radius-btn);
   padding: 8px 10px;
 }
+
+/* 安装弹窗双 tab（TOML / Winapp2.ini 导入） */
+.modal-tabs {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 12px;
+}
+.modal-tab {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.modal-tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.modal-tab:focus { outline: none; }
+
+/* Winapp2.ini 导入预览 */
+.winapp2-preview { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.winapp2-preview-head {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.winapp2-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.winapp2-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.winapp2-item.blocked {
+  border-color: color-mix(in srgb, var(--risk-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--risk-danger) 6%, transparent);
+}
+.winapp2-item-main {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.winapp2-item-name { font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.winapp2-redline {
+  color: var(--risk-danger);
+  background: color-mix(in srgb, var(--risk-danger) 8%, transparent);
+  border-radius: var(--radius-btn);
+  padding: 4px 8px;
+}
+.winapp2-item-disclaimer { margin-left: 22px; }
 .studio-uninstall-btn {
   margin-left: auto;
   color: var(--ink-3);

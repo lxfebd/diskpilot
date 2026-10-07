@@ -77,7 +77,6 @@ export function StartupPanel() {
 
   useEffect(() => {
     if (startupPerm) loadStartup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startupPerm]);
 
   return (

@@ -34,8 +34,6 @@ export interface ScaffoldCard {
  * 匹配的脚本），避免嵌套目录被重复计入。返回按「命中优先 + 体量降序」排的卡片。
  */
 export function collectScaffoldCards(root: Node | null, scaffolds: Scaffold[]): ScaffoldCard[] {
-  if (!root) return [];
-
   const byId = new Map<string, Scaffold>();
   const seen = new Set<string>();
   for (const sc of scaffolds) {
@@ -43,6 +41,15 @@ export function collectScaffoldCards(root: Node | null, scaffolds: Scaffold[]): 
       seen.add(sc.id);
       byId.set(sc.id, sc);
     }
+  }
+
+  // 未扫描（root=null）：仍返回全部已安装脚本的卡片（命中为空，列表显示
+  // 「未检测到」），让用户进页就能看到有哪些清理能力，而不是误以为没装脚本；
+  // 详情区有 noTargets 文案引导先去扫描。
+  if (!root) {
+    return [...byId.values()]
+      .map((sc) => ({ scaffold: sc, matches: [], totalSize: 0, totalFiles: 0 }))
+      .sort((a, b) => a.scaffold.name.localeCompare(b.scaffold.name));
   }
 
   const hits = new Map<string, Node[]>();

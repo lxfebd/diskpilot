@@ -52,6 +52,29 @@ export const studio = {
     'studio.tomlSample':
       'id = "my-tool"\nname = "我的工具缓存"\nrisk = "low"\n# detect / match / scopes ...',
 
+    // ── Winapp2.ini 社区规则导入（BleachBit 生态取长补短）──
+    'studio.tabToml': '粘贴 TOML',
+    'studio.tabWinapp2': 'Winapp2.ini 导入',
+    'studio.winapp2Lead':
+      '粘贴 BleachBit / 社区维护的 winapp2.ini 文本（可直接用官方仓库最新版），解析成可清理脚本预览。危险条目会红字标注并拒绝安装。',
+    'studio.winapp2Placeholder':
+      '; winapp2.ini 内容（[Section] + FileKeyN= 等，可选）',
+    'studio.winapp2Parse': '解析预览',
+    'studio.winapp2Parsing': '解析中…',
+    'studio.winapp2Empty': '未解析出可清理文件规则（可能只含注册表项或内容为空）。',
+    'studio.winapp2ParseFailed': '解析失败：{msg}',
+    'studio.winapp2Scopes': '{n} 个清理项',
+    'studio.winapp2RedLine': '红线拒绝：{msg}',
+    'studio.winapp2InstallSelected': '安装 {n} 条',
+    'studio.winapp2Installing': '安装中…',
+    'studio.winapp2SelectAll': '全选',
+    'studio.winapp2Clear': '清空',
+    'studio.winapp2Installed': '已安装 {id}',
+    'studio.winapp2InstallFailed': '安装失败：{msg}',
+    'studio.winapp2NoneSelected': '请先勾选要安装的规则',
+    'studio.winapp2AllSafe': '全部可安全安装（未命中红线）',
+    'studio.winapp2SomeBlocked': '{n} 条被红线拒绝（自动跳过）',
+
     // ── 脚本卡片明细 ──
     'studio.reveal': '在文件管理器中打开',
     'studio.copyPath': '复制路径',
@@ -127,6 +150,29 @@ export const studio = {
       'script from the community repo and paste it here to install it. A script only declares where to look and what may be cleaned — installing it never runs a cleanup.',
     'studio.tomlSample':
       'id = "my-tool"\nname = "My tool cache"\nrisk = "low"\n# detect / match / scopes ...',
+
+    // ── Winapp2.ini community rule import (learning from the BleachBit ecosystem) ──
+    'studio.tabToml': 'Paste TOML',
+    'studio.tabWinapp2': 'Import Winapp2.ini',
+    'studio.winapp2Lead':
+      'Paste winapp2.ini text (the community-maintained rule file shared with BleachBit; the official repo’s latest version works) to parse it into installable cleanup scripts. Dangerous entries are flagged in red and refused.',
+    'studio.winapp2Placeholder':
+      '; winapp2.ini content ([Section] + FileKeyN= etc., optional)',
+    'studio.winapp2Parse': 'Parse preview',
+    'studio.winapp2Parsing': 'Parsing…',
+    'studio.winapp2Empty': 'No installable file-cleanup rules parsed (the text may contain only registry entries or be empty).',
+    'studio.winapp2ParseFailed': 'Parse failed: {msg}',
+    'studio.winapp2Scopes': '{n} cleanup scopes',
+    'studio.winapp2RedLine': 'Refused by red line: {msg}',
+    'studio.winapp2InstallSelected': 'Install {n}',
+    'studio.winapp2Installing': 'Installing…',
+    'studio.winapp2SelectAll': 'Select all',
+    'studio.winapp2Clear': 'Clear',
+    'studio.winapp2Installed': 'Installed {id}',
+    'studio.winapp2InstallFailed': 'Install failed: {msg}',
+    'studio.winapp2NoneSelected': 'Select the rules to install first',
+    'studio.winapp2AllSafe': 'All safe to install (no red-line hits)',
+    'studio.winapp2SomeBlocked': '{n} refused by the red line (skipped automatically)',
 
     // ── Script card details ──
     'studio.reveal': 'Open in File Explorer',

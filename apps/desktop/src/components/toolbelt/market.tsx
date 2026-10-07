@@ -426,12 +426,12 @@ export function MarketPanel() {
           ) : (
             <>
           <div className="toolbelt-market-head" style={{ marginTop: 8 }}>
-            <div style={{ flex: 1, display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 value={registryUrl}
                 onChange={(e) => setRegistryUrl(e.target.value)}
                 placeholder={t('toolbelt.mkt.indexUrlPlaceholder')}
-                style={{ flex: 1 }}
+                style={{ flex: 1, minWidth: 180 }}
                 spellCheck={false}
               />
               <button

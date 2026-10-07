@@ -3,7 +3,7 @@ import { ChevronRight, ChevronDown, Sparkles, MessageSquare, Trash2, FolderOpen,
 import { useStore } from '../store';
 import { formatBytes } from '../format';
 import { t, useT } from '../i18n';
-import { api, type RegistryScaffold } from '../api';
+import { api, type RegistryScaffold, type Winapp2PreviewItem } from '../api';
 import { isPermEnabled } from '../permissions';
 import type { Node, Scaffold } from '../types';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -275,6 +275,7 @@ function InstallScaffoldModal({
   onInstalled: (id: string) => void;
 }) {
   const t = useT();
+  const [tab, setTab] = useState<'toml' | 'winapp2'>('toml');
   const [toml, setToml] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -303,27 +304,172 @@ function InstallScaffoldModal({
           <span>{t('studio.installHead')}</span>
           <button className="ghost icon" onClick={onClose} title={t('studio.close')} aria-label={t('studio.close')}><X size={14} /></button>
         </div>
-        <div className="modal-body">
-          <p className="muted small">
-            {t('studio.installLead')} <code>*.toml</code> {t('studio.installTail')}
-          </p>
-          <textarea
-            className="scaffold-toml-input"
-            placeholder={t('studio.tomlSample')}
-            value={toml}
-            onChange={(e) => setToml(e.target.value)}
-            spellCheck={false}
-          />
-          {err && <div className="install-err">{err}</div>}
-        </div>
-        <div className="modal-foot">
-          <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
-          <button className="primary" onClick={() => void install()} disabled={busy}>
-            {busy ? t('studio.installing') : t('studio.install')}
+        <div className="modal-tabs">
+          <button className={'modal-tab' + (tab === 'toml' ? ' active' : '')} onClick={() => setTab('toml')}>
+            {t('studio.tabToml')}
+          </button>
+          <button className={'modal-tab' + (tab === 'winapp2' ? ' active' : '')} onClick={() => setTab('winapp2')}>
+            {t('studio.tabWinapp2')}
           </button>
         </div>
+        {tab === 'toml' ? (
+          <>
+            <div className="modal-body">
+              <p className="muted small">
+                {t('studio.installLead')} <code>*.toml</code> {t('studio.installTail')}
+              </p>
+              <textarea
+                className="scaffold-toml-input"
+                placeholder={t('studio.tomlSample')}
+                value={toml}
+                onChange={(e) => setToml(e.target.value)}
+                spellCheck={false}
+              />
+              {err && <div className="install-err">{err}</div>}
+            </div>
+            <div className="modal-foot">
+              <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
+              <button className="primary" onClick={() => void install()} disabled={busy}>
+                {busy ? t('studio.installing') : t('studio.install')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <Winapp2ImportPanel onClose={onClose} onInstalled={onInstalled} />
+        )}
       </div>
     </div>
+  );
+}
+
+/// Winapp2.ini 社区规则导入：粘贴 → 解析预览（危险条目红线标注）→ 勾选入库。
+/// 全程只读预览 + installScaffold（后端红线闸二次校验），不直接执行任何清理。
+function Winapp2ImportPanel({
+  onClose,
+  onInstalled,
+}: {
+  onClose: () => void;
+  onInstalled: (id: string) => void;
+}) {
+  const t = useT();
+  const toast = useStore((s) => s.toast);
+  const [ini, setIni] = useState('');
+  const [items, setItems] = useState<Winapp2PreviewItem[] | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const parse = async () => {
+    if (!ini.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const list = await api.parseWinapp2(ini);
+      setItems(list);
+      setSelected(new Set(list.filter((i) => !i.red_line).map((i) => i.id)));
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (!items) return;
+    const safe = items.filter((i) => !i.red_line).map((i) => i.id);
+    setSelected((prev) => (prev.size === safe.length && safe.every((id) => prev.has(id)) ? new Set() : new Set(safe)));
+  };
+
+  const installSelected = async () => {
+    if (!items) return;
+    const chosen = items.filter((i) => selected.has(i.id) && i.toml);
+    if (chosen.length === 0) {
+      setErr(t('studio.winapp2NoneSelected'));
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      for (const item of chosen) {
+        const id = await api.installScaffold(item.toml!);
+        toast(t('studio.winapp2Installed', { id }), 'ok');
+        onInstalled(id);
+      }
+    } catch (e) {
+      setErr(t('studio.winapp2InstallFailed', { msg: String(e) }));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const safeCount = items?.filter((i) => !i.red_line).length ?? 0;
+  const blockedCount = items ? items.length - safeCount : 0;
+
+  return (
+    <>
+      <div className="modal-body">
+        <p className="muted small">{t('studio.winapp2Lead')}</p>
+        <textarea
+          className="scaffold-toml-input"
+          placeholder={t('studio.winapp2Placeholder')}
+          value={ini}
+          onChange={(e) => setIni(e.target.value)}
+          spellCheck={false}
+        />
+        {err && <div className="install-err">{err}</div>}
+        {items !== null && (
+          <div className="winapp2-preview">
+            <div className="winapp2-preview-head">
+              <span className="muted small">
+                {safeCount === items.length
+                  ? t('studio.winapp2AllSafe')
+                  : t('studio.winapp2SomeBlocked', { n: blockedCount })}
+              </span>
+              <button className="ghost small" onClick={toggleAll}>{selected.size === safeCount && safeCount > 0 ? t('studio.winapp2Clear') : t('studio.winapp2SelectAll')}</button>
+            </div>
+            <ul className="winapp2-list">
+              {items.map((item) => (
+                <li key={item.id} className={'winapp2-item' + (item.red_line ? ' blocked' : '')}>
+                  <label className="winapp2-item-main">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(item.id)}
+                      disabled={!!item.red_line}
+                      onChange={() => toggle(item.id)}
+                    />
+                    <span className="winapp2-item-name">{item.name}</span>
+                    <span className="muted small">{t('studio.winapp2Scopes', { n: item.scope_count })}</span>
+                  </label>
+                  {item.red_line && <div className="winapp2-redline small">{t('studio.winapp2RedLine', { msg: item.red_line })}</div>}
+                  <div className="winapp2-item-disclaimer muted small">{item.disclaimer}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+      <div className="modal-foot">
+        <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
+        {items === null ? (
+          <button className="primary" onClick={() => void parse()} disabled={busy || !ini.trim()}>
+            {busy ? t('studio.winapp2Parsing') : t('studio.winapp2Parse')}
+          </button>
+        ) : (
+          <button className="primary" onClick={() => void installSelected()} disabled={busy}>
+            {busy ? t('studio.winapp2Installing') : t('studio.winapp2InstallSelected', { n: selected.size })}
+          </button>
+        )}
+      </div>
+    </>
   );
 }
 

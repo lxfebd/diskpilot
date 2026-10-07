@@ -188,6 +188,23 @@
 
 .chat-turn.pending .chat-bubble { opacity: 0.6; font-style: italic; }
 
+/* Pending bubble spinner：AI 请求还在飞时的活动指示。不转就不再 is 转，
+   让用户一眼区分「正在生成」与「卡死」——转圈在、状态就还活着。 */
+.chat-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  border: 2px solid var(--accent);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: chat-spinner-rotate 800ms linear infinite;
+}
+@keyframes chat-spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
 /* === Markdown inside assistant bubble ====================================== */
 .chat-turn.assistant .chat-bubble > *:first-child { margin-top: 0; }
 .chat-turn.assistant .chat-bubble > *:last-child { margin-bottom: 0; }

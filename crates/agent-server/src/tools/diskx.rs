@@ -47,9 +47,10 @@ const HEAD_HASH_BYTES: usize = 64 * 1024;
 #[cfg(windows)]
 pub fn collect_biggest_files(path: String, top_n: usize) -> Result<String, String> {
     let p = Path::new(&path);
-    // PathGuard：拒绝盘根 / 系统目录 / 用户主目录根，防止 AI 误传 `C:\` 或 `C:\Users`。
+    // 只读口径（check_read）：放行盘根枚举（AI 分析全盘大文件分布的核心入口）。
+    // 系统目录 / 用户主目录根仍拒绝。
     PathGuard
-        .check(p)
+        .check_read(p)
         .map_err(|e| format!("路径被安全守卫拒绝：{e}"))?;
     let n = if top_n == 0 { 20 } else { top_n.clamp(5, 100) };
 
@@ -125,8 +126,9 @@ pub fn collect_biggest_files(_path: String, _top_n: usize) -> Result<String, Str
 #[cfg(windows)]
 pub fn collect_duplicate_files(path: String, top_n: usize) -> Result<String, String> {
     let p = Path::new(&path);
+    // 只读口径（check_read）：放行盘根枚举（AI 查全盘重复文件的核心入口）。
     PathGuard
-        .check(p)
+        .check_read(p)
         .map_err(|e| format!("路径被安全守卫拒绝：{e}"))?;
     let n = if top_n == 0 { 20 } else { top_n.clamp(5, 100) };
 
@@ -362,8 +364,10 @@ pub fn collect_disk_io_usage(_sample_ms: u64) -> Result<String, String> {
 #[cfg(windows)]
 pub fn collect_top_directories(path: String, top_n: usize) -> Result<String, String> {
     let p = Path::new(&path);
+    // 只读口径（check_read）：放行盘根枚举——统计盘根直接子目录占用是 AI
+    // 分析空间分布的核心入口，不修改任何东西。系统目录/主目录根仍拒绝。
     PathGuard
-        .check(p)
+        .check_read(p)
         .map_err(|e| format!("路径被安全守卫拒绝：{e}"))?;
     let n = if top_n == 0 { 20 } else { top_n.clamp(5, 100) };
 

@@ -43,6 +43,17 @@ export const cleanApi = {
       ? invoke<string>('scaffold_registry_install', { id, confirmed })
       : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'scaffold_registry_install' }))),
 
+  /**
+   * Winapp2.ini 社区规则导入预览（借 BleachBit 生态取长补短）：
+   * 把社区 winapp2.ini 文本解析成可清理 scaffold 列表，**只预览不写盘**。
+   * 危险条目已由后端红线闸标注 `red_line` 拒绝理由，UI 据此红字提示；
+   * 用户确认后再逐条走 installScaffold 入库。纯解析，无任何系统副作用。
+   */
+  parseWinapp2: (content: string): Promise<Winapp2PreviewItem[]> =>
+    isTauri
+      ? invoke<Winapp2PreviewItem[]>('parse_winapp2', { content })
+      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'parse_winapp2' }))),
+
   scopeSizesBatch: (
     scaffoldId: string,
     rootPaths: string[],
@@ -362,4 +373,26 @@ export interface ScaffoldRegistryOut {
   items: RegistryScaffold[];
   warning: string | null;
   updated_at: number;
+}
+
+// ── Winapp2.ini 社区规则导入（后端 parse_winapp2 返回形状）──
+
+/** 单条可导入的 Winapp2 清理规则（只预览，未落盘） */
+export interface Winapp2PreviewItem {
+  /** 生成的安全 id（= 后续 installScaffold 的脚本 id） */
+  id: string;
+  /** 社区规则名（如「Google Chrome Autofill Data *」） */
+  name: string;
+  /** 风险等级（'low' | 'medium' | 'high'，转换产物恒为 low） */
+  risk: string;
+  /** 文件清理 scope 数（注册表项不执行，已剥离） */
+  scope_count: number;
+  /** 可读 scope 说明（lable → glob） */
+  scopes: string[];
+  /** 转换说明（回收站模式 / 含注册表项提示 / 社区警告） */
+  disclaimer: string;
+  /** 序列化好的 toml（勾选后直接 installScaffold 入库）；红线被拒项为 null */
+  toml: string | null;
+  /** 命中红线时的拒绝理由（中文，直接进 UI）；null = 可安全安装 */
+  red_line: string | null;
 }
