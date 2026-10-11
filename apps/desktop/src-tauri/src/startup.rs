@@ -27,6 +27,15 @@ const HKCU_RUN: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const HKLM_RUN: &str = r"HKLM\Software\Microsoft\Windows\CurrentVersion\Run";
 const FOLDER_REL: &str = r"\Microsoft\Windows\Start Menu\Programs\Startup";
 
+/// 转义 PowerShell 单引号字符串字面量内容：单引号翻倍（PS 里 `'` 的唯一逃逸）。
+///
+/// 启用/禁用/删除注册表启动项时，值名来自**注册表数据**（可被恶意软件写成
+/// `x'; <任意 PS> #` 这种构造），必须先转义再拼进 `'...'` 字面量，否则启停
+/// 操作本身成为代码执行入口（与 agent-server sys.rs 同一条铁律）。
+fn escape_ps_single_quoted(s: &str) -> String {
+    s.replace('\'', "''")
+}
+
 /// 枚举启动项（只读，无确认要求）。
 /// registry 部分用 PowerShell 读注册表（值名+值内容保真），文件夹部分直接读目录。
 #[tauri::command]
@@ -214,23 +223,26 @@ fn set_startup_item_blocking(id: &str, enable: bool) -> Result<(), String> {
             };
             let value_name = &item.name;
             let disabled_name = format!("{value_name}.disabled");
+            // 注册表值名是外部数据（恶意软件可伪造引号构造）——转义后拼入。
+            let en = escape_ps_single_quoted(value_name);
+            let dis = escape_ps_single_quoted(&disabled_name);
             // 用 PowerShell 读写注册表，值内容保真（避免 reg.exe 本地化输出歧义）。
             let script = if enable {
                 format!(
                     "$k='{key}'; \
-                     $d=(Get-ItemProperty -Path $k -Name '{disabled_name}' -ErrorAction SilentlyContinue).'{disabled_name}'; \
-                     if ($null -eq $d) {{ throw '备份值不存在：{disabled_name}' }}; \
-                     Set-ItemProperty -Path $k -Name '{value_name}' -Value $d -Type String; \
-                     Remove-ItemProperty -Path $k -Name '{disabled_name}' -ErrorAction SilentlyContinue; \
+                     $d=(Get-ItemProperty -Path $k -Name '{dis}' -ErrorAction SilentlyContinue).'{dis}'; \
+                     if ($null -eq $d) {{ throw '备份值不存在：{dis}' }}; \
+                     Set-ItemProperty -Path $k -Name '{en}' -Value $d -Type String; \
+                     Remove-ItemProperty -Path $k -Name '{dis}' -ErrorAction SilentlyContinue; \
                      'ok'"
                 )
             } else {
                 format!(
                     "$k='{key}'; \
-                     $d=(Get-ItemProperty -Path $k -Name '{value_name}' -ErrorAction SilentlyContinue).'{value_name}'; \
-                     if ($null -eq $d) {{ throw '值不存在：{value_name}' }}; \
-                     Set-ItemProperty -Path $k -Name '{disabled_name}' -Value $d -Type String; \
-                     Remove-ItemProperty -Path $k -Name '{value_name}' -ErrorAction SilentlyContinue; \
+                     $d=(Get-ItemProperty -Path $k -Name '{en}' -ErrorAction SilentlyContinue).'{en}'; \
+                     if ($null -eq $d) {{ throw '值不存在：{en}' }}; \
+                     Set-ItemProperty -Path $k -Name '{dis}' -Value $d -Type String; \
+                     Remove-ItemProperty -Path $k -Name '{en}' -ErrorAction SilentlyContinue; \
                      'ok'"
                 )
             };
@@ -327,15 +339,43 @@ fn remove_startup_item_blocking(id: &str) -> Result<(), String> {
             } else {
                 HKLM_RUN
             };
+            // 值名是外部数据——转义后拼入（防单引号逃逸注入）。
             let script = format!(
                 "$k='{key}'; \
                  Remove-ItemProperty -Path $k -Name '{}' -ErrorAction Stop; \
                  'ok'",
-                item.name
+                escape_ps_single_quoted(&item.name)
             );
             ps_capture(&script, Duration::from_secs(15))?;
             Ok(())
         }
         other => Err(format!("未知的启动项来源：{other}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 钉死转义口径：单引号翻倍是 PS 单引号字面量的唯一逃逸；
+    /// 恶意值名 `x'; <恶意> #` 转义后无法闭合字面量。
+    #[test]
+    fn escape_ps_single_quoted_escapes_quote() {
+        assert_eq!(escape_ps_single_quoted("plain"), "plain");
+        assert_eq!(escape_ps_single_quoted("o'brien"), "o''brien");
+        let evil = "x'; Start-Process calc; #";
+        let esc = escape_ps_single_quoted(evil);
+        // 拼入 '...' 后：整串仍在字面量内——每个原单引号都翻倍成转义对
+        // （引号数 = 原数量 ×2），解析器遇到 `''` 只得到字面量字符，不闭合。
+        assert_eq!(esc, "x''; Start-Process calc; #");
+        assert_eq!(esc.matches('\'').count(), evil.matches('\'').count() * 2);
+    }
+
+    /// disabled 名 = 原名+.disabled，转义必须在拼接后仍覆盖引号。
+    #[test]
+    fn disabled_name_escapes_correctly() {
+        let name = "evil'";
+        let disabled = format!("{name}.disabled");
+        assert_eq!(escape_ps_single_quoted(&disabled), "evil''.disabled");
     }
 }
