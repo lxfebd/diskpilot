@@ -194,6 +194,14 @@ button.ghost:active:not(:disabled) {
 }
 button.ghost.icon { padding: 8px; }
 button.ghost.full { width: 100%; justify-content: center; margin-top: 6px; }
+/* 紧凑小按钮：统一 28px 高（≥24px 可点目标），避免个别组件用内联
+   padding 把 ghost.small 压到 17px 而成不可点扁条（AssetOverview 打开清理页）。 */
+button.ghost.small {
+  padding: 5px 10px;
+  font-size: 12px;
+  gap: 5px;
+  min-height: 28px;
+}
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Inputs ────────────────────────────────────────────────────────── */

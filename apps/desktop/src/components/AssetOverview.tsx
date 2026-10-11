@@ -786,7 +786,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             <h2 className="ao-card-title">
               <Trash2 size={16} /> {t('overview.clean.title')}
               <span className="ao-clean-summary">{cleanSummaryText}</span>
-              <button className="ghost small" onClick={onOpenCleanup} style={{ marginLeft: 'auto', fontSize: 11, padding: '0 8px' }}>
+              <button className="ghost small" onClick={onOpenCleanup} style={{ marginLeft: 'auto' }}>
                 {t('overview.clean.openPage')}
               </button>
             </h2>
@@ -794,7 +794,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
               {cleanState === 'loading' ? (
                 <div className="ao-empty"><RefreshCw size={16} className="ao-spin" />{t('overview.clean.checkingList')}</div>
               ) : cleanState === 'empty' ? (
-                <div className="ao-empty"><Check size={16} />{selDrive ? t('overview.clean.spotless', { drive: driveLetter(selDrive.path) }) : t('overview.noDrive')}</div>
+                <div className="ao-empty">
+                  {selScanned
+                    ? <><Check size={16} />{selDrive ? t('overview.clean.spotless', { drive: driveLetter(selDrive.path) }) : t('overview.noDrive')}</>
+                    : <><Info size={16} />{selDrive ? t('overview.clean.needScan') : t('overview.noDrive')}</>}
+                </div>
               ) : (
                 cleanItems.map((it) => (
                   <label key={it.key} className="ao-clean-row">

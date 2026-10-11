@@ -646,7 +646,7 @@ export function workshopTitles(ids: number[]): Record<number, string> {
 // 真实 Tauri 环境走后端 toolbelt_catalog；这里让预览模式也能看到工具墙全貌。
 export const TOOLBELT_CATALOG = {
   tools_root: 'C:/mock/图吧工具箱/Tools',
-  total: 24,
+  total: 18,
   category_order: ['处理器工具', '显卡工具', '硬盘工具', '综合检测', '其他工具', '烤鸡工具', '内存工具', '外设工具', '显示器工具', '主板工具', '游戏工具', '常用工具'],
   categories: [
     { name: '处理器工具', tools: [
