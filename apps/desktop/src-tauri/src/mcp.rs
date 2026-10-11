@@ -149,6 +149,11 @@ pub struct McpServerStatus {
 const AUDIT_FILE: &str = "mcp-audit.jsonl";
 /// probe 结果缓存 TTL（秒）：5s 内重复 list_servers/list_tools 免重连。
 const PROBE_TTL_SECS: u64 = 5;
+
+/// 单次 `tools/call` 的端到端上限（连接 + 调用）。probe/list 有 10s 兜底，
+/// 但调用路径此前无任何超时：挂死的 MCP 服务器（stdio 子进程阻塞、HTTP 无响应）
+/// 会永久卡住整个 AI 回合——后端 await 不返回，前端 busy 永远清不掉。
+const CALL_TOOL_TIMEOUT_SECS: u64 = 60;
 /// probe 全局超时（秒）：stdio 无 timeout 时兜底，防死锁。
 const PROBE_TIMEOUT_SECS: u64 = 10;
 
@@ -387,8 +392,12 @@ async fn connect_http(cfg: &McpServerConfig) -> Result<McpService, String> {
 
     // reqwest Client 构建器：timeout / header 都挂在 builder 上（不是在 Client 上）。
     let mut builder = reqwest::Client::builder();
-    if let Some(secs) = timeout_secs {
-        builder = builder.timeout(std::time::Duration::from_secs(*secs));
+    match timeout_secs {
+        // 0 在 reqwest 里表示「立即超时」（不是「不限时」），会把一切请求打失败；
+        // 配置者填 0 的意图是「用默认/不限」，这里显式按未设置处理。
+        Some(0) => {}
+        Some(secs) => builder = builder.timeout(std::time::Duration::from_secs(*secs)),
+        None => {}
     }
     if !headers.is_empty() {
         for (k, v) in headers {
@@ -835,36 +844,34 @@ pub(crate) async fn mcp_call_tool(
 
     // stdio 每次重新 spawn（阻塞式 IO），放 spawn_blocking 防卡主线程；
     // http 连接本身 async，无需阻塞线程。统一走 async 即可。
+    // 端到端 60s 超时：连接 + 调用一起包——MCP 服务器挂死时宁可报「调用超时」，
+    // 也不让 AI 回合永久悬挂（call 是同步 await，无超时则前端 busy 永不清除）。
     let cfg = cfg.clone();
-    let service = match connect_server(&cfg).await {
-        Ok(s) => s,
-        Err(e) => {
-            let msg = format!("连接 MCP 服务器失败：{e}");
-            append_audit(
-                &app,
-                serde_json::json!({
-                    "ts": audit_ts(),
-                    "op": "call_tool",
-                    "server_id": server_id,
-                    "tool": name,
-                    "perm": perm,
-                    "granted": true,
-                    "args": args_snapshot,
-                    "ok": false,
-                    "error": msg,
-                }),
-            );
-            return Err(msg);
+    let call = async {
+        let service = connect_server(&cfg).await.map_err(|e| format!("连接 MCP 服务器失败：{e}"))?;
+        let mut params = CallToolRequestParams::new(name.clone());
+        if let Some(args) = &args_obj {
+            params = params.with_arguments(args.clone());
         }
+        service
+            .call_tool(params)
+            .await
+            .map_err(|e| format!("tools/call 失败：{e}"))
     };
-    let mut params = CallToolRequestParams::new(name.clone());
-    if let Some(args) = args_obj {
-        params = params.with_arguments(args);
-    }
-    let result = match service.call_tool(params).await {
+    let result = match tokio::time::timeout(
+        std::time::Duration::from_secs(CALL_TOOL_TIMEOUT_SECS),
+        call,
+    )
+    .await
+    {
+        Err(_) => Err(format!(
+            "调用超时（>{CALL_TOOL_TIMEOUT_SECS}s）：MCP 服务器无响应，已放弃本次调用。"
+        )),
         Ok(r) => r,
-        Err(e) => {
-            let msg = format!("tools/call 失败：{e}");
+    };
+    let result = match result {
+        Ok(r) => r,
+        Err(msg) => {
             append_audit(
                 &app,
                 serde_json::json!({

@@ -372,32 +372,50 @@ fn extract_first_f64(line: &str) -> Option<f64> {
         .filter(|v| v.is_finite() && *v > 0.0)
 }
 
-/// 从 SMART/磁盘健康文本里找「剩余 X GB」。
+/// 从 SMART/磁盘健康文本里找「剩余 X GB/TB」。
+///
+/// 三条防错规则（否则会把磨损度当成剩余容量、把已用值当成剩余值）：
+/// 1. 只认「剩余/free + 容量单位（GB/TB/G）」的行；
+/// 2. 跳过含 `%` 的行——`寿命剩余约 X%` 是磨损度百分比，不是剩余容量。
+///    磨损行一旦被命中，健康 SSD 会收到虚假的「磁盘剩余低于阈值」告警；
+/// 3. 「已用 XGB / 剩余 YGB」结构以关键词为锚取词**之后**的值（剩余），
+///    不取行首数字（已用）。
 fn extract_free_gb(text: &str) -> Option<(f64, String)> {
-    let lines: Vec<&str> = text.lines().collect();
-    for (i, l) in lines.iter().enumerate() {
+    for l in text.lines() {
         let low = l.to_lowercase();
-        if low.contains("剩余") || low.contains("free") {
-            if let Some(v) = extract_first_f64(l) {
-                // 找单位
-                let unit = if low.contains("tb") { 1024.0 } else { 1.0 };
-                return Some((v * unit, l.trim().to_string()));
-            }
-            // 可能是 "已用 XGB / 剩余 YGB" 结构，扫同一行所有数字取最后有效
-            if let Some(tail) = lines.get(i).copied() {
-                let nums: Vec<f64> = tail
-                    .split_whitespace()
-                    .filter_map(|w| {
-                        w.trim_matches(|c: char| !c.is_ascii_digit() && c != '.')
-                            .parse::<f64>()
-                            .ok()
-                    })
-                    .collect();
-                if let Some(&last) = nums.last() {
-                    return Some((last, tail.trim().to_string()));
-                }
-            }
+        if !(low.contains("剩余") || low.contains("free")) || low.contains('%') {
+            continue;
         }
+        if !(low.contains("gb") || low.contains("tb") || low.contains("g ")) {
+            continue;
+        }
+        let unit = if low.contains("tb") { 1024.0 } else { 1.0 };
+        let nums = |s: &str| -> Vec<f64> {
+            s.split_whitespace()
+                .filter_map(|w| {
+                    let n: String = w
+                        .chars()
+                        .filter(|c| c.is_ascii_digit() || *c == '.')
+                        .collect();
+                    if n.is_empty() {
+                        return None;
+                    }
+                    n.parse::<f64>()
+                        .ok()
+                        .filter(|v| v.is_finite() && *v > 0.0)
+                })
+                .collect()
+        };
+        // 锚定关键词：只取「剩余/free」之后的数字（排除行首的已用值）
+        let kw = low.find("剩余").or_else(|| low.find("free"))?;
+        let after = nums(&low[kw..]);
+        let v = if !after.is_empty() {
+            after[0]
+        } else {
+            // 兜底：关键词在行尾（如 "900 GB free"），整行取最后一个有效数字
+            *nums(l).last()?
+        };
+        return Some((v * unit, l.trim().to_string()));
     }
     None
 }
@@ -421,5 +439,46 @@ mod tests {
         assert_eq!(fmt_uptime(3600), "1小时 0分");
         assert_eq!(fmt_uptime(90061), "1天 1小时 1分");
         assert_eq!(fmt_uptime(120), "2分");
+    }
+
+    #[test]
+    fn extract_free_gb_hits_remaining_capacity() {
+        // 直接命中：剩余 + GB 单位
+        assert_eq!(
+            extract_free_gb("- 磁盘剩余：120.5 GB\n"),
+            Some((120.5, "- 磁盘剩余：120.5 GB".to_string()))
+        );
+        // 已有 SMART 文本风格：磨损行「寿命剩余约 X%」必须被跳过（健康 SSD
+        // 会被误判成剩余 8GB → 虚假的低容量告警），下一行才可能是真实容量
+        let smart = "- 三星SSD：SSD，NVMe，512 GB，健康状态 良好（系统盘）\n  - 磨损度：8%（寿命剩余约 92%）\n  - 通电时长：1234 小时\n  - 剩余空间：80 GB\n";
+        assert_eq!(
+            extract_free_gb(smart),
+            Some((80.0, "- 剩余空间：80 GB".to_string()))
+        );
+        // 「已用 X GB / 剩余 Y GB」结构：取关键词之后的剩余值，不取行首已用值
+        assert_eq!(
+            extract_free_gb("已用 300GB / 剩余 120GB\n"),
+            Some((120.0, "已用 300GB / 剩余 120GB".to_string()))
+        );
+        // TB 单位换算成 GB
+        assert_eq!(
+            extract_free_gb("Free space: 1.5 TB\n"),
+            Some((1536.0, "Free space: 1.5 TB".to_string()))
+        );
+        // 关键词在行尾（"900 GB free"）
+        assert_eq!(
+            extract_free_gb("Disk 2: 900 GB free\n"),
+            Some((900.0, "Disk 2: 900 GB free".to_string()))
+        );
+    }
+
+    #[test]
+    fn extract_free_gb_rejects_percent_or_no_unit() {
+        // 磨损百分比行：即使含「剩余」也不当作剩余容量
+        assert_eq!(extract_free_gb("  - 磨损度：8%（寿命剩余约 92%）\n"), None);
+        assert_eq!(extract_free_gb("寿命剩余约 92% 健康度良好\n"), None);
+        // 无容量单位（GB/TB）不去猜
+        assert_eq!(extract_free_gb("剩余 300\n"), None);
+        assert_eq!(extract_free_gb("无剩余空间信息"), None);
     }
 }
