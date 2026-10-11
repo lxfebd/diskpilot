@@ -194,7 +194,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 700;
 }

@@ -1052,6 +1052,14 @@ footer {
   border-radius: var(--radius-btn);
   overflow: visible;
 }
+/* 主题选择器：17 套主题自适应换行块，按钮放宽到内容宽度 + 呼吸间距，
+   中文主题名不换行、不被省略号截断（不再用 3 列分段控件） */
+.seg-4.auto.theme-pick .seg-opt {
+  flex: 0 1 auto;
+  min-width: 64px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
 .seg-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
 /* Base URL 下方的协议识别标签 + 手动开关入口 */

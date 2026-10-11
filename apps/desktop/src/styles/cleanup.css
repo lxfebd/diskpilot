@@ -106,7 +106,7 @@ main.cleanup-page > .cleanup-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 13px;
   padding: 40px 20px;
   text-align: center;

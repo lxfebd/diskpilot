@@ -384,7 +384,9 @@ export function Settings({ onClose, initialTab }: Props) {
 
             <label className="field">
               <span>{t('settings.theme')}</span>
-              <div className="seg seg-3">
+              {/* 17 套主题用 3 列分段控件会溢出截断（长中文名被省略号吃掉）；
+                 改用自适应 flex 换行块，每个主题完整可读、可独立点击 */}
+              <div className="seg seg-4 auto theme-pick">
                 {(Object.keys(THEME_LABEL) as unknown as ThemeId[]).map((id) => (
                   <button
                     key={id}
