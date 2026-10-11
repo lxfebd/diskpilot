@@ -136,78 +136,6 @@
       "download_hint": "https://geeks3d.com/furmark/"
     },
     {
-      "name": "FPT64",
-      "category": "显卡工具",
-      "exe_rel": "显卡工具/FPT64/fptw64.exe",
-      "purpose": "Intel 平台主板 BIOS 备份/刷写（Intel Flash Programming Tool 64 位版）",
-      "when_to_use": "备份当前 BIOS（-d）、在确认镜像匹配后刷写 BIOS（-f）",
-      "when_not_to_use": "未确认镜像与主板型号匹配时；电池电量不足/未接电源时——刷写失败可致主板变砖",
-      "invocation": {
-        "mode": "cli",
-        "launchable": true,
-        "args_template": "{action} {file} -bios",
-        "params": [
-          {
-            "name": "action",
-            "flag": "",
-            "type": "enum",
-            "required": true,
-            "desc": "-d 备份到文件 / -f 刷写镜像"
-          },
-          {
-            "name": "file",
-            "flag": "",
-            "type": "path",
-            "required": true,
-            "desc": "备份目标文件（-d）或 BIOS 镜像（-f）"
-          },
-          {
-            "name": "bios",
-            "flag": "-bios",
-            "type": "boolean",
-            "required": false,
-            "desc": "操作对象为 BIOS 区域（配合 -d/-f）"
-          },
-          {
-            "name": "force",
-            "flag": "-y",
-            "type": "boolean",
-            "required": false,
-            "desc": "跳过确认提示全自动"
-          }
-        ],
-        "timeout_secs": 300
-      },
-      "output": {
-        "format": "stdout",
-        "parser": "stdout",
-        "schema": "FPT 控制台输出；0 = 成功"
-      },
-      "risk": "high",
-      "permission_level": "L3",
-      "side_effects": "刷写（-f）可直接改 BIOS 区，失败变砖——L3 永久禁止自动执行，仅允许备份（-d）在 L2 确认后执行",
-      "examples": [
-        {
-          "args": "-d bios_bak.bin -bios",
-          "desc": "备份当前 BIOS（安全，L2 确认后放行）",
-          "expect": "生成 bios_bak.bin"
-        },
-        {
-          "args": "-f bios_f.bin -bios",
-          "desc": "刷写 BIOS（永久禁止自动执行）",
-          "expect": "拒绝：L3 永禁"
-        }
-      ],
-      "publisher": "Intel",
-      "tags": [
-        "BIOS",
-        "刷写",
-        "主板"
-      ],
-      "tutorial_url": "",
-      "download_hint": ""
-    },
-    {
       "name": "nvidiaInspector",
       "category": "显卡工具",
       "exe_rel": "显卡工具/nvidiaInspector/nvidiaInspector.exe",
@@ -755,68 +683,6 @@
       "download_hint": "https://www.hwinfo.com/"
     },
     {
-      "name": "USBDeview",
-      "category": "其他工具",
-      "exe_rel": "其他工具/USBDeview/USBDeview.exe",
-      "purpose": "USB 设备管理：列出/导出/断开/禁用/卸载 USB 设备（NirSoft）",
-      "when_to_use": "导出 USB 设备清单、安全弹出 U 盘（/stop_by_drive）、排查 USB 设备状态",
-      "when_not_to_use": "禁用/卸载/断开设备未获明确授权时",
-      "invocation": {
-        "mode": "cli",
-        "launchable": true,
-        "args_template": "/scomma \"{outfile}\" /AddExportHeaderLine 1",
-        "params": [
-          {
-            "name": "outfile",
-            "flag": "/scomma",
-            "type": "path",
-            "required": false,
-            "desc": "导出 CSV（/stext /stab /shtml /sxml 同族）"
-          },
-          {
-            "name": "action",
-            "flag": "",
-            "type": "string",
-            "required": false,
-            "desc": "/stop_by_drive g: 断开盘 /is_connected \"名称\" 查询 /disable /remove"
-          }
-        ],
-        "timeout_secs": 60
-      },
-      "output": {
-        "format": "file",
-        "parser": "smart_csv",
-        "schema": "CSV 列含 Device Name/Device Type/Serial Number/Drive Letter 等"
-      },
-      "risk": "medium",
-      "permission_level": "L1",
-      "side_effects": "导出只读；断开/禁用/卸载设备改变系统状态",
-      "examples": [
-        {
-          "args": "/scomma \"usb.csv\" /AddExportHeaderLine 1",
-          "desc": "导出全部 USB 设备 CSV",
-          "expect": "CSV 含设备清单"
-        },
-        {
-          "args": "/stop_by_drive g:",
-          "desc": "安全弹出 G 盘",
-          "expect": "stdout 确认断开"
-        },
-        {
-          "args": "/is_connected_by_serial \"7538957348957398\"",
-          "desc": "检查某序列号 U 盘是否连接",
-          "expect": "退出码 = 匹配设备数"
-        }
-      ],
-      "publisher": "NirSoft",
-      "tags": [
-        "USB",
-        "设备管理"
-      ],
-      "tutorial_url": "https://www.nirsoft.net/utils/usb_devices_view.html",
-      "download_hint": "https://www.nirsoft.net/"
-    },
-    {
       "name": "BlueScreenView",
       "category": "其他工具",
       "exe_rel": "其他工具/bluescreenview/BlueScreenViewx64.exe",
@@ -925,79 +791,6 @@
       ],
       "tutorial_url": "https://www.nirsoft.net/utils/battery_information_view.html",
       "download_hint": "https://www.nirsoft.net/"
-    },
-    {
-      "name": "Autoruns / autorunsc",
-      "category": "其他工具",
-      "exe_rel": "其他工具/Autoruns/autorunsc64.exe",
-      "purpose": "自启动项全量扫描导出（Sysinternals autorunsc 命令行版）",
-      "when_to_use": "审计自启动项、查找可疑第三方启动项、对比系统变化",
-      "when_not_to_use": "非 Sysinternals 场景、不熟悉自启动项含义时",
-      "invocation": {
-        "mode": "cli",
-        "launchable": true,
-        "args_template": "-a {type} -{format} -accepteula",
-        "params": [
-          {
-            "name": "type",
-            "flag": "-a",
-            "type": "string",
-            "required": false,
-            "default": "*",
-            "desc": "* 全部 / l 登录 / s 服务驱动 / m WMI / t 计划任务 等"
-          },
-          {
-            "name": "format",
-            "flag": "",
-            "type": "enum",
-            "required": false,
-            "default": "c",
-            "desc": "-c CSV / -ct 制表 / -x XML"
-          },
-          {
-            "name": "hide_ms",
-            "flag": "-m",
-            "type": "boolean",
-            "required": false,
-            "desc": "隐藏微软条目"
-          },
-          {
-            "name": "verify_sig",
-            "flag": "-s",
-            "type": "boolean",
-            "required": false,
-            "desc": "验证数字签名"
-          }
-        ],
-        "timeout_secs": 120
-      },
-      "output": {
-        "format": "stdout",
-        "parser": "smart_csv",
-        "schema": "CSV 列含 Entry/Description/Publisher/Image Path/Hash（-c 输出到 stdout）"
-      },
-      "risk": "low",
-      "permission_level": "L0",
-      "side_effects": "只读扫描；-u/-v 会上传文件哈希查 VirusTotal（隐私注意）",
-      "examples": [
-        {
-          "args": "-a * -c -accepteula",
-          "desc": "导出全部自启动项 CSV",
-          "expect": "stdout CSV 含全部条目"
-        },
-        {
-          "args": "-a * -c -m -s -accepteula",
-          "desc": "隐藏微软项验证签名",
-          "expect": "stdout 仅第三方条目"
-        }
-      ],
-      "publisher": "Sysinternals (Microsoft)",
-      "tags": [
-        "自启动项",
-        "系统审计"
-      ],
-      "tutorial_url": "https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns",
-      "download_hint": "https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns"
     },
     {
       "name": "Everything",
@@ -1697,6 +1490,1968 @@
       ],
       "tutorial_url": "https://rufus.ie/",
       "download_hint": "https://rufus.ie/"
+    },
+    {
+      "name": "DesktopOK",
+      "category": "其他工具",
+      "exe_rel": "其他工具/DesktopOK/DesktopOK.exe",
+      "purpose": "桌面布局保存与恢复：记忆图标位置、多显示器分辨率切换",
+      "when_to_use": "用户要桌面布局保存与恢复时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "仅读写桌面图标布局配置",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 DesktopOK GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "其他工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "DirectX Repair",
+      "category": "其他工具",
+      "exe_rel": "其他工具/DirectX_Repair/DirectX Repair.exe",
+      "purpose": "DirectX 组件修复：检测并修复缺失/损坏的 DX 运行库与 VC++ 运行库",
+      "when_to_use": "用户要DirectX 组件修复时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "下载并安装系统组件，更改系统文件",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 DirectX Repair GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "其他工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "Geek Uninstaller",
+      "category": "其他工具",
+      "exe_rel": "其他工具/Geek Uninstaller/Geek Uninstaller.exe",
+      "purpose": "软件卸载：彻底卸载应用并清理残留注册表项与文件",
+      "when_to_use": "用户要软件卸载时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "卸载应用+删注册表（需确认目标）",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 Geek Uninstaller GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "其他工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "GifCam",
+      "category": "其他工具",
+      "exe_rel": "其他工具/gifcam/GifCam.exe",
+      "purpose": "屏幕录制为 GIF：录制选区动画，导出 GIF 文件",
+      "when_to_use": "用户要屏幕录制为 GIF时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "录制屏幕，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 GifCam GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "其他工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "procexp",
+      "category": "其他工具",
+      "exe_rel": "其他工具/procexp/procexp.exe",
+      "purpose": "进程管理器：查看进程树、句柄、DLL 与资源占用（Sysinternals）",
+      "when_to_use": "用户要进程管理器时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读诊断；结束进程需明确授权",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 procexp GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "Sysinternals",
+      "tags": [
+        "其他工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "ULTRAISO",
+      "category": "其他工具",
+      "exe_rel": "其他工具/ULTRAISO/ULTRAISO.exe",
+      "purpose": "光盘镜像工具：制作/编辑/转换 ISO 镜像，写入 U 盘",
+      "when_to_use": "用户要光盘镜像工具时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "写 U 盘/镜像需确认目标，防覆盖",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 ULTRAISO GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "其他工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "memtest",
+      "category": "内存工具",
+      "exe_rel": "内存工具/memtest/memtest.exe",
+      "purpose": "内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）",
+      "when_to_use": "用户要内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写内存/存储，产生较高负载与热量",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 memtest GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "社区",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "MemTest64",
+      "category": "内存工具",
+      "exe_rel": "内存工具/memtest64/MemTest64.exe",
+      "purpose": "内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）",
+      "when_to_use": "用户要内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写内存/存储，产生较高负载与热量",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 MemTest64 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "社区",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "memtestpro",
+      "category": "内存工具",
+      "exe_rel": "内存工具/memtestpro/memtestpro.exe",
+      "purpose": "内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）",
+      "when_to_use": "用户要内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写内存/存储，产生较高负载与热量",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 memtestpro GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "社区",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "Thaiphoon",
+      "category": "内存工具",
+      "exe_rel": "内存工具/Thaiphoon/Thaiphoon.exe",
+      "purpose": "Thaiphoon 工具（GUI 启动）",
+      "when_to_use": "用户要Thaiphoon 工具（GUI 启动）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "GUI 交互工具，无脚本化副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 Thaiphoon GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "TM5",
+      "category": "内存工具",
+      "exe_rel": "内存工具/tm5/TM5.exe",
+      "purpose": "内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）",
+      "when_to_use": "用户要内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写内存/存储，产生较高负载与热量",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 TM5 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "社区",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "ZenTimings",
+      "category": "内存工具",
+      "exe_rel": "内存工具/ZenTimings/ZenTimings.exe",
+      "purpose": "内存条 SPD/时序信息读取（Thaiphoon 常用于查看内存颗粒与超频档）",
+      "when_to_use": "用户要内存条 SPD/时序信息读取（Thaiphoon 常用于查看内存颗粒与超频档）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读 SPD 信息，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 ZenTimings GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "ramdisk",
+      "category": "内存工具",
+      "exe_rel": "内存工具/魔方内存盘/ramdisk.exe",
+      "purpose": "内存虚拟磁盘：把内存划为磁盘分区，高速读写临时文件",
+      "when_to_use": "用户要内存虚拟磁盘时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "占用内存容量；断电后盘内数据丢失",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 ramdisk GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "内存工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "C2CLatency",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/C2CLatency/C2CLatency.exe",
+      "purpose": "CPU 性能/稳定性测试：计算负载验证稳定性与散热（SuperPi 单线程圆周率，wPrime 多核，LinX 高负载）",
+      "when_to_use": "用户要CPU 性能/稳定性测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载运行产生热量与功耗",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 C2CLatency GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "处理器工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "LinX",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/LinX/LinX.exe",
+      "purpose": "CPU 性能/稳定性测试：计算负载验证稳定性与散热（SuperPi 单线程圆周率，wPrime 多核，LinX 高负载）",
+      "when_to_use": "用户要CPU 性能/稳定性测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载运行产生热量与功耗",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 LinX GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "处理器工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "Superpi",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/superpi/Superpi.exe",
+      "purpose": "CPU 性能/稳定性测试：计算负载验证稳定性与散热（SuperPi 单线程圆周率，wPrime 多核，LinX 高负载）",
+      "when_to_use": "用户要CPU 性能/稳定性测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载运行产生热量与功耗",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 Superpi GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "处理器工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "wPrime",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/wPrime/wPrime.exe",
+      "purpose": "CPU 性能/稳定性测试：计算负载验证稳定性与散热（SuperPi 单线程圆周率，wPrime 多核，LinX 高负载）",
+      "when_to_use": "用户要CPU 性能/稳定性测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载运行产生热量与功耗",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 wPrime GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "处理器工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "xiangqi",
+      "category": "处理器工具",
+      "exe_rel": "处理器工具/XIANGQI/xiangqi.exe",
+      "purpose": "CPU 性能/稳定性测试：计算负载验证稳定性与散热（SuperPi 单线程圆周率，wPrime 多核，LinX 高负载）",
+      "when_to_use": "用户要CPU 性能/稳定性测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载运行产生热量与功耗",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 xiangqi GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "处理器工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "鼠标测试软件AresonMouseTestProgram",
+      "category": "外设工具",
+      "exe_rel": "外设工具/AresonMouseTest/鼠标测试软件AresonMouseTestProgram.exe",
+      "purpose": "外设测试/调校：鼠标点击/移动反馈测试、键盘映射与延迟测量",
+      "when_to_use": "用户要外设测试/调校时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "读输入设备，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 鼠标测试软件AresonMouseTestProgram GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "外设工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "Keyboard Test Utility",
+      "category": "外设工具",
+      "exe_rel": "外设工具/Keyboard Test Utility/Keyboard Test Utility.exe",
+      "purpose": "外设测试/调校：鼠标点击/移动反馈测试、键盘映射与延迟测量",
+      "when_to_use": "用户要外设测试/调校时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "读输入设备，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 Keyboard Test Utility GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "外设工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "KeyTweak",
+      "category": "外设工具",
+      "exe_rel": "外设工具/KeyTweak/KeyTweak.exe",
+      "purpose": "外设测试/调校：鼠标点击/移动反馈测试、键盘映射与延迟测量",
+      "when_to_use": "用户要外设测试/调校时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "读输入设备，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 KeyTweak GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "外设工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "MOUSERATE",
+      "category": "外设工具",
+      "exe_rel": "外设工具/MOUSERATE/MOUSERATE.EXE",
+      "purpose": "外设测试/调校：鼠标点击/移动反馈测试、键盘映射与延迟测量",
+      "when_to_use": "用户要外设测试/调校时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "读输入设备，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 MOUSERATE GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "外设工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "MouseTester",
+      "category": "外设工具",
+      "exe_rel": "外设工具/MouseTester/MouseTester.exe",
+      "purpose": "外设测试/调校：鼠标点击/移动反馈测试、键盘映射与延迟测量",
+      "when_to_use": "用户要外设测试/调校时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "读输入设备，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 MouseTester GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "外设工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "鼠标单击变双击测试器V2.0",
+      "category": "外设工具",
+      "exe_rel": "外设工具/鼠标单机变双击测试器/鼠标单击变双击测试器V2.0.exe",
+      "purpose": "外设测试/调校：鼠标点击/移动反馈测试、键盘映射与延迟测量",
+      "when_to_use": "用户要外设测试/调校时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "读输入设备，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 鼠标单击变双击测试器V2.0 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "外设工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "DXVAChecker",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/dxvachecker/DXVAChecker.exe",
+      "purpose": "DXVA 硬件解码能力检测：查看显卡视频硬解支持情况",
+      "when_to_use": "用户要DXVA 硬件解码能力检测时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读查询，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 DXVAChecker GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "显卡工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "GpuTest",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/GpuTest_Windows x64/GpuTest.exe",
+      "purpose": "显卡性能基准测试（GPU-Z 同作者的通用 GPU 测试程序）",
+      "when_to_use": "用户要显卡性能基准测试（GPU-Z 同作者的通用 GPU 测试程序）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "高负载渲染产生热量与功耗",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 GpuTest GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "Geeks3D",
+      "tags": [
+        "显卡工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "monitorinfo",
+      "category": "显示器工具",
+      "exe_rel": "显示器工具/色域检测/monitorinfo.exe",
+      "purpose": "显示器信息检测：分辨率、色域、面板参数读取",
+      "when_to_use": "用户要显示器信息检测时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读查询，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 monitorinfo GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "显示器工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "ASSSDBenchmark",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/ASSSDBenchmark/ASSSDBenchmark.exe",
+      "purpose": "存储设备基准测试：顺序/随机读写速度与 IOPS 测量",
+      "when_to_use": "用户要存储设备基准测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写被测存储，可能产生较高负载",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 ASSSDBenchmark GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "ATTO 磁盘基准测试",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/ATTODISKBENCHMARK/ATTO 磁盘基准测试.exe",
+      "purpose": "存储设备基准测试：顺序/随机读写速度与 IOPS 测量",
+      "when_to_use": "用户要存储设备基准测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写被测存储，可能产生较高负载",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 ATTO 磁盘基准测试 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "FdWizard",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/finaldata/FdWizard.exe",
+      "purpose": "数据恢复：扫描并恢复误删/格式化后的文件",
+      "when_to_use": "用户要数据恢复时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "深度扫描耗时长；写入恢复另开分区更安全",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 FdWizard GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "h2testw_1.4",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/H2testw/h2testw_1.4.exe",
+      "purpose": "内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）",
+      "when_to_use": "用户要内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写内存/存储，产生较高负载与热量",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 h2testw_1.4 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "社区",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "LLFTOOL",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/LLFTOOL/LLFTOOL.exe",
+      "purpose": "存储介质低级格式化（LLF）：重建扇区标记，彻底清除数据",
+      "when_to_use": "用户要存储介质低级格式化（LLF）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "high",
+      "permission_level": "L2",
+      "side_effects": "不可逆清除整个存储介质数据",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 LLFTOOL GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "MyDiskTest_v298",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/mydisktest/MyDiskTest_v298.exe",
+      "purpose": "内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）",
+      "when_to_use": "用户要内存/存储芯片读写稳定性测试（写入-回读校验，检测坏块与稳定超频）时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写内存/存储，产生较高负载与热量",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 MyDiskTest_v298 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "社区",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "SSDZ",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/SSDZ/SSDZ.exe",
+      "purpose": "存储设备基准测试：顺序/随机读写速度与 IOPS 测量",
+      "when_to_use": "用户要存储设备基准测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写被测存储，可能产生较高负载",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 SSDZ GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "TxBENCH",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/TxBENCH/TxBENCH.exe",
+      "purpose": "存储设备基准测试：顺序/随机读写速度与 IOPS 测量",
+      "when_to_use": "用户要存储设备基准测试时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "持续读写被测存储，可能产生较高负载",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 TxBENCH GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "windirstat",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/windirstat/windirstat.exe",
+      "purpose": "磁盘空间可视化分析：按目录/文件大小树状图展示占用",
+      "when_to_use": "用户要磁盘空间可视化分析时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读扫描，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 windirstat GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "Jérôme",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "魔方数据恢复",
+      "category": "硬盘工具",
+      "exe_rel": "硬盘工具/魔方数据恢复/魔方数据恢复.exe",
+      "purpose": "数据恢复：扫描并恢复误删/格式化后的文件",
+      "when_to_use": "用户要数据恢复时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "深度扫描耗时长；写入恢复另开分区更安全",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 魔方数据恢复 GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "硬盘工具"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "Rw",
+      "category": "综合检测",
+      "exe_rel": "综合检测/RWEverything/Rw.exe",
+      "purpose": "系统/硬件信息检测：主板、内存、硬盘、显卡等详细规格（Speccy 全面，RWEverything 底层寄存器）",
+      "when_to_use": "用户要系统/硬件信息检测时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读查询，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 Rw GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "综合检测"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "Speccy",
+      "category": "综合检测",
+      "exe_rel": "综合检测/speccy/Speccy.exe",
+      "purpose": "系统/硬件信息检测：主板、内存、硬盘、显卡等详细规格（Speccy 全面，RWEverything 底层寄存器）",
+      "when_to_use": "用户要系统/硬件信息检测时",
+      "when_not_to_use": "对工具操作不熟悉且未获明确授权时",
+      "invocation": {
+        "mode": "gui",
+        "launchable": true,
+        "args_template": "{launch}",
+        "params": [
+          {
+            "name": "launch",
+            "flag": "",
+            "type": "boolean",
+            "required": false,
+            "default": "true",
+            "desc": "启动 GUI（无脚本化参数；AI 只能启动不能操作）"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读查询，无副作用",
+      "examples": [
+        {
+          "args": "",
+          "desc": "启动 Speccy GUI",
+          "expect": "打开工具界面"
+        }
+      ],
+      "publisher": "",
+      "tags": [
+        "综合检测"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "FPT64",
+      "category": "显卡工具",
+      "exe_rel": "显卡工具/FPT64/fptw64.exe",
+      "purpose": "Intel 平台主板 BIOS 备份/刷写（Intel Flash Programming Tool 64 位版）",
+      "when_to_use": "备份当前 BIOS（-d）、在确认镜像匹配后刷写 BIOS（-f）",
+      "when_not_to_use": "未确认镜像与主板型号匹配时；电池电量不足/未接电源时——刷写失败可致主板变砖",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "{action} {file} -bios",
+        "params": [
+          {
+            "name": "action",
+            "flag": "",
+            "type": "enum",
+            "required": true,
+            "desc": "-d 备份到文件 / -f 刷写镜像"
+          },
+          {
+            "name": "file",
+            "flag": "",
+            "type": "path",
+            "required": true,
+            "desc": "备份目标文件（-d）或 BIOS 镜像（-f）"
+          },
+          {
+            "name": "bios",
+            "flag": "-bios",
+            "type": "boolean",
+            "required": false,
+            "desc": "操作对象为 BIOS 区域（配合 -d/-f）"
+          },
+          {
+            "name": "force",
+            "flag": "-y",
+            "type": "boolean",
+            "required": false,
+            "desc": "跳过确认提示全自动"
+          }
+        ],
+        "timeout_secs": 300
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "stdout",
+        "schema": "FPT 控制台输出；0 = 成功"
+      },
+      "risk": "high",
+      "permission_level": "L3",
+      "side_effects": "刷写（-f）可直接改 BIOS 区，失败变砖——L3 永久禁止自动执行，仅允许备份（-d）在 L2 确认后执行",
+      "examples": [
+        {
+          "args": "-d bios_bak.bin -bios",
+          "desc": "备份当前 BIOS（安全，L2 确认后放行）",
+          "expect": "生成 bios_bak.bin"
+        },
+        {
+          "args": "-f bios_f.bin -bios",
+          "desc": "刷写 BIOS（永久禁止自动执行）",
+          "expect": "拒绝：L3 永禁"
+        }
+      ],
+      "publisher": "Intel",
+      "tags": [
+        "BIOS",
+        "刷写",
+        "主板"
+      ],
+      "tutorial_url": "",
+      "download_hint": ""
+    },
+    {
+      "name": "USBDeview",
+      "category": "其他工具",
+      "exe_rel": "其他工具/USBDeview/USBDeview.exe",
+      "purpose": "USB 设备管理：列出/导出/断开/禁用/卸载 USB 设备（NirSoft）",
+      "when_to_use": "导出 USB 设备清单、安全弹出 U 盘（/stop_by_drive）、排查 USB 设备状态",
+      "when_not_to_use": "禁用/卸载/断开设备未获明确授权时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "/scomma \"{outfile}\" /AddExportHeaderLine 1",
+        "params": [
+          {
+            "name": "outfile",
+            "flag": "/scomma",
+            "type": "path",
+            "required": false,
+            "desc": "导出 CSV（/stext /stab /shtml /sxml 同族）"
+          },
+          {
+            "name": "action",
+            "flag": "",
+            "type": "string",
+            "required": false,
+            "desc": "/stop_by_drive g: 断开盘 /is_connected \"名称\" 查询 /disable /remove"
+          }
+        ],
+        "timeout_secs": 60
+      },
+      "output": {
+        "format": "file",
+        "parser": "smart_csv",
+        "schema": "CSV 列含 Device Name/Device Type/Serial Number/Drive Letter 等"
+      },
+      "risk": "medium",
+      "permission_level": "L1",
+      "side_effects": "导出只读；断开/禁用/卸载设备改变系统状态",
+      "examples": [
+        {
+          "args": "/scomma \"usb.csv\" /AddExportHeaderLine 1",
+          "desc": "导出全部 USB 设备 CSV",
+          "expect": "CSV 含设备清单"
+        },
+        {
+          "args": "/stop_by_drive g:",
+          "desc": "安全弹出 G 盘",
+          "expect": "stdout 确认断开"
+        },
+        {
+          "args": "/is_connected_by_serial \"7538957348957398\"",
+          "desc": "检查某序列号 U 盘是否连接",
+          "expect": "退出码 = 匹配设备数"
+        }
+      ],
+      "publisher": "NirSoft",
+      "tags": [
+        "USB",
+        "设备管理"
+      ],
+      "tutorial_url": "https://www.nirsoft.net/utils/usb_devices_view.html",
+      "download_hint": "https://www.nirsoft.net/"
+    },
+    {
+      "name": "Autoruns / autorunsc",
+      "category": "其他工具",
+      "exe_rel": "其他工具/Autoruns/autorunsc64.exe",
+      "purpose": "自启动项全量扫描导出（Sysinternals autorunsc 命令行版）",
+      "when_to_use": "审计自启动项、查找可疑第三方启动项、对比系统变化",
+      "when_not_to_use": "非 Sysinternals 场景、不熟悉自启动项含义时",
+      "invocation": {
+        "mode": "cli",
+        "launchable": true,
+        "args_template": "-a {type} -{format} -accepteula",
+        "params": [
+          {
+            "name": "type",
+            "flag": "-a",
+            "type": "string",
+            "required": false,
+            "default": "*",
+            "desc": "* 全部 / l 登录 / s 服务驱动 / m WMI / t 计划任务 等"
+          },
+          {
+            "name": "format",
+            "flag": "",
+            "type": "enum",
+            "required": false,
+            "default": "c",
+            "desc": "-c CSV / -ct 制表 / -x XML"
+          },
+          {
+            "name": "hide_ms",
+            "flag": "-m",
+            "type": "boolean",
+            "required": false,
+            "desc": "隐藏微软条目"
+          },
+          {
+            "name": "verify_sig",
+            "flag": "-s",
+            "type": "boolean",
+            "required": false,
+            "desc": "验证数字签名"
+          }
+        ],
+        "timeout_secs": 120
+      },
+      "output": {
+        "format": "stdout",
+        "parser": "smart_csv",
+        "schema": "CSV 列含 Entry/Description/Publisher/Image Path/Hash（-c 输出到 stdout）"
+      },
+      "risk": "low",
+      "permission_level": "L0",
+      "side_effects": "只读扫描；-u/-v 会上传文件哈希查 VirusTotal（隐私注意）",
+      "examples": [
+        {
+          "args": "-a * -c -accepteula",
+          "desc": "导出全部自启动项 CSV",
+          "expect": "stdout CSV 含全部条目"
+        },
+        {
+          "args": "-a * -c -m -s -accepteula",
+          "desc": "隐藏微软项验证签名",
+          "expect": "stdout 仅第三方条目"
+        }
+      ],
+      "publisher": "Sysinternals (Microsoft)",
+      "tags": [
+        "自启动项",
+        "系统审计"
+      ],
+      "tutorial_url": "https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns",
+      "download_hint": "https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns"
     }
   ]
 }

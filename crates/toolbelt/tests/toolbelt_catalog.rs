@@ -556,6 +556,20 @@ fn manifests_parse_all_expected_tools() {
         "Everything",
         "Ventoy",
         "WinDbg",
+        // 2026-10 扩容：内存/外设/硬盘/烤机检测工具（30 → 69 条）
+        "memtest",
+        "TM5",
+        "ZenTimings",
+        "KeyTweak",
+        "MouseTester",
+        "Speccy",
+        "Rw",
+        "windirstat",
+        "SSDZ",
+        "TxBENCH",
+        "h2testw_1.4",
+        "GpuTest",
+        "鼠标测试软件AresonMouseTestProgram",
     ] {
         assert!(ms.iter().any(|m| m.name == want), "缺少 manifest {}", want);
     }
