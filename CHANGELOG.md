@@ -78,6 +78,38 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   缩小默认执行面，与安全模型一致；
 - 测试断言同步扩容。
 
+### UI/UX 视觉审查（第 6–8 轮，`e403751` `d4a01bc` `740ba54`）
+
+对全前端做了 3 轮视觉审查（浏览器 1280×800 实渲染 + DOM 像素级取证 +
+WCAG 对比度量化 + 视觉子代理交叉验证），修复清单按严重度排序：
+
+- **修复（高）** `button.primary` 等 accent 填充文字用 `var(--ink)` 近黑字，
+  在 vercel(#1447e6)/doubao/google/trae 等深色 accent 主题下对比仅 **2.9:1**：
+  新增语义 token `--on-accent`（accent 上文字色，按亮度自动选白/深字，
+  WCAG ≥4.5），`applyTheme` 预设路径与 `applyAccent` 自定义主色路径均计算；
+  primary / `.seg-opt.active` / `.tree-row.selected` / `::selection` /
+  `.trace-chip` / `.toolbelt-nav.active` 六类统一改用它。
+  实测 vercel 2.9→**6.83**、claude 浅 accent 自动深字 **4.46**。
+- **修复（中）** 系统优化页「刷新电源计划」按钮误复用 `system.startup.refresh`
+  （显示「刷新启动项」）——新增 `optimizer.power.refresh` 中英 key。
+- **修复（中）** `settings-group-title` 组标题 11px+ink-3 比正文还小还淡
+  （层级倒挂）——统一 12px+ink-2。
+- **修复（中）** 无效 token `--ink-1`（theme.ts 仅 ink/ink-2/ink-3）4 处引用
+  全部静默回退失效——permOff 权限提示改 `--risk-caution` 琥珀强调色；
+  设置页 select 改 `--ink`。
+- **修复（中）** 清理页 21 条脚本 10 条长名被 ellipsis 截断且 hover 无提示
+  ——`cp-script` 补 `title`。
+- **修复（低）** 工作台无盘布局塌陷（`drives=[]` 时 ws-strip 不渲染，
+  `aside.left` 落进 grid auto 行、1fr 行 479px 空白）——三栏+splitter
+  显式 `grid-row: 2`，实测 227px→706px 铺满。
+- **修复（低）** 设置页主题选择器 17 套主题 3 列分段控件溢出截断长中文名
+  ——改自适应 flex 换行块（17 项全显 0 截断）；清理/工具墙空态弱色
+  ink-3→ink-2（对比 3.5→10.09）。
+
+**取证排除（非缺陷）**：脚本名单行省略为侧栏列宽物理限制；历史页空态
+内容流式正常；字号滑杆数值与轨道精确对齐；「设置」在侧栏底部固定区为
+成熟桌面工具标准布局。
+
 ---
 
 ## 较早版本
