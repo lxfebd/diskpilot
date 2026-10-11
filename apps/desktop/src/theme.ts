@@ -414,7 +414,7 @@ const ALL_VARS = Array.from(new Set(
       '--pink', '--pink-deep', '--pink-soft', '--pink-bg', '--ok',
       '--bg', '--surface', '--surface-2', '--surface-3', '--paper-1', '--muted',
       '--text', '--text-2', '--text-3',
-      '--accent', '--accent-strong', '--accent-soft', '--accent-bg',
+      '--accent', '--accent-strong', '--accent-soft', '--accent-bg', '--on-accent',
       '--risk-safe', '--risk-caution', '--risk-danger',
       '--border', '--border-strong', '--radius',
       '--radius-xs', '--radius-sm', '--radius-btn', '--radius-md', '--radius-card', '--radius-lg',
@@ -467,6 +467,9 @@ function applyAccent(el: CSSStyleDeclaration, accent: string, themeId: ThemeId) 
   el.setProperty('--accent-strong', deep);
   el.setProperty('--accent-soft', soft);
   el.setProperty('--accent-bg', bg);
+  // 主色上的文字色（--on-accent）：primary 按钮文字/active seg 用。
+  // 深色 accent 用白字，浅色 accent 用深字，保证 WCAG ≥4.5:1。
+  el.setProperty('--on-accent', brightness(accent) > 0.45 ? '#1a1a1a' : '#ffffff');
   // Status "ok" follows the accent so custom-colored themes feel coherent —
   // but only if the accent is bright enough to act as a button fill.
   if (brightness(accent) > 0.25) {
@@ -480,7 +483,14 @@ export function applyTheme(t: ThemeSettings) {
   for (const k of ALL_VARS) el.removeProperty(k);
   const preset = PRESETS[t.id] ?? PRESETS.vercel;
   for (const [k, v] of Object.entries(preset)) el.setProperty(k, v);
-  if (t.accent && /^#[0-9a-fA-F]{6}$/.test(t.accent)) applyAccent(el, t.accent, t.id);
+  if (t.accent && /^#[0-9a-fA-F]{6}$/.test(t.accent)) {
+    applyAccent(el, t.accent, t.id);
+  } else {
+    // 无自定义主色：preset 自带 accent 不经过 applyAccent，这里按亮度补
+    // --on-accent（accent 上文字色，primary/seg/selection 共用）。
+    const a = preset['--accent'] ?? '#1447e6';
+    el.setProperty('--on-accent', brightness(a) > 0.45 ? '#1a1a1a' : '#ffffff');
+  }
   const scale = Math.max(0.8, Math.min(1.3, t.fontScale || 1));
   el.setProperty('--font-scale', String(scale));
   document.documentElement.setAttribute('data-theme', t.id);

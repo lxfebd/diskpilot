@@ -87,7 +87,7 @@ export function StartupPanel() {
           {t('system.startup.hintA')} <code>.disabled</code>{' '}
           {t('system.startup.hintB')}
           {!startupPerm && (
-            <strong style={{ color: 'var(--ink-1)' }}> {t('system.startup.permOff')}</strong>
+            <strong style={{ color: 'var(--risk-caution)' }}> {t('system.startup.permOff')}</strong>
           )}
         </span>
       </div>

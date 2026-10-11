@@ -72,7 +72,7 @@ export function PowerPlanCard() {
         <span>
           {t('optimizer.power.hint')}
           {!perm && (
-            <strong style={{ color: 'var(--ink-1)' }}> {t('optimizer.power.permOff')}</strong>
+            <strong style={{ color: 'var(--risk-caution)' }}> {t('optimizer.power.permOff')}</strong>
           )}
         </span>
       </div>
@@ -124,7 +124,7 @@ export function PowerPlanCard() {
         </div>
       )}
       <button type="button" className="ghost small" onClick={load} disabled={loading || !perm}>
-        <RefreshCw size={11} className={loading ? 'spin' : undefined} /> {t('system.startup.refresh')}
+        <RefreshCw size={11} className={loading ? 'spin' : undefined} /> {t('optimizer.power.refresh')}
       </button>
     </>
   );

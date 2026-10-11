@@ -118,7 +118,7 @@ header {
 /* ── Buttons ───────────────────────────────────────────────────────── */
 button.primary {
   background: var(--accent);
-  color: var(--ink);
+  color: var(--on-accent, var(--ink));
   border: 1px solid var(--border);
   padding: 8px 14px;
   border-radius: var(--radius-btn);
@@ -352,8 +352,18 @@ main.ws-main {
   grid-template-rows: auto 1fr;
   padding: 0 12px;
 }
+/* 三栏显式钉在 1fr 行：无盘数据时 .ws-strip 不渲染（drives.length === 0），
+   若不做行定位，aside.left 会落进第一行 auto 把 1fr 整行留白（243px + 479px
+   空白塌陷）。钉死后无论 strip 是否存在，三栏都铺满剩余高度。 */
+main.ws-main > aside.left,
+main.ws-main > section.center,
+main.ws-main > aside.right,
+main.ws-main > .splitter {
+  grid-row: 2;
+}
 .ws-strip {
   grid-column: 1 / -1;
+  grid-row: 1;
   padding: 10px 14px 0;
   min-width: 0;
 }
@@ -642,7 +652,7 @@ aside::-webkit-scrollbar-thumb {
 .tree-row:hover { background: var(--accent-bg); }
 .tree-row.selected {
   background: var(--accent);
-  color: var(--ink);
+  color: var(--on-accent, var(--ink));
   font-weight: 600;
 }
 .tree-row.is-file .name { color: var(--ink-2); }
@@ -1026,7 +1036,7 @@ footer {
 }
 .seg-opt:last-child { border-right: 0; }
 .seg-opt:hover { background: var(--accent-bg); }
-.seg-opt.active { background: var(--accent); color: var(--ink); }
+.seg-opt.active { background: var(--accent); color: var(--on-accent, var(--ink)); }
 /* 各分段控件统一按钮尺寸：主题(3)/字号(4)/每目录保留文件数(4)/协议(5) */
 .seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -1144,7 +1154,7 @@ footer {
 .ctxmenu-item.danger:hover { background: var(--err-soft); }
 .ctxmenu-icon { display: inline-flex; align-items: center; color: var(--accent-strong); }
 
-::selection { background: var(--accent); color: var(--ink); }
+::selection { background: var(--accent); color: var(--on-accent, var(--ink)); }
 
 /* ── Studio (right panel) ──────────────────────────────────────────── */
 .studio {

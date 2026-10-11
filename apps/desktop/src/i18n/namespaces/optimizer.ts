@@ -9,6 +9,7 @@ export const optimizer = {
     // ── 电源计划切换 ──
     'optimizer.power.title': '电源计划',
     'optimizer.power.hint': '枚举系统电源计划并切换当前生效计划。切换立即生效，耗电与性能随之变化。',
+    'optimizer.power.refresh': '刷新电源计划',
     'optimizer.power.permOff': '当前未开启「电源计划」权限 — 请先到 AI 权限中心打开开关。',
     'optimizer.power.empty': '没有检测到可用的电源计划。',
     'optimizer.power.activeTag': '使用中',
@@ -24,6 +25,7 @@ export const optimizer = {
   en: {
     'optimizer.power.title': 'Power plan',
     'optimizer.power.hint': 'List system power plans and switch the active one. Applies immediately, changing power draw and performance.',
+    'optimizer.power.refresh': 'Refresh power plans',
     'optimizer.power.permOff': 'Power-plan permission is off — enable it under the permission hub first.',
     'optimizer.power.empty': 'No power plans detected.',
     'optimizer.power.activeTag': 'Active',

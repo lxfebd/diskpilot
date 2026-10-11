@@ -136,7 +136,7 @@
   transition: background .08s, transform .08s;
 }
 .toolbelt-nav:hover { background: var(--accent-bg); transform: translate(-1px, -1px); }
-.toolbelt-nav.active { background: var(--accent); color: var(--ink); }
+.toolbelt-nav.active { background: var(--accent); color: var(--on-accent, var(--ink)); }
 .toolbelt-nav svg { flex-shrink: 0; color: var(--accent-strong); }
 .toolbelt-nav.active svg { color: var(--ink); }
 .toolbelt-nav-name { font-size: 13.5px; font-weight: 600; }

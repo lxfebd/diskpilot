@@ -76,6 +76,7 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
                     className={`cp-script${active ? ' active' : ''}${detected ? ' detected' : ''}`}
                     onClick={() => select(c.scaffold.id)}
                     disabled={!!session?.running}
+                    title={c.scaffold.name}
                   >
                     <span className="cp-script-name">{c.scaffold.name}</span>
                     <RiskBadge risk={c.scaffold.risk} showLabel={false} />

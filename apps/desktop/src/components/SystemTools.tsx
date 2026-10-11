@@ -185,7 +185,7 @@ function SystemToolsInner() {
             <> {t('system.fan.hintCtrlOff')}</>
           )}
           {!fanPerm && (
-            <strong style={{ color: 'var(--ink-1)' }}> {t('system.fan.permOff')}</strong>
+            <strong style={{ color: 'var(--risk-caution)' }}> {t('system.fan.permOff')}</strong>
           )}
         </span>
       </div>
@@ -307,7 +307,7 @@ function SystemToolsInner() {
         <span>
           {t('system.driver.hint')}
           {!driverPerm && (
-            <strong style={{ color: 'var(--ink-1)' }}> {t('system.driver.permOff')}</strong>
+            <strong style={{ color: 'var(--risk-caution)' }}> {t('system.driver.permOff')}</strong>
           )}
         </span>
       </div>
