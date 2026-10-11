@@ -323,13 +323,20 @@ fn validate_stdio(cfg: &McpServerConfig) -> Result<(), String> {
             }
         }
     }
-    for k in env.keys() {
+    for (k, v) in env {
         if k.trim().is_empty()
             || k.contains('=')
             || k.contains('\0')
             || k.chars().any(|c| !(c.is_ascii_alphanumeric() || c == '_'))
         {
             return Err(format!("环境变量键非法：{k}"));
+        }
+        // `std::process::Command::env` 对含 NUL 的**值**同样会返回
+        // "nul byte found in provided data"（实测）→ 该服务器永远连不上。
+        // 与键校验对齐，在配置入库前就拒绝，宁可报配置错也别留一个
+        // 永远 spawn 失败的僵尸服务器。
+        if v.contains('\0') {
+            return Err(format!("环境变量值含 NUL 字节（\\x00）：{k}"));
         }
     }
     Ok(())
@@ -1052,6 +1059,18 @@ mod tests {
             ..base.clone()
         };
         assert!(validate_stdio(&bad_env).unwrap_err().contains("环境变量键"));
+        // env **值**含 NUL：Command::env 实测会拒（nul byte found），必须在
+        // 配置层先拦，否则服务器永远 spawn 失败、UI 却显示"已添加"。
+        let nul_val = McpServerConfig {
+            transport: McpTransport::Stdio {
+                command: "node".into(),
+                args: vec![],
+                env: HashMap::from([("TOKEN".into(), "a\x00b".into())]),
+                cwd: None,
+            },
+            ..base.clone()
+        };
+        assert!(validate_stdio(&nul_val).unwrap_err().contains("值含 NUL"));
     }
 
     #[test]

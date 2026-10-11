@@ -54,10 +54,16 @@ function pickPhysicalGpu(gpus: unknown[]): Record<string, unknown> | undefined {
   return gpus[0] as Record<string, unknown>;
 }
 
-function vramStr(v: unknown): string {
+/// AdapterRAM 展示：WMI Win32_VideoController.AdapterRAM 是 UINT32，显存 ≥4GiB
+/// 时读数饱和到 ~u32::MAX（4294967294/4294967295），并非真实容量——此时改显示
+/// 「≥4GB（WMI 溢出）」。原条件 `n >= 4GiB || n <= 4GiB-1MiB` 写反（`<=`），
+/// 导致 2GB 卡被标成「≥4GB 溢出」、真正的溢出值反而落进 formatBytes 分支，
+/// 除 1MiB 窗口外全判错（2026-10-11 修复：收敛为「≥ 4GiB-1MiB 即溢出区」）。
+const VRAM_OVERFLOW_BYTES = 4_293_918_720; // 4GiB - 1MiB
+export function vramStr(v: unknown): string {
   const n = num(v);
   if (n <= 0) return t('hw.unknown');
-  if (n >= 4_294_967_296 || n <= 4_293_918_720) return t('hw.vramOverflow');
+  if (n >= VRAM_OVERFLOW_BYTES) return t('hw.vramOverflow');
   return formatBytes(n);
 }
 

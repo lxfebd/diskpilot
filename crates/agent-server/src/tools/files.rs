@@ -323,10 +323,19 @@ pub struct DirEntry {
 }
 
 /// 列出目录直接子项（非递归）。按目录在前、名称排序。
+/// 条目收集有 10 万硬上限：超大目录（缓存/解压目录可能有数十万条目）全量
+/// 读进内存再排序会瞬间占用数百 MB（2026-10-11 修复）；触顶即截断并标记
+/// truncated，排序在已收集子集内进行（截断态本就只承诺前 limit 条）。
+const MAX_DIR_ENTRIES: usize = 100_000;
 pub fn list_dir(p: &std::path::Path, limit: usize) -> Result<(Vec<DirEntry>, bool), String> {
     let rd = std::fs::read_dir(p).map_err(|e| format!("读取目录失败：{e}"))?;
     let mut items = Vec::new();
+    let mut hard_capped = false;
     for e in rd.flatten() {
+        if items.len() >= MAX_DIR_ENTRIES {
+            hard_capped = true;
+            break;
+        }
         let name = e.file_name().to_string_lossy().into_owned();
         let path = e.path();
         let ft = match e.file_type() {
@@ -346,7 +355,7 @@ pub fn list_dir(p: &std::path::Path, limit: usize) -> Result<(Vec<DirEntry>, boo
         });
     }
     items.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
-    let truncated = items.len() > limit;
+    let truncated = hard_capped || items.len() > limit;
     items.truncate(limit);
     Ok((items, truncated))
 }
@@ -360,7 +369,15 @@ pub fn read_text_file(p: &std::path::Path) -> Result<(String, bool), String> {
     if meta.is_dir() {
         return Err("目标是目录，请传文件路径".into());
     }
-    let mut bytes = std::fs::read(p).map_err(|e| format!("读取文件失败：{e}"))?;
+    // 只读前 256KB+1 字节：原先 std::fs::read 整读再 truncate，读 GB 级文件会
+    // 先吃掉等量内存才截断（2026-10-11 修复：截断必须发生在读取时，不是读完后）。
+    // 多读 1 字节用于判定 truncated；UTF-16 分支截断后长度为偶数，不受影响。
+    let mut bytes = Vec::with_capacity(MAX_READ_BYTES + 1);
+    let f = std::fs::File::open(p).map_err(|e| format!("打开文件失败：{e}"))?;
+    use std::io::Read;
+    f.take(MAX_READ_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("读取文件失败：{e}"))?;
     let truncated = bytes.len() > MAX_READ_BYTES;
     bytes.truncate(MAX_READ_BYTES);
     // UTF-16 LE BOM（常见于 .ini/.reg 等 Windows 文本）
@@ -860,6 +877,29 @@ mod tests {
         assert_eq!(first["bytes_freed"], 4096);
         let second: serde_json::Value = serde_json::from_str(lines[1]).expect("次行应为合法 JSON");
         assert!(second.get("bytes_freed").is_none(), "None 字节应省略键");
+    }
+
+    /// read_text_file 截断回归：>256KB 文件必须在读取阶段截断（不整读进内存），
+    /// truncated 标记为 true 且返回长度恰为 MAX_READ_BYTES。
+    #[test]
+    fn read_text_file_truncates_at_limit_without_full_read() {
+        let dir = std::env::temp_dir().join(format!("dp-agent-read-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let big = dir.join("big.txt");
+        std::fs::write(&big, vec![b'a'; MAX_READ_BYTES + 4096]).unwrap();
+        let (text, truncated) = read_text_file(&big).expect("读取应成功");
+        assert!(truncated, "超限文件必须标记 truncated");
+        assert_eq!(
+            text.len(),
+            MAX_READ_BYTES,
+            "返回内容必须恰好截断到 MAX_READ_BYTES"
+        );
+        // 恰好等于上限：不截断
+        let exact = dir.join("exact.txt");
+        std::fs::write(&exact, vec![b'b'; MAX_READ_BYTES]).unwrap();
+        let (_, truncated2) = read_text_file(&exact).expect("读取应成功");
+        assert!(!truncated2, "恰好等于上限不应标记截断");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// path_bytes 统计回归：单文件返回 len，目录递归求和。

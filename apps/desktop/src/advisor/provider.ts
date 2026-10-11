@@ -329,10 +329,11 @@ async function runChatRaw(system: string, user: string, images?: ChatImage[], si
       parts.push({ inline_data: { mime_type: img.mimeType, data: dataUrlBase64(img.dataUrl) } });
     }
     const r = await aiRequest(
-      `${url}/v1beta/models/${encodeURIComponent(settings.model)}:generateContent?key=${encodeURIComponent(settings.apiKey)}`,
+      // 密钥走 header（x-goog-api-key），不进 URL query：query 会落访问日志。
+      `${url}/v1beta/models/${encodeURIComponent(settings.model)}:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
         signal,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },

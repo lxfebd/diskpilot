@@ -161,11 +161,14 @@ pub fn collect_cleanup_suggestions(root: String, top_n: usize) -> Result<String,
         .max_depth(48);
 
     for entry in walker {
-        let Ok(entry) = entry else { continue };
+        // 外层主循环也受上限保护：一旦 files_seen 打满，即便当前目录还没
+        // 命中任何 scaffold，也**整体退出**遍历——否则达到上限后外层还会
+        // 把剩余的整棵目录树（可能是几十万目录）全部枚举一遍空转。
         if files_seen >= MAX_FILES_WALK {
             truncated = true;
             break;
         }
+        let Ok(entry) = entry else { continue };
         if entry.path_is_symlink() {
             continue;
         }

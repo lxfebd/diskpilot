@@ -6,8 +6,9 @@ import type { Node } from './types';
 // recycle 后的剪枝清选，不触碰真实 Tauri IPC。
 vi.mock('./api', () => ({
   api: {
-    recyclePaths: vi.fn(async () => undefined),
-    executeAiPlan: vi.fn(async () => undefined),
+    // 真后端 recyclePaths 返回 UndoEntry[]（每个成功条目一个，含实测 bytes_freed）。
+    recyclePaths: vi.fn(async () => []),
+    executeAiPlan: vi.fn(async () => []),
   },
 }));
 

@@ -532,9 +532,11 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
     setPendingRecycle(null);
     if (!target || !run) return;
     try {
-      await api.recyclePaths([target.path], target.reason, true);
-      addReclaimed(target.size);
-      pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycled', { path: target.path, size: formatBytes(target.size) }) });
+      // 后端返回实测 bytes_freed（回收前统计），记账用它；接口失败抛错时不记账。
+      const entries = (await api.recyclePaths([target.path], target.reason, true)) ?? [];
+      const freed = entries.reduce((s, e) => s + (e.bytes_freed ?? 0), 0);
+      addReclaimed(freed);
+      pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycled', { path: target.path, size: formatBytes(freed) }) });
     } catch (e) {
       pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycleFailed', { msg: String(e) }) });
     }

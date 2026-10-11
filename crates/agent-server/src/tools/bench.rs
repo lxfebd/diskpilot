@@ -402,6 +402,11 @@ pub fn stress_test(
             fp_ops += f;
         }
     }
+    // 取消信号必须在复位**之前**捕获：监控线程可能正阻塞在 hw_probe_temp
+    // （fancmd 最长 ~8s），主线程先 set_cancel(false)/clear_stop_file() 会让它
+    // 醒来后读到「无取消」→ 返回 cancelled=false → 1s join 窗口超时走兜底
+    // (false,…) → 用户按了停止却报「✅ 正常结束」（2026-10-11 修复的报告竞态）。
+    let cancel_seen = cancel_requested();
     set_cancel(false);
     RUNNING.store(false, Ordering::Relaxed);
     clear_stop_file();
@@ -448,6 +453,10 @@ pub fn stress_test(
             std::thread::sleep(Duration::from_millis(50));
         }
     };
+    // 合成最终取消态：监控线程观察到的 OR 复位前捕获到的。超温熔断也会
+    // set_cancel(true)（见监控循环），因此用 !tripped 排除，避免把熔断误报
+    // 成「用户取消」——熔断有自己更准确的 ⚠️ 分支。
+    let cancelled = cancelled || (cancel_seen && !tripped);
     // 峰值 = 采样曲线最大值；压测前温度更高时取它（避免「峰值低于压测前」的假象）
     let peak = samples
         .iter()

@@ -32,7 +32,18 @@ export function BenchPanel() {
   // 历史：localStorage 追加式，每类基准独立数组（上限 12 条）
   const [history, setHistory] = useState<Record<string, BenchHistoryEntry[]>>(() => {
     try {
-      return JSON.parse(localStorage.getItem('bench.history') ?? '{}');
+      // 形状校验：JSON.parse 只保证语法合法，不保证值是 { string: Entry[] }。
+      // 若 localStorage 被写成 "null" 或 {"cpu":123}，后续
+      // `...(prev[key] ?? [])` 对数字展开会抛 TypeError 击穿组件初始化。
+      const raw: unknown = JSON.parse(localStorage.getItem('bench.history') ?? '{}');
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+      const out: Record<string, BenchHistoryEntry[]> = {};
+      for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+        if (Array.isArray(v) && v.every((e) => e && typeof e === 'object')) {
+          out[k] = v as BenchHistoryEntry[];
+        }
+      }
+      return out;
     } catch {
       return {};
     }

@@ -111,14 +111,17 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
   // 一次性 toast/教学条定时器统一登记，卸载时全部清理：避免已关闭的组件
   // 里迟到触发 setState，以及长驻的回调引用的泄漏。
   const timersRef = useRef<number[]>([]);
-  const later = (fn: () => void, ms: number) => {
+  // 固定身份（useCallback）：do*/refresh 会把它写进依赖数组；逐渲染重建的
+  // plain fn 会让这些 useCallback 与 keydown 订阅每次渲染都抖动（2026-10-11
+  // 清基线 exhaustive-deps 警告时固定）。
+  const later = useCallback((fn: () => void, ms: number) => {
     const id = window.setTimeout(() => {
       timersRef.current = timersRef.current.filter((timer) => timer !== id);
       fn();
     }, ms);
     timersRef.current.push(id);
     return id;
-  };
+  }, []);
   useEffect(() => () => {
     for (const timer of timersRef.current) window.clearTimeout(timer);
     timersRef.current = [];
@@ -183,7 +186,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
         setError(String(e));
         setLoading(false);
       });
-  }, []);
+  }, [translateGames, later]);
 
   useEffect(() => {
     refresh();
@@ -217,10 +220,10 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
   // ------------------------------------------------------------------
   // Actions
   // ------------------------------------------------------------------
-  const showToast = (text: string, ms = 2400) => {
+  const showToast = useCallback((text: string, ms = 2400) => {
     setToast(text);
     later(() => setToast(null), ms);
-  };
+  }, [later]);
 
   const doRevealManifest = useCallback(
     async (g: SteamGame) => {
@@ -230,7 +233,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
         showToast(t('steam.errReveal', { msg: String(e) }));
       }
     },
-    [],
+    [showToast, t],
   );
 
   const doUninstallViaSteam = useCallback(async (g: SteamGame) => {
@@ -244,7 +247,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     } catch (e) {
       showToast(t('steam.uninstallFailed', { msg: String(e) }));
     }
-  }, []);
+  }, [showToast, t, later]);
 
   const doOpenInstallDir = useCallback(
     async (g: SteamGame) => {
@@ -254,7 +257,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
         showToast(t('steam.errOpenDir', { msg: String(e) }));
       }
     },
-    [],
+    [showToast, t],
   );
 
   const doCopyInstallPath = useCallback(async (g: SteamGame) => {
@@ -264,7 +267,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     } catch (e) {
       showToast(t('steam.copyFailed', { msg: String(e) }));
     }
-  }, []);
+  }, [showToast, t]);
 
   const doExportReport = useCallback(() => {
     if (!inventory) return;
@@ -293,7 +296,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     a.click();
     URL.revokeObjectURL(url);
     showToast(t('steam.reportExported'));
-  }, [inventory, nameCn]);
+  }, [inventory, nameCn, showToast, t]);
 
   const navigate = useCallback(
     (delta: number) => {

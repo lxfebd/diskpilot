@@ -1542,14 +1542,27 @@ Get-NetWiFiInterface | Where-Object { $_.Name } | ForEach-Object {
     json_arr_of(script, "WiFi 接口").unwrap_or_default()
 }
 
+/// 构造「查单个 profile 安全类型」的 netsh 命令（抽成纯函数便于回归测试）。
+/// 转义规则见 [`ps_wifi_profile_security`] 的注入防护说明。
+fn wifi_profile_security_script(profile: &str) -> String {
+    let escaped = crate::tools::sys::escape_ps_single_quoted(profile);
+    format!("netsh wlan show profiles name='{escaped}'")
+}
+
 /// 已保存 profile 的安全类型：`netsh wlan show profiles` 中英文列名都含
 /// "Authentication/身份验证"。只读安全类型，**不读任何密码字段**。
+///
+/// 注入防护（2026-10-11 修复）：profile 名来自本机保存的 Wi-Fi 配置，而 SSID
+/// 可由近距离攻击者任意广播（`$`/`(`/`)`/反引号都不是 Windows 文件名非法字符，
+/// 恶意 SSID 能存成 profile 名）。脚本跑在 `powershell.exe -Command` 里，
+/// 名字必须按 **PowerShell 单引号字面量**规则转义（单引号翻倍），且**不能**
+/// 走双引号——否则 `$(...)` / 反引号会被 PS 先求值再传给 netsh（实测注入成立）。
+/// 反斜杠转义是 netsh/C 习惯、PS 不认，原实现双重错误，已一并移除。
 #[cfg(windows)]
 fn ps_wifi_profile_security(profiles: &[String]) -> std::collections::HashMap<String, String> {
     let mut map = std::collections::HashMap::new();
     for p in profiles {
-        let escaped = p.replace('\\', "\\\\").replace('"', "\\\"");
-        let script = format!("netsh wlan show profiles name=\"{escaped}\"");
+        let script = wifi_profile_security_script(p);
         let out = match ps_capture(&script) {
             Ok(s) => s,
             Err(_) => continue,
@@ -1693,6 +1706,30 @@ mod tests {
         assert_eq!(adapter_status_cn(2), "未连接");
         assert_eq!(adapter_status_cn(6), "未插入/已禁用");
         assert!(adapter_status_cn(99).contains("状态码"));
+    }
+
+    /// 注入回归：profile 名（恶意 SSID 可控制）必须被 PowerShell **单引号字面量**
+    /// 完整包住——双引号里 `$(...)` / 反引号会被 PS 先求值再传给 netsh
+    /// （2026-10-11 实测注入成立后修复）。
+    #[test]
+    fn wifi_profile_script_is_ps_single_quoted_literal() {
+        // 注入载荷原样保留（单引号内 = 字面量）
+        let s = wifi_profile_security_script("evil$(Write-Output pwned)`whoami");
+        assert!(
+            s.contains("name='evil$(Write-Output pwned)`whoami'"),
+            "载荷必须整体落在单引号字面量内：{s}"
+        );
+        // 绝不能出现双引号包裹（双引号 = 可求值上下文）
+        assert!(!s.contains("name=\""), "禁止双引号上下文：{s}");
+        // 名字里的单引号必须翻倍逃逸，否则提前闭合字面量
+        let s2 = wifi_profile_security_script("o'brien $(x)");
+        assert!(
+            s2.contains("name='o''brien $(x)'"),
+            "单引号须翻倍且载荷仍被包住：{s2}"
+        );
+        // 反斜杠（网络共享名常见）保持原样——PS 单引号里反斜杠不是转义符
+        let s3 = wifi_profile_security_script(r"\\server\share");
+        assert!(s3.contains(r"name='\\server\share'"), "got: {s3}");
     }
 
     #[test]

@@ -130,8 +130,9 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
       canvas.height = Math.round(window.innerHeight * dpr * SCALE);
     };
     resize();
-    window.addEventListener('resize', resize);
-    document.body.style.overflow = 'hidden';
+    // 注意：resize 监听与 body 滚动锁必须等下面 gl/shader/link/FBO 全部初始化
+    // 成功后再注册——否则 WebGL2 缺失/编译失败的提前返回路径没有 cleanup 可跑，
+    // 页面滚动被永久锁死 + resize 监听泄漏（2026-10-11 修复）。
 
     // ── WebGL2 初始化：全屏四边形 + 片元着色器（GPU 每像素海量浮点迭代）──
     // desynchronized: 让 WebGL 交换缓冲区脱离显示器刷新率同步——压测必须让 GPU
@@ -474,6 +475,10 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
     const fb0 = mkSet();
     const fb1 = mkSet();
     const fbPick = (n: number) => (n % 2 === 0 ? fb0 : fb1);
+    // 所有可失败初始化（gl / shader / link / FBO）都已通过，此时才注册 resize
+    // 监听与 body 滚动锁——cleanup 保证一定会执行（见上方注册点迁移注释）。
+    window.addEventListener('resize', resize);
+    document.body.style.overflow = 'hidden';
 
     // 单 pass 绘制工具：绑定 FBO/tex + program + 全屏四边形
     const drawPass = (progP: WebGLProgram, fb: WebGLFramebuffer | null, tex?: WebGLTexture) => {
@@ -614,7 +619,10 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
       const ext = gl.getExtension('WEBGL_lose_context');
       ext?.loseContext();
     };
-  }, [onDone, finish]);
+    // `t` 显式入列：effect 体内直接用它拼错误文案。行为不变——`finish` 已随
+    // `t`（useT 按语言换身份）变，effect 本来就会在切语言时重建，这里只是让
+    // 依赖声明与事实一致（2026-10-11 清基线警告）。
+  }, [onDone, finish, t]);
 
   return (
     <div className="gpu-donut-overlay">

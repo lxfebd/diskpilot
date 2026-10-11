@@ -137,14 +137,32 @@ pub fn load_dir(dir: &Path) -> anyhow::Result<Vec<Scaffold>> {
         return Ok(out);
     }
     for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
+        let entry = match entry {
+            Ok(e) => e,
+            // 单个目录项读不出来（瞬时 IO 错误/被删除）只跳过它，不中止整批——
+            // 与下面 parse 失败跳过同语义（2026-10-11 修复：原 `entry?` 会让
+            // 一个坏条目清空整张清理规则表）。
+            Err(e) => {
+                tracing::warn!("scaffold read_dir entry error in {:?}: {}", dir, e);
+                continue;
+            }
+        };
         if entry
             .path()
             .extension()
             .map(|e| e == "toml")
             .unwrap_or(false)
         {
-            let text = std::fs::read_to_string(entry.path())?;
+            // 单文件读失败（被 AV 锁住 / 非 UTF-8 编码）同样只跳过该文件：
+            // 原 `read_to_string()?` 会让一个坏文件把整目录规则清空，清理页
+            // 直接失去全部脚手架（2026-10-11 修复）。
+            let text = match std::fs::read_to_string(entry.path()) {
+                Ok(t) => t,
+                Err(e) => {
+                    tracing::warn!("scaffold read error in {:?}: {}", entry.path(), e);
+                    continue;
+                }
+            };
             match toml::from_str::<Scaffold>(&text) {
                 Ok(s) => out.push(s),
                 Err(e) => tracing::warn!("scaffold parse error in {:?}: {}", entry.path(), e),
@@ -720,6 +738,34 @@ mode = "recycle"
         let s: Scaffold = toml::from_str(toml).unwrap();
         assert_eq!(s.id, "demo");
         assert_eq!(s.scopes.len(), 1);
+    }
+
+    /// 一个坏 .toml（非 UTF-8 / 解析失败）绝不能把整目录规则清空——原实现
+    /// `read_to_string()?` 遇到第一个坏文件就中止，清理页失去全部脚手架
+    /// （2026-10-11 修复）。
+    #[test]
+    fn load_dir_skips_bad_files_and_keeps_good_ones() {
+        let dir = std::env::temp_dir().join(format!("scaffold-load-dir-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // 好文件
+        let good = "id = \"good\"\nname = \"Good\"\nrisk = \"low\"\n\
+                    disclaimer = \"test\"\ndetect = [\"**/Good\"]\n\
+                    [[scope]]\nid = \"s\"\nlabel = \"S\"\nglob = \"**/Cache/**\"\nmode = \"recycle\"\n";
+        std::fs::write(dir.join("good.toml"), good).unwrap();
+        // 坏文件 1：非 UTF-8 字节（模拟编码坏/被截断的下载文件）
+        std::fs::write(dir.join("bad-utf8.toml"), [0xff, 0xfe, 0x00, 0x80]).unwrap();
+        // 坏文件 2：语法错误（解析失败走 warn 跳过）
+        std::fs::write(dir.join("bad-syntax.toml"), "id = [broken").unwrap();
+        // 非 toml 扩展名不该被读
+        std::fs::write(dir.join("notes.txt"), "whatever").unwrap();
+
+        let out = load_dir(&dir).expect("load_dir must not abort on a single bad file");
+        let ids: Vec<_> = out.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(ids, vec!["good"], "好文件必须被加载，坏文件只跳过");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -58,7 +58,7 @@ impl Workspace {
 // ============================================================================
 
 #[test]
-fn dry_run_writes_log_but_touches_nothing() {
+fn dry_run_writes_no_log_and_touches_nothing() {
     let w = Workspace::new();
     let f = w.file("a.dat");
 
@@ -75,8 +75,9 @@ fn dry_run_writes_log_but_touches_nothing() {
     assert!(!w.quarantine_root().join("0-a.dat").exists());
     // Every entry is marked dry-run.
     assert!(entries.iter().all(|e| e.reason.contains("dry-run")));
-    // Log was written even in dry-run mode.
-    assert_eq!(list_undo(&w.undo_log).unwrap().len(), 1);
+    // dry-run 是只读「预览/确认窗」语义：绝不写 undo.jsonl，否则「最近清理」
+    // 台账会堆积无法撤销的幽灵条目（destination=None），反复预览会无限膨胀。
+    assert_eq!(list_undo(&w.undo_log).unwrap().len(), 0);
 }
 
 // ============================================================================

@@ -1193,6 +1193,16 @@ fn html_wrap(md: &str) -> String {
     )
 }
 
+/// WMI `Win32_VideoController.AdapterRAM` 是否落在 32 位溢出饱和区。
+/// AdapterRAM 是 UINT32：显存 ≥4GiB 时读数饱和到 ~u32::MAX（4294967294/…295），
+/// 不是真实容量；阈值取 4GiB-1MiB（4293918720，含 u32 读数整个上界窗口）。
+/// 原实现 `vram >= 4GiB || vram <= 4GiB-1MiB` 第二支写反（`<=`），把 2GB 卡
+/// 标成「≥4GB 溢出」、真正的溢出值反落进 GB 分支——除 1MiB 窗口外全判错
+/// （2026-10-11 修复，与前端 HwPanels.vramStr 同源同修）。
+fn is_vram_overflow(vram: i64) -> bool {
+    vram >= 4_293_918_720
+}
+
 fn fmt_gb(bytes: u64) -> String {
     let b = bytes as f64;
     if b >= 1024.0 * 1024.0 * 1024.0 {
@@ -1292,7 +1302,7 @@ fn build_hw_markdown(
         for g in gpus {
             let vram: i64 = v_str(g, "AdapterRAM").parse().unwrap_or(0);
             let vram_str = if vram > 0 {
-                if vram >= 4_294_967_296 || vram <= 4_293_918_720 {
+                if is_vram_overflow(vram) {
                     "≥4 GB（WMI 32 位溢出，实际可能更大）".to_string()
                 } else {
                     fmt_gb(vram as u64)
@@ -2182,6 +2192,19 @@ mod tests {
         // 恰好 4 GiB 走 GB 分支
         let gb = 4u64 * 1024 * 1024 * 1024;
         assert_eq!(fmt_gb(gb), "4.0 GB");
+    }
+
+    /// AdapterRAM 溢出判定回归：原条件第二支 `<=` 写反（2026-10-11 修复）。
+    #[test]
+    fn vram_overflow_detects_saturation_not_normal_cards() {
+        // 正常显存绝不能被标成溢出（这正是原 bug：2GB 卡被误标）
+        assert!(!is_vram_overflow(2 * 1024 * 1024 * 1024), "2GB 卡不得标溢出");
+        assert!(!is_vram_overflow(1024 * 1024 * 1024), "1GB 卡不得标溢出");
+        // u32 饱和区与 ≥4GiB-1MiB 的读数必须标溢出
+        assert!(is_vram_overflow(4_294_967_295), "u32::MAX 必须标溢出");
+        assert!(is_vram_overflow(4_294_967_294), "u32 饱和值必须标溢出");
+        assert!(is_vram_overflow(4_293_918_720), "4GiB-1MiB 阈值本身必须标溢出");
+        assert!(is_vram_overflow(4_294_967_000), "溢出窗口内读数必须标溢出");
     }
 
     #[test]

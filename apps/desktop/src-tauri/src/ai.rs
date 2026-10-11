@@ -292,12 +292,16 @@ pub(crate) async fn ai_proxy(
             .unwrap_or(false)
     };
 
+    // 307/308 重定向要求保留方法——只解析一次，重定向环内复用。
+    let http_method =
+        reqwest::Method::from_bytes(method.as_deref().unwrap_or("POST").as_bytes())
+            .map_err(|e| format!("非法 HTTP 方法: {e}"))?;
+    // 初始请求主机：重定向只对同主机转发鉴权头（防跨主机泄密，见下方注释）。
+    let orig_host = reqwest::Url::parse(&url)
+        .ok()
+        .and_then(|u| u.host_str().map(|h| h.to_lowercase()));
     let mut req = client
-        .request(
-            reqwest::Method::from_bytes(method.as_deref().unwrap_or("POST").as_bytes())
-                .map_err(|e| format!("非法 HTTP 方法: {e}"))?,
-            &url,
-        )
+        .request(http_method.clone(), &url)
         .timeout(timeout);
     if let Some(h) = &headers {
         for (k, v) in h {
@@ -309,8 +313,8 @@ pub(crate) async fn ai_proxy(
             }
         }
     }
-    if let Some(b) = body {
-        req = req.body(b);
+    if let Some(b) = &body {
+        req = req.body(b.clone());
     }
     // 发送前先查一次取消（防止用户在请求刚发起就点停止）
     if cancelled() {
@@ -345,35 +349,81 @@ pub(crate) async fn ai_proxy(
         if let Some(blocked) = blocked_private_target(next.as_str()) {
             return Err(format!("AI 重定向目标不可用（{blocked}）：{}", next));
         }
-        let mut r2 = client.get(next.as_str()).timeout(timeout);
-        // 跟随重定向时把 caller 的头一并带过去（AI 服务商常要求鉴权头不丢）。
-        if let Some(h) = &headers {
-            for (k, v) in h {
-                if let (Ok(name), Ok(value)) = (
-                    reqwest::header::HeaderName::from_bytes(k.as_bytes()),
-                    reqwest::header::HeaderValue::from_str(v),
-                ) {
-                    r2 = r2.header(name, value);
+        let hop_status = resp.status().as_u16();
+        // 307/308 语义要求保留原方法与请求体；301/302/303 改写为 GET。
+        let preserve_method = preserve_redirect_method(hop_status);
+        let r2 = if preserve_method {
+            client.request(http_method.clone(), next.as_str())
+        } else {
+            client.request(reqwest::Method::GET, next.as_str())
+        };
+        let mut r2 = r2.timeout(timeout);
+        if preserve_method {
+            if let Some(b) = &body {
+                r2 = r2.body(b.clone());
+            }
+        }
+        // 调用方的头（x-goog-api-key / Authorization 等鉴权头）只转发给
+        // **最初请求的同一主机**（见 redirect_same_host 注释）。
+        if redirect_same_host(orig_host.as_deref(), &next) {
+            if let Some(h) = &headers {
+                for (k, v) in h {
+                    if let (Ok(name), Ok(value)) = (
+                        reqwest::header::HeaderName::from_bytes(k.as_bytes()),
+                        reqwest::header::HeaderValue::from_str(v),
+                    ) {
+                        r2 = r2.header(name, value);
+                    }
                 }
             }
+        } else {
+            tracing::warn!(
+                "ai_proxy 重定向跨主机（{} → {}），已丢弃调用方鉴权头",
+                resp.url().host_str().unwrap_or("?"),
+                next.host_str().unwrap_or("?")
+            );
         }
         resp = r2.send().await.map_err(|e| format!("AI 请求失败: {e}"))?;
     }
     let status = resp.status().as_u16();
-    // 响应体上限 10 MB：AI 接口的合法响应远小于此，防止恶意/异常服务器
-    // 用无限响应把本进程内存打爆。
-    let bytes = resp
-        .bytes()
+    // 响应体上限 10 MB：**流式边读边截**——原实现 `resp.bytes()` 先全量缓冲、
+    // 读完才比大小，恶意/异常服务器可以用无限流先打爆内存再触发检查（与
+    // web_search 的 fetch_limited 同一类坑，2026-10-11 修复）。超过上限立刻
+    // 返回错误，任何时刻本进程缓冲不超过 10 MB + 单 chunk。
+    const AI_MAX_BODY: usize = 10 * 1024 * 1024;
+    let mut bytes: Vec<u8> = Vec::new();
+    while let Some(chunk) = resp
+        .chunk()
         .await
-        .map_err(|e| format!("AI 响应读取失败: {e}"))?;
-    if bytes.len() > 10 * 1024 * 1024 {
-        return Err(format!(
-            "AI 响应体过大（{} bytes，上限 10 MB）",
-            bytes.len()
-        ));
+        .map_err(|e| format!("AI 响应读取失败: {e}"))?
+    {
+        if bytes.len() + chunk.len() > AI_MAX_BODY {
+            return Err(format!(
+                "AI 响应体过大（读取已超 {AI_MAX_BODY} bytes，上限 10 MB）"
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
     }
     let text = String::from_utf8_lossy(&bytes).to_string();
     Ok(AiProxyResponse { status, body: text })
+}
+
+/// 判断该 30x 跳转是否必须保留原方法与请求体（RFC 9110：307/308 保留，
+/// 301/302/303 按惯例改写为 GET）。抽纯函数便于单测锁定语义。
+fn preserve_redirect_method(status: u16) -> bool {
+    matches!(status, 307 | 308)
+}
+
+/// 重定向的下一跳是否与**最初请求同一主机**——只有同主机才转发调用方的头。
+/// 跨主机 30x（含开放重定向 / 被劫持的 Location）会把 x-goog-api-key /
+/// Authorization 等鉴权头送到任意外部服务器；reqwest 自带重定向在跨主机时
+/// 同样会剥敏感头，这里关了自动重定向手动跟，必须等价补上
+/// （2026-10-11 修复）。任一侧 host 缺失一律按跨主机处理（fail-closed）。
+fn redirect_same_host(orig_host: Option<&str>, next: &reqwest::Url) -> bool {
+    match (orig_host, next.host_str()) {
+        (Some(a), Some(b)) => a.eq_ignore_ascii_case(b),
+        _ => false,
+    }
 }
 
 /// ai_proxy 取消守卫：Drop 时从 AppState.ai_cancels 移除 key（RAII，保证
@@ -649,7 +699,49 @@ fn parse_ip_part(part: &str) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
-    use super::{blocked_private_target, ipv6_is_private, parse_ipv4, parse_ipv6};
+    use super::{
+        blocked_private_target, ipv6_is_private, parse_ipv4, parse_ipv6,
+        preserve_redirect_method, redirect_same_host,
+    };
+
+    /// 307/308 必须保留方法与请求体，301/302/303 按惯例降级为 GET。
+    /// 原实现把 preserve 判定内联在 ai_proxy 手动重定向环里（全部跳转都
+    /// 沿用首跳方法、301/302 也带 body），抽函数 + 本测试锁定语义
+    /// （2026-10-11 修复）。
+    #[test]
+    fn redirect_preserves_method_only_for_307_308() {
+        assert!(preserve_redirect_method(307));
+        assert!(preserve_redirect_method(308));
+        assert!(!preserve_redirect_method(301));
+        assert!(!preserve_redirect_method(302));
+        assert!(!preserve_redirect_method(303));
+        assert!(!preserve_redirect_method(200));
+    }
+
+    /// 重定向只对同主机转发调用方鉴权头（x-goog-api-key/Authorization）。
+    /// 跨主机（含 host 缺失）一律 false——fail-closed，密钥不外泄
+    /// （2026-10-11 修复：原实现跨主机无条件透传 caller 的全部头）。
+    #[test]
+    fn redirect_strips_auth_headers_cross_host() {
+        let orig = Some("generativelanguage.googleapis.com");
+        // 同主机（大小写不敏感）→ 转发
+        assert!(redirect_same_host(
+            orig,
+            &reqwest::Url::parse("https://GENERATIVELANGUAGE.googleapis.com/v1beta/x").unwrap()
+        ));
+        assert!(redirect_same_host(
+            orig,
+            &reqwest::Url::parse("https://generativelanguage.googleapis.com:443/v1beta").unwrap()
+        ));
+        // 跨主机 → 剥头
+        assert!(!redirect_same_host(
+            orig,
+            &reqwest::Url::parse("https://attacker.example/collect").unwrap()
+        ));
+        // 初始 host 缺失 / 下一跳 host 缺失 → fail-closed
+        assert!(!redirect_same_host(None, &reqwest::Url::parse("https://a.example/x").unwrap()));
+        assert!(!redirect_same_host(Some("a.example"), &reqwest::Url::parse("data:text/plain,x").unwrap()));
+    }
 
     #[test]
     fn ssrf_blocks_loopback_and_private_targets() {

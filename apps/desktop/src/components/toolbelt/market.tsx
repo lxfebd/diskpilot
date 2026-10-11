@@ -101,7 +101,7 @@ export function MarketPanel() {
         });
     });
     return () => { unlisten?.(); };
-  }, [refresh]);
+  }, [refresh, t]);
 
   const installByUrl = useCallback(async () => {
     const u = url.trim();
@@ -164,6 +164,11 @@ export function MarketPanel() {
   );
   const installedCount = (market ?? []).filter((p) => p.installed).length;
 
+  // 已安装台账加载（installFromCommunity 的依赖也用它——声明须在其之前）。
+  const loadInstalled = useCallback(() => {
+    api.pluginListInstalled().then((r) => setInstalled(r.installed)).catch(() => setInstalled([]));
+  }, []);
+
   // 从社区注册表一键安装：复用远程下载管线（https + Ed25519 签名强制）。
   const installFromCommunity = useCallback(async (p: RegistryPlugin) => {
     setConfirmAsk({
@@ -187,7 +192,7 @@ export function MarketPanel() {
         })();
       },
     });
-  }, [loadCommunity, cQuery, t]);
+  }, [loadCommunity, cQuery, t, loadInstalled]);
 
   // ── 远端分发完整版：索引 URL / 刷新 / 校验 / 已安装台账 ──
   const loadRegistryConfig = useCallback(() => {
@@ -195,9 +200,6 @@ export function MarketPanel() {
       setRegistryUrl(r.registry_url);
       setRegInfo((prev) => ({ ...(prev ?? { fetched_at: 0, signed: false, verified: false, plugins: 0 }), indexed: !!r.registry_url.trim(), registry_url: r.registry_url }));
     }).catch(() => {});
-  }, []);
-  const loadInstalled = useCallback(() => {
-    api.pluginListInstalled().then((r) => setInstalled(r.installed)).catch(() => setInstalled([]));
   }, []);
   useEffect(() => {
     if (tab !== 'community') return;

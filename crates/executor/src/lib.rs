@@ -137,7 +137,9 @@ pub fn execute(
                 bytes_freed: path_bytes_before(p),
             });
         }
-        write_log(undo_log, &out)?;
+        // 只读探测**不落盘**：dry-run 是「预览/确认窗」语义，写 undo.jsonl 会
+        // 在「最近清理」台账里留下无法撤销的幽灵条目（destination=None），
+        // 且反复预览会让台账无限膨胀。真正执行时每项才单独 write_log。
         return Ok(out);
     }
 

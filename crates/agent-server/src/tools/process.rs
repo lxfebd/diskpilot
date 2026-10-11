@@ -279,8 +279,7 @@ pub fn collect_cpu_usage() -> Result<String, String> {
 ///
 /// 非 Windows 恒返回错误。
 #[cfg(windows)]
-pub fn kill_process(pid: u32) -> Result<String, String> {
-    const KILL_GUARD_PS: &str = r#"
+const KILL_GUARD_PS: &str = r#"
 $ErrorActionPreference='Stop'
 function is-system-dir([string]$p) {
   if(-not $p){ return $true }
@@ -290,10 +289,14 @@ function is-system-dir([string]$p) {
   $pl=$p.ToLowerInvariant()
   return ($pl.StartsWith($sys.ToLowerInvariant())) -or ($pl.StartsWith($windir.ToLowerInvariant())) -or ($pl.StartsWith($root.ToLowerInvariant()+'windows'))
 }
-function blocked-pid([int]$pid) {
-  # 系统关键进程 PID + 系统目录里的进程一律拒绝
-  if($pid -lt 5){ return $true }
-  $p=Get-Process -Id $pid -ErrorAction SilentlyContinue
+function blocked-pid([int]$targetPid) {
+  # 系统关键进程 PID + 系统目录里的进程一律拒绝。
+  # 注意参数名必须避开 $pid：它是 PowerShell 内置只读自动变量
+  # （当前 PS 进程 PID），用 $pid 当参数会让绑定直接报
+  # "Cannot overwrite variable pid because it is read-only or constant"
+  # ——整个守卫脚本执行失败，任何进程都杀不掉（2026-10-11 实测修复）。
+  if($targetPid -lt 5){ return $true }
+  $p=Get-Process -Id $targetPid -ErrorAction SilentlyContinue
   if(-not $p){ return $true }  # 不存在=已被结束，也不用杀
   $pp=$null
   try { $pp=$p.Path } catch {}
@@ -306,6 +309,9 @@ if(blocked-pid $args[0]) {
 Stop-Process -Id $args[0] -Force -ErrorAction Stop
 Write-Output 'KILLED'
 "#;
+
+#[cfg(windows)]
+pub fn kill_process(pid: u32) -> Result<String, String> {
     if pid < 5 {
         return Err(format!(
             "进程 PID {pid} 是系统关键进程，拒绝结束（最小允许 PID 为 5）"
@@ -404,9 +410,13 @@ fn is_whitelisted_exe(command: &str) -> bool {
         let pd = pd.trim_end_matches('\\').to_lowercase();
         whitelist.push(format!("{pd}\\microsoft\\windows\\start menu\\programs"));
     }
+    // 白名单前缀判定：`abs_lower` 必须**正好等于**白名单目录，或**以
+    // `白名单目录 + 路径分隔符` 开头**。只 `starts_with(w)` 会放过
+    // `C:\Program Files Evil\x.exe`（Program Files 后接空格）这类逃逸——
+    // 白名单目录名被当作任意子目录的前缀。这里强制边界：`\` 之后才算命中。
     whitelist
         .iter()
-        .any(|w| abs_lower.starts_with(w.as_str()) || abs_lower.starts_with(&format!("{w}\\")))
+        .any(|w| abs_lower == w.as_str() || abs_lower.starts_with(&format!("{w}\\")))
 }
 
 /// 启动一个已安装程序（白名单执行，写操作）。**由主项目 agent.rs 桥接层做
@@ -522,5 +532,53 @@ mod tests {
         assert!(!is_whitelisted_exe(
             "\"C:\\Windows\\System32\\notepad.exe\""
         ));
+    }
+
+    /// 守卫脚本参数名回归：`$pid` 是 PowerShell 内置**只读**自动变量，
+    /// 拿它当函数参数名会让绑定报
+    /// "Cannot overwrite variable pid because it is read-only or constant"
+    /// → 整个 KILL_GUARD_PS 执行失败（ps_capture 视为 Err）→ kill_process
+    /// 对任何 pid 都返回"结束进程失败"（2026-10-11 实测确认的全量功能故障）。
+    #[test]
+    #[cfg(windows)]
+    fn kill_guard_ps_never_shadows_readonly_pid() {
+        assert!(
+            !KILL_GUARD_PS.contains("[int]$pid"),
+            "KILL_GUARD_PS 不得用 PowerShell 只读自动变量 $pid 当参数名"
+        );
+        assert!(
+            KILL_GUARD_PS.contains("[int]$targetPid"),
+            "守卫函数参数应为 $targetPid"
+        );
+        assert!(
+            KILL_GUARD_PS.contains("blocked-pid $args[0]"),
+            "调用点应把命令行首个参数传给 blocked-pid"
+        );
+    }
+
+    /// 前缀边界回归：白名单目录名后跟空格/文件名变体，不得被当作命中。
+    #[test]
+    fn whitelist_rejects_prefix_sibling_and_spaced_variant() {
+        let win = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".into());
+        // Program Files 目录名后接空格 + 其它目录
+        let spaced = format!("{}\\Program Files Evil\\evil.exe", win);
+        assert!(
+            !is_whitelisted_exe(&spaced),
+            "Program Files 目录名后接后缀必须拒绝: {spaced}"
+        );
+        // System32 后接更多字符（System32x）不是目录内部
+        let sibling = format!("{}\\System32x\\evil.exe", win);
+        assert!(
+            !is_whitelisted_exe(&sibling),
+            "System32 目录名后接后缀必须拒绝: {sibling}"
+        );
+        // 真正的目录边界内仍放行（防误伤合法白名单命中）
+        let inner = format!("{}\\System32\\notepad.exe", win);
+        if std::path::Path::new(&inner).exists() {
+            assert!(
+                is_whitelisted_exe(&inner),
+                "白名单目录内真实 exe 仍应放行: {inner}"
+            );
+        }
     }
 }

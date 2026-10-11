@@ -49,6 +49,14 @@ use crate::tools::{reg_read_dword, reg_read_str, v_str};
 
 // ── Windows 平台专用工具 ────────────────────────────────────────────────
 
+/// PS 单引号字符串字面量转义：单引号翻倍（`''`）是 PS 里唯一需要的转义。
+/// 所有把 AI/用户可控文本放进 PowerShell 源码字面量的位置都必须过这里，
+/// 否则 `'` 可逃出字符串、`;` 后接任意命令（命令注入）。
+#[cfg(windows)]
+pub(crate) fn escape_ps_single_quoted(s: &str) -> String {
+    s.replace('\'', "''")
+}
+
 /// UTF-16 宽字符串（注册表 API 输入用）。
 #[cfg(windows)]
 fn wide(s: &str) -> Vec<u16> {
@@ -431,24 +439,26 @@ pub fn control_service(name: &str, action: &str) -> Result<String, String> {
     if name_l.is_empty() {
         return Err("服务名不能为空".into());
     }
-    let action_ok = match action_l.as_str() {
-        "start" | "stop" | "restart" => true,
+    match action_l.as_str() {
+        "start" | "stop" | "restart" => {}
         _ => {
             return Err(format!(
                 "action 只支持 start / stop / restart，收到：{action}"
             ))
         }
-    };
+    }
     if system_services.contains(&name_l.as_str()) {
         return Err(format!(
             "拒绝：服务「{name}」是系统关键服务，不可由 AI 启停（安全守卫）"
         ));
     }
-    let _ = action_ok;
-    // 查目标服务现在的状态：不存在的服务直接拒绝（避免 AI 在不存在的东西上操作）。
+    // 注入防护：name 一律不拼进 PS 源码，改由 `-Name $n` 变量绑定传入
+    // （PS 变量绑定不做字符串解析，单引号/分号等恶意内容无法逃逸）。
+    // 变量赋值里的字面量串仍需按 PS 规则转义：单引号翻倍（''）是唯一逃逸。
     let probe = ps_capture(&format!(
         "$ErrorActionPreference='SilentlyContinue'; \
-         (Get-Service -Name '{name}' | ConvertTo-Json -Compress)"
+         $n='{escaped}'; (Get-Service -Name $n | ConvertTo-Json -Compress)",
+        escaped = escape_ps_single_quoted(name)
     ))?;
     if probe.trim().is_empty() || probe.trim() == "null" {
         return Err(format!(
@@ -456,14 +466,18 @@ pub fn control_service(name: &str, action: &str) -> Result<String, String> {
         ));
     }
     // 用 Start-Service / Stop-Service / Restart-Service 执行；Restart 失败时逐个 stop→start 兜底。
+    // action 已在上方白名单校验（start/stop/restart），$a 绑定后 switch 匹配，杜绝拼接注入。
     let script = format!(
         "$ErrorActionPreference='Stop'; \
-         $s=Get-Service -Name '{name}' -ErrorAction Stop; \
-         switch('{action_l}') {{ \
-           'start' {{ if($s.Status -eq 'Running'){{ 'already' }} else {{ Start-Service -Name '{name}' -ErrorAction Stop; 'started' }} }} \
-           'stop' {{ if($s.Status -eq 'Stopped'){{ 'already' }} else {{ Stop-Service -Name '{name}' -ErrorAction Stop; 'stopped' }} }} \
-           'restart' {{ if($s.Status -eq 'Running'){{ Restart-Service -Name '{name}' -Force -ErrorAction Stop }} else {{ Start-Service -Name '{name}' -ErrorAction Stop }}; 'restarted' }} \
-         }}"
+         $n='{escaped}'; $a='{action_l}'; \
+         $s=Get-Service -Name $n -ErrorAction Stop; \
+         switch($a) {{ \
+           'start' {{ if($s.Status -eq 'Running'){{ 'already' }} else {{ Start-Service -Name $n -ErrorAction Stop; 'started' }} }} \
+           'stop' {{ if($s.Status -eq 'Stopped'){{ 'already' }} else {{ Stop-Service -Name $n -ErrorAction Stop; 'stopped' }} }} \
+           'restart' {{ if($s.Status -eq 'Running'){{ Restart-Service -Name $n -Force -ErrorAction Stop }} else {{ Start-Service -Name $n -ErrorAction Stop }}; 'restarted' }} \
+         }}",
+        escaped = escape_ps_single_quoted(name),
+        action_l = action_l
     );
     let out = ps_capture(&script).map_err(|e| format!("控制服务失败：{e}"))?;
     let st = out.trim();
@@ -995,15 +1009,14 @@ pub fn manage_scheduled_task(name: &str, action: &str, dry_run: bool) -> Result<
     if name.is_empty() || name == "\\*" {
         return Err("任务名不能为空（也不接受通配 \\*，一次只操作一个任务）".into());
     }
-    let action_ok = match action.as_str() {
-        "enable" | "disable" | "query" => true,
+    match action.as_str() {
+        "enable" | "disable" | "query" => {}
         _ => {
             return Err(format!(
                 "action 只支持 enable / disable / query（不开放 delete/run），收到：{action}"
             ))
         }
-    };
-    let _ = action_ok;
+    }
     // 系统任务黑名单：Windows 内置任务路径前缀。这些任务的启停是系统维护的
     // 一部分，禁用会导致系统异常（更新/备份/碎片整理失效），一定不是用户想让
     // AI 干的；query 仍放行（只读）。
@@ -1032,7 +1045,8 @@ pub fn manage_scheduled_task(name: &str, action: &str, dry_run: bool) -> Result<
     match action.as_str() {
         "enable" => {
             let out = ps_capture(&format!(
-                "$ErrorActionPreference='Stop'; Enable-ScheduledTask -TaskName '{name}' -ErrorAction Stop; 'enabled'"
+                "$ErrorActionPreference='Stop'; $n='{escaped}'; Enable-ScheduledTask -TaskName $n -ErrorAction Stop; 'enabled'",
+                escaped = escape_ps_single_quoted(name)
             ));
             match out {
                 Ok(o) if o.trim() == "enabled" => Ok(format!("已启用计划任务「{name}」")),
@@ -1044,7 +1058,8 @@ pub fn manage_scheduled_task(name: &str, action: &str, dry_run: bool) -> Result<
         }
         "disable" => {
             let out = ps_capture(&format!(
-                "$ErrorActionPreference='Stop'; Disable-ScheduledTask -TaskName '{name}' -ErrorAction Stop; 'disabled'"
+                "$ErrorActionPreference='Stop'; $n='{escaped}'; Disable-ScheduledTask -TaskName $n -ErrorAction Stop; 'disabled'",
+                escaped = escape_ps_single_quoted(name)
             ));
             match out {
                 Ok(o) if o.trim() == "disabled" => {
@@ -1060,8 +1075,9 @@ pub fn manage_scheduled_task(name: &str, action: &str, dry_run: bool) -> Result<
         _ => {
             match ps_capture(&format!(
                 "$ErrorActionPreference='SilentlyContinue'; \
-                 $t=Get-ScheduledTask -TaskName '{name}'; \
-                 ($t.State.ToString());"
+                 $n='{escaped}'; $t=Get-ScheduledTask -TaskName $n; \
+                 ($t.State.ToString());",
+                escaped = escape_ps_single_quoted(name)
             )) {
                 Ok(o) => Ok(format!("计划任务「{name}」当前状态：{}", o.trim())),
                 Err(e) => Err(format!(
@@ -1134,5 +1150,35 @@ mod tests {
         // 不存在的服务也必须拒绝，不能假装操作成功
         let r = control_service("zzz_definitely_not_a_service_xyz", "stop");
         assert!(r.is_err(), "不存在服务应被拒绝，实际：{r:?}");
+    }
+
+    #[test]
+    fn ps_single_quote_escape_closes_literal_only() {
+        // 注入防护回归：单引号必须翻倍，且翻倍后字符串仍是合法 PS 字面量。
+        assert_eq!(escape_ps_single_quoted("plain"), "plain");
+        assert_eq!(escape_ps_single_quoted("a'b"), "a''b");
+        assert_eq!(escape_ps_single_quoted("'; calc.exe; '"), "''; calc.exe; ''");
+        // 真正的逃逸条件：字面量里出现奇数长度的连续引号串会让字符串提前
+        // 闭合（如 `'` 单独出现、或 `'''` 剩一个单引号）。翻倍转义后任何
+        // 引号串长度必须是偶数——这是「无法逃逸」的充要条件。
+        for probe in ["'", "'; whoami; '", "a' ; b", "''''", "';'"] {
+            let escaped = escape_ps_single_quoted(probe);
+            let bytes = escaped.as_bytes();
+            let mut i = 0;
+            while i < bytes.len() {
+                if bytes[i] == b'\'' {
+                    let start = i;
+                    while i < bytes.len() && bytes[i] == b'\'' {
+                        i += 1;
+                    }
+                    assert!(
+                        (i - start) % 2 == 0,
+                        "转义后引号串长度必须为偶数（{probe:?} → {escaped:?}）"
+                    );
+                } else {
+                    i += 1;
+                }
+            }
+        }
     }
 }

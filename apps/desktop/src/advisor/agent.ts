@@ -339,8 +339,10 @@ async function agentGemini(
   showThink: boolean,
 ): Promise<string> {
   const base = (s.baseUrl || 'https://generativelanguage.googleapis.com').replace(/\/$/, '');
-  const url = `${base}/v1beta/models/${encodeURIComponent(s.model)}:generateContent?key=${encodeURIComponent(s.apiKey)}`;
-  const headers = { 'Content-Type': 'application/json' };
+  // API key 走 x-goog-api-key 请求头，绝不放 ?key= query：query 会进代理/网关
+  // 访问日志、浏览器历史与 Referer，header 不落日志（2026-10-11 修复的密钥泄漏面）。
+  const url = `${base}/v1beta/models/${encodeURIComponent(s.model)}:generateContent`;
+  const headers = { 'Content-Type': 'application/json', 'x-goog-api-key': s.apiKey };
   const parts: unknown[] = [{ text: o.user }];
   for (const img of o.images ?? []) parts.push({ inline_data: { mime_type: img.mimeType, data: dataUrlBase64(img.dataUrl) } });
   const contents: any[] = [

@@ -482,9 +482,11 @@ export const useStore = create<AppState>((set, get) => {
     const succeeded: string[] = [];
     for (const p of paths) {
       try {
-        await api.recyclePaths([p.path], reason, true);
+        // 后端每个成功条目返回实测 bytes_freed（回收前统计，见 executor::execute），
+        // 记账用实测值，不再用扫描时的 size_hint 预估值（可能过期/缺失）。
+        const entries = (await api.recyclePaths([p.path], reason, true)) ?? [];
         done += 1;
-        bytes += p.size_hint ?? 0;
+        for (const e of entries) bytes += e.bytes_freed ?? 0;
         succeeded.push(p.path);
       } catch {
         failed += 1;
@@ -521,14 +523,18 @@ export const useStore = create<AppState>((set, get) => {
     const batch = paths.map((p) => p.path);
     try {
       // dry-run 返回值 = 后端认为实际可回收的条目。为空说明这些路径已不存在
-      // 或全部命中保护（可能刚被清过），再真删也是空转——不按全量计成功，
-      // 落到下方逐项再各试一次（逐项只对真正失败的单个计数）。
+      // 或全部命中保护（可能刚被清过），再真删也是空转——落到下方逐项再各试一次。
       const dry = await api.executeAiPlan(batch, true, true);
       if (dry.length > 0) {
-        await api.executeAiPlan(batch, true, false);
-        done = paths.length;
-        bytes = paths.reduce((s, p) => s + (p.size_hint ?? 0), 0);
-        succeeded.push(...batch);
+        // 真删返回值 = 实际进回收站的条目：后端对失败项是「跳过继续」（文件留在
+        // 原地就是安全方向），所以 entries 可能少于 batch——用返回条目数计成功、
+        // 实测 bytes_freed 记账，少掉的（静默跳过/保护命中）如实计失败，绝不拿
+        // 输入路径数/扫描预估 size_hint 充数。
+        const real = await api.executeAiPlan(batch, true, false);
+        done = real.length;
+        failed += batch.length - real.length;
+        for (const e of real) bytes += e.bytes_freed ?? 0;
+        succeeded.push(...real.map((e) => e.source));
       } else {
         // 整批 dry-run 无实际条目 → 逐项兜底（可能单个路径仍可回收，
         // 也可能逐项也空，那样 failed 计数如实反映）。不抛异常走批量 catch，
@@ -540,9 +546,15 @@ export const useStore = create<AppState>((set, get) => {
               failed += 1;
               continue;
             }
-            await api.executeAiPlan([p.path], true, false);
+            const r = await api.executeAiPlan([p.path], true, false);
+            // 真删返回空 = 该项被后端静默跳过（占用/权限/保护命中），如实计失败，
+            // 不能因为 dry-run 探到了就按成功记。
+            if (r.length === 0) {
+              failed += 1;
+              continue;
+            }
             done += 1;
-            bytes += p.size_hint ?? 0;
+            for (const e of r) bytes += e.bytes_freed ?? 0;
             succeeded.push(p.path);
           } catch {
             failed += 1;
@@ -550,14 +562,18 @@ export const useStore = create<AppState>((set, get) => {
         }
       }
     } catch {
-      // 批量不可行（含 dry-run 拒绝 / 保护路径命中）：回退逐项，保持
-      // 「失败的不计入、其余照常」的既有语义，已成功的仍一次性剪树。
+      // 批量不可行（含 dry-run 拒绝 / 保护路径命中 / 整批中某项已不存在导致
+      // 后端整体拒绝）：回退逐项，保持「失败的不计入、其余照常」的既有语义。
       for (const p of paths) {
         try {
           // 用户已在确认窗逐项确认 → user_confirmed=true；后端二次校验 + 强制回收站。
-          await api.executeAiPlan([p.path], true, false);
+          const r = await api.executeAiPlan([p.path], true, false);
+          if (r.length === 0) {
+            failed += 1;
+            continue;
+          }
           done += 1;
-          bytes += p.size_hint ?? 0;
+          for (const e of r) bytes += e.bytes_freed ?? 0;
           succeeded.push(p.path);
         } catch {
           failed += 1;
