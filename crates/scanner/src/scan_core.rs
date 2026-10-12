@@ -93,6 +93,10 @@ where
                             bytes_seen: bytes,
                             current_path: format!("MFT record {}", records),
                         });
+                        // 返回 false → scan_volume 在下一个 PROGRESS_EVERY 检查点
+                        // 以 scan:cancelled: 中止：大卷 MFT 解析期间点「停止」
+                        // 一个检查块内响应，不等整段 pass 跑完。
+                        !cancel.is_some_and(|c| c.load(Ordering::Relaxed))
                     },
                 )
             }))

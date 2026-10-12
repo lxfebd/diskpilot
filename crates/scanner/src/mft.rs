@@ -72,7 +72,7 @@ pub fn scan_volume<F>(
     mut on_progress: F,
 ) -> anyhow::Result<Node>
 where
-    F: FnMut(u64, u64), // (records_seen, bytes_seen)
+    F: FnMut(u64, u64) -> bool, // (records_seen, bytes_seen) → false = 调用方要求中止
 {
     let path = format!(r"\\.\{}:", volume_letter.to_ascii_uppercase());
     let file = OpenOptions::new()
@@ -109,7 +109,9 @@ where
         );
         // 进度回调：快路径解析完成后一次性回报（总条数 + 总字节），
         // 语义与慢路径的「扫到第 N 条」一致，只是没有中间回调。
-        on_progress(entries.len() as u64, bytes_total);
+        if !on_progress(entries.len() as u64, bytes_total) {
+            return Err(anyhow::anyhow!("scan:cancelled: after mft fast parse"));
+        }
         link_children(&mut entries);
         // 子路径（非盘根）解析失败 → 报错让上层回退 walkdir，绝不回退整卷
         // （8.3 短名 / 重解析点 / 大小写差异都会导致逐组件匹配失败）。
@@ -188,7 +190,7 @@ pub mod bench {
             &ntfs,
             volume_letter,
             record_size,
-            &mut |_, _| {},
+            &mut |_, _| true,
         )?;
         let fast_ms = t0.elapsed().as_millis();
         link_children(&mut entries_fast);
@@ -220,7 +222,7 @@ pub mod bench {
             None,
             None,
             record_size,
-            |_, _| {},
+            |_, _| true,
         )?;
         let slow_ms = t1.elapsed().as_millis();
 

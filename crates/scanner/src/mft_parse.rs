@@ -9,7 +9,10 @@ use std::io::{Read, Seek};
 
 use crate::mft::{Entry, ATTR_DATA, ATTR_FILE_NAME, NTFS_BLOCK_SIZE, PROGRESS_EVERY};
 
-pub(crate) fn parse_mft_fast<R: Read + Seek, F: FnMut(u64, u64)>(
+/// 快路径解析 $MFT。`on_progress` 返回 `false` 表示调用方要求中止
+/// （用户取消）——在 `PROGRESS_EVERY` 检查点立即以 `scan:cancelled:` 退出，
+/// 大卷解析期间点「停止」可在一个检查块内响应，而不是等整段 pass 结束。
+pub(crate) fn parse_mft_fast<R: Read + Seek, F: FnMut(u64, u64) -> bool>(
     reader: &mut R,
     ntfs: &Ntfs,
     volume_letter: char,
@@ -67,7 +70,11 @@ pub(crate) fn parse_mft_fast<R: Read + Seek, F: FnMut(u64, u64)>(
         }
         rec_num += 1;
         if rec_num.is_multiple_of(PROGRESS_EVERY) {
-            on_progress(rec_num, bytes_total);
+            if !on_progress(rec_num, bytes_total) {
+                return Err(anyhow!(
+                    "scan:cancelled: mft fast parse at record {rec_num}/{total_records}"
+                ));
+            }
             tracing::trace!("MFT fast path progress: {rec_num}/{}", total_records);
         }
     }
@@ -77,7 +84,9 @@ pub(crate) fn parse_mft_fast<R: Read + Seek, F: FnMut(u64, u64)>(
     // Node 树叠加占用峰值内存（大卷 $MFT 可达 1-2GB）。
     drop(mft_bytes);
     // 与慢路径一致：末尾补一次 100% 回调。
-    on_progress(total_records, bytes_total);
+    if !on_progress(total_records, bytes_total) {
+        return Err(anyhow!("scan:cancelled: mft fast parse final"));
+    }
     Ok((entries, bytes_total))
 }
 

@@ -132,7 +132,7 @@ pub(crate) fn scan_volume_slow<R, F>(
 ) -> anyhow::Result<Node>
 where
     R: Read + Seek,
-    F: FnMut(u64, u64), // (records_seen, bytes_seen)
+    F: FnMut(u64, u64) -> bool, // (records_seen, bytes_seen) → false = 调用方要求中止
 {
     // 定位 $MFT，拿总记录数。
     let mft_file = ntfs.file(reader, KnownNtfsFileRecordNumber::MFT as u64)?;
@@ -219,11 +219,15 @@ where
             );
         }
 
-        if record_num.is_multiple_of(PROGRESS_EVERY) {
-            on_progress(record_num, bytes_total);
+        if record_num.is_multiple_of(PROGRESS_EVERY) && !on_progress(record_num, bytes_total) {
+            return Err(anyhow!(
+                "scan:cancelled: mft slow parse at record {record_num}/{total_records}"
+            ));
         }
     }
-    on_progress(total_records, bytes_total);
+    if !on_progress(total_records, bytes_total) {
+        return Err(anyhow!("scan:cancelled: mft slow parse final"));
+    }
 
     // 公共的 children 链接 + 树构建。
     link_children(&mut entries);

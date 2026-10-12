@@ -515,3 +515,49 @@ fn tempdir_path() -> PathBuf {
     std::fs::create_dir_all(&p).unwrap();
     p
 }
+
+// ── 取消语义（scan_with_stats_cancellable）──────────────────────────
+
+#[test]
+fn cancellable_scan_refuses_when_flag_pre_set() {
+    let dir = tempdir_path();
+    fs::write(dir.join("f.txt"), b"x").unwrap();
+    let flag = std::sync::atomic::AtomicBool::new(true);
+    let r = scan_with_stats_cancellable(&dir, ScanOptions::default(), Some(&flag), |_| {});
+    let _ = fs::remove_dir_all(&dir);
+    let e = r.expect_err("已置位的取消标志必须在开始前就拒绝");
+    assert!(e.to_string().starts_with("scan:cancelled:"), "got: {e}");
+}
+
+/// 中途取消：12000 文件保证 walk 路径在 5000 文件节流点发出**中途**进度
+/// （MFT 路径则保证 PROGRESS_EVERY 或末尾回调），测试在**首个**进度回调
+/// 即翻转标志——两条路径都必须在下一个检查点以 scan:cancelled: 中止，
+/// 而不是跑完整段扫描。钉死「用户点停止 → 一个检查块内响应」的契约
+/// （含 MFT 快/慢路径回调 false=中止的新语义）。
+#[test]
+fn cancellable_scan_aborts_mid_scan_when_flag_flipped_on_first_progress() {
+    let dir = tempdir_path();
+    for d in 0..12 {
+        let sub = dir.join(format!("d{d}"));
+        fs::create_dir_all(&sub).unwrap();
+        for f in 0..1000 {
+            fs::write(sub.join(format!("f{f}.bin")), b"ab").unwrap();
+        }
+    }
+
+    let flag = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let flag2 = flag.clone();
+    let first = std::sync::atomic::AtomicBool::new(true);
+    let r = scan_with_stats_cancellable(&dir, ScanOptions::default(), Some(&flag), |p| {
+        // 首个进度回调即请求取消：此后任何检查点（walk 每条目 / MFT
+        // PROGRESS_EVERY / 末尾回调）都必须中止。
+        if first.swap(false, std::sync::atomic::Ordering::Relaxed) {
+            flag2.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        let _ = p;
+    });
+    let _ = fs::remove_dir_all(&dir);
+
+    let e = r.expect_err("中途取消必须中止扫描");
+    assert!(e.to_string().starts_with("scan:cancelled:"), "got: {e}");
+}
