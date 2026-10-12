@@ -217,7 +217,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
             }
             // 周巡检简报（health-butler P1）：weekly_report_enabled 开才跑。
             if cfg.weekly_report_enabled {
-                let interval = Duration::from_secs(cfg.weekly_interval_days.clamp(1, 90).saturating_mul(86400));
+                let interval = Duration::from_secs(
+                    cfg.weekly_interval_days.clamp(1, 90).saturating_mul(86400),
+                );
                 if last_weekly.elapsed() >= interval {
                     last_weekly = std::time::Instant::now();
                     let _ = crate::weekly_report::run_weekly_report(&app);

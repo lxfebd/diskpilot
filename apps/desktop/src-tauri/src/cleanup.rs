@@ -770,9 +770,11 @@ mod tests {
     fn covering_keys_drive_root_matches_subdir_entries() {
         // 清理 detect 根（`c:/users/x/appdata/...`）后，盘根 key `c:/` 的缓存条目
         // 必须被覆盖清除，否则 30 分钟 TTL 内建议仍返回已回收的旧字节。
-        let keys = ["c:/".to_string(),
+        let keys = [
+            "c:/".to_string(),
             "c:/users/x/appdata/local".to_string(),
-            "d:/".to_string()];
+            "d:/".to_string(),
+        ];
         let hit = covering_cache_keys(keys.iter(), "c:/users/x/appdata/local");
         assert!(
             hit.contains(&"c:/".to_string()),

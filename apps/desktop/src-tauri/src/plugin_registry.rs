@@ -1491,14 +1491,20 @@ mod tests {
         assert_eq!(env.source_url, "https://cdn.example.org/index.json");
         assert_eq!(env.fetched_at, 987);
         assert_eq!(env.plugins.len(), 1);
-        assert!(!verified, "官方索引未签名 → Ok(false)，显示「未验签」而非报错");
+        assert!(
+            !verified,
+            "官方索引未签名 → Ok(false)，显示「未验签」而非报错"
+        );
     }
 
     #[test]
     fn parse_rejects_unknown_schema() {
         let err = parse_and_verify_envelope(&index_body_with_schema(2), "https://x/i.json", 0)
             .unwrap_err();
-        assert!(err.contains("schema 版本不兼容"), "schema 不匹配必须拒绝: {err}");
+        assert!(
+            err.contains("schema 版本不兼容"),
+            "schema 不匹配必须拒绝: {err}"
+        );
     }
 
     #[test]
@@ -1525,11 +1531,16 @@ mod tests {
         assert_eq!(env.source_url, url);
         assert!(!verified, "官方占位索引未签名 → 合法「未验签」态");
         assert!(
-            env.plugins.iter().all(|p| !p.id.is_empty() && !p.name.is_empty()),
+            env.plugins
+                .iter()
+                .all(|p| !p.id.is_empty() && !p.name.is_empty()),
             "每条插件至少要有 id 与 name"
         );
         // 当前官方索引为全占位（url 全空）：与 CI 校验的「占位」合法态一致。
-        eprintln!("[实连] 官方索引 {} 条插件，占位 {} 条", env.plugins.len(),
-            env.plugins.iter().filter(|p| p.url.is_empty()).count());
+        eprintln!(
+            "[实连] 官方索引 {} 条插件，占位 {} 条",
+            env.plugins.len(),
+            env.plugins.iter().filter(|p| p.url.is_empty()).count()
+        );
     }
 }

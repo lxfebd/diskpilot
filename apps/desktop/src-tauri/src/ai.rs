@@ -293,16 +293,13 @@ pub(crate) async fn ai_proxy(
     };
 
     // 307/308 重定向要求保留方法——只解析一次，重定向环内复用。
-    let http_method =
-        reqwest::Method::from_bytes(method.as_deref().unwrap_or("POST").as_bytes())
-            .map_err(|e| format!("非法 HTTP 方法: {e}"))?;
+    let http_method = reqwest::Method::from_bytes(method.as_deref().unwrap_or("POST").as_bytes())
+        .map_err(|e| format!("非法 HTTP 方法: {e}"))?;
     // 初始请求主机：重定向只对同主机转发鉴权头（防跨主机泄密，见下方注释）。
     let orig_host = reqwest::Url::parse(&url)
         .ok()
         .and_then(|u| u.host_str().map(|h| h.to_lowercase()));
-    let mut req = client
-        .request(http_method.clone(), &url)
-        .timeout(timeout);
+    let mut req = client.request(http_method.clone(), &url).timeout(timeout);
     if let Some(h) = &headers {
         for (k, v) in h {
             if let (Ok(name), Ok(value)) = (
@@ -700,8 +697,8 @@ fn parse_ip_part(part: &str) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::{
-        blocked_private_target, ipv6_is_private, parse_ipv4, parse_ipv6,
-        preserve_redirect_method, redirect_same_host,
+        blocked_private_target, ipv6_is_private, parse_ipv4, parse_ipv6, preserve_redirect_method,
+        redirect_same_host,
     };
 
     /// 307/308 必须保留方法与请求体，301/302/303 按惯例降级为 GET。
@@ -739,8 +736,14 @@ mod tests {
             &reqwest::Url::parse("https://attacker.example/collect").unwrap()
         ));
         // 初始 host 缺失 / 下一跳 host 缺失 → fail-closed
-        assert!(!redirect_same_host(None, &reqwest::Url::parse("https://a.example/x").unwrap()));
-        assert!(!redirect_same_host(Some("a.example"), &reqwest::Url::parse("data:text/plain,x").unwrap()));
+        assert!(!redirect_same_host(
+            None,
+            &reqwest::Url::parse("https://a.example/x").unwrap()
+        ));
+        assert!(!redirect_same_host(
+            Some("a.example"),
+            &reqwest::Url::parse("data:text/plain,x").unwrap()
+        ));
     }
 
     #[test]

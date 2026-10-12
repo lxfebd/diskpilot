@@ -58,7 +58,15 @@ fn next_report_path(app: &AppHandle) -> PathBuf {
         let secs = ts % 86400;
         let days = ts / 86400;
         let (y, m, d) = civil_from_days(days as i64);
-        format!("{:04}{:02}{:02}-{:02}{:02}{:02}", y, m, d, secs / 3600, (secs % 3600) / 60, secs % 60)
+        format!(
+            "{:04}{:02}{:02}-{:02}{:02}{:02}",
+            y,
+            m,
+            d,
+            secs / 3600,
+            (secs % 3600) / 60,
+            secs % 60
+        )
     };
     reports_dir(app).join(format!("weekly-{stamp}.json"))
 }
@@ -106,7 +114,11 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
     // 2) 最高温（fan_curve_advice 带 TTL 缓存，失败降级 null）。
     let temp_max_c = tauri::async_runtime::block_on(crate::hw::fan_curve_advice(None))
         .ok()
-        .and_then(|v| v.get("temp_max_c").and_then(|x| x.as_f64()).map(|x| x as f32));
+        .and_then(|v| {
+            v.get("temp_max_c")
+                .and_then(|x| x.as_f64())
+                .map(|x| x as f32)
+        });
 
     // 3) 本周硬件快照（hw_history 归档只读），首尾对比温度/通电。
     let snaps = crate::hw_history::get_hw_history(app.clone());
@@ -157,7 +169,10 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
 }
 
 /// 归档周报：写入 weekly-report/*.json，裁剪旧份（最多 MAX_REPORTS）。
-pub(crate) fn archive_weekly_report(app: &AppHandle, report: &WeeklyReport) -> Result<PathBuf, String> {
+pub(crate) fn archive_weekly_report(
+    app: &AppHandle,
+    report: &WeeklyReport,
+) -> Result<PathBuf, String> {
     const MAX_REPORTS: usize = 12;
     let dir = reports_dir(app);
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -237,7 +252,10 @@ mod tests {
     fn weekly_report_serialize_roundtrip() {
         let r = WeeklyReport {
             ts: 123,
-            drives: vec![DriveCleanupBrief { path: "C:\\".into(), bytes: 100 }],
+            drives: vec![DriveCleanupBrief {
+                path: "C:\\".into(),
+                bytes: 100,
+            }],
             total_bytes: 100,
             temp_max_c: Some(72.5),
             hw_snapshots: 2,

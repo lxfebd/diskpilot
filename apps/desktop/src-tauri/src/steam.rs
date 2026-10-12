@@ -147,10 +147,9 @@ pub(crate) async fn translate_steam_names(
     let mut out: HashMap<u32, String> = HashMap::new();
     for id in &appids {
         match cache.get(&id.to_string()) {
-            Some(c) if cache_entry_usable(c, now)
-                && !c.name_cn.is_empty() => {
-                    out.insert(*id, c.name_cn.clone());
-                }
+            Some(c) if cache_entry_usable(c, now) && !c.name_cn.is_empty() => {
+                out.insert(*id, c.name_cn.clone());
+            }
             _ => {}
         }
     }

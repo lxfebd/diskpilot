@@ -1,4 +1,9 @@
+# rustfmt 配置（stable 通道）。
+#
+# 说明：`imports_granularity` 与 `group_imports` 为 nightly-only 选项，
+# stable rustfmt 会静默忽略并持续告警，而 CI 三平台都用 stable
+# （dtolnay/rust-toolchain@stable）跑 `cargo fmt --all -- --check`——
+# 声明无法被 CI 验证，故移除，stable 语义即事实标准。
+# 导入的 Crate 粒度风格（`use crate::x::{a, b}`）由代码自行维护。
 edition = "2021"
 max_width = 100
-imports_granularity = "Crate"
-group_imports = "StdExternalCrate"

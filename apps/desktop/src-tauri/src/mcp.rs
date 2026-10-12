@@ -848,7 +848,9 @@ pub(crate) async fn mcp_call_tool(
     // 也不让 AI 回合永久悬挂（call 是同步 await，无超时则前端 busy 永不清除）。
     let cfg = cfg.clone();
     let call = async {
-        let service = connect_server(&cfg).await.map_err(|e| format!("连接 MCP 服务器失败：{e}"))?;
+        let service = connect_server(&cfg)
+            .await
+            .map_err(|e| format!("连接 MCP 服务器失败：{e}"))?;
         let mut params = CallToolRequestParams::new(name.clone());
         if let Some(args) = &args_obj {
             params = params.with_arguments(args.clone());
@@ -858,17 +860,15 @@ pub(crate) async fn mcp_call_tool(
             .await
             .map_err(|e| format!("tools/call 失败：{e}"))
     };
-    let result = match tokio::time::timeout(
-        std::time::Duration::from_secs(CALL_TOOL_TIMEOUT_SECS),
-        call,
-    )
-    .await
-    {
-        Err(_) => Err(format!(
-            "调用超时（>{CALL_TOOL_TIMEOUT_SECS}s）：MCP 服务器无响应，已放弃本次调用。"
-        )),
-        Ok(r) => r,
-    };
+    let result =
+        match tokio::time::timeout(std::time::Duration::from_secs(CALL_TOOL_TIMEOUT_SECS), call)
+            .await
+        {
+            Err(_) => Err(format!(
+                "调用超时（>{CALL_TOOL_TIMEOUT_SECS}s）：MCP 服务器无响应，已放弃本次调用。"
+            )),
+            Ok(r) => r,
+        };
     let result = match result {
         Ok(r) => r,
         Err(msg) => {

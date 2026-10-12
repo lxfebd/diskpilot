@@ -221,7 +221,11 @@ fn signdir_export_install_roundtrip() {
     // 4) 篡改导出包的内容 → 安装必须拒绝。用「已签名的清单 + 改过的 run.bat」
     //    重建一个 zip：安装端按清单里的 digest/signature 验签必须失败。
     let meta_json = fs::read_to_string(dir.join("pub-rt/tool.plugin.json")).unwrap();
-    make_plugin_zip(&dir, &meta_json, &[("run.bat", b"@echo EVIL"), ("data/cfg.toml", b"x=1")]);
+    make_plugin_zip(
+        &dir,
+        &meta_json,
+        &[("run.bat", b"@echo EVIL"), ("data/cfg.toml", b"x=1")],
+    );
     let evil2 = dir.join("evil2.zip");
     fs::rename(dir.join("plugin.zip"), &evil2).unwrap();
     let err = diskpilot_toolbelt::install_plugin_zip(&evil2, &tools_root).unwrap_err();

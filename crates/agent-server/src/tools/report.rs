@@ -400,9 +400,7 @@ fn extract_free_gb(text: &str) -> Option<(f64, String)> {
                     if n.is_empty() {
                         return None;
                     }
-                    n.parse::<f64>()
-                        .ok()
-                        .filter(|v| v.is_finite() && *v > 0.0)
+                    n.parse::<f64>().ok().filter(|v| v.is_finite() && *v > 0.0)
                 })
                 .collect()
         };

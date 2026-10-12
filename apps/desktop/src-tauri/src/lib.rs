@@ -19,8 +19,8 @@ pub(crate) mod startup;
 pub(crate) mod steam;
 pub(crate) mod system;
 pub(crate) mod toolbelt;
-mod weekly_report;
 pub(crate) mod updates;
+mod weekly_report;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
@@ -754,7 +754,9 @@ fn parse_winapp2(content: String) -> Result<Vec<ParseWinapp2Item>, String> {
     let entries = diskpilot_scaffold::winapp2::parse_winapp2(&content);
     let scaffolds = diskpilot_scaffold::winapp2::winapp2_to_scaffolds(&entries);
     if scaffolds.is_empty() {
-        return Err("未能从该 Winapp2.ini 解析出任何文件清理规则（可能只含注册表项，或内容为空）。".into());
+        return Err(
+            "未能从该 Winapp2.ini 解析出任何文件清理规则（可能只含注册表项，或内容为空）。".into(),
+        );
     }
     Ok(scaffolds
         .into_iter()
@@ -774,7 +776,11 @@ fn parse_winapp2(content: String) -> Result<Vec<ParseWinapp2Item>, String> {
                     .map(|s| format!("{} → {}", s.label, s.glob))
                     .collect(),
                 disclaimer: sc.disclaimer,
-                toml: if toml_text.is_empty() { None } else { Some(toml_text) },
+                toml: if toml_text.is_empty() {
+                    None
+                } else {
+                    Some(toml_text)
+                },
                 red_line,
             }
         })
@@ -1104,7 +1110,11 @@ fn set_tools_root(app: AppHandle, path: String) -> Result<(), String> {
     };
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let mut cfg = general_config_at(&app);
-    cfg.tools_root = if path.trim().is_empty() { None } else { Some(path) };
+    cfg.tools_root = if path.trim().is_empty() {
+        None
+    } else {
+        Some(path)
+    };
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(dir.join("general.json"), text).map_err(|e| e.to_string())?;
     Ok(())
@@ -1133,7 +1143,12 @@ fn set_close_to_tray(app: AppHandle, enabled: bool) -> Result<(), String> {
 
 /// 前端把当前语言的托盘菜单文案推过来（菜单项 id 固定，重建菜单换 text + tooltip）。
 #[tauri::command]
-fn tray_sync(app: AppHandle, show_label: String, quit_label: String, tooltip: String) -> Result<(), String> {
+fn tray_sync(
+    app: AppHandle,
+    show_label: String,
+    quit_label: String,
+    tooltip: String,
+) -> Result<(), String> {
     use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
     let Some(_tray) = app.tray_by_id(TRAY_ID) else {
         return Ok(()); // 平台不支持（如无 appindicator 的 Linux）时静默
@@ -1142,15 +1157,19 @@ fn tray_sync(app: AppHandle, show_label: String, quit_label: String, tooltip: St
         .map_err(|e| e.to_string())?;
     let quit = MenuItem::with_id(&app, TRAY_QUIT_ID, quit_label, true, None::<&str>)
         .map_err(|e| e.to_string())?;
-    let menu = Menu::with_items(&app, &[
-        &show,
-        &PredefinedMenuItem::separator(&app).expect("separator"),
-        &quit,
-    ])
+    let menu = Menu::with_items(
+        &app,
+        &[
+            &show,
+            &PredefinedMenuItem::separator(&app).expect("separator"),
+            &quit,
+        ],
+    )
     .map_err(|e| e.to_string())?;
     let tray = app.tray_by_id(TRAY_ID).expect("tray exists");
     tray.set_menu(Some(menu)).map_err(|e| e.to_string())?;
-    tray.set_tooltip(Some(&tooltip)).map_err(|e| e.to_string())?;
+    tray.set_tooltip(Some(&tooltip))
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -1165,13 +1184,16 @@ fn spawn_tray(app: &tauri::App) {
 
     let show = MenuItem::with_id(app, TRAY_SHOW_ID, "显示 DiskPilot", true, None::<&str>)
         .expect("tray show item");
-    let quit = MenuItem::with_id(app, TRAY_QUIT_ID, "退出", true, None::<&str>)
-        .expect("tray quit item");
-    let menu = Menu::with_items(app, &[
-        &show,
-        &PredefinedMenuItem::separator(app).expect("separator"),
-        &quit,
-    ])
+    let quit =
+        MenuItem::with_id(app, TRAY_QUIT_ID, "退出", true, None::<&str>).expect("tray quit item");
+    let menu = Menu::with_items(
+        app,
+        &[
+            &show,
+            &PredefinedMenuItem::separator(app).expect("separator"),
+            &quit,
+        ],
+    )
     .expect("tray menu");
 
     let result = TrayIconBuilder::with_id(TRAY_ID)

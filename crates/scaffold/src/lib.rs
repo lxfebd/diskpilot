@@ -443,7 +443,9 @@ pub fn scaffold_red_line_violations(sc: &Scaffold) -> Vec<(String, Vec<String>)>
 pub fn directory_scope_recycle_violations(sc: &Scaffold) -> Vec<(String, Mode)> {
     sc.scopes
         .iter()
-        .filter(|s| s.recycle_granularity == RecycleGranularity::Directory && s.mode != Mode::Recycle)
+        .filter(|s| {
+            s.recycle_granularity == RecycleGranularity::Directory && s.mode != Mode::Recycle
+        })
         .map(|s| (s.id.clone(), s.mode))
         .collect()
 }
@@ -591,14 +593,8 @@ mod tests {
         assert!(!glob_hits_red_line("**/key/**").is_empty(), "key");
         // winapp2 社区规则 `*Web Data` / `*Form Data` 只认文件名后缀——
         // 表单自动填充库也是红线，补样本后这类绕过必须命中
-        assert!(
-            !glob_hits_red_line("*Web Data").is_empty(),
-            "*Web Data"
-        );
-        assert!(
-            !glob_hits_red_line("*Form Data").is_empty(),
-            "*Form Data"
-        );
+        assert!(!glob_hits_red_line("*Web Data").is_empty(), "*Web Data");
+        assert!(!glob_hits_red_line("*Form Data").is_empty(), "*Form Data");
     }
 
     #[test]

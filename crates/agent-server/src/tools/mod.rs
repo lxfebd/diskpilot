@@ -29,13 +29,13 @@ pub mod toolbelt;
 
 mod lenient;
 
+use diskpilot_toolbelt::Risk;
 use rmcp::{
     handler::server::{wrapper::Parameters, ServerHandler},
     model::{AnnotateAble, CallToolResult, RawContent, ServerCapabilities, ServerInfo},
     schemars, tool, tool_handler, tool_router, ErrorData as McpError,
 };
 use serde::Deserialize;
-use diskpilot_toolbelt::Risk;
 use std::sync::Mutex;
 
 fn text_result(s: String) -> CallToolResult {

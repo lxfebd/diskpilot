@@ -279,9 +279,10 @@ fn try_rename_move(
     // 同批次里找同 FRN 的 RENAME_NEW_NAME（事件顺序不定，全量搜索；排除
     // 自己——本事件的 reason 可能同时带 RENAME_NEW_NAME 位但 path 仍是旧路径）。
     let old_abs = root.join(old_rel);
-    let new_abs = match resolved.iter().find(|r| {
-        r.frn == frn && r.reason & USN_REASON_RENAME_NEW_NAME != 0 && r.path != old_abs
-    }) {
+    let new_abs = match resolved
+        .iter()
+        .find(|r| r.frn == frn && r.reason & USN_REASON_RENAME_NEW_NAME != 0 && r.path != old_abs)
+    {
         Some(r) => r.path.clone(),
         None => return false,
     };
@@ -291,7 +292,10 @@ fn try_rename_move(
     let Some(new_leaf) = new_rel.file_name().map(|s| s.to_string_lossy().to_string()) else {
         return false;
     };
-    let new_parent_rel = new_rel.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+    let new_parent_rel = new_rel
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_default();
 
     // 旧节点必须物化在树上且是目录（文件被移动时新路径会有独立的
     // FILE_CREATE/RENAME_NEW_NAME 事件走 apply_upsert 重建，无需搬移）。
@@ -362,7 +366,10 @@ fn try_rename_move(
         }
         match child_index(cur, &new_leaf) {
             Some(i) => {
-                insert_stale = Some((cur.children[i].size as i64, cur.children[i].file_count as i64));
+                insert_stale = Some((
+                    cur.children[i].size as i64,
+                    cur.children[i].file_count as i64,
+                ));
                 cur.children[i] = sub;
             }
             None => cur.children.push(sub),
@@ -997,7 +1004,11 @@ mod tests {
         assert_eq!(applied, 2);
         assert_eq!(tree.file_count, 1);
         assert_eq!(tree.size, 100);
-        let dir = tree.children.iter().find(|c| c.name == "merge_updates_dir").unwrap();
+        let dir = tree
+            .children
+            .iter()
+            .find(|c| c.name == "merge_updates_dir")
+            .unwrap();
         assert!(dir.is_dir);
         assert_eq!(dir.size, 100);
         assert_eq!(dir.file_count, 1);
@@ -1250,7 +1261,7 @@ mod tests {
             children_truncated: None,
             mtime: None,
         };
-                let d = root.join("rename_move_dir");
+        let d = root.join("rename_move_dir");
         // 先清残留再建沙箱：失败运行会留下 new_dir 等残骸，下一次 rename 直接
         // DirectoryNotEmpty（并行跑多个测试时残留更容易发生）。
         let _ = std::fs::remove_dir_all(&d);
@@ -1309,7 +1320,11 @@ mod tests {
         assert_eq!(applied, 2);
 
         // 新路径下子树完整：new_dir/old.bin 存在且 size=50。
-        let dir = tree.children.iter().find(|c| c.name == "rename_move_dir").unwrap();
+        let dir = tree
+            .children
+            .iter()
+            .find(|c| c.name == "rename_move_dir")
+            .unwrap();
         assert_eq!(dir.children.len(), 1, "旧 sub 摘走后 dir 下只剩 new_dir");
         let new_dir_node = dir.children.iter().find(|c| c.name == "new_dir").unwrap();
         assert!(new_dir_node.is_dir);

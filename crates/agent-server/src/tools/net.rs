@@ -53,9 +53,9 @@
 use serde_json::Value;
 
 use crate::ps::{json_array_of, ps_capture};
-use crate::tools::{fmt_bytes, v_str};
 #[cfg(windows)]
 use crate::tools::process;
+use crate::tools::{fmt_bytes, v_str};
 
 // ── 通用小工具（不依赖平台）────────────────────────────────────────────
 

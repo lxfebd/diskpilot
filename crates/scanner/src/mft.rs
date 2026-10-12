@@ -459,7 +459,9 @@ fn parse_record(rec: &[u8]) -> Option<(u64, String, u64, bool)> {
                 let name_bytes = &rec[name_off + 66..name_off + 66 + nlen * 2];
                 let name = String::from_utf16_lossy(
                     &name_bytes
-                        .as_chunks::<2>().0.iter()
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
                         .map(|c| u16::from_le_bytes([c[0], c[1]]))
                         .collect::<Vec<_>>(),
                 );

@@ -27,8 +27,12 @@ use diskpilot_toolbelt::{export_plugin_zip, signature};
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let plugin_dir = args.next().expect("用法: export_plugin <plugin_dir> <out_zip> [secret_hex]");
-    let out_zip = args.next().expect("用法: export_plugin <plugin_dir> <out_zip> [secret_hex]");
+    let plugin_dir = args
+        .next()
+        .expect("用法: export_plugin <plugin_dir> <out_zip> [secret_hex]");
+    let out_zip = args
+        .next()
+        .expect("用法: export_plugin <plugin_dir> <out_zip> [secret_hex]");
     let secret = args.next();
 
     let dir = Path::new(&plugin_dir);

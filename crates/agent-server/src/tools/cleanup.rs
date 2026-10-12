@@ -286,4 +286,3 @@ pub fn collect_cleanup_suggestions(root: String, top_n: usize) -> Result<String,
 pub fn collect_cleanup_suggestions(_root: String, _top_n: usize) -> Result<String, String> {
     Ok("当前平台不是 Windows，清理建议不可用".into())
 }
-
