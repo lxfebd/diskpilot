@@ -121,8 +121,13 @@ impl AgentServer {
                 let lines = metas
                     .iter()
                     .map(|m| {
+                        let mapped = if m.mapped_to.is_empty() {
+                            String::new()
+                        } else {
+                            format!("，映射到 {}（不是独立物理盘）", m.mapped_to)
+                        };
                         format!(
-                            "- {}：{}，{}，卷标「{}」",
+                            "- {}：{}，{}，卷标「{}」{}",
                             m.drive,
                             m.drive_type,
                             if m.fs.is_empty() {
@@ -130,12 +135,21 @@ impl AgentServer {
                             } else {
                                 &m.fs
                             },
-                            if m.label.is_empty() { "无" } else { &m.label }
+                            if m.label.is_empty() { "无" } else { &m.label },
+                            mapped
                         )
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                Ok(format!("分区类型（{} 个）：\n{lines}", metas.len()))
+                let mapped_n = metas.iter().filter(|m| !m.mapped_to.is_empty()).count();
+                let footer = if mapped_n == 0 {
+                    String::new()
+                } else {
+                    format!(
+                        "\n其中 {mapped_n} 个是映射盘（subst）：不是独立物理盘，空间与目标卷同一份，别按两块盘数。"
+                    )
+                };
+                Ok(format!("分区类型（{} 个）：\n{lines}{footer}", metas.len()))
             },
             "分区元数据读取",
         )

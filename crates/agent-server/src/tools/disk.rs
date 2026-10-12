@@ -174,6 +174,22 @@ pub struct VolumeMeta {
     pub drive_type: String,
     pub fs: String,
     pub label: String,
+    /// 映射盘（`subst D: J:\D`）的目标路径；普通盘为空。
+    /// 映射盘在 GetLogicalDrives 里就是一个正经盘符，不标出来会被当成第二块盘。
+    pub mapped_to: String,
+}
+
+/// 把 subst 表标到分区元数据上（纯函数，可测）。字母大小写不敏感。
+pub fn apply_subst_marks(metas: &mut [VolumeMeta], substs: &[(String, String)]) {
+    for m in metas.iter_mut() {
+        let letter = m.drive.trim_end_matches(':').to_ascii_uppercase();
+        if let Some((_, target)) = substs
+            .iter()
+            .find(|(l, _)| l.to_ascii_uppercase() == letter)
+        {
+            m.mapped_to = target.clone();
+        }
+    }
 }
 
 #[cfg(windows)]
@@ -251,8 +267,10 @@ pub fn collect_volume_meta() -> Vec<VolumeMeta> {
             drive_type: drive_type_name(dt),
             fs,
             label,
+            mapped_to: String::new(),
         });
     }
+    apply_subst_marks(&mut out, &collect_substs());
     out
 }
 
@@ -355,5 +373,31 @@ mod tests {
         assert_eq!(path_drive_letter("\\\\nas\\share\\f"), "");
         assert_eq!(path_drive_letter("relative\\path"), "");
         assert_eq!(path_drive_letter(""), "");
+    }
+
+    #[test]
+    fn subst_marks_land_on_the_matching_drive_only() {
+        let mut metas = vec![
+            VolumeMeta {
+                drive: "C:".into(),
+                drive_type: "本地磁盘".into(),
+                fs: "NTFS".into(),
+                label: String::new(),
+                mapped_to: String::new(),
+            },
+            VolumeMeta {
+                drive: "D:".into(),
+                drive_type: "本地磁盘".into(),
+                fs: "NTFS".into(),
+                label: "DATA".into(),
+                mapped_to: String::new(),
+            },
+        ];
+        apply_subst_marks(&mut metas, &[("d".into(), "J:\\D".into())]);
+        assert_eq!(metas[0].mapped_to, "");
+        assert_eq!(metas[1].mapped_to, "J:\\D");
+        // 表里没有的盘符保持空串：不猜。
+        apply_subst_marks(&mut metas, &[("Z".into(), "Q:\\x".into())]);
+        assert_eq!(metas[1].mapped_to, "J:\\D");
     }
 }
