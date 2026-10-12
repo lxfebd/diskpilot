@@ -173,6 +173,24 @@ fn prune_keeps_latest_30() {
 }
 
 #[test]
+fn v_num_takes_first_token_not_concatenated_digits() {
+    // CDI 风格字符串值：只取第一个数字 token。
+    let v = serde_json::json!({
+        "通电时间": "1,234 小时（约 51 天 / 0 年）",
+        "温度": "45 ℃",
+        "磨损": "90 %（2021 年上报）",
+        "power_on_hours": 130,
+        "bad": "无",
+    });
+    // 旧实现 filter 拼接会得到 12345100 / 902021 这类天文数字差值。
+    assert_eq!(v_num(&v, "通电时间"), Some(1234.0));
+    assert_eq!(v_num(&v, "温度"), Some(45.0));
+    assert_eq!(v_num(&v, "磨损"), Some(90.0));
+    assert_eq!(v_num(&v, "power_on_hours"), Some(130.0));
+    assert_eq!(v_num(&v, "bad"), None);
+}
+
+#[test]
 fn path_traversal_rejected() {
     // read_snapshot 的文件名白名单：只允许 hw-*.json 且不含 ..
     assert!(!safe_snapshot_file("..\\evil.json"));

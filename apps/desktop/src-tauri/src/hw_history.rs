@@ -218,16 +218,37 @@ fn v_str(v: &serde_json::Value, key: &str) -> String {
         .to_string()
 }
 
+/// 取字符串里**第一个数字 token**，而不是把所有数字字符拼起来。
+/// 旧实现 filter 拼接：`"1,234 小时（约 51 天 / 0 年）"` 会被拼成
+/// `12345100`，`"90 %（2021 年上报）"` 拼成 `902021`——快照对比出现
+/// 天文数字差值。千分位逗号先去掉（与 parse_cdi_report 预处理一致）；
+/// `-` 只有紧跟数字/小数点时才当负号起点（子弹头防错，同 rep_util）。
+fn first_number_token(s: &str) -> Option<f64> {
+    let cleaned = s.replace(',', "");
+    let chars: Vec<char> = cleaned.chars().collect();
+    let mut num = String::new();
+    for (i, &c) in chars.iter().enumerate() {
+        let starts = c.is_ascii_digit()
+            || (c == '-'
+                && num.is_empty()
+                && chars
+                    .get(i + 1)
+                    .is_some_and(|n| n.is_ascii_digit() || *n == '.'));
+        if starts || (c == '.' && !num.is_empty() && !num.contains('.')) {
+            num.push(c);
+        } else if !num.is_empty() {
+            break;
+        }
+    }
+    num.parse::<f64>().ok()
+}
+
 fn v_num(v: &serde_json::Value, key: &str) -> Option<f64> {
     v.get(key).and_then(|x| {
         if x.is_number() {
             x.as_f64()
         } else if let Some(s) = x.as_str() {
-            let cleaned: String = s
-                .chars()
-                .filter(|c| c.is_ascii_digit() || *c == '.' || *c == '-')
-                .collect();
-            cleaned.parse().ok()
+            first_number_token(s)
         } else {
             None
         }
