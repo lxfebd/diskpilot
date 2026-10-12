@@ -25,6 +25,8 @@ pub use rep_report::{sensor_trend, system_report};
 
 // 回归测试引用的内部符号。
 #[cfg(test)]
+pub(crate) use rep_report::trend_point;
+#[cfg(test)]
 pub(crate) use rep_util::{extract_first_f64, extract_free_gb, fmt_uptime};
 
 #[cfg(test)]
@@ -87,5 +89,28 @@ mod tests {
         // 无容量单位（GB/TB）不去猜
         assert_eq!(extract_free_gb("剩余 300\n"), None);
         assert_eq!(extract_free_gb("无剩余空间信息"), None);
+    }
+
+    #[test]
+    fn trend_point_maps_all_series_and_survives_legacy_rows() {
+        // 新行：三条数据齐全（ts + CPU 温度 + 内存占用）
+        let full = serde_json::json!({"ts": 1730000000i64, "cpu_temp_c": 56.5, "mem_percent": 42.0, "snapshot": "…"});
+        let p = trend_point(&full);
+        assert_eq!(p["ts"], 1730000000i64);
+        assert_eq!(p["cpu_temp_c"], 56.5);
+        assert_eq!(p["mem_percent"], 42.0);
+
+        // 旧行（mem_percent 上线前写的）：字段缺失 → null，不虚构 0%
+        let legacy = serde_json::json!({"ts": 1729999999i64, "cpu_temp_c": 51.0, "snapshot": "…"});
+        let p = trend_point(&legacy);
+        assert_eq!(p["cpu_temp_c"], 51.0);
+        assert!(p["mem_percent"].is_null(), "缺数据的内存曲线必须是 null");
+
+        // 温度采集失败（null）与 ts 缺失（0 兜底）都不炸
+        let sparse = serde_json::json!({"cpu_temp_c": null, "mem_percent": null});
+        let p = trend_point(&sparse);
+        assert!(p["cpu_temp_c"].is_null());
+        assert!(p["mem_percent"].is_null());
+        assert_eq!(p["ts"], 0i64);
     }
 }

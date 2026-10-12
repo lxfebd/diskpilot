@@ -73,6 +73,16 @@ pub fn system_report(progress: Option<&dyn Fn(usize, usize)>) -> Result<String, 
     Ok(out)
 }
 
+/// JSONL 行 → 折线图点（纯映射，可单测）。旧行没有 `mem_percent` 字段时
+/// 该值为 null——前端折线图只画有值的曲线，不会把缺数据的点画成 0%。
+pub(crate) fn trend_point(r: &serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "ts": r.get("ts").and_then(|v| v.as_i64()).unwrap_or(0),
+        "cpu_temp_c": r.get("cpu_temp_c").and_then(|v| v.as_f64()),
+        "mem_percent": r.get("mem_percent").and_then(|v| v.as_f64()),
+    })
+}
+
 /// 2) 传感器趋势：追加一条当前快照并返回最近 `n` 条（默认 10，上限 50）。
 ///
 /// `format`：`text`（默认，人类可读）/ `json`（供前端折线图，返回结构化数组）。
@@ -81,11 +91,20 @@ pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, 
     let as_json = format.as_deref().map(|s| s == "json").unwrap_or(false);
     // 快照（fancmd 全量文本，失败退回 ACPI 通道）
     let snap = hw::collect_sensors_fast().unwrap_or_else(|e| format!("采集失败：{e}"));
-    // 结构化最小集：CPU 最高温 + 文本快照
+    // 结构化最小集：CPU 最高温 + 内存占用% + 文本快照。
+    // mem_percent 来自 GlobalMemoryStatusEx（一次 syscall）；非 Windows 或
+    // 读数不可用时记 null——前端折线图只画有值的曲线，不会画出假 0%。
     let cpu_temp = hw::max_cpu_temp().ok();
+    let sys = system::collect_system_info();
+    let mem_percent = if sys.mem_total_bytes > 0 {
+        Some(sys.mem_percent)
+    } else {
+        None
+    };
     let row = serde_json::json!({
         "ts": ts_secs(),
         "cpu_temp_c": cpu_temp,
+        "mem_percent": mem_percent,
         "snapshot": snap,
     });
     append_jsonl("sensor-history.jsonl", &row.to_string());
@@ -97,15 +116,7 @@ pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, 
 
     if as_json {
         // JSON 输出：纯结构化（ts + cpu_temp_c 可空），供前端画趋势折线。
-        let arr: Vec<serde_json::Value> = recent
-            .iter()
-            .map(|r| {
-                serde_json::json!({
-                    "ts": r.get("ts").and_then(|v| v.as_i64()).unwrap_or(0),
-                    "cpu_temp_c": r.get("cpu_temp_c").and_then(|v| v.as_f64()),
-                })
-            })
-            .collect();
+        let arr: Vec<serde_json::Value> = recent.iter().map(trend_point).collect();
         return Ok(serde_json::json!({
             "total": rows.len(),
             "points": arr,
@@ -126,7 +137,12 @@ pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, 
             .and_then(|v| v.as_f64())
             .map(|t| format!("{t:.1}℃"))
             .unwrap_or_else(|| "无".into());
-        out.push_str(&format!("- {} CPU 最高温：{temp}\n", fmt_ts(ts)));
+        let mem = r
+            .get("mem_percent")
+            .and_then(|v| v.as_f64())
+            .map(|p| format!(" / 内存 {p:.0}%"))
+            .unwrap_or_default();
+        out.push_str(&format!("- {} CPU 最高温：{temp}{mem}\n", fmt_ts(ts)));
     }
     out.push_str("\n完整快照见 sensor_trend 数据目录 sensor-history.jsonl（%LOCALAPPDATA%/diskpilot/agent-server/）。");
     Ok(out)
