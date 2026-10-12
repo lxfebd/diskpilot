@@ -19,7 +19,11 @@ use serde_json::Value;
 pub(crate) const DISK_SMART_PS: &str = r#"$ErrorActionPreference='SilentlyContinue'
 $disks=Get-PhysicalDisk
 $out=@($disks | ForEach-Object {
-  $rc=$_ | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue
+  # 计数读不到有两种完全不同的原因（控制器真不上报 vs 普通权限被 CIM 拒绝），
+  # 以前 SilentlyContinue 把异常吞了，界面只能显示 8 行「未上报」却不说是为什么。
+  # 这里把错误文本带出来，Rust 侧据此给准确解释。
+  $rc=$null; $rcErr=''
+  try { $rc = $_ | Get-StorageReliabilityCounter -ErrorAction Stop } catch { $rcErr = [string]$_.Exception.Message }
   [ordered]@{
     friendly=[string]$_.FriendlyName
     media=[string]$_.MediaType
@@ -28,6 +32,7 @@ $out=@($disks | ForEach-Object {
     health=[string]$_.HealthStatus
     operational=[string]$_.OperationalStatus
     is_boot=$_.IsBoot
+    rc_err=$rcErr
     power_on_hours=if($rc){$rc.PowerOnHours}else{$null}
     temperature=if($rc){$rc.Temperature}else{$null}
     temperature_max=if($rc){$rc.TemperatureMax}else{$null}
@@ -251,38 +256,84 @@ pub fn collect_disk_smart_raw() -> Result<String, String> {
     if arr.is_empty() {
         return Ok("未检测到物理磁盘（Get-PhysicalDisk 无返回）".into());
     }
+    Ok(render_smart_raw(&arr))
+}
+
+/// 纯渲染（可单测）：磁盘 JSON → 文本。
+/// 一块计数都没读到时，不再逐盘打印 8 行「未上报」（实测 5 块盘 = 40 行噪音），
+/// 改成一行一盘 + 说清为什么读不到。
+#[cfg(windows)]
+fn render_smart_raw(arr: &[Value]) -> String {
+    let fields: [(&str, &str); 8] = [
+        ("power_on_hours", "通电时长(小时)"),
+        ("temperature", "温度(原始)"),
+        ("temperature_max", "历史最高温(原始)"),
+        ("wear", "磨损度"),
+        ("read_errors", "累计读错误"),
+        ("write_errors", "累计写错误"),
+        ("start_stop", "启停循环"),
+        ("load_unload", "加载/卸载循环"),
+    ];
+    let name_of = |d: &Value| -> String {
+        if v_str(d, "friendly").is_empty() {
+            "未命名磁盘".to_string()
+        } else {
+            v_str(d, "friendly")
+        }
+    };
+    let health_of = |d: &Value| -> String {
+        if v_str(d, "health").is_empty() {
+            "未知".to_string()
+        } else {
+            v_str(d, "health")
+        }
+    };
+
     let mut s = String::new();
     s.push_str(&format!(
         "- 磁盘可靠性计数（共 {} 块物理磁盘）：\n",
         arr.len()
     ));
-    for d in &arr {
-        let nm = if v_str(d, "friendly").is_empty() {
-            "未命名磁盘".to_string()
-        } else {
-            v_str(d, "friendly")
-        };
-        let health = if v_str(d, "health").is_empty() {
-            "未知".to_string()
-        } else {
-            v_str(d, "health")
-        };
-        s.push_str(&format!("- {nm}：健康 {health}\n"));
+
+    // 一块都没读到任何计数时，别再逐盘打印 8 行「未上报」（实测 5 块盘 = 40 行噪音，
+    // 读的人只会以为「这软件读不出东西」）。改成一行一盘 + 说清为什么读不到。
+    let any_value = arr
+        .iter()
+        .any(|d| fields.iter().any(|(k, _)| get_int(d, k).is_some()));
+    if !any_value {
+        for d in arr {
+            s.push_str(&format!(
+                "- {}：健康 {}（计数未读到）\n",
+                name_of(d),
+                health_of(d)
+            ));
+        }
+        s.push_str("\n说明：本次所有可靠性计数都读不到，这不代表磁盘有问题。\n  ");
+        if let Some(err) = arr
+            .iter()
+            .map(|d| v_str(d, "rc_err"))
+            .find(|e| !e.is_empty())
+        {
+            s.push_str(&format!(
+                "PowerShell 侧错误：{}。\n  ",
+                err.chars().take(160).collect::<String>()
+            ));
+        }
+        s.push_str(
+            "Get-StorageReliabilityCounter 在普通权限下常被 CIM 拒绝访问，以管理员身份运行本应用才能读到通电时长/温度/磨损。\n  \
+             只想看容量与健康状态：用 disk_health；想看温度：用 hw_temperature（SuperIO 直读，普通权限可用）。",
+        );
+        return s;
+    }
+
+    for d in arr {
+        s.push_str(&format!("- {}：健康 {}\n", name_of(d), health_of(d)));
         let f = |k: &str| -> String {
             get_int(d, k)
                 .map(format_num)
                 .unwrap_or_else(|| "未上报".into())
         };
-        for (k, label) in [
-            ("power_on_hours", "通电时长(小时)"),
-            ("temperature", "温度(原始)"),
-            ("temperature_max", "历史最高温(原始)"),
-            ("wear", "磨损度"),
-            ("read_errors", "累计读错误"),
-            ("write_errors", "累计写错误"),
-            ("start_stop", "启停循环"),
-            ("load_unload", "加载/卸载循环"),
-        ] {
+        for (k, label) in fields {
             s.push_str(&format!("  - {label}：{}\n", f(k)));
         }
     }
@@ -292,10 +343,68 @@ pub fn collect_disk_smart_raw() -> Result<String, String> {
          要完整 SMART 表需安装 smartmontools 的 smartctl（第三方可选，本工具不自动装）。\n  \
          外接 USB / SD 卡通常不出现在 Get-PhysicalDisk 里。",
     );
-    Ok(s)
+    s
 }
 
 #[cfg(not(windows))]
 pub fn collect_disk_smart_raw() -> Result<String, String> {
     Ok(crate::tools::hw_common::NOT_WINDOWS.into())
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn all_counters_missing_collapses_to_one_line_per_disk() {
+        // 实测：普通权限下 CIM 拒绝 Get-StorageReliabilityCounter，
+        // 5 块盘 × 8 个字段 = 40 行「未上报」，读的人只会以为软件读不出东西。
+        let arr = vec![
+            json!({"friendly": "WD_BLACK SN770 1TB", "health": "Healthy",
+                   "rc_err": "无法从客户端中访问 CIM 资源。",
+                   "power_on_hours": null, "temperature": null, "wear": null}),
+            json!({"friendly": "WDC WD20EZRX", "health": "Healthy",
+                   "rc_err": "", "power_on_hours": null, "temperature": null}),
+        ];
+        let out = render_smart_raw(&arr);
+        assert_eq!(
+            out.lines().filter(|l| l.starts_with("  - ")).count(),
+            0,
+            "{out}"
+        );
+        assert!(out.contains("计数未读到"), "{out}");
+        assert!(out.contains("以管理员身份运行"), "{out}");
+        assert!(out.contains("无法从客户端中访问 CIM 资源"), "{out}");
+        assert!(out.contains("disk_health"), "{out}");
+    }
+
+    #[test]
+    fn counters_present_keep_the_full_listing() {
+        let arr = vec![json!({
+            "friendly": "KIOXIA 2TB", "health": "Healthy", "rc_err": "",
+            "power_on_hours": 4321, "temperature": 38, "wear": 3,
+            "read_errors": 0, "write_errors": 0
+        })];
+        let out = render_smart_raw(&arr);
+        assert!(
+            out.contains("通电时长(小时)：4,321") || out.contains("通电时长(小时)：4321"),
+            "{out}"
+        );
+        assert!(out.contains("温度(原始)：38"), "{out}");
+        // 读到了就继续说明「这不是完整 SMART 表」。
+        assert!(out.contains("不是标准 SMART 属性表"), "{out}");
+    }
+
+    #[test]
+    fn partial_counters_still_print_per_disk_lines() {
+        // 只要有一块盘读到了东西，就保留逐盘明细（另一块没读到的字段仍写未上报）。
+        let arr = vec![
+            json!({"friendly": "A", "health": "Healthy", "power_on_hours": 10}),
+            json!({"friendly": "B", "health": "Healthy", "power_on_hours": null}),
+        ];
+        let out = render_smart_raw(&arr);
+        assert!(out.contains("通电时长(小时)：10"), "{out}");
+        assert!(out.contains("通电时长(小时)：未上报"), "{out}");
+    }
 }

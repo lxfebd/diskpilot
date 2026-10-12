@@ -96,7 +96,14 @@ pub(crate) fn json_arr_of(script: &str, what: &str) -> Result<Vec<Value>, String
 pub(crate) fn fmt_wmi_date(s: &str) -> String {
     let t = s.trim();
     if let Some(inner) = t.strip_prefix("/Date(").and_then(|x| x.strip_suffix(")/")) {
-        if let Ok(ms) = inner.trim().parse::<i64>() {
+        // PowerShell ConvertTo-Json 有两种形态：`/Date(1150848000000)/` 和
+        // `/Date(1150848000000+0800)/`（带时区偏移）。以前只认前者，带偏移的
+        // 直接原样透传，界面上就出现 `/Date(...)/` 这种没人看得懂的串。
+        let head: String = inner
+            .chars()
+            .take_while(|c| c.is_ascii_digit() || *c == '-')
+            .collect();
+        if let Ok(ms) = head.parse::<i64>() {
             return com_date_to_iso(ms);
         }
         return t.to_string();
@@ -309,3 +316,34 @@ pub(crate) fn amd_adl_temp() -> Option<String> {
 /// 跨平台降级文案：引用它的都是 `#[cfg(not(windows))]` 分支，Windows 下无人调用。
 #[allow(dead_code)]
 pub(crate) const NOT_WINDOWS: &str = "当前平台不是 Windows，硬件信息不可用";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wmi_date_com_form_and_offset_form_agree() {
+        // PowerShell ConvertTo-Json 的两种形态必须给出同一个日期：带 +0800 的那种
+        // 以前解析不了，界面上就露出 /Date(...)/ 原文。
+        let a = fmt_wmi_date("/Date(1150848000000)/");
+        let b = fmt_wmi_date("/Date(1150848000000+0800)/");
+        assert_eq!(a, b);
+        assert!(!a.contains("/Date("), "解析失败会露出原文：{a}");
+        assert!(a.starts_with("2006-06-"), "实测该时间戳是 2006-06-21：{a}");
+    }
+
+    #[test]
+    fn wmi_date_epoch_is_exact() {
+        assert_eq!(fmt_wmi_date("/Date(0)/"), "1970-01-01");
+        assert_eq!(fmt_wmi_date("/Date(86400000)/"), "1970-01-02");
+    }
+
+    #[test]
+    fn wmi_date_cim_numeric_form_and_garbage_passthrough() {
+        let s = fmt_wmi_date("20260410000000.000000-000");
+        assert!(s.starts_with("2026-04-10"), "{s}");
+        // 认不出来的绝不猜，原样透传。
+        assert_eq!(fmt_wmi_date("/Date(abc)/"), "/Date(abc)/");
+        assert_eq!(fmt_wmi_date(""), "");
+    }
+}

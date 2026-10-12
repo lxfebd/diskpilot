@@ -65,6 +65,13 @@ Get-LocalUser -ErrorAction SilentlyContinue | ForEach-Object {
     if arr.is_empty() {
         return Ok("未枚举到用户账户。".into());
     }
+    Ok(render_user_accounts(&arr))
+}
+
+/// 纯渲染：账户 JSON → 文本。表头数字与列出的条数**必须一致**，所以先建行、
+/// 再写表头（以前表头用过滤前的原始条数，实测出现「用户账户（7 个）」只列出 6 条）。
+#[cfg(windows)]
+fn render_user_accounts(arr: &[Value]) -> String {
     // 排除常见内置/系统账户，避免噪音；保留 Guest（有价值）
     let skip: [&str; 4] = [
         "defaultuser0",
@@ -72,10 +79,12 @@ Get-LocalUser -ErrorAction SilentlyContinue | ForEach-Object {
         "wdagutilityaccount",
         "systemprofile",
     ];
-    let mut out = format!("用户账户（{} 个）：\n", arr.len());
-    for v in &arr {
+    let mut rows: Vec<String> = Vec::new();
+    let mut skipped = 0usize;
+    for v in arr {
         let name = v_str(v, "Name");
         if name.is_empty() || skip.contains(&name.to_ascii_lowercase().as_str()) {
+            skipped += 1;
             continue;
         }
         let full = v_str(v, "FullName");
@@ -93,7 +102,7 @@ Get-LocalUser -ErrorAction SilentlyContinue | ForEach-Object {
         if lockout {
             flag.push("锁定");
         }
-        out.push_str(&format!(
+        rows.push(format!(
             "- {name}{} · {}，{}\n",
             if full.is_empty() {
                 String::new()
@@ -104,7 +113,16 @@ Get-LocalUser -ErrorAction SilentlyContinue | ForEach-Object {
             sid_tail(&v_str(v, "SID"))
         ));
     }
-    Ok(out)
+    let mut out = format!("用户账户（{} 个）：\n", rows.len());
+    for r in rows {
+        out.push_str(&r);
+    }
+    if skipped > 0 {
+        out.push_str(&format!(
+            "（另有 {skipped} 个内置系统账户未列出：defaultuser0 / wdagutilityaccount 等）\n"
+        ));
+    }
+    out
 }
 
 #[cfg(not(windows))]
@@ -132,5 +150,45 @@ pub(crate) fn sid_tail(sid: &str) -> String {
         format!("SID {sid}")
     } else {
         format!("RID {tail}")
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn acct(name: &str, disabled: bool) -> Value {
+        json!({
+            "Name": name, "FullName": "", "Disabled": disabled,
+            "LocalAccount": true, "SID": "S-1-5-21-1-2-3-1001", "Lockout": false
+        })
+    }
+
+    #[test]
+    fn header_count_matches_the_rows_actually_listed() {
+        // 实测缺陷：表头用过滤前的原始条数，出现「用户账户（7 个）」只列出 6 条。
+        let arr = vec![
+            acct("31672", false),
+            acct("Administrator", true),
+            acct("Guest", false),
+            acct("defaultuser0", false),
+            acct("wdagutilityaccount", false),
+            acct("sl", false),
+            acct("afk", false),
+        ];
+        let out = render_user_accounts(&arr);
+        let listed = out.lines().filter(|l| l.starts_with("- ")).count();
+        assert_eq!(listed, 5, "{out}");
+        assert!(out.starts_with("用户账户（5 个）"), "{out}");
+        assert!(out.contains("另有 2 个内置系统账户未列出"), "{out}");
+    }
+
+    #[test]
+    fn no_skip_note_when_nothing_was_filtered() {
+        let out = render_user_accounts(&[acct("me", false)]);
+        assert!(out.starts_with("用户账户（1 个）"));
+        assert!(!out.contains("另有"), "{out}");
+        assert!(out.contains("- me · 本地，RID 1001"), "{out}");
     }
 }

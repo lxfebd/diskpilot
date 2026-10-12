@@ -79,15 +79,24 @@ try {
 
     let mp_ok = obj.get("MpOk").and_then(Value::as_bool).unwrap_or(false);
     if mp_ok {
+        // 空值必须显式写「未上报」：以前直接拼进模板，实测输出过
+        // 「病毒库：（引擎 ）」这种半截句子，读的人无法判断是「没有」还是「没读到」。
+        let or_na = |s: String| {
+            if s.is_empty() {
+                "未上报".to_string()
+            } else {
+                s
+            }
+        };
+        let sig_part = defender_signature_line(&v_str(&obj, "Signatures"), &v_str(&obj, "Engine"));
         out.push_str(&format!(
-            "- 实时保护：{}；病毒库：{}（引擎 {}）\n",
-            v_str(&obj, "RealTime"),
-            v_str(&obj, "Signatures"),
-            v_str(&obj, "Engine")
+            "- 实时保护：{}；{}\n",
+            or_na(v_str(&obj, "RealTime")),
+            sig_part
         ));
         out.push_str(&format!(
             "- 产品：{}；最近快速扫描：{}\n",
-            v_str(&obj, "Product"),
+            or_na(v_str(&obj, "Product")),
             if v_str(&obj, "LastScan").is_empty() {
                 "从未扫描".to_string()
             } else {
@@ -115,10 +124,49 @@ pub fn collect_defender_status() -> Result<String, String> {
     Ok(NOT_WINDOWS.into())
 }
 
+/// 病毒库 / 引擎版本一行。**空值必须显式写「未上报」**：以前直接拼进模板，
+/// 实测输出过「病毒库：（引擎 ）」这种半截句子，读的人分不清「没有」还是「没读到」。
+/// 纯函数、跨平台，便于单测。
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn defender_signature_line(sig: &str, eng: &str) -> String {
+    match (sig.is_empty(), eng.is_empty()) {
+        (true, true) => "病毒库：未上报".to_string(),
+        (false, true) => format!("病毒库：{sig}（引擎版本未上报）"),
+        (true, false) => format!("病毒库：未上报（引擎 {eng}）"),
+        (false, false) => format!("病毒库：{sig}（引擎 {eng}）"),
+    }
+}
+
 /// 跑输出「对象」的 PowerShell 脚本（不做数组折叠）。
 #[cfg(windows)]
 fn json_of_sec(script: &str, what: &str) -> Result<Value, String> {
     let raw = ps_capture(script)?;
     let trimmed = raw.trim().trim_start_matches('\u{feff}');
     serde_json::from_str(trimmed).map_err(|e| format!("解析{what}查询结果失败：{e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_fields_are_said_out_loudly() {
+        // 实测缺陷：这台机器病毒库/引擎版本读不到，输出成「病毒库：（引擎 ）」。
+        assert_eq!(defender_signature_line("", ""), "病毒库：未上报");
+        assert_eq!(
+            defender_signature_line("1.411.15", ""),
+            "病毒库：1.411.15（引擎版本未上报）"
+        );
+        assert_eq!(
+            defender_signature_line("", "1.1.24000.0"),
+            "病毒库：未上报（引擎 1.1.24000.0）"
+        );
+    }
+
+    #[test]
+    fn both_present_reads_normally() {
+        let line = defender_signature_line("1.411.15", "1.1.24000.0");
+        assert_eq!(line, "病毒库：1.411.15（引擎 1.1.24000.0）");
+        assert!(!line.contains("未上报"), "{line}");
+    }
 }

@@ -88,7 +88,7 @@
 | `disk_health` | — | 列出本机所有磁盘的总/已用/可用空间与使用率（只读，实时读取）。用户问磁盘空间/哪块盘快满了/该清哪里之前先调用。 |
 | `disk_io_usage` | sample_ms:Option<u64> | 读取磁盘实时 IO 使用率：每块盘的活动时间百分比与读写速率（只读，需要跑一次 PowerShell 采样，约 1 秒）。用户问『磁盘是不是满了/卡了/谁在读写盘』时调用。 |
 | `disk_partition_usage` | path:String | 返回某路径所在卷（分区）的用量：总/已用/可用字节与使用率（只读）。比 disk_health 更细粒度——同一盘上不同挂载点用量可能不同。 |
-| `disk_smart_raw_attributes` | — | 读取磁盘可靠性计数器明细：每块物理盘的通电时长/温度/磨损/累计读写错误/启停循环（只读，普通权限）。注意：这是 Get-StorageReliabilityCounter 可靠性计数，**不是**标准 SMART 属性表（ID 0x05 重分配扇区等需 smartctl，本工具不装）。 |
+| `disk_smart_raw_attributes` | — | 读取磁盘可靠性计数器明细：每块物理盘的通电时长/温度/磨损/累计读写错误/启停循环（只读；普通权限下 CIM 可能拒绝读计数，工具会如实说明并指向 disk_health / hw_temperature）。注意：这是 Get-StorageReliabilityCounter 可靠性计数，**不是**标准 SMART 属性表（ID 0x05 重分配扇区等需 smartctl，本工具不装）。 |
 | `disk_top_directories` | path:String, top_n:Option<usize> | 统计某目录的**直接子目录**占用 Top N（含各自全部子级大小，只读，单遍并行遍历）。用户问『哪个文件夹占了空间/什么目录最大』时比单文件视角更实用。 |
 | `disk_volume_meta` | — | 列出每个分区的类型元数据（只读）：本地磁盘/可移动/网络/光驱 + 文件系统（NTFS/exFAT/FAT32）+ 卷标。AI 回答『这个盘是什么盘/能不能插拔』时用。 |
 | `file_tree` | path:String, max_depth:Option<usize>, max_nodes:Option<usize> | 列出目录树（深度限制，带文件大小；只读）。AI 想一眼看清『某目录下结构长什么样』时用，比 list_dir 更宏观。 |
@@ -194,7 +194,7 @@ GPU 快照（只读 L0，复刻 AIDA64 GPGPU Benchmark 的只读部分）：显�
 
 ### `disk_smart_raw_attributes`
 
-读取磁盘可靠性计数器明细：每块物理盘的通电时长/温度/磨损/累计读写错误/启停循环（只读，普通权限）。注意：这是 Get-StorageReliabilityCounter 可靠性计数，**不是**标准 SMART 属性表（ID 0x05 重分配扇区等需 smartctl，本工具不装）。用户问『硬盘具体磨损多少/通电多久的明细』时调用。
+读取磁盘可靠性计数器明细：每块物理盘的通电时长/温度/磨损/累计读写错误/启停循环（只读）。注意：这是 Get-StorageReliabilityCounter 可靠性计数，**不是**标准 SMART 属性表（ID 0x05 重分配扇区等需 smartctl，本工具不装）。普通权限下 CIM 常拒绝读取计数（实测 `Access to a CIM resource was not available to the client`）：此时输出只有一行一盘的健康状态 + 原因说明（并指向 disk_health / hw_temperature），不会刷 40 行「未上报」。用户问『硬盘具体磨损多少/通电多久的明细』时调用。
 
 ### `disk_top_directories`
 

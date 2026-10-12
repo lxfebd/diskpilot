@@ -25,13 +25,22 @@ $out=@(Get-CimInstance Win32_PnPSignedDriver | Where-Object { $_.DeviceName -and
 $out | ConvertTo-Json -Depth 4 -Compress
 "#;
 
-/// `DriverDate` 的 CIM DateTime（如 `20260410000000.000000-000`）→ `YYYY-MM-DD`。
-/// 只取前 8 位数字，安全解析；失败原样透传。仅供 cfg(windows) 的 collect_drivers 使用。
+/// `DriverDate` → `YYYY-MM-DD`；解析失败原样透传，绝不猜。
+/// 仅供 cfg(windows) 的 collect_drivers 使用。
+///
+/// 两种真实形态都要认：
+/// - PowerShell `ConvertTo-Json` 把 CIM DateTime 序列化成 `/Date(1150848000000)/`
+///   （有时带时区偏移）——实测驱动列表 138 条全是这个形态，以前只认下面那种，
+///   于是界面上整列都是 `/Date(1150848000000)/` 这种没人看得懂的串；
+/// - CIM DateTime 数字串 `20260410000000.000000-000`。
 #[cfg(windows)]
 fn fmt_driver_date(raw: &str) -> String {
     let t = raw.trim();
     if t.is_empty() {
         return String::new();
+    }
+    if t.starts_with("/Date(") {
+        return crate::tools::hw_common::fmt_wmi_date(t);
     }
     let digits: Vec<char> = t.chars().take(8).collect();
     if digits.len() == 8 && digits.iter().all(|c| c.is_ascii_digit()) {
@@ -65,11 +74,17 @@ fn device_class_zh(s: &str) -> String {
     }
 }
 
-/// 微软驱动日期失真检测：年份 < 2020 且版本号形如 `10.0.*`。
-/// 仅供 cfg(windows) 的 collect_drivers 使用。
+/// 驱动日期字段不可信的情形。仅供 cfg(windows) 的 collect_drivers 使用。
+///
+/// - 版本号 `10.0.*` 且年份 < 2020：Windows 内置驱动，日期会被累积更新重置（实测 2006-06-21）；
+/// - 年份 < 1995：WMI 零值/溢出产物（实测 `10.1.49.9` 的 Intel 驱动报成 1968-07-18），
+///   任何 Windows 驱动都不可能来自 1968 年。
 #[cfg(windows)]
 fn is_microsoft_date_suspect(version: &str, year: u32) -> bool {
-    year > 0 && year < 2020 && version.starts_with("10.0.")
+    if year == 0 {
+        return false;
+    }
+    year < 1995 || (year < 2020 && version.starts_with("10.0."))
 }
 
 /// 驱动枚举：PowerShell `Win32_PnPSignedDriver`（真机 137 条跑通）。
@@ -123,7 +138,16 @@ pub fn collect_drivers(keyword: Option<String>, top_n: usize) -> Result<String, 
             String::new()
         }
     ));
-    for v in &rows {
+    s.push_str(&render_driver_rows(&rows));
+    Ok(s)
+}
+
+/// 纯渲染（可单测）：驱动明细行 + 日期失真标注。
+#[cfg(windows)]
+fn render_driver_rows(rows: &[Value]) -> String {
+    let mut s = String::new();
+    let mut lines: Vec<(String, bool)> = Vec::new();
+    for v in rows {
         let name = if v_str(v, "DeviceName").is_empty() {
             "未知设备".to_string()
         } else {
@@ -151,26 +175,126 @@ pub fn collect_drivers(keyword: Option<String>, top_n: usize) -> Result<String, 
         } else {
             v_str(v, "Manufacturer")
         };
-        s.push_str(&format!(
-            "- {} · {} · {} · {} · {}\n",
-            name,
-            cls,
-            ver,
-            if date_fmt.is_empty() {
-                "未知"
-            } else {
-                &date_fmt
-            },
-            man
+        lines.push((
+            format!(
+                "- {} · {} · {} · {} · {}\n",
+                name,
+                cls,
+                ver,
+                if date_fmt.is_empty() {
+                    "未知"
+                } else {
+                    &date_fmt
+                },
+                man
+            ),
+            microsoft_suspect,
         ));
-        if microsoft_suspect {
-            s.push_str("  - （微软驱动日期可能失真：版本号 10.0.* 但日期字段异常旧，Windows 累积更新会重置该字段）\n");
+    }
+    // 命中 3 条以上就折叠成一条汇总：实测日期解析修好后几乎每条内置驱动都命中，
+    // 逐行挂注释会让 50 行输出变成 100 行，等于没在说事情。
+    let suspects = lines.iter().filter(|(_, sus)| *sus).count();
+    if suspects >= 3 {
+        let sample = lines
+            .iter()
+            .find(|(_, sus)| *sus)
+            .map(|(l, _)| l.split(" · ").nth(3).unwrap_or("?").to_string())
+            .unwrap_or_default();
+        for (l, _) in &lines {
+            s.push_str(l);
+        }
+        s.push_str(&format!(
+            "  - 其中 {suspects} 条日期字段不可信（例如 {sample}）：Windows 内置驱动的日期会被累积更新重置，个别是 WMI 零值/溢出，\n    \
+             这不代表驱动很旧；判断驱动新旧请看版本号。\n"
+        ));
+    } else {
+        for (l, sus) in &lines {
+            s.push_str(l);
+            if *sus {
+                s.push_str("  - （日期字段不可信：Windows 内置驱动日期会被累积更新重置，或为 WMI 零值/溢出）\n");
+            }
         }
     }
-    Ok(s)
+    s
 }
 
 #[cfg(not(windows))]
 pub fn collect_drivers(_keyword: Option<String>, _top_n: usize) -> Result<String, String> {
     Ok(NOT_WINDOWS.into())
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn driver_date_parses_the_json_com_form() {
+        // 实测驱动列表 138 条全是这个形态，以前只认 CIM 数字串，
+        // 于是整列输出成 /Date(1150848000000)/。
+        assert_eq!(fmt_driver_date("/Date(1150848000000)/"), "2006-06-21");
+        assert_eq!(fmt_driver_date("/Date(1150848000000+0800)/"), "2006-06-21");
+    }
+
+    #[test]
+    fn driver_date_parses_the_cim_numeric_form() {
+        assert_eq!(fmt_driver_date("20260410000000.000000-000"), "2026-04-10");
+    }
+
+    #[test]
+    fn driver_date_never_invents_a_date() {
+        assert_eq!(fmt_driver_date(""), "");
+        assert_eq!(fmt_driver_date("unknown"), "unknown");
+        assert_eq!(fmt_driver_date("/Date(zzz)/"), "/Date(zzz)/");
+    }
+
+    #[test]
+    fn parsed_date_enables_the_microsoft_date_suspect_flag() {
+        // 日期解析失败时年份读成 0，这个标注以前对 /Date(...) 永远不触发。
+        assert!(is_microsoft_date_suspect("10.0.26100.1150", 2006));
+        assert!(!is_microsoft_date_suspect("10.0.26100.1150", 2024));
+        assert!(!is_microsoft_date_suspect("1.7.16.218", 2006));
+        // 实测 10.1.49.9 的 Intel 驱动报成 1968-07-18：任何 Windows 驱动都不可能来自 1968。
+        assert!(is_microsoft_date_suspect("10.1.49.9", 1968));
+        assert!(!is_microsoft_date_suspect("10.1.49.9", 2023));
+    }
+
+    fn drv(name: &str, ver: &str, date: &str) -> Value {
+        serde_json::json!({
+            "DeviceName": name, "DeviceClass": "System",
+            "DriverVersion": ver, "DriverDate": date, "Manufacturer": "Microsoft"
+        })
+    }
+
+    #[test]
+    fn repeated_date_suspects_collapse_into_one_summary() {
+        // 实测：日期解析修好后几乎每条内置驱动都命中，逐行挂注释把 50 行变成 100 行。
+        let rows = vec![
+            drv("ACPI Fan", "10.0.26100.1150", "/Date(1150848000000)/"),
+            drv("ACPI Button", "10.0.26100.1150", "/Date(1150848000000)/"),
+            drv("ACPI Sleep", "10.0.26100.1150", "/Date(1150848000000)/"),
+            drv("AMD Tool", "1.7.16.218", "/Date(1590537600000)/"),
+        ];
+        let out = render_driver_rows(&rows);
+        assert!(
+            out.contains("其中 3 条日期字段不可信（例如 2006-06-21）"),
+            "{out}"
+        );
+        assert!(!out.contains("（日期字段不可信"), "{out}");
+        assert_eq!(
+            out.lines().filter(|l| l.starts_with("- ")).count(),
+            4,
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn few_date_suspects_keep_the_per_line_note() {
+        let rows = vec![
+            drv("ACPI Fan", "10.0.26100.1150", "/Date(1150848000000)/"),
+            drv("Vendor Driver", "12.3.4", "/Date(1700000000000)/"),
+        ];
+        let out = render_driver_rows(&rows);
+        assert!(out.contains("（日期字段不可信"), "{out}");
+        assert!(!out.contains("其中"), "{out}");
+    }
 }

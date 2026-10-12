@@ -252,7 +252,7 @@ impl AgentServer {
     }
 
     #[tool(
-        description = "读取磁盘可靠性计数器明细：每块物理盘的通电时长/温度/磨损/累计读写错误/启停循环（只读，普通权限）。注意：这是 Get-StorageReliabilityCounter 可靠性计数，**不是**标准 SMART 属性表（ID 0x05 重分配扇区等需 smartctl，本工具不装）。用户问『硬盘具体磨损多少/通电多久的明细』时调用。"
+        description = "读取磁盘可靠性计数器明细：每块物理盘的通电时长/温度/磨损/累计读写错误/启停循环（只读）。注意：这是 Get-StorageReliabilityCounter 可靠性计数，**不是**标准 SMART 属性表（ID 0x05 重分配扇区等需 smartctl，本工具不装）；普通权限下 CIM 常拒绝读取计数（实测「Access to a CIM resource was not available to the client」），届时输出只有健康状态并说明原因——别据此向用户承诺读到了磨损/通电时长，想看容量与健康用 disk_health、想看温度用 hw_temperature。用户问『硬盘具体磨损多少/通电多久的明细』时调用。"
     )]
     async fn disk_smart_raw_attributes(
         &self,

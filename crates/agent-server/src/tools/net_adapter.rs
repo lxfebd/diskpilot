@@ -16,6 +16,8 @@ mod nad_ps;
 #[cfg(windows)]
 pub(crate) use nad_ident::is_virtual_adapter;
 #[cfg(windows)]
+pub(crate) use nad_ident::AdapterRow;
+#[cfg(windows)]
 pub(crate) use nad_native::native_adapters;
 #[cfg(windows)]
 pub(crate) use nad_ps::ps_adapters_fallback;
