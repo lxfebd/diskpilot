@@ -147,6 +147,41 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - agent-server 采集收敛（去重 + TTL 缓存 + 温度口径统一）。
 - 详见各提交：`808770d` `0ead78a` `c47d278` `21b846a` `9c431b0` `21ba5d7` `6291e5f`。
 
+### 巨型文件拆分 + 前端 bundle 优化（`eb7a0d1`~`64b81b1`）
+
+对全部点名巨型 Rust 文件执行**域拆分**（子模块化，函数按域迁入同名目录），
+消除 400–520 行的单文件，按 crate 逐一提交，每提交前 check 0 警告 /
+test 全绿 / clippy 0 / fmt 干净：
+
+- **desktop（`apps/desktop/src-tauri/src`）**
+  - `scan.rs` 470→422：抽 scaffold 标记域至 `scan/tag`；
+  - `hw_report.rs` 440→342：抽风扇建议域（`build_fan_advice`）至 `hw_report/fan`；
+  - `hw_test.rs` 413→371：抽温度采样域（TTL 缓存 + `sample_thermal_c`）至 `hw_test/thermal`；
+  - `ai.rs` 488→245：抽单测至 `ai_tests`。
+- **scanner（`crates/scanner/src`）**：`scan_core.rs` 504→405（`scan_core/build_tree`）、
+  `walker.rs` 522→396（`walker/tally`）、`mft.rs` 452→332（`mft_tests`）、
+  `usn.rs` 456→245（`usn/win`）、`usn_tree.rs` 436→237（`usn_tree/apply`）、
+  `mft_tree.rs` 400→268（`mft_tree/build_node`）。
+- **steam-inspector**：`lib.rs` 452→220（库扫描域 → `inspect`）。
+- **scaffold**：`winapp2.rs` 490→295（Winapp2.ini 解析域 → `winapp2/parse`）。
+- **agent-server（`crates/agent-server/src/tools`）**
+  - `sys_boot.rs` 455→295：抽注册表枚举域至 `sys_boot/registry`；
+  - `sys_services.rs` 475→394：抽解析辅助域至 `sys_services/parse`；
+  - `bench_stress.rs` 408→305：抽 GPU 压测域（温度熔断守门）至 `bench_stress/gpu`。
+- **toolbelt（`crates/toolbelt/src`）**：`tree.rs` 456→380（`tree/tree_helpers`）、
+  `plugin.rs` 416→286（`plugin/validate` + `plugin/green`）。
+- **executor**：`lib.rs` 447→261（回收站域 → `recycle` + 受保护路径判定 → `protect`，
+  保持 `pub use` 顶层重导出，外部 crate 调用面不变）。
+
+**前端 bundle 优化（`eb7a0d1`）**：页面级代码分割，主入口 **765KB→428KB（-44%）**，
+11 个懒加载页面 chunk 288KB，预加载 vendor-markdown/vendor-react/vendor-tauri；
+`tsc -b` 0 / eslint 0 / vitest 224 passed。
+
+**净效果**：30 个拆分提交（`eb7a0d1` 起 15 个，含此前 scanner/toolbelt 系列），
+全仓最大 src 文件从 522 行降至 429 行（`scan_core.rs`），无 >450 文件。
+workspace `cargo check --workspace --all-targets` 0 警告（唯一可接受项 binrw
+v0.11.3 future-incompat）、`cargo test --workspace` 全绿、clippy 0、fmt 干净。
+
 ### 工具清单扩容（`9517e2c`）
 
 - toolbelt 工具清单 **30 → 69 条**（内存/外设/硬盘/烤机检测工具）；
