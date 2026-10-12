@@ -64,6 +64,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   `ToolCard` 两组件同名不同义（目录卡 vs 图标卡）非重复；`fmtTime`/
   `relativeTime` 输出格式与 i18n key 不同，非真重复。
 
+#### 工程专项：巨型文件拆分（`7568df9` `3af6564`）
+
+- **修复（工程·中）** desktop `hw.rs`（2259 行）按边界拆分：报告 Markdown/
+  HTML 格式化（`html_escape`/`html_wrap`/`is_vram_overflow`/`fmt_gb`/`v_str`/
+  `arr`/`build_hw_markdown`）与风扇建议规则（`build_fan_advice`）为无状态纯
+  函数，连同 12 条单测搬入新模块 `hw_report.rs`；`hw.rs` 保留 Tauri 命令层，
+  降到 1684 行。
+- **修复（工程·中）** desktop `mcp.rs`（1156 行）拆分：stdio/http 连接与
+  校验（`validate_http_url`/`validate_stdio`/`connect_stdio`/`connect_http`/
+  `connect_server` + `McpService` 别名）连同 2 条单测搬入 `mcp_bridge.rs`；
+  `mcp.rs` 降到 921 行。
+- **方式**：同 crate 内模块移动、`pub(crate)` 导出、零行为变化——仅移动
+  不改逻辑；130 passed / 2 ignored，clippy/fmt 全绿。
+- **排查排除**：`cleanup.rs`（1009 行）命令层与逻辑层交织（命令内联引用
+  多个逻辑函数、测试混居），拆分收益递减风险上升，留待后续。
+
 #### 第 5 轮（`d0815a5`）
 
 - **修复（Bug 风险）** `agent-server report.rs` `extract_free_gb`：
