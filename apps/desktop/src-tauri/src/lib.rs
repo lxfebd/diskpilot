@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 pub(crate) mod agent;
 pub(crate) mod ai;
+mod ai_net;
 mod cleanup;
 mod conda;
 mod drivers;
@@ -1389,7 +1390,7 @@ pub fn run() {
             steam::translate_steam_names,
             steam::translate_steam_names_fetch,
             steam::open_steam_url,
-            ai::web_search,
+            ai_net::web_search,
             ai::ai_proxy,
             ai::ai_cancel,
             agent::agent_list_tools,
