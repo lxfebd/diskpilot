@@ -573,3 +573,100 @@ fn execute_delete_refuses_junction_pointing_at_windows() {
         "junction -> C:\\Windows must be refused by execute, got: {msg}"
     );
 }
+
+// ============================================================================
+// bytes_freed 语义（前端「已清理 X」真实展示的数据源，2026-10-13 补测）
+// ============================================================================
+
+/// dry-run 也实测每项真实字节（与真执行同一口径）：确认面板的「预估」必须
+/// 与实际可清量对齐，不再恒 None。文件取 len，目录递归求和。
+#[test]
+fn dry_run_measures_real_bytes_for_file_and_dir() {
+    let w = Workspace::new();
+    let f = w.file("a.dat"); // "hello" = 5 bytes
+    let d = w.subdir("d"); // inner.txt = 1 byte
+
+    let entries = execute(
+        &plan(Action::Quarantine, vec![f, d]),
+        true,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0].bytes_freed, Some(5), "file must report real len");
+    assert_eq!(
+        entries[1].bytes_freed,
+        Some(1),
+        "dir must report recursive sum"
+    );
+}
+
+/// 真执行（quarantine）的字节统计必须在移动**之前**完成：move 成功后原路径
+/// 已消失，晚算必为 0。台账（list_undo）里也必须持久化同一数值。
+#[test]
+fn quarantine_records_actual_bytes_freed_before_move() {
+    let w = Workspace::new();
+    let f = w.file("big.dat"); // 5 bytes
+
+    let entries = execute(
+        &plan(Action::Quarantine, vec![f]),
+        false,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+
+    assert_eq!(entries[0].bytes_freed, Some(5));
+    let logged = list_undo(&w.undo_log).unwrap();
+    assert_eq!(logged.len(), 1);
+    assert_eq!(
+        logged[0].bytes_freed,
+        Some(5),
+        "undo log must persist the measured bytes"
+    );
+}
+
+/// 目录删除的字节 = 递归求和（含嵌套子目录），且必须在删除前统计。
+#[test]
+fn delete_records_recursive_bytes_for_directory() {
+    let w = Workspace::new();
+    let d = w.src.join("tree");
+    std::fs::create_dir_all(d.join("sub")).unwrap();
+    std::fs::write(d.join("one.txt"), "1234").unwrap(); // 4
+    std::fs::write(d.join("sub").join("two.txt"), "56").unwrap(); // 2
+
+    let entries = execute(
+        &plan(Action::Delete, vec![d]),
+        false,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        entries[0].bytes_freed,
+        Some(6),
+        "dir delete must report recursive sum (4 + 2)"
+    );
+}
+
+/// 不存在的路径：动作照常记录（不 panic），但字节必须是 None——
+/// 前端据此降级为「预估」展示，而不是谎报 0 字节已释放。
+#[test]
+fn missing_path_records_none_bytes_freed() {
+    let w = Workspace::new();
+    let ghost = w.src.join("ghost.dat");
+
+    let entries = execute(
+        &plan(Action::Delete, vec![ghost]),
+        false,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].bytes_freed, None);
+}

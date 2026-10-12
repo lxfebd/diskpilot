@@ -277,3 +277,122 @@ fn main() -> anyhow::Result<()> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 最小合法 scaffold：一条 cache scope，不触红线。
+    const VALID: &str = r#"
+id = "test-scaffold"
+name = "Test Scaffold"
+risk = "low"
+disclaimer = "test only"
+detect = ["%LOCALAPPDATA%/TestApp"]
+
+[match]
+name_contains = ["TestApp"]
+
+[[scope]]
+id = "cache"
+label = "缓存"
+glob = "**/TestApp/Cache/**"
+mode = "recycle"
+"#;
+
+    #[test]
+    fn valid_scaffold_passes() {
+        let (ok, errors) = lint_text("valid", VALID);
+        assert!(ok, "valid scaffold must pass, errors={errors}");
+        assert_eq!(errors, 0);
+    }
+
+    #[test]
+    fn malformed_toml_is_hard_error() {
+        let (ok, errors) = lint_text("bad", "id = not-valid-toml [[[");
+        assert!(!ok);
+        assert_eq!(errors, 1);
+    }
+
+    #[test]
+    fn empty_glob_scope_is_hard_error() {
+        let text = VALID.replace(r#"glob = "**/TestApp/Cache/**""#, r#"glob = "  ""#);
+        let (ok, errors) = lint_text("empty-glob", &text);
+        assert!(
+            !ok,
+            "empty glob must fail (scope would silently match nothing)"
+        );
+        assert!(errors >= 1);
+    }
+
+    #[test]
+    fn red_line_glob_is_hard_error() {
+        // 与运行时安装共用 red_line_violations 同一把尺：命中 Firefox 登录库样本即 FAIL。
+        let text = VALID.replace(
+            r#"glob = "**/TestApp/Cache/**""#,
+            r#"glob = "**/Firefox/Profiles/**/logins.json""#,
+        );
+        let (ok, errors) = lint_text("redline", &text);
+        assert!(!ok, "scope glob hitting account/login DB must be refused");
+        assert!(errors >= 1);
+    }
+
+    #[test]
+    fn directory_granularity_with_non_recycle_mode_is_hard_error() {
+        // 执行层对目录粒度恒走 Recycle（desktop/executor.rs），TOML 写 quarantine
+        // 是静默不生效的陷阱——lint 必须拦下，不能放行坏配置。
+        let text = VALID.replace(
+            "mode = \"recycle\"",
+            "mode = \"quarantine\"\nrecycle_granularity = \"directory\"",
+        );
+        let (ok, _) = lint_text("dir-gran", &text);
+        assert!(
+            !ok,
+            "directory granularity + quarantine mode must fail lint"
+        );
+    }
+
+    #[test]
+    fn bad_glob_syntax_is_hard_error() {
+        let text = VALID.replace(
+            r#"glob = "**/TestApp/Cache/**""#,
+            r#"glob = "**/[unclosed/**""#,
+        );
+        let (ok, errors) = lint_text("bad-glob", &text);
+        assert!(!ok);
+        assert!(errors >= 1);
+    }
+
+    #[test]
+    fn render_new_scaffold_substitutes_and_self_lints() {
+        // cmd_new 写盘前自检依赖这条链路：模板替换 id/name/risk 后必须仍过 lint。
+        let text = render_new_scaffold("my-new-app", "My New App", "medium");
+        assert!(
+            text.contains(r#"id          = "my-new-app""#),
+            "id substituted"
+        );
+        assert!(
+            text.contains(r#"name        = "My New App""#),
+            "name substituted"
+        );
+        assert!(
+            text.contains(r#"risk        = "medium""#),
+            "risk substituted"
+        );
+        assert!(
+            !text.contains("TODO-kebab-case-id"),
+            "template placeholder gone"
+        );
+        let (ok, errors) = lint_text("my-new-app", &text);
+        assert!(
+            ok,
+            "generated scaffold must self-lint clean, errors={errors}"
+        );
+    }
+
+    #[test]
+    fn build_set_rejects_bad_glob() {
+        assert!(build_set("**/[abc").is_err());
+        assert!(build_set("**/ok/**").is_ok());
+    }
+}
