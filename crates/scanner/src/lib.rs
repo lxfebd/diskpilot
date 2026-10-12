@@ -17,6 +17,17 @@ pub(crate) fn is_pruned_system_file(name: &str) -> bool {
 
 #[cfg(windows)]
 mod mft;
+#[cfg(windows)]
+mod mft_parse;
+/// MFT 相关子模块（从 mft.rs 拆出，2026-10-12）：
+/// - mft_reader: 512B 对齐卷设备读取器
+/// - mft_parse: 记录解析（parse_mft_fast/fixup_all/parse_record）
+/// - mft_tree: 条目→Node 树（link_children/rollup/build_node_tree/…）
+/// mft.rs 保留 scan_volume 入口 + tests + bench，内部经 pub(crate) use 引用。
+#[cfg(windows)]
+mod mft_reader;
+#[cfg(windows)]
+mod mft_tree;
 /// bench feature 下把 mft 内部结构暴露给冒烟 CLI（仅 bench::run 一个入口）。
 #[cfg(all(windows, feature = "bench"))]
 pub mod mft_bench {
