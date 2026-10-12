@@ -171,7 +171,7 @@ pub(crate) fn prune_history(app: &tauri::AppHandle) {
 /// 通过 `crate::volume_info` 读卷容量（复用 list_drives 同款 Win32 查询）；
 /// 读取失败静默（历史是增强功能，不能因它失败）。
 pub(crate) fn record_after_scan(app: &tauri::AppHandle, key: &str) {
-    let Ok(info) = crate::volume_info(key.to_string()) else {
+    let Ok(info) = crate::drives::volume_info(key.to_string()) else {
         return;
     };
     record_space_point(app, key, info.total_bytes, info.used_bytes);

@@ -3,7 +3,7 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::volume_info;
+use crate::drives::volume_info;
 #[derive(serde::Serialize, Default, Clone)]
 #[allow(dead_code)] // 字段仅供前端/AI 序列化消费，Rust 侧不读
 pub(crate) struct SystemProbe {

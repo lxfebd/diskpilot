@@ -95,7 +95,7 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
     let mut total: u64 = 0;
     for letter in b'C'..=b'Z' {
         let root = format!("{}:\\", letter as char);
-        if crate::volume_info(root.clone()).is_err() {
+        if crate::drives::volume_info(root.clone()).is_err() {
             continue;
         }
         let suggs = tauri::async_runtime::block_on(crate::cleanup::cleanup_suggestions(

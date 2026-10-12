@@ -161,7 +161,7 @@ fn compute_reminder(
     let mut total: u64 = 0;
     for letter in b'C'..=b'Z' {
         let root = format!("{}:\\", letter as char);
-        if crate::volume_info(root.clone()).is_err() {
+        if crate::drives::volume_info(root.clone()).is_err() {
             continue;
         }
         // cleanup_suggestions 需要 scaffolds；直接读 state。block_on 在后台线程
