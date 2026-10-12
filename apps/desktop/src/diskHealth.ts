@@ -142,6 +142,29 @@ export function pathsOnRiskyDrives(
   return risky.filter((d) => d.letters.some((l) => hit.has(l)));
 }
 
+export interface DiskHealthSummary {
+  total: number;
+  /** caution + bad 的块数（需要提醒的盘）。 */
+  risky: number;
+  bad: number;
+  unknown: number;
+  /** 一句话状态：UI 直接按它选文案，不再自己数。 */
+  state: 'none' | 'risky' | 'all-unknown' | 'partial' | 'all-good';
+}
+
+/** 一组盘的健康汇总（体检条用）。空数组 = 「没读到」，不是「都没问题」。 */
+export function summarizeDiskHealth(disks: unknown[]): DiskHealthSummary {
+  const grades = disks.map((d) => gradeDiskHealth((d as { health?: unknown } | null)?.health));
+  const bad = grades.filter((g) => g === 'bad').length;
+  const caution = grades.filter((g) => g === 'caution').length;
+  const unknown = grades.filter((g) => g === 'unknown').length;
+  const total = grades.length;
+  const risky = bad + caution;
+  const state: DiskHealthSummary['state'] =
+    total === 0 ? 'none' : risky > 0 ? 'risky' : unknown === total ? 'all-unknown' : unknown > 0 ? 'partial' : 'all-good';
+  return { total, risky, bad, unknown, state };
+}
+
 const GRADE_LABELS: Record<DiskHealthGrade, string> = {
   good: '健康',
   caution: '注意：SMART 有告警',

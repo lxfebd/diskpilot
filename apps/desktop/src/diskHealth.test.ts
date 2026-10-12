@@ -9,6 +9,7 @@ import {
   resolveDriveLetter,
   resolveLetter,
   riskyDrives,
+  summarizeDiskHealth,
 } from './diskHealth';
 
 // 数据形状取自本机 hw_disk_health 的真实输出（Get-PhysicalDisk + Get-Partition 映射）。
@@ -163,6 +164,37 @@ describe('映射盘（subst）解析', () => {
     expect(hit[0].friendly).toBe('KIOXIA 2TB');
     // 不给别名表就漏掉——这正是修复前的行为。
     expect(pathsOnRiskyDrives(disks, ['D:\\Downloads\\big.zip'])).toEqual([]);
+  });
+});
+
+describe('summarizeDiskHealth（体检条的一句话状态）', () => {
+  it('空数组是「没读到」，不是「都没问题」', () => {
+    expect(summarizeDiskHealth([])).toEqual({ total: 0, risky: 0, bad: 0, unknown: 0, state: 'none' });
+  });
+
+  it('本机形状：五块全 Healthy → all-good', () => {
+    const s = summarizeDiskHealth(DISKS);
+    expect(s).toEqual({ total: 5, risky: 0, bad: 0, unknown: 0, state: 'all-good' });
+  });
+
+  it('一块 Warning 就算 risky（但没 bad 时 UI 用琥珀不用红）', () => {
+    const s = summarizeDiskHealth([{ health: 'Healthy' }, { health: 'Warning' }]);
+    expect(s.state).toBe('risky');
+    expect(s.risky).toBe(1);
+    expect(s.bad).toBe(0);
+  });
+
+  it('全 Unknown → all-unknown；部分 Unknown → partial（不能报成全好）', () => {
+    expect(summarizeDiskHealth([{ health: 'Unknown' }, { health: '' }]).state).toBe('all-unknown');
+    const p = summarizeDiskHealth([{ health: 'Healthy' }, { health: 'Unknown' }]);
+    expect(p.state).toBe('partial');
+    expect(p.unknown).toBe(1);
+  });
+
+  it('脏数据（null 条目）不炸', () => {
+    const s = summarizeDiskHealth([null, undefined, { health: 'Healthy' }]);
+    expect(s.total).toBe(3);
+    expect(s.state).toBe('partial');
   });
 });
 

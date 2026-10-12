@@ -545,6 +545,7 @@ export default function App() {
                 onRefresh={(p) => scan([p], { force: true })}
                 onGoWorkspace={() => setView('workspace')}
                 onOpenCleanup={() => openCleanup()}
+                onGoOptimizer={() => setView('optimizer')}
               />
             </Suspense>
           </ErrorBoundary>

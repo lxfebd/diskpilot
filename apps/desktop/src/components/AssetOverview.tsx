@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket } from 'lucide-react';
-import { api, type SpacePoint, type StartupItem } from '../api';
+import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react';
+import { api, type SpacePoint, type StartupItem, type HwDiskHealth } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
+import { ensureHwLoaded } from '../hwCache';
+import { riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
 import { physicalDrives } from '../drives';
 import { DriveStrip } from './DriveStrip';
@@ -35,6 +37,8 @@ type Props = {
   onRefresh: (path: string) => void;
   onGoWorkspace: () => void;
   onOpenCleanup: () => void;
+  /** 跳到「系统优化」页看硬盘健康（体检条的硬盘格用）。 */
+  onGoOptimizer?: () => void;
 };
 
 function catColor(seed: string): string {
@@ -307,21 +311,26 @@ function HealthCheckupCard({
   scanning,
   onScanAll,
   onGoCleanup,
+  onGoOptimizer,
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
   scanning: boolean;
   onScanAll: () => void;
   onGoCleanup: () => void;
+  onGoOptimizer?: () => void;
 }) {
   const t = useT();
-  // 温度 / 启动项每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
+  // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
+  // 硬盘健康走 hwCache 共享缓存：与系统优化页同一条链路，切页不重跑 PowerShell。
   const [tempC, setTempC] = useState<number | null>(null);
   const [startup, setStartup] = useState<StartupItem[] | null>(null);
+  const [diskHealth, setDiskHealth] = useState<HwDiskHealth | null>(null);
   useEffect(() => {
     let alive = true;
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
     api.listStartupItems().then((r) => { if (alive) setStartup(r); }).catch(() => { setStartup([]); });
+    ensureHwLoaded().then((c) => { if (alive) setDiskHealth(c.health); }).catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -330,6 +339,11 @@ function HealthCheckupCard({
   const redCount = physicalDrives(drives).filter((d) => isDriveCritical(d.used_bytes, d.total_bytes)).length;
   const disabledCount = disabledStartupCount(startup);
   const tempHigh = isTempHigh(tempC, TEMP_WARN_C);
+
+  // 硬盘健康一格：读不到就说读不到，Unknown 不等于坏（第 26 轮的教训）。
+  const hwDisks = diskHealth?.disks ?? [];
+  const hwSummary = summarizeDiskHealth(hwDisks);
+  const riskyDisks = riskyDrives(hwDisks);
 
   return (
     <section className="ao-checkup">
@@ -367,12 +381,36 @@ function HealthCheckupCard({
               : t('overview.checkup.startupNone')}
           </span>
         </div>
+        {/* 硬盘健康：读不到就说读不到；Unknown 只标「未上报」，不给红牌（第 26 轮的教训） */}
+        <button
+          className={'ao-checkup-item' + (hwSummary.state === 'risky' ? (hwSummary.bad > 0 ? ' danger' : ' caution') : '')}
+          onClick={onGoOptimizer}
+          disabled={!onGoOptimizer}
+          title={
+            riskyDisks.length > 0
+              ? `${t('overview.checkup.goHardware')} · ${riskyDisks.map((d) => (d.letters ? `${d.letters}: ${d.friendly}` : d.friendly)).join(' · ')}`
+              : t('overview.checkup.goHardware')
+          }
+        >
+          {hwSummary.state === 'risky' ? <ShieldAlert size={14} /> : hwSummary.total === 0 ? <ShieldQuestion size={14} /> : <ShieldCheck size={14} />}
+          <span>
+            {hwSummary.state === 'none'
+              ? t('overview.checkup.diskNone')
+              : hwSummary.state === 'risky'
+                ? t('overview.checkup.diskRisky', { n: hwSummary.risky })
+                : hwSummary.state === 'all-unknown'
+                  ? t('overview.checkup.diskUnknown', { n: hwSummary.unknown })
+                  : hwSummary.state === 'partial'
+                    ? t('overview.checkup.diskPartial', { good: hwSummary.total - hwSummary.unknown, unknown: hwSummary.unknown })
+                    : t('overview.checkup.diskAllGood', { n: hwSummary.total })}
+          </span>
+        </button>
       </div>
     </section>
   );
 }
 
-export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup }: Props) {
+export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup, onGoOptimizer }: Props) {
   const t = useT();
   const scanCache = useStore((s) => s.scanCache);
   const toast = useStore((s) => s.toast);
@@ -658,13 +696,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
   return (
     <div className="asset-overview">
-      {/* ---- 今日体检条：全只读汇总（红盘 / 可回收 / 温度 / 启动项）---- */}
+      {/* ---- 今日体检条：全只读汇总（红盘 / 可回收 / 温度 / 启动项 / 硬盘健康）---- */}
       <HealthCheckupCard
         drives={drives}
         reclaimTotal={reclaimTotal}
         scanning={scanning}
         onScanAll={onScanAll}
         onGoCleanup={onOpenCleanup}
+        onGoOptimizer={onGoOptimizer}
       />
 
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}

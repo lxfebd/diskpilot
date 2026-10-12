@@ -108,6 +108,12 @@ export const overview = {
     'overview.checkup.startupNone': '未检测',
     'overview.checkup.goRescue': '查看红盘',
     'overview.checkup.goClean': '去清理',
+    'overview.checkup.diskAllGood': '{n} 块硬盘健康',
+    'overview.checkup.diskRisky': '{n} 块硬盘 SMART 告警',
+    'overview.checkup.diskUnknown': '{n} 块硬盘健康未上报',
+    'overview.checkup.diskPartial': '{good} 块健康 · {unknown} 块未上报',
+    'overview.checkup.diskNone': '硬盘健康未读到',
+    'overview.checkup.goHardware': '查看硬盘健康',
 
     // 重复文件查找 → 清理提案（提案四件套：是什么 / 干什么用 / 删了影响）
     'overview.dup.noneFound': '未发现 ≥1MB 的重复文件（按大小 + 头部哈希）',
@@ -253,6 +259,12 @@ export const overview = {
     'overview.checkup.startupNone': 'Not detected',
     'overview.checkup.goRescue': 'See drives',
     'overview.checkup.goClean': 'Clean up',
+    'overview.checkup.diskAllGood': '{n} drives healthy',
+    'overview.checkup.diskRisky': '{n} drives with SMART warnings',
+    'overview.checkup.diskUnknown': '{n} drives with no health reported',
+    'overview.checkup.diskPartial': '{good} healthy · {unknown} not reported',
+    'overview.checkup.diskNone': 'Drive health not read',
+    'overview.checkup.goHardware': 'See drive health',
 
     // Duplicate scan → cleanup proposal (what / purpose / impact)
     'overview.dup.noneFound': 'No duplicates ≥1MB found (by size + header hash)',
