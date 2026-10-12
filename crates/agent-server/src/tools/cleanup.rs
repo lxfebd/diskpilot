@@ -289,7 +289,10 @@ pub fn collect_cleanup_suggestions(root: String, top_n: usize) -> Result<String,
          命中文件数上限 {MAX_FILES_WALK}，超出标 truncated。"
     ));
     if truncated || truncated_items {
-        s.push_str("\n⚠ 已达上限，结果不完整（文件遍历或 Top N 截断）");
+        s.push_str(&format!(
+            "\n⚠ 已达上限，结果不完整：条目按 top_n 截断（上限 50，可传更大值）；\
+             文件遍历上限 {MAX_FILES_WALK}，换更具体的 root（如某个软件目录）重扫可看全。"
+        ));
     }
     Ok(s)
 }

@@ -61,8 +61,9 @@ pub(crate) fn process_mem_bytes(pid: u32) -> u64 {
 
 /// 枚举进程（Toolhelp32 快照），按内存占用降序（内存取不到的按 PID 兜底），
 /// 可截断到 top_n。每个进程补 exe 路径与父 PID。
+/// 返回 `(列表, 截断前的进程总数)`。
 #[cfg(windows)]
-pub fn list_processes(top_n: usize) -> Vec<ProcessInfo> {
+pub fn list_processes(top_n: usize) -> (Vec<ProcessInfo>, usize) {
     use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
@@ -71,7 +72,7 @@ pub fn list_processes(top_n: usize) -> Vec<ProcessInfo> {
 
     let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
     if snapshot.is_null() || snapshot == INVALID_HANDLE_VALUE {
-        return Vec::new();
+        return (Vec::new(), 0);
     }
     let mut entry: PROCESSENTRY32W = unsafe { std::mem::zeroed() };
     entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
@@ -98,13 +99,15 @@ pub fn list_processes(top_n: usize) -> Vec<ProcessInfo> {
     unsafe { CloseHandle(snapshot) };
     // 内存降序；取不到的排后
     out.sort_by_key(|p| std::cmp::Reverse(p.mem_bytes));
+    // 返回截断前的总数：调用方要如实告诉用户「还有多少个没显示」。
+    let total = out.len();
     out.truncate(top_n.max(1));
-    out
+    (out, total)
 }
 
 #[cfg(not(windows))]
-pub fn list_processes(_top_n: usize) -> Vec<ProcessInfo> {
-    Vec::new()
+pub fn list_processes(_top_n: usize) -> (Vec<ProcessInfo>, usize) {
+    (Vec::new(), 0)
 }
 
 /// 单进程详情（指定 PID），查不到返回 None。

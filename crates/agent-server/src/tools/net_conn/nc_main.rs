@@ -12,6 +12,7 @@ use super::nc_raw::{collect_tcp, collect_udp, ConnRow};
 #[cfg(windows)]
 pub(crate) fn process_name_map() -> std::collections::HashMap<u32, String> {
     process::list_processes(20_000)
+        .0
         .into_iter()
         .map(|p| (p.pid, p.name))
         .collect()
@@ -133,7 +134,7 @@ pub fn collect_net_connections(
     }
     if total > limit {
         out.push_str(&format!(
-            "- （已达 {limit} 条上限，还有 {} 条未显示）\n",
+            "- （已达 {limit} 条上限，还有 {} 条未显示：传 pid 或 keyword 缩小范围可看到它们）\n",
             total - limit
         ));
     }
@@ -220,7 +221,7 @@ $out | ConvertTo-Json -Depth 4 -Compress
     }
     if total > limit {
         out.push_str(&format!(
-            "- （已达 {limit} 条上限，还有 {} 条未显示）\n",
+            "- （已达 {limit} 条上限，还有 {} 条未显示：传 pid 或 keyword 缩小范围可看到它们）\n",
             total - limit
         ));
     }

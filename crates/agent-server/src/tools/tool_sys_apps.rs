@@ -36,7 +36,10 @@ impl AgentServer {
                         })
                         .collect()
                 };
-                let truncated = matched.len() > limit;
+                // 表头数字必须是**匹配到的总数**，不是截断后的条数（否则「（50 个）」
+                // 会被当成全部，和 sys_user_accounts 那个计数缺陷同类）。
+                let total = matched.len();
+                let truncated = total > limit;
                 matched.truncate(limit);
                 let lines = matched
                     .iter()
@@ -57,9 +60,11 @@ impl AgentServer {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                let mut head = format!("已安装程序（{} 个）：\n{lines}", matched.len());
+                let mut head = format!("已安装程序（{} 个）：\n{lines}", total);
                 if truncated {
-                    head.push_str(&format!("\n（只显示前 {} 个）", limit));
+                    head.push_str(&format!(
+                        "\n（共 {total} 个，只显示前 {limit} 个：用 keyword 缩小范围或传更大的 limit（上限 200））"
+                    ));
                 }
                 Ok(head)
             },

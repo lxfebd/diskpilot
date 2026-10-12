@@ -116,7 +116,8 @@ pub fn collect_top_directories(
     ));
     if truncated || truncated_items {
         s.push_str(&format!(
-            "\n⚠ 已达上限（子目录数 > {n} 或文件数上限），结果不完整"
+            "\n⚠ 已达上限（子目录数 > {n} 或文件数上限），结果不完整：\
+             想看全请传更大的 top_n（上限 100），或对某个子目录再单独调用本工具下钻。"
         ));
     }
     Ok(s)

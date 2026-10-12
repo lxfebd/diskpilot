@@ -60,7 +60,7 @@ impl AgentServer {
             move || -> Result<String, String> {
                 let pb = std::path::PathBuf::from(&path_str);
                 match files::list_dir(&pb, limit) {
-                    Ok((items, truncated)) => {
+                    Ok((items, truncated, total)) => {
                         if items.is_empty() {
                             return Ok(format!("{path_str} 是空目录或不可读"));
                         }
@@ -81,9 +81,14 @@ impl AgentServer {
                             })
                             .collect::<Vec<_>>()
                             .join("\n");
-                        let mut s = format!("{path_str}（{} 项）：\n{lines}", items.len());
+                        // 表头写截断前的真实条数：以前写 items.len()，截断时
+                        // 「（100 项）」会被读成「这个目录只有 100 项」。
+                        let mut s = format!("{path_str}（{} 项）：\n{lines}", total);
                         if truncated {
-                            s.push_str(&format!("\n（只显示前 {} 项）", limit));
+                            s.push_str(&format!(
+                                "\n（共 {total} 项，只显示前 {} 项：传更大的 limit（上限 500）可看更多）",
+                                items.len()
+                            ));
                         }
                         Ok(s)
                     }
@@ -201,7 +206,7 @@ impl AgentServer {
         Ok(blocking_call(
             45,
             move || -> Result<String, String> {
-                let procs = process::list_processes(top_n);
+                let (procs, total) = process::list_processes(top_n);
                 if procs.is_empty() {
                     return Err("无法枚举进程（非 Windows 环境或权限不足）。".into());
                 }
@@ -222,10 +227,14 @@ impl AgentServer {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                Ok(format!(
-                    "进程列表（{} 个，按内存降序）：\n{lines}",
-                    procs.len()
-                ))
+                let mut s = format!("进程列表（{} 个，按内存降序）：\n{lines}", total);
+                if total > procs.len() {
+                    s.push_str(&format!(
+                        "\n（共 {total} 个进程，只显示前 {} 个：传更大的 top_n（上限 500）可看更多）",
+                        procs.len()
+                    ));
+                }
+                Ok(s)
             },
             "进程列表读取",
         )

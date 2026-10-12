@@ -133,7 +133,10 @@ pub fn collect_drivers(keyword: Option<String>, top_n: usize) -> Result<String, 
         "驱动列表（共 {} 条{}）：\n",
         total_before,
         if total_before > rows.len() {
-            format!("，只显示前 {}", rows.len())
+            format!(
+                "，只显示前 {}；用 keyword 缩小范围或传 top_n（上限 200）看更多",
+                rows.len()
+            )
         } else {
             String::new()
         }

@@ -20,7 +20,7 @@ pub struct DirEntry {
 /// 读进内存再排序会瞬间占用数百 MB（2026-10-11 修复）；触顶即截断并标记
 /// truncated，排序在已收集子集内进行（截断态本就只承诺前 limit 条）。
 pub(crate) const MAX_DIR_ENTRIES: usize = 100_000;
-pub fn list_dir(p: &std::path::Path, limit: usize) -> Result<(Vec<DirEntry>, bool), String> {
+pub fn list_dir(p: &std::path::Path, limit: usize) -> Result<(Vec<DirEntry>, bool, usize), String> {
     let rd = std::fs::read_dir(p).map_err(|e| format!("读取目录失败：{e}"))?;
     let mut items = Vec::new();
     let mut hard_capped = false;
@@ -48,9 +48,11 @@ pub fn list_dir(p: &std::path::Path, limit: usize) -> Result<(Vec<DirEntry>, boo
         });
     }
     items.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
+    // total 是截断前的真实条数：调用方要用它写表头，否则「（100 项）」会被当成全部。
+    let total = items.len();
     let truncated = hard_capped || items.len() > limit;
     items.truncate(limit);
-    Ok((items, truncated))
+    Ok((items, truncated, total))
 }
 
 pub(crate) const MAX_READ_BYTES: usize = 256 * 1024;

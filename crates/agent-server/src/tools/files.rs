@@ -138,6 +138,26 @@ mod tests {
     }
 
     #[test]
+    fn list_dir_reports_the_pre_truncate_total() {
+        // 表头数字必须来自截断前的总数：以前写 items.len()，截断时
+        // 「（100 项）」会被读成「这个目录只有 100 项」。
+        let dir = std::env::temp_dir().join(format!("dp_list_dir_total_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        for n in ["a.txt", "b.txt", "c.txt"] {
+            std::fs::write(dir.join(n), "x").expect("write temp file");
+        }
+        let (items, truncated, total) = list_dir(&dir, 2).expect("list_dir");
+        assert_eq!(total, 3, "total 应是截断前的条数");
+        assert_eq!(items.len(), 2);
+        assert!(truncated, "limit 小于条数时必须标 truncated");
+        let (items2, truncated2, total2) = list_dir(&dir, 10).expect("list_dir 全量");
+        assert_eq!((items2.len(), total2), (3, 3));
+        assert!(!truncated2, "没截断就不该标 truncated");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn check_for_write_rejects_system_subdir() {
         let g = PathGuard;
         // 系统目录下的文件：写操作必须拒绝（只读 check 同口径前缀匹配后同样拒绝）
