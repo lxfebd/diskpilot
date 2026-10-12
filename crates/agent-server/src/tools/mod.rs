@@ -50,6 +50,7 @@ mod tool_disk;
 mod tool_hw;
 mod tool_misc;
 mod tool_sys;
+mod tool_sys_apps;
 mod tool_sys_misc;
 mod tool_sys_services;
 
@@ -251,6 +252,7 @@ impl AgentServer {
     fn tool_router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
         Self::tool_router_disk()
             + Self::tool_router_sys()
+            + Self::tool_router_sys_apps()
             + Self::tool_router_sys_services()
             + Self::tool_router_sys_misc()
             + Self::tool_router_hw()
