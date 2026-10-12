@@ -401,5 +401,29 @@ mod usn_scan;
 #[cfg(windows)]
 pub use usn_scan::scan_with_usn;
 
+/// Pull up to `n` sample paths from a directory, ordered shallowest-first.
+pub fn sample_paths<P: AsRef<Path>>(root: P, n: usize) -> Vec<String> {
+    let root = root.as_ref();
+    walkdir::WalkDir::new(root)
+        .max_depth(3)
+        .into_iter()
+        .filter_entry(|e| {
+            if !e.file_type().is_dir() {
+                return true;
+            }
+            let parent_name = e
+                .path()
+                .parent()
+                .and_then(|p| p.file_name())
+                .unwrap_or_else(|| e.path().as_os_str());
+            !crate::is_pruned_system_dir_at(parent_name, e.file_name())
+        })
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .take(n)
+        .map(|e| e.path().to_string_lossy().to_string())
+        .collect()
+}
+
 mod build_tree;
 pub(crate) use build_tree::build_tree;
