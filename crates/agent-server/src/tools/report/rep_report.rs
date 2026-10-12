@@ -1,0 +1,119 @@
+//! 体检报告/传感器趋势域（从 report.rs 拆分，2026-10-12）。
+//! system_report + sensor_trend。
+
+use crate::tools::{hw, system};
+
+use super::rep_storage::{append_jsonl, read_jsonl, trim_jsonl, ts_secs};
+use super::rep_util::{fmt_ts, fmt_uptime, format_f1, now_str};
+
+pub fn system_report() -> Result<String, String> {
+    let mut out = String::from("# DiskPilot 系统体检报告\n\n");
+    out.push_str(&format!("生成时间：{}", now_str()));
+    out.push('\n');
+
+    let mut sections: Vec<(&str, String)> = Vec::new();
+
+    // CPU / GPU / 内存 / 主板
+    for (name, f) in [
+        ("CPU", hw::collect_cpu as fn() -> Result<String, String>),
+        ("GPU", hw::collect_gpu),
+        ("内存", hw::collect_memory),
+        ("主板", hw::collect_motherboard),
+    ] {
+        sections.push((name, f().unwrap_or_else(|e| format!("采集失败：{e}"))));
+    }
+    // 温度（fancmd 全量或降级）
+    sections.push((
+        "温度",
+        hw::collect_sensors_fast().unwrap_or_else(|e| format!("采集失败：{e}")),
+    ));
+    // 磁盘 SMART + 系统 + 电池
+    sections.push((
+        "磁盘健康",
+        hw::collect_disk_smart().unwrap_or_else(|e| format!("采集失败：{e}")),
+    ));
+    let sys = system::collect_system_info();
+    sections.push((
+        "系统",
+        format!(
+            "OS：{}\nCPU 核心：{}\n内存：{} / {}（{}%）\n运行时长：{}",
+            sys.os,
+            sys.cpu_cores,
+            crate::tools::fmt_bytes(sys.mem_used_bytes),
+            crate::tools::fmt_bytes(sys.mem_total_bytes),
+            format_f1(sys.mem_percent),
+            fmt_uptime(sys.uptime_secs),
+        ),
+    ));
+    sections.push((
+        "电池",
+        hw::collect_battery().unwrap_or_else(|e| format!("采集失败：{e}")),
+    ));
+
+    for (name, body) in sections {
+        out.push_str(&format!("## {name}\n```\n{body}\n```\n\n"));
+    }
+
+    out.push_str("## 结论\n- 体检完成：以上为实时采集快照，未做任何修改（全部只读）。\n");
+    out.push_str("- 如需清理建议：用 cleanup_suggestions 只读统计可清理空间；真正清理走主项目清理流程（先清单 + 用户确认 + 回收站）。\n");
+    Ok(out)
+}
+
+/// 2) 传感器趋势：追加一条当前快照并返回最近 `n` 条（默认 10，上限 50）。
+///
+/// `format`：`text`（默认，人类可读）/ `json`（供前端折线图，返回结构化数组）。
+pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, String> {
+    let n = n.unwrap_or(10).clamp(1, 50);
+    let as_json = format.as_deref().map(|s| s == "json").unwrap_or(false);
+    // 快照（fancmd 全量文本，失败退回 ACPI 通道）
+    let snap = hw::collect_sensors_fast().unwrap_or_else(|e| format!("采集失败：{e}"));
+    // 结构化最小集：CPU 最高温 + 文本快照
+    let cpu_temp = hw::max_cpu_temp().ok();
+    let row = serde_json::json!({
+        "ts": ts_secs(),
+        "cpu_temp_c": cpu_temp,
+        "snapshot": snap,
+    });
+    append_jsonl("sensor-history.jsonl", &row.to_string());
+    trim_jsonl("sensor-history.jsonl", 500);
+
+    let rows = read_jsonl("sensor-history.jsonl");
+    let take = rows.len().min(n);
+    let recent = &rows[rows.len().saturating_sub(take)..];
+
+    if as_json {
+        // JSON 输出：纯结构化（ts + cpu_temp_c 可空），供前端画趋势折线。
+        let arr: Vec<serde_json::Value> = recent
+            .iter()
+            .map(|r| {
+                serde_json::json!({
+                    "ts": r.get("ts").and_then(|v| v.as_i64()).unwrap_or(0),
+                    "cpu_temp_c": r.get("cpu_temp_c").and_then(|v| v.as_f64()),
+                })
+            })
+            .collect();
+        return Ok(serde_json::json!({
+            "total": rows.len(),
+            "points": arr,
+        })
+        .to_string());
+    }
+
+    let mut out = String::new();
+    out.push_str(&format!(
+        "传感器趋势（最近 {} 条，共 {} 条已记录）：\n",
+        recent.len(),
+        rows.len()
+    ));
+    for r in recent {
+        let ts = r.get("ts").and_then(|v| v.as_i64()).unwrap_or(0);
+        let temp = r
+            .get("cpu_temp_c")
+            .and_then(|v| v.as_f64())
+            .map(|t| format!("{t:.1}℃"))
+            .unwrap_or_else(|| "无".into());
+        out.push_str(&format!("- {} CPU 最高温：{temp}\n", fmt_ts(ts)));
+    }
+    out.push_str("\n完整快照见 sensor_trend 数据目录 sensor-history.jsonl（%LOCALAPPDATA%/diskpilot/agent-server/）。");
+    Ok(out)
+}
