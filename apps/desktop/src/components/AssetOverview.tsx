@@ -4,6 +4,7 @@ import { api, type SpacePoint, type StartupItem } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
 import { useStore, type CleanupProposalItem } from '../store';
+import { physicalDrives } from '../drives';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
 import type { Node, Scaffold } from '../types';
@@ -20,6 +21,8 @@ interface DriveInfo {
   total_bytes: number;
   used_bytes: number;
   free_bytes: number;
+  /** 映射盘（subst）的目标路径，普通盘为空。 */
+  mapped_to?: string;
 }
 
 type Props = {
@@ -322,7 +325,9 @@ function HealthCheckupCard({
     return () => { alive = false; };
   }, []);
 
-  const redCount = drives.filter((d) => isDriveCritical(d.used_bytes, d.total_bytes)).length;
+  // 红盘按物理卷数：映射盘（D: 是 J:\D 的 subst）不是第二块盘，
+  // 直接数条目会把一块盘说成「2 块盘空间告急」。
+  const redCount = physicalDrives(drives).filter((d) => isDriveCritical(d.used_bytes, d.total_bytes)).length;
   const disabledCount = disabledStartupCount(startup);
   const tempHigh = isTempHigh(tempC, TEMP_WARN_C);
 

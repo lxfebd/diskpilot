@@ -7,6 +7,7 @@ import { isTauri } from './env';
 import { useStore } from './store';
 import { LeftPanel } from './components/LeftPanel';
 import { useCleanupStore } from './useCleanupStore';
+import { scanTargets } from './drives';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
 import { PageHeader } from './components/PageHeader';
@@ -76,6 +77,8 @@ interface DriveInfo {
   total_bytes: number;
   used_bytes: number;
   free_bytes: number;
+  /** 映射盘（subst）的目标路径，普通盘为空。 */
+  mapped_to?: string;
 }
 
 // ScanBar 暴露给 App 的命令接口：扫描开始（目标列表）+ 盘根总量探针。
@@ -538,7 +541,7 @@ export default function App() {
                 scaffolds={scaffolds}
                 scanning={scanning}
                 onScanDrive={(p) => scan([p])}
-                onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
+                onScanAll={() => drives.length > 0 && scan(scanTargets(drives))}
                 onRefresh={(p) => scan([p], { force: true })}
                 onGoWorkspace={() => setView('workspace')}
                 onOpenCleanup={() => openCleanup()}
@@ -553,7 +556,7 @@ export default function App() {
               drives={drives}
               scanning={scanning}
               onScanDrive={(p) => scan([p])}
-              onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
+              onScanAll={() => drives.length > 0 && scan(scanTargets(drives))}
               onGoWorkspace={() => setView('workspace')}
               onOpenSettings={(tab) => { setSettingsTab(tab); setShowSettings(true); }}
             />
@@ -605,7 +608,7 @@ export default function App() {
             <DriveStrip
               drives={drives}
               scanning={scanning}
-              onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
+              onScanAll={() => drives.length > 0 && scan(scanTargets(drives))}
               onScanDrive={(p) => scan([p])}
               onRefresh={(p) => scan([p], { force: true })}
             />
