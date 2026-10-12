@@ -91,6 +91,33 @@ walk/MFT → 平铺 (path,size,children) → build_tree（复用扫描一趟数�
 - 路径守卫：从环境变量推导盘根/系统目录/主目录根并拒绝；WiFi 工具绝不读密码
 - 桌面「工具墙 → AI 可操作」分区即这套工具的本地视图，带只读/可写徽标
 
+### 4.3 工具进度通道（notifications/progress，2026-10-13）
+
+长工具（stress_test / bench_disk / mem_test / stress_test_gpu / 大文件与重复
+扫描）此前只能干等结果——MCP 客户端 handler 若不实现 `on_progress`，进度通知
+会被静默丢弃。现在打通为三段式：
+
+- **服务端**（`tools/progress.rs`）：工具向 `ProgressSlot`（`Arc<AtomicU64>`，
+  千分比 0..=1000）写进度；`blocking_call_progress()`（`tools/mod.rs`）统一
+  入口——clone peer → 取/生成 progressToken → spawn 500ms 轮询转发器发
+  `notifications/progress`（`ProgressNotificationParam`，total=1000）→ 工具
+  完成后 `fwd.abort()`。progressToken 优先取客户端请求 meta，缺省自生成。
+- **桌面端**（`src-tauri/agent.rs`）：`ProgressClientHandler` 实现
+  `ClientHandler::on_progress`，把通知转成 Tauri 事件 `agent-tool-progress`
+  （pct 千分比 + progress 0-100 + message）。
+- **前端**（`components/AgentProgressMonitor.tsx`）：`useAgentToolProgress`
+  订阅事件，`AgentProgressCard` 在 ChatPanel 输入区渲染实时进度条（与 HW
+  测试监控并排），完成判据 `pct>=1000` 或 message 含「完成」。
+
+语义边界：进度是**增强通道**——推送失败静默、绝不阻塞结果返回；桌面每次调用
+spawn 全新 agent-server，进度只在单次调用会话内有效。
+
+设计约束（实测坑，commit f823e91）：被 `#[cfg(test)]` 调用的 `agent_call_tool_core`
+**不能收 `AppHandle`**——会把 tauri Wry 窗口子系统（comctl32 v6 的
+TaskDialogIndirect 等）单态化进测试二进制，测试 exe 无 v6 manifest 直接
+STATUS_ENTRYPOINT_NOT_FOUND。事件闭包只在 `#[tauri::command]` 包装层构造，
+core 收 `Arc<dyn Fn(u64, String)>` 回调保持可脱离 UI 测试。
+
 ## 5. 工具墙与硬件中心（toolbelt + hw.rs）
 
 - 目录数据由后端 catalog 下发（12 分类 90+ 条目），CLI 走**白名单**执行、GUI 一键启动
