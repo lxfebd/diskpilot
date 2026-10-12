@@ -255,4 +255,78 @@ mod tests {
         assert_eq!(json_array_of("[1,2]"), "[1,2]");
         assert_eq!(json_array_of("  [3]  "), "[3]");
     }
+
+    // ── 执行器真跑 PowerShell（Windows）──────────────────────────────
+    // ps_capture 是全部 hw/net/sys 采集的地基：超时强杀、退出码语义、
+    // UTF-8 首行注入（中文系统 GBK 乱码根治）此前零测试。
+
+    #[cfg(windows)]
+    #[test]
+    fn ps_capture_returns_stdout_and_injects_utf8_first_line() {
+        let out = ps_capture("Write-Output 'hello-diskpilot'").expect("应成功");
+        assert!(out.contains("hello-diskpilot"), "got: {out}");
+    }
+
+    /// 中文 Windows 回归：控制台默认 GBK，首行强制 UTF8 编码后中文必须
+    /// 无损返回（此前 desktop/agent-server 各自维护、一边没修好的漂移源头）。
+    #[cfg(windows)]
+    #[test]
+    fn ps_capture_chinese_output_is_not_mojibake() {
+        let out = ps_capture("Write-Output '中文测试✓'").expect("应成功");
+        assert!(out.contains("中文测试"), "UTF-8 首行注入失效？got: {out}");
+    }
+
+    /// 超时强杀语义：挂起脚本必须在超时后**快速返回 Err**（不挂死调用方）。
+    #[cfg(windows)]
+    #[test]
+    fn ps_capture_timeout_kills_hanging_script() {
+        let t0 = std::time::Instant::now();
+        let r = ps_capture_timeout("Start-Sleep 30", Duration::from_secs(1));
+        let elapsed = t0.elapsed();
+        let err = r.expect_err("挂起脚本必须超时报错");
+        assert!(err.contains("超时"), "错误文案应说明超时，got: {err}");
+        assert!(
+            elapsed < Duration::from_secs(8),
+            "强杀应在超时后快速返回，实际 {elapsed:?}"
+        );
+    }
+
+    /// 退出码语义：非零退出且无 stdout → Err；非零退出但有 stdout → 保留
+    /// 输出（采集脚本常见「部分成功 + 末尾非零」，不能整段丢弃）。
+    #[cfg(windows)]
+    #[test]
+    fn ps_capture_exit_code_semantics() {
+        let e = ps_capture("exit 3").expect_err("无输出非零退出应报错");
+        assert!(e.contains("退出码"), "got: {e}");
+        let ok = ps_capture("Write-Output 'partial-out'; exit 3").expect("有输出应保留");
+        assert!(ok.contains("partial-out"), "got: {ok}");
+    }
+
+    /// 注入防御端到端：恶意串过 escape 后放进单引号字面量，必须**原样保留**
+    /// 在字面量内、绝不作为命令执行。判据用副作用探针（注入若执行会创建临时
+    /// 文件）——字面量文本本身含标记词时 contains 无法区分「保留」与「执行」。
+    #[cfg(windows)]
+    #[test]
+    fn escaped_literal_cannot_break_out_at_executor_level() {
+        let probe =
+            std::env::temp_dir().join(format!("dp-inject-probe-{}.txt", std::process::id()));
+        let _ = std::fs::remove_file(&probe);
+        let evil = format!(
+            "x'; New-Item -Path '{}' -Force | Out-Null; '",
+            probe.display()
+        );
+        let script = format!("Write-Output '{}'", escape_ps_single_quoted(&evil));
+        let out = ps_capture(&script).expect("应成功");
+        assert!(!probe.exists(), "注入命令被执行了：探针文件被创建");
+        assert!(out.contains(&evil), "字面量应原样保留，got: {out}");
+        let _ = std::fs::remove_file(&probe);
+    }
+
+    /// 非 Windows 降级：不 spawn、不 panic，返回明确错误。
+    #[cfg(not(windows))]
+    #[test]
+    fn ps_capture_non_windows_returns_clear_error() {
+        let e = ps_capture("whatever").expect_err("非 Windows 必须报错");
+        assert!(e.contains("不是 Windows"), "got: {e}");
+    }
 }
