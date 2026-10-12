@@ -562,7 +562,7 @@ pub(crate) async fn plugin_registry_refresh(
     }
 
     // SSRF 安全拉取（禁重定向跟随 + 逐跳私网校验 + 响应体上限 32MB 足矣）。
-    let body = crate::ssrf_safe_get(url.trim(), 32 * 1024 * 1024, None).await?;
+    let body = crate::net_http::ssrf_safe_get(url.trim(), 32 * 1024 * 1024, None).await?;
     let body = String::from_utf8_lossy(&body).to_string();
 
     // 解析 → schema 校验 → 验签 → 非空校验 → 补 source_url/fetched_at。
@@ -1295,7 +1295,7 @@ mod tests {
     #[ignore = "实连 jsDelivr CDN，需公网可达；CI 默认跳过"]
     async fn real_official_index_refresh_chain() {
         let url = "https://cdn.jsdelivr.net/gh/lxfebd/diskpilot-scaffolds-index@main/index.json";
-        let body = crate::ssrf_safe_get(url, 32 * 1024 * 1024, None)
+        let body = crate::net_http::ssrf_safe_get(url, 32 * 1024 * 1024, None)
             .await
             .expect("jsDelivr 拉取官方索引应成功（走系统代理）");
         let text = String::from_utf8_lossy(&body).to_string();

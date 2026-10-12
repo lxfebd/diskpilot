@@ -14,6 +14,7 @@ mod hw_history;
 mod hw_report;
 pub(crate) mod mcp;
 mod mcp_bridge;
+mod net_http;
 mod net_proxy;
 mod plugin_registry;
 mod plugin_registry_types;
@@ -32,8 +33,7 @@ mod weekly_report;
 
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
 
 use diskpilot_scaffold::{parse_toml, Risk, Scaffold};
 use diskpilot_scanner::Node;
@@ -41,139 +41,6 @@ use include_dir::{include_dir, Dir};
 use tauri::{AppHandle, Manager, State};
 
 pub(crate) use cleanup_logic::CleanupCacheEntry;
-
-// 进程级共享 HTTP 客户端：网络搜索 / Steam 标题 / AI 代理都复用同一份
-// 连接池与 TLS 会话缓存，避免每个请求重新握手、连接池打不满。
-static SHARED_HTTP: OnceLock<reqwest::Client> = OnceLock::new();
-/// AI 代理专用：禁用自动重定向。默认跟随会把「首跳合法公网 → 302 到内网」
-/// 的 SSRF 绕过漏掉，ai::ai_proxy 用手动跟随并逐个校验跳转目标。
-static SHARED_HTTP_NO_REDIRECT: OnceLock<reqwest::Client> = OnceLock::new();
-
-fn http_client_base() -> reqwest::ClientBuilder {
-    let mut builder = reqwest::Client::builder()
-        .timeout(Duration::from_secs(12))
-        .user_agent(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        );
-    if let Some(proxy_str) = net_proxy::system_https_proxy() {
-        if let Ok(p) = reqwest::Proxy::all(&proxy_str) {
-            builder = builder.proxy(p);
-        }
-    }
-    builder
-}
-
-fn shared_http() -> &'static reqwest::Client {
-    SHARED_HTTP.get_or_init(|| {
-        http_client_base()
-            .build()
-            .expect("reqwest client build cannot fail")
-    })
-}
-
-pub(crate) fn http_no_redirect() -> &'static reqwest::Client {
-    SHARED_HTTP_NO_REDIRECT.get_or_init(|| {
-        http_client_base()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .expect("reqwest client build cannot fail")
-    })
-}
-
-/// SSRF 防护下最多读多少字节的响应体：插件包/索引/脚本都远小于此，
-/// 防止恶意服务器用无限响应打爆本进程内存。
-const SSRF_MAX_BODY: u64 = 256 * 1024 * 1024;
-
-/// SSRF 安全的 GET 下载：禁自动重定向 + 逐跳校验私网 + 响应体上限。
-///
-/// 插件/DiskPilot 语义区别于 AI 代理——这是「下载资产」而非「转发用户内容」，
-/// 所以不做任意 host 的代理转发，只做受控 GET。默认共享 client 跟随重定向的
-/// 「首跳合法公网 → 302 到内网」绕过在这里被堵死：每个 Location 都过一遍
-/// `ai::blocked_private_target`（与 AI 代理同一把尺），最多 5 跳防环。
-/// 返回 200 响应体；失败删除半截下载物（调用方传 out 时由调用方负责，便于
-/// 渐进式进度上报——本 helper 只负责网络层，落盘由调用方做）。
-///
-/// `on_chunk` 可选回调（下载进度上报）。
-pub(crate) async fn ssrf_safe_get(
-    url: &str,
-    max_bytes: u64,
-    mut on_chunk: Option<Box<dyn FnMut(u64, u64) + Send>>,
-) -> Result<Vec<u8>, String> {
-    let parsed = url::Url::parse(url.trim()).map_err(|e| format!("URL 非法：{e}"))?;
-    if parsed.scheme() != "https" {
-        return Err(format!(
-            "下载地址必须使用 https（当前协议：{}）。为防中间人篡改，http 与自定义协议一律拒绝。",
-            parsed.scheme()
-        ));
-    }
-    if let Some(blocked) = crate::ai::blocked_private_target(parsed.as_str()) {
-        return Err(format!("下载目标不可用（{blocked}）：{parsed}"));
-    }
-    let client = http_no_redirect();
-    let mut url = parsed.as_str().to_string();
-    let mut hops = 0;
-    loop {
-        let resp = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("下载失败（网络错误)：{e}"))?;
-        let status = resp.status();
-        if status.is_redirection() {
-            let loc = resp
-                .headers()
-                .get(reqwest::header::LOCATION)
-                .and_then(|v| v.to_str().ok())
-                .ok_or_else(|| "下载重定向缺少 Location 头".to_string())?
-                .to_string();
-            let next = resp
-                .url()
-                .join(&loc)
-                .map_err(|e| format!("重定向目标不合法: {e}"))?;
-            hops += 1;
-            if hops > 5 {
-                return Err("下载重定向次数过多（超过 5 跳）".to_string());
-            }
-            if let Some(blocked) = crate::ai::blocked_private_target(next.as_str()) {
-                return Err(format!("下载重定向目标不可用（{blocked}）：{next}"));
-            }
-            url = next.to_string();
-            continue;
-        }
-        if !status.is_success() {
-            return Err(format!(
-                "下载失败：HTTP {}（{}）",
-                status.as_u16(),
-                status.canonical_reason().unwrap_or("")
-            ));
-        }
-        let total = resp.content_length().unwrap_or(0);
-        if total > max_bytes {
-            return Err(format!(
-                "响应体过大（{} bytes，上限 {} MB）",
-                total,
-                max_bytes / (1024 * 1024)
-            ));
-        }
-        let mut body = Vec::new();
-        let mut downloaded: u64 = 0;
-        let mut stream = resp;
-        while let Some(chunk) = stream.chunk().await.map_err(|e| format!("下载中断：{e}"))? {
-            downloaded = downloaded.saturating_add(chunk.len() as u64);
-            if downloaded > max_bytes {
-                return Err(format!(
-                    "响应体超过上限（{} MB），已中断",
-                    max_bytes / (1024 * 1024)
-                ));
-            }
-            if let Some(cb) = on_chunk.as_mut() {
-                cb(downloaded, total);
-            }
-            body.extend_from_slice(&chunk);
-        }
-        return Ok(body);
-    }
-}
 
 // Compile-time embed of repo-root scaffolds/. Used as the lowest-priority
 // fallback in load_all_scaffolds so a portable raw exe (no resource_dir,
@@ -1275,9 +1142,10 @@ mode = "delete"
         // 就会因为私网拒绝——这验证的是「私网首跳拒绝」。重定向绕过验证
         // 依赖公网首跳，单测里无法真打公网；这里验证核心语义：任何私网
         // 目标（含 302 后跳向私网）都无法到达。
-        let err = ssrf_safe_get(&format!("http://127.0.0.1:{port}/ok"), 1024, None)
-            .await
-            .expect_err("私网目标必须拒绝");
+        let err =
+            crate::net_http::ssrf_safe_get(&format!("http://127.0.0.1:{port}/ok"), 1024, None)
+                .await
+                .expect_err("私网目标必须拒绝");
         assert!(
             err.contains("https") || err.contains("不可用"),
             "拒绝信息应说明协议/私网原因: {err}"
@@ -1288,7 +1156,7 @@ mode = "delete"
     /// 本身不放开协议白名单）。
     #[tokio::test]
     async fn ssrf_http_scheme_is_rejected() {
-        let err = ssrf_safe_get("http://127.0.0.1:1/a", 10, None)
+        let err = crate::net_http::ssrf_safe_get("http://127.0.0.1:1/a", 10, None)
             .await
             .expect_err("http 私网必须拒绝");
         assert!(err.contains("https"), "http 应被协议白名单拦下: {err}");

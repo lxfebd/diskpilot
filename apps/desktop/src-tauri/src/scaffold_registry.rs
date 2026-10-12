@@ -161,7 +161,7 @@ pub(crate) async fn scaffold_registry_install(
     }
 
     // SSRF 安全下载（禁重定向跟随 + 逐跳私网校验 + 响应体上限 1MB：脚本 toml 远小于此）。
-    let body = crate::ssrf_safe_get(item.url.trim(), 1024 * 1024, None).await?;
+    let body = crate::net_http::ssrf_safe_get(item.url.trim(), 1024 * 1024, None).await?;
     let toml = String::from_utf8_lossy(&body).to_string();
     if toml.trim().is_empty() {
         return Err("下载到的脚本内容为空".into());

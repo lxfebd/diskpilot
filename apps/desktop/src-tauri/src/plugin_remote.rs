@@ -30,7 +30,7 @@ pub(crate) async fn plugin_download_to_path(
     let app = app.clone();
     let body = {
         let url = url.clone();
-        crate::ssrf_safe_get(&url, crate::SSRF_MAX_BODY, None).await?
+        crate::net_http::ssrf_safe_get(&url, crate::net_http::SSRF_MAX_BODY, None).await?
     };
     // 写盘 + 进度上报（256KB 阈值，与之前一致）。
     let mut f = std::fs::File::create(out).map_err(|e| format!("创建缓存文件失败: {e}"))?;
@@ -104,9 +104,9 @@ pub(crate) async fn plugin_install_url_inner(
     // 边下载边写临时文件，每 256KB 发一次进度事件（前端 MarketPanel 进度条）。
     let app2 = app.clone();
     let url2 = url.clone();
-    let body = crate::ssrf_safe_get(
+    let body = crate::net_http::ssrf_safe_get(
         &url,
-        crate::SSRF_MAX_BODY,
+        crate::net_http::SSRF_MAX_BODY,
         Some(Box::new(move |down, total| {
             let _ = app2.emit(
                 "plugin-download-progress",

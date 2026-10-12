@@ -5,8 +5,6 @@
 
 use std::time::Duration;
 
-use crate::shared_http;
-
 // ── AI 联网 ──────────────────────────────────────────────────────────────
 // 给 AI agent 循环用的免 key 网页搜索：直连 Bing(cn) HTML 解析自然结果，
 // 失败再退 DDG-lite。手动字符串扫描（不想为这一个命令引 regex crate）。
@@ -157,7 +155,7 @@ pub(crate) async fn web_search(query: String) -> Result<Vec<SearchHit>, String> 
     if query.chars().count() > 500 {
         return Err("搜索词过长（上限 500 字符）".to_string());
     }
-    let client = shared_http();
+    let client = crate::net_http::shared_http();
     // 搜索页是静态 HTML，8s 足够；超长响应只取前 2 MB（网页全文解析用不到更多）。
     const SEARCH_TIMEOUT: Duration = Duration::from_secs(8);
     const SEARCH_MAX_BYTES: usize = 2 * 1024 * 1024;

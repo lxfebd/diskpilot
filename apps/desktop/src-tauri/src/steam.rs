@@ -6,7 +6,6 @@ use std::time::Duration;
 
 use tauri::Manager;
 
-use crate::shared_http;
 #[tauri::command]
 pub(crate) async fn list_steam_games() -> Result<diskpilot_steam_inspector::SteamInventory, String>
 {
@@ -58,7 +57,7 @@ pub(crate) async fn fetch_workshop_titles(ids: Vec<u64>) -> Result<HashMap<u64, 
 
     let form = build_published_file_form(&ids);
 
-    let client = shared_http();
+    let client = crate::net_http::shared_http();
 
     let url = "https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/";
     let mut last_err: Option<String> = None;
@@ -181,7 +180,7 @@ pub(crate) async fn translate_steam_names_fetch(
         return Ok(HashMap::new());
     }
 
-    let client = shared_http();
+    let client = crate::net_http::shared_http();
     let mut out: HashMap<u32, String> = HashMap::new();
     let mut changed = false;
 

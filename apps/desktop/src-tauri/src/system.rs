@@ -3,7 +3,6 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::shared_http;
 use crate::volume_info;
 #[derive(serde::Serialize, Default, Clone)]
 #[allow(dead_code)] // 字段仅供前端/AI 序列化消费，Rust 侧不读
@@ -183,7 +182,7 @@ pub(crate) async fn network_probe(targets: Vec<String>) -> Result<Vec<PingProbe>
         return Err("没有可检测的站点".into());
     }
 
-    let client = shared_http().clone();
+    let client = crate::net_http::shared_http().clone();
     let mut results = Vec::with_capacity(sites.len());
     for (name, url) in sites {
         let t0 = std::time::Instant::now();

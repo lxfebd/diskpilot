@@ -27,7 +27,7 @@ pub(crate) struct UpdateInfo {
 #[tauri::command]
 pub(crate) async fn check_update() -> Result<UpdateInfo, String> {
     // 复用进程级共享客户端：带系统代理解析（企业/校园网必须走代理才能出网）。
-    let client = crate::shared_http();
+    let client = crate::net_http::shared_http();
     let resp = client
         .get(format!(
             "https://api.github.com/repos/{REPO}/releases/latest"

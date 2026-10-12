@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use crate::http_no_redirect;
+use crate::net_http::http_no_redirect;
 
 // ── AI 请求代理 ─────────────────────────────────────────────────────────
 // 生产模式页面 origin 是 tauri.localhost，前端直接 fetch 外部 AI API 会被
