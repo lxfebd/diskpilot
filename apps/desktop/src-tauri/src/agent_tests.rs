@@ -279,3 +279,60 @@ fn connect_injects_scaffolds_env() {
         assert!(n_toml > 0, "scaffolds 目录 {} 下应有 TOML", dir.display());
     }
 }
+
+/// B2/B3 回归：工具进度通道端到端可用。
+/// 真实 spawn + MCP 握手 + tools/call，钉死「服务端 ProgressSlot → 转发器 →
+/// 客户端 ProgressClientHandler::on_progress → core 闭包」整条链路。
+/// 完成帧（progress=1000，progress.rs::send_completion）保证任何成功工具
+/// 至少产生一条通知——毫秒级快工具也不会因转发器首帧竞态而 0 通知。
+#[tokio::test]
+async fn agent_call_tool_progress_channel_delivers_notifications() {
+    if !has_binary() {
+        eprintln!("skip: agent-server.exe 未构建");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("dp-progress-e2e-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("临时目录应可创建");
+    for i in 0..3u8 {
+        std::fs::write(dir.join(format!("f{i}.bin")), vec![i; 1024]).expect("写测试文件");
+    }
+
+    let seen: Arc<std::sync::Mutex<Vec<(u64, String)>>> =
+        Arc::new(std::sync::Mutex::new(Vec::new()));
+    let sink = seen.clone();
+    let progress: Arc<dyn Fn(u64, String) + Send + Sync + 'static> = Arc::new(move |pct, msg| {
+        sink.lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .push((pct, msg));
+    });
+
+    let r = agent_call_tool_core(
+        "disk_find_biggest_files".into(),
+        serde_json::json!({ "path": dir.display().to_string(), "top_n": 5 }),
+        None,
+        None,
+        Some(progress),
+    )
+    .await
+    .expect("call_tool 应成功");
+    let _ = std::fs::remove_dir_all(&dir);
+
+    assert!(!r.is_error, "工具应成功返回：{}", r.text);
+    let got = seen.lock().unwrap().clone();
+    assert!(
+        !got.is_empty(),
+        "progress 闭包应至少收到完成帧（send_completion 保证）"
+    );
+    for (pct, _) in &got {
+        assert!(*pct <= 1000, "千分比口径越界: {pct}");
+    }
+    assert!(
+        got.iter().any(|(_, m)| m.as_str() == "大文件扫描"),
+        "通知 message 应为工具 label，got: {got:?}"
+    );
+    assert!(
+        got.iter().any(|(pct, _)| *pct == 1000),
+        "应收到 progress=1000 完成帧，got: {got:?}"
+    );
+}

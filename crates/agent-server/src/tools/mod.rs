@@ -117,8 +117,8 @@ where
     let token = progress::progress_token_from(ctx);
     let slot = progress::ProgressSlot::new();
     let fwd = progress::spawn_progress_forwarder(
-        peer,
-        token,
+        peer.clone(),
+        token.clone(),
         slot.clone(),
         label,
         std::time::Duration::from_millis(500),
@@ -130,7 +130,11 @@ where
     .await;
     fwd.abort();
     match result {
-        Ok(Ok(Ok(v))) => text_result(v.to_string()),
+        Ok(Ok(Ok(v))) => {
+            // 完成帧（progress=1000）：快工具也保证至少一条通知，见 progress.rs。
+            progress::send_completion(&peer, token, label).await;
+            text_result(v.to_string())
+        }
         Ok(Ok(Err(e))) => tool_error(e),
         Ok(Err(_)) => tool_error(format!("{label}线程异常退出")),
         Err(_) => tool_error(format!("{label}执行超时（>{secs}s），已中断防止挂起")),

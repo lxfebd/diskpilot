@@ -110,7 +110,10 @@ walk/MFT → 平铺 (path,size,children) → build_tree（复用扫描一趟数�
   测试监控并排），完成判据 `pct>=1000` 或 message 含「完成」。
 
 语义边界：进度是**增强通道**——推送失败静默、绝不阻塞结果返回；桌面每次调用
-spawn 全新 agent-server，进度只在单次调用会话内有效。
+spawn 全新 agent-server，进度只在单次调用会话内有效。工具成功返回前直发
+`progress=1000` 完成帧（`progress.rs::send_completion`）：UI 明确走到 100%，
+且毫秒级快工具也不会因转发器首帧竞态而 0 通知——回归测试
+`agent_call_tool_progress_channel_delivers_notifications` 钉死整条链路。
 
 设计约束（实测坑，commit f823e91）：被 `#[cfg(test)]` 调用的 `agent_call_tool_core`
 **不能收 `AppHandle`**——会把 tauri Wry 窗口子系统（comctl32 v6 的

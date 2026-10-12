@@ -92,6 +92,23 @@ pub(crate) fn spawn_progress_forwarder(
     })
 }
 
+/// 完成帧：工具成功返回前直发一条 `progress = 1000` 通知。
+///
+/// 两个作用：① 前端进度条明确走到 100% 再收结果（完成可见）；
+/// ② 消除「毫秒级快工具在转发器首帧前就被 abort → 0 通知」的竞态——
+/// 任何走 `blocking_call_progress` 的工具至少产生一条进度通知。
+pub(crate) async fn send_completion(
+    peer: &Peer<RoleServer>,
+    token: ProgressToken,
+    label: &'static str,
+) {
+    let param = ProgressNotificationParam::new(token, 1000.0)
+        .with_total(1000.0)
+        .with_message(label);
+    let notif = ServerNotification::ProgressNotification(ProgressNotification::new(param));
+    let _ = peer.send_notification(notif).await;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
