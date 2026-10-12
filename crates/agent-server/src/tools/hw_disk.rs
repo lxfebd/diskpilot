@@ -1,13 +1,21 @@
 //! 磁盘 SMART 采集：健康状态/通电时长/温度/磨损 + USB 设备枚举（只读）。
 //!
 //! 从 hw.rs 拆分（2026-10-12）。
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回降级文案的 fn），
+// 顶层 import 随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::{json_array_of, ps_capture};
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
+#[cfg(windows)]
 use crate::tools::hw_common::{format_num, get_f64, get_int};
+#[cfg(windows)]
 use crate::tools::v_str;
+#[cfg(windows)]
 use serde_json::Value;
 
-// DISK_SMART_PS 由 hw_thermal 复用（collect_temperature 的磁盘温度通道）
+// DISK_SMART_PS 由 hw_thermal 复用（collect_temperature 的磁盘温度通道，亦 cfg(windows)）
+#[cfg(windows)]
 pub(crate) const DISK_SMART_PS: &str = r#"$ErrorActionPreference='SilentlyContinue'
 $disks=Get-PhysicalDisk
 $out=@($disks | ForEach-Object {
@@ -157,6 +165,8 @@ pub fn collect_disk_smart() -> Result<String, String> {
 /// 不需要管理员）。**不读 WiFi 密码、不读序列号机密**：只取设备类型/名称/
 /// 厂商/状态/实例 ID（实例 ID 用于区分设备，不含敏感内容）。
 /// 树形输出：控制器 → 集线器 → 外设层级（保留 ParentInstanceId 关联）。
+/// USB 枚举 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const USB_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $devs = @(Get-PnpDevice -Class USB -Status OK -ErrorAction SilentlyContinue | Select-Object FriendlyName, InstanceId, Class, Service, Status, Manufacturer, Present)

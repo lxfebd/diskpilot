@@ -13,8 +13,12 @@
 //!    ≥50GB 且 ≥3 个月未玩；Steam 本体/SteamVR 等系统组件绝不建议）。
 //!    找不到 Steam / 没有任何游戏库时返回中文兜底（不是 Err）。
 
+// SystemTime/UNIX_EPOCH 与 fmt_bytes 仅供 cfg(windows) 的 collect_steam_games
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
 
 /// 盘点本机 Steam 游戏库（只读）。

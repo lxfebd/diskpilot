@@ -1,9 +1,13 @@
 //! 防火墙规则域（从 sec.rs 拆分，2026-10-12）。
 //! collect_firewall_rules：DisplayName / Port / Protocol / Remote 元数据。
 
+// ps_capture / v_str 仅供 cfg(windows) 的 collect_firewall_rules 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::ps_capture;
 #[cfg(windows)]
 use crate::tools::sec::sec_common::{v_arr, validate_ps_value};
+#[cfg(windows)]
 use crate::tools::v_str;
 
 #[cfg(windows)]
@@ -17,6 +21,8 @@ use super::NOT_WINDOWS;
 /// 防火墙规则查询脚本模板：联查 `Get-NetFirewallRule` +
 /// `Get-NetFirewallPortFilter` + `Get-NetFirewallAddressFilter`，
 /// 输出规则元数据（**绝不返回规则内部动作细节**，只输出只读元数据）。
+/// 仅 PowerShell 查询使用（Linux 下无消费方）。
+#[cfg(windows)]
 const FIREWALL_PS_TMPL: &str = r#"
 $dir = '__DIR__'
 $act = '__ACTION__'

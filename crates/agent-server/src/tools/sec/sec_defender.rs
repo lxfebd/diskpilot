@@ -1,6 +1,10 @@
 //! 3b) Windows Defender 状态域（从 sec.rs 拆分，2026-10-12）。
 
+// ps_capture / v_str 仅供 cfg(windows) 的 collect_defender_status 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::ps_capture;
+#[cfg(windows)]
 use crate::tools::v_str;
 
 #[cfg(windows)]

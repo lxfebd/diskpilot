@@ -2,9 +2,14 @@
 //!
 //! from tools/net.rs 拆分（2026-10-12）。
 
+// Value / json_of / v_str 仅供 cfg(windows) 的 collect_net_share 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use serde_json::Value;
 
+#[cfg(windows)]
 use crate::tools::net_util::json_of;
+#[cfg(windows)]
 use crate::tools::v_str;
 
 // ── 4. 网络共享 ─────────────────────────────────────────────────────────

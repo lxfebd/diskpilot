@@ -1,10 +1,16 @@
 //! 全量传感器快照域（从 hw_thermal.rs 拆分，2026-10-12）。
 //! collect_sensors / collect_sensors_fast + fancmd 探测与解析。
 
+// 顶层 import 仅供 cfg(windows) 的采集实现使用（Linux 仅返回降级文案），
+// 随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::tools::v_str;
+#[cfg(windows)]
 use serde_json::Value;
+#[cfg(windows)]
 use std::io::Read;
 
+#[cfg(windows)]
 use super::therm_temp::collect_temperature;
 
 /// 非 Windows：快速传感器快照同样不可用。

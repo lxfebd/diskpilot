@@ -27,24 +27,34 @@
 //! 2026-10-12 拆分：驱动加载 → `sio_driver`，芯片枚举 → `sio_chip`，
 //! 环境寄存器与读数 → `sio_readings`。
 
+// 三个子模块全为 Windows-only 实现（端口驱动 LoadLibraryW 直读），
+// read_text / read_temperatures 由下方 cfg(not(windows)) 降级 fn 承接。
+#[cfg(windows)]
 mod sio_chip;
+#[cfg(windows)]
 mod sio_driver;
+#[cfg(windows)]
 mod sio_readings;
 
+#[cfg(windows)]
 pub use sio_readings::{read_temperatures, read_text};
 
-// 回归测试引用的内部符号。
-#[cfg(test)]
+// 回归测试引用的内部符号（仅 Windows 编译）。
+#[cfg(all(test, windows))]
 pub(crate) use sio_chip::{kind_for, ChipKind};
-#[cfg(test)]
+#[cfg(all(test, windows))]
 pub(crate) use sio_driver::{load_driver, DRIVER_CANDIDATES};
 
+// 非 Windows 降级供上层 fn 对称编译；调用方（therm_* 等）全为 cfg(windows)，
+// Linux 下无实际消费方 → allow(dead_code)。
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub fn read_text() -> Result<String, String> {
     Err("SuperIO 直读仅 Windows 可用".into())
 }
 
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub fn read_temperatures() -> Result<Vec<(String, f64)>, String> {
     Err("SuperIO 直读仅 Windows 可用".into())
 }

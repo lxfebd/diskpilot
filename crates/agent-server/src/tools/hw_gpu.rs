@@ -1,14 +1,24 @@
 //! GPU 采集：型号/显存/驱动/分辨率 + N 卡/A 卡实时通道。
 //!
 //! 从 hw.rs 拆分（2026-10-12）。
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回降级文案的 collect_gpu），
+// 顶层 import 随 Windows 实现一起编译，避免 Linux 下 unused-import 告警。
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
-use crate::tools::hw_common::{
-    amd_adl_live, fmt_wmi_date, get_int, json_arr_of, nvidia_gpu_live, nvidia_gpu_name,
-};
+#[cfg(windows)]
+use crate::tools::hw_common::{fmt_wmi_date, get_int, json_arr_of};
+#[cfg(windows)]
 use crate::tools::v_str;
+
+// N 卡/A 卡实时通道符号仅在 Windows 有真实现（nvidia-smi / ADL），Linux 无定义，
+// 随 collect_gpu 的 cfg(windows) 实现一起编译。
+#[cfg(windows)]
+use crate::tools::hw_common::{amd_adl_live, nvidia_gpu_live, nvidia_gpu_name};
 
 // ── 2. GPU ────────────────────────────────────────────────────────────────
 
+/// GPU 采集 PS 脚本仅 Windows 运行（PowerShell），Linux 下无消费方。
+#[cfg(windows)]
 const GPU_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 # 部分机器 Get-CimInstance 对 Win32_VideoController 抛「调用已取消」返回空，

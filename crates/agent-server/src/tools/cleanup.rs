@@ -27,18 +27,27 @@
 //!    读 scaffolds → 对 `root` 下目录做单遍并行 walk → 统计每个 scope
 //!    命中文件数/总字节 → 按字节降序输出 Top N 个可清理项。
 
+// 本文件所有实现仅供 cfg(windows) 的 collect_cleanup_suggestions 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use std::collections::BTreeMap;
+#[cfg(windows)]
 use std::path::{Path, PathBuf};
 
+#[cfg(windows)]
 use diskpilot_scaffold::{compile_all, detect_compiled, expand_env, load_dir, Scope};
 
+#[cfg(windows)]
 use super::files::PathGuard;
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
 
 /// 单次遍历的文件硬上限：C 盘几十万文件也够（与 diskx 大文件扫描同量级）。
+#[cfg(windows)]
 const MAX_FILES_WALK: usize = 500_000;
 
 /// 候选 scaffolds 目录（按优先级取第一个存在的）。
+#[cfg(windows)]
 fn candidate_scaffold_dirs() -> Vec<PathBuf> {
     let mut v = Vec::new();
     if let Ok(env) = std::env::var("DISKPILOT_SCAFFOLDS") {
@@ -54,6 +63,7 @@ fn candidate_scaffold_dirs() -> Vec<PathBuf> {
 }
 
 /// 读取 scaffolds 目录里的所有 TOML；失败返回中文错误串。
+#[cfg(windows)]
 fn load_scaffolds() -> Result<Vec<diskpilot_scaffold::Scaffold>, String> {
     let mut last_err: Option<String> = None;
     for dir in candidate_scaffold_dirs() {
@@ -89,12 +99,14 @@ fn load_scaffolds() -> Result<Vec<diskpilot_scaffold::Scaffold>, String> {
 /// 展开 `%APPDATA%` 等环境变量、反斜杠转正斜杠，再对**完整绝对路径**
 /// （正斜杠归一化）做匹配；literal_separator(false) + case_insensitive(true)
 /// 保持一致。不命中返回 None。
+#[cfg(windows)]
 fn scope_matches(build: &globset::GlobMatcher, path: &str) -> bool {
     build.is_match(path)
 }
 
 /// 预编译一个 scope 的 glob 为 GlobMatcher（展开环境变量 + 正斜杠归一化）。
 /// 编译失败（glob 语法错误）返回 None，调用方跳过该 scope（对齐主项目容错）。
+#[cfg(windows)]
 fn compile_scope_matcher(glob: &str) -> Option<globset::GlobMatcher> {
     let pat = expand_env(glob).replace('\\', "/");
     globset::GlobBuilder::new(&pat)

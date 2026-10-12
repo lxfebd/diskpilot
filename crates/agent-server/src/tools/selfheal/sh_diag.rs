@@ -3,6 +3,8 @@
 
 use serde_json::{json, Value};
 
+// sh_core 全为 Windows 实现，仅 cfg(windows) 分支引用。
+#[cfg(windows)]
 use super::sh_core::{find_fancmd, run_fancmd};
 
 /// 解析 fancmd diag json，归一化为本工具返回结构。
@@ -57,7 +59,9 @@ pub(crate) fn parse_diag(raw: &str) -> Value {
     })
 }
 
+// 非 Windows 降级版仅供 Windows 侧符号对称编译，Linux 下无调用方（调用方均 cfg(windows)）。
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub(crate) fn parse_diag(_raw: &str) -> Value {
     json!({ "parsed": false, "note": "非 Windows 平台，风扇自修复不可用" })
 }

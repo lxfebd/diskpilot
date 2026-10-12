@@ -64,8 +64,8 @@ pub use sec_firewall::collect_firewall_rules;
 pub use sec_login::collect_login_events;
 pub use sec_users::collect_user_accounts;
 
-// 回归测试引用的私有符号。
-#[cfg(test)]
+// 回归测试引用的私有符号：sid_tail 仅 Windows 实现，对应测试 fn 带 cfg(windows)。
+#[cfg(all(test, windows))]
 pub(crate) use sec_users::sid_tail;
 
 // 2026-10-12 拆分：通用小工具 → `sec_common`，事件日志 → `sec_eventlog`，

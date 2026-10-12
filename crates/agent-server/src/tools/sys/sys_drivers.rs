@@ -26,7 +26,8 @@ $out | ConvertTo-Json -Depth 4 -Compress
 "#;
 
 /// `DriverDate` 的 CIM DateTime（如 `20260410000000.000000-000`）→ `YYYY-MM-DD`。
-/// 只取前 8 位数字，安全解析；失败原样透传。
+/// 只取前 8 位数字，安全解析；失败原样透传。仅供 cfg(windows) 的 collect_drivers 使用。
+#[cfg(windows)]
 fn fmt_driver_date(raw: &str) -> String {
     let t = raw.trim();
     if t.is_empty() {
@@ -45,7 +46,8 @@ fn fmt_driver_date(raw: &str) -> String {
     t.to_string()
 }
 
-/// `DeviceClass` 短码 → 中文。未命中返回原字符串。
+/// `DeviceClass` 短码 → 中文。未命中返回原字符串。仅供 cfg(windows) 的 collect_drivers 使用。
+#[cfg(windows)]
 fn device_class_zh(s: &str) -> String {
     match s {
         "NET" | "Net" => "网络适配器".to_string(),
@@ -64,6 +66,8 @@ fn device_class_zh(s: &str) -> String {
 }
 
 /// 微软驱动日期失真检测：年份 < 2020 且版本号形如 `10.0.*`。
+/// 仅供 cfg(windows) 的 collect_drivers 使用。
+#[cfg(windows)]
 fn is_microsoft_date_suspect(version: &str, year: u32) -> bool {
     year > 0 && year < 2020 && version.starts_with("10.0.")
 }

@@ -122,6 +122,8 @@ pub(crate) fn parallel_walker(root: &std::path::Path) -> jwalk::WalkDir {
 }
 
 /// JSON 取值转字符串：hw/net/sec/sys 四个模块各复刻了一份，收敛到这里。
+/// 消费方均为 cfg(windows) 采集实现，Linux 下无调用方 → 豁免 dead_code。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn v_str(v: &serde_json::Value, k: &str) -> String {
     match v.get(k) {
         Some(serde_json::Value::String(s)) => s.clone(),

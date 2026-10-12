@@ -1,11 +1,17 @@
 //! CPU 采集：型号/核心/线程/频率/缓存 + CPUID 指令集探测。
 //!
 //! 从 hw.rs 拆分（2026-10-12）。
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回降级文案的 fn），
+// 顶层 import 随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::tools::hw_common::{get_f64, get_int, json_arr_of, json_of, v_arr};
+#[cfg(windows)]
 use crate::tools::v_str;
 
 // ── 1. CPU ────────────────────────────────────────────────────────────────
 
+/// CPU PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const CPU_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $cpu=@(Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,CurrentClockSpeed,L2CacheSize,L3CacheSize,Manufacturer,VirtualizationFirmwareEnabled,LoadPercentage)
@@ -106,6 +112,8 @@ pub fn collect_cpu() -> Result<String, String> {
     Ok(crate::tools::hw_common::NOT_WINDOWS.into())
 }
 
+/// CPUID 指令集探测 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const CPUID_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=@(Get-CimInstance Win32_Processor | Select-Object Name,NumberOfLogicalProcessors,VirtualizationFirmwareEnabled,SecondLevelAddressTranslationExtensions,VMMonitorModeExtensions,PowerManagementSupported)

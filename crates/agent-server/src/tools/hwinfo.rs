@@ -40,7 +40,11 @@
 //!
 //! 2026-10-12 拆分：常量与类型 → `hwinfo_types`，解析管道 → `hwinfo_parse`。
 
+// hwinfo_parse / hwinfo_types 全为 Windows-only 实现（读写 HWiNFO 共享内存段），
+// 非 Windows 由下方 cfg(not(windows)) 降级 fn 承接。
+#[cfg(windows)]
 mod hwinfo_parse;
+#[cfg(windows)]
 mod hwinfo_types;
 
 #[cfg(windows)]
@@ -48,8 +52,8 @@ pub(crate) use hwinfo_parse::{format_snapshot, read_full_with};
 #[cfg(windows)]
 pub(crate) use hwinfo_types::map_names;
 
-// 回归测试引用的解析管道符号。
-#[cfg(test)]
+// 回归测试引用的解析管道符号（hwinfo_parse/hwinfo_types 仅 Windows 编译）。
+#[cfg(all(test, windows))]
 pub(crate) use hwinfo_parse::{cstr, parse_header, parse_readings};
 
 #[cfg(windows)]
@@ -79,7 +83,9 @@ pub(crate) fn read_temperature_lines() -> Result<Vec<(String, f64)>, String> {
 }
 
 /// 防未使用告警：非 Windows 时本文件保持可编译（不引入任何符号）。
+/// 调用方（therm_temp 等）全为 cfg(windows)，Linux 下无实际消费方。
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub(crate) fn read_hwinfo_text() -> Result<String, String> {
     Err("HWiNFO 共享内存仅 Windows 可用".into())
 }

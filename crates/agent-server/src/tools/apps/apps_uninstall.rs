@@ -1,6 +1,8 @@
 //! R5 卸载助手域（从 apps.rs 拆分，2026-10-12）。
 //! uninstall_app + 白名单/静默参数校验。
 
+// list_installed_apps 仅供 cfg(windows) 的 uninstall_app 使用（Linux 仅返回降级文案）。
+#[cfg(windows)]
 use super::apps_enum::list_installed_apps;
 
 // ── R5 卸载助手 ─────────────────────────────────────────────────────────

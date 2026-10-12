@@ -14,10 +14,10 @@ pub use proc_enum::{list_processes, process_info};
 pub use proc_kill::kill_process;
 pub use proc_start::start_process;
 
-// 回归测试引用的私有符号。
-#[cfg(test)]
+// 回归测试引用的私有符号（测试模块 cfg(all(test, windows))，符号也仅 Windows 有）。
+#[cfg(all(test, windows))]
 pub(crate) use proc_kill::KILL_GUARD_PS;
-#[cfg(test)]
+#[cfg(all(test, windows))]
 pub(crate) use proc_start::is_whitelisted_exe;
 
 #[cfg(all(test, windows))]

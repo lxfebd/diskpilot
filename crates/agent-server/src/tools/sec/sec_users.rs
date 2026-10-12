@@ -1,7 +1,11 @@
 //! 用户账户域（从 sec.rs 拆分，2026-10-12）。
 //! collect_user_accounts + json_arr_of_sec + sid_tail。
 
+// ps_capture / v_str / sid_tail 仅供 cfg(windows) 的 collect_user_accounts 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::ps_capture;
+#[cfg(windows)]
 use crate::tools::v_str;
 
 #[cfg(windows)]

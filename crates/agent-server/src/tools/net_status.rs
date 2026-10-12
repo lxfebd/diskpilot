@@ -2,7 +2,11 @@
 //!
 //! from tools/net.rs 拆分（2026-10-12）。
 
+// net_adapter 三符号仅 Windows 有实现，随 cfg(windows) 的 collect_* 编译。
+#[cfg(windows)]
 use crate::tools::net_adapter::{is_virtual_adapter, native_adapters, ps_adapters_fallback};
+// fmt_bps 仅被 cfg(windows) 的采集实现使用，Linux 下 collect_net_status 降级 fn 不依赖它。
+#[cfg(windows)]
 use crate::tools::net_util::fmt_bps;
 
 /// 网卡状态 / IP / MAC / 网关 / DNS / 速率。

@@ -1,10 +1,17 @@
 //! 系统信息采集：显示器 / ACPI 热区 / IPMI 探测 / 主板 BIOS。
 //!
 //! 从 hw.rs 拆分（2026-10-12）。
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回降级文案的 fn），
+// 顶层 import 随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::tools::hw_common::{fmt_wmi_date, get_int, json_arr_of, json_of, v_arr};
+#[cfg(windows)]
 use crate::tools::v_str;
+#[cfg(windows)]
 use serde_json::Value;
 
+/// 显示器 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const DISPLAY_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=@(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams | Select-Object InstanceName,VideoInputType,MaxHorizontalImageSize,MaxVerticalImageSize,DisplayTransferCharacteristic,Active)
@@ -73,6 +80,8 @@ pub fn collect_displays() -> Result<String, String> {
 // WMI Win32_BIOS + Win32_ComputerSystem 可读固件版本/序列号/唤醒类型 + 电源状态；
 // 完整 ACPI 表浏览（FADT/DSDT 反汇编）需 Ring0/bios 工具，这里给到可读信息。
 
+/// ACPI 热区 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const ACPI_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=[ordered]@{
@@ -129,6 +138,8 @@ pub fn collect_acpi() -> Result<String, String> {
 
 // ── 3.9 IPMI 服务器接口探测（阶段五·G14）────────────────────────────
 
+/// IPMI 探测 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const IPMI_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=[ordered]@{
@@ -181,6 +192,8 @@ pub fn collect_ipmi() -> Result<String, String> {
     Ok(crate::tools::hw_common::NOT_WINDOWS.into())
 }
 
+/// 主板 BIOS PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const BOARD_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=[ordered]@{

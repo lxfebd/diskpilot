@@ -1,9 +1,18 @@
 //! 修复执行域（从 selfheal.rs 拆分，2026-10-12）。
 //! selfheal_fix / install_driver / run_diag_after_install / reset_fan / fan_control（两平台版）。
 
-use serde_json::{json, Value};
+// json! 宏被 cfg(not(windows)) 降级 fn 使用（Linux 下也有调用方），保持跨平台。
+use serde_json::json;
 
+// 采集实现均为 cfg(windows)（Linux 仅保留返回降级文案的 fn），
+// Value 类型随 Windows 实现一起编译，避免 Linux 下 unused-import 告警。
+#[cfg(windows)]
+use serde_json::Value;
+
+// sh_core 全为 Windows 实现，仅 cfg(windows) 分支引用。
+#[cfg(windows)]
 use super::sh_core::{find_fancmd, is_admin, run_fancmd};
+#[cfg(windows)]
 use super::sh_diag::parse_diag;
 
 /// 自修复执行（写 L2，主项目确认门守护）。action 可选：

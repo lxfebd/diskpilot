@@ -1,6 +1,8 @@
 //! 启动进程域（从 process.rs 拆分，2026-10-12）。
 //! start_process + is_whitelisted_exe（M2 短名/.. 白名单防线）。
 
+// realpath_or_lexical 仅供 cfg(windows) 的 start_process / is_whitelisted_exe 使用。
+#[cfg(windows)]
 use crate::tools::files::realpath_or_lexical;
 
 #[cfg(windows)]

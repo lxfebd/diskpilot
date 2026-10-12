@@ -1,12 +1,19 @@
 //! 内存采集：每根内存条 + 总容量 + XMP/EXPO 诊断 + DRAM 时序。
 //!
 //! 从 hw.rs 拆分（2026-10-12）。
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回 Err 的降级 fn），
+// 顶层 import 随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
+#[cfg(windows)]
 use crate::tools::hw_common::{get_int, json_arr_of};
+#[cfg(windows)]
 use crate::tools::v_str;
 
 // ── 3. 内存 ───────────────────────────────────────────────────────────────
 
+/// 内存 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const MEM_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 # 与 GPU_PS 同理：部分机 Get-CimInstance 对该类抛「调用已取消」返回空，
@@ -111,6 +118,8 @@ pub fn collect_memory() -> Result<String, String> {
 
 // ── 3.5 DRAM 时序（SPD 读取，阶段四）──────────────────────────────────────
 
+/// DRAM 时序 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const DRAM_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=@(Get-CimInstance Win32_PhysicalMemory | Select-Object DeviceLocator,Manufacturer,PartNumber,ConfiguredClockSpeed,Speed,Capacity)

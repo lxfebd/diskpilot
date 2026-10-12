@@ -20,9 +20,15 @@
 //! 它只为让那些模块顶层的 `use crate::ps::ps_capture` 能在 macOS/Linux 上通过编译。
 //! `json_array_of` 是纯文本函数，全平台可用。
 
-pub use diskpilot_psutil::{json_array_of, ps_capture, ps_capture_timeout, ADL_PROBE_PS};
+// json_array_of / ps_capture 全平台可用：降级分支与 JSON 工具跨平台引用。
+pub use diskpilot_psutil::{json_array_of, ps_capture};
+// ps_capture_timeout / ADL_PROBE_PS 仅 Windows 采集使用，Linux 无消费方。
+#[cfg(windows)]
+pub use diskpilot_psutil::{ps_capture_timeout, ADL_PROBE_PS};
 
 /// 单引号转义重导出（兼容 `crate::ps::escape_ps_single_quoted` 旧路径，
 /// 实际消费方 sys.rs 经 `crate::tools::sys::escape_ps_single_quoted` 引用）。
+/// psutil 中该函数带 cfg(windows)，非 Windows 无定义。
+#[cfg(windows)]
 #[allow(unused_imports)]
 pub use diskpilot_psutil::escape_ps_single_quoted;

@@ -1,14 +1,27 @@
 //! 温度采集主通道（从 hw_thermal.rs 拆分，2026-10-12）。
 //! THERMAL_PS + collect_temperature：HWiNFO 共享内存 → ACPI 热区降级。
 
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回 Err 的 collect_temperature），
+// 顶层 import 随 Windows 实现一起编译，避免 Linux 下 unused-import 告警。
+#[cfg(windows)]
 use crate::ps::{json_array_of, ps_capture};
-use crate::tools::hw_common::{amd_adl_temp, get_f64, nvidia_gpu_temp, thermal_ready};
+#[cfg(windows)]
+use crate::tools::hw_common::{get_f64, thermal_ready};
+#[cfg(windows)]
 use crate::tools::hw_disk::DISK_SMART_PS;
+#[cfg(windows)]
 use crate::tools::v_str;
+#[cfg(windows)]
 use serde_json::Value;
 
+// ADL/nvidia-smi 实时温度与 fancmd 传感器解析仅 Windows 有实现，随 cfg(windows) 使用方编译。
+#[cfg(windows)]
 use super::therm_sensors::{extract_cpu_temps_from_sensor_json, run_fancmd_sensors};
+#[cfg(windows)]
+use crate::tools::hw_common::{amd_adl_temp, nvidia_gpu_temp};
 
+/// THERMAL_PS 被 therm_cpu 的采集实现（cfg(windows)）引用，这里保持模块内定义。
+#[cfg(windows)]
 pub(crate) const THERMAL_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $out=@(Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object InstanceName,CurrentTemperature)

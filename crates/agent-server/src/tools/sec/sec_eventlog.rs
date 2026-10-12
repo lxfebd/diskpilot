@@ -1,9 +1,13 @@
 //! 事件日志域（从 sec.rs 拆分，2026-10-12）。
 //! collect_event_logs：System / Application 等普通权限可读的系统事件。
 
+// ps_capture / v_str 仅供 cfg(windows) 的 collect_event_logs 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::ps_capture;
 #[cfg(windows)]
 use crate::tools::sec::sec_common::{level_cn, trunc_msg, v_arr, validate_log_name};
+#[cfg(windows)]
 use crate::tools::v_str;
 
 #[cfg(windows)]
@@ -20,6 +24,8 @@ use super::NOT_WINDOWS;
 /// **权限陷阱**：`-FilterHashtable @{LogName='Security'}` 不抛异常，只返回空
 /// （server-side 过滤绕过权限检查）；所以必须先 `-LogName` 探测。
 /// `$err` 收集探测或查询阶段的异常，由 Rust 侧降级。
+/// 仅 PowerShell 查询使用（Linux 下无消费方）。
+#[cfg(windows)]
 const EVENT_LOG_PS_TMPL: &str = r#"
 $log = '__LOG__'
 $hours = __HOURS__

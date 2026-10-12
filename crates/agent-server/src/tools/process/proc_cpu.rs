@@ -1,7 +1,11 @@
 //! CPU 使用率域（从 process.rs 拆分，2026-10-12）。
 
+// process_mem_bytes 仅 Windows 有实现（Psapi），随 cfg(windows) 的 collect_cpu_usage 编译。
+#[cfg(windows)]
 use super::proc_enum::process_mem_bytes;
 
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回 Err 的 collect_cpu_usage）。
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
 
 #[cfg(windows)]

@@ -7,8 +7,10 @@ use serde_json::Value;
 use crate::ps::{json_array_of, ps_capture};
 
 // ── 通用小工具（不依赖平台）────────────────────────────────────────────
+// 消费方均为 cfg(windows) 网络采集实现，Linux 下无调用方 → 豁免 dead_code。
 
 /// 位速率（bps）人类可读：`1.2 Gbps` / `800 Mbps` / `未上报`。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn fmt_bps(bps: u64) -> String {
     if bps == 0 {
         return "未上报".into();
@@ -26,6 +28,7 @@ pub(crate) fn fmt_bps(bps: u64) -> String {
 }
 
 /// 字节/秒人类可读：`1.23 MB/s` / `340 KB/s` / `0 B/s`。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn fmt_rate(bytes_per_sec: f64) -> String {
     if bytes_per_sec <= 0.0 {
         return "0 B/s".into();
@@ -41,18 +44,21 @@ pub(crate) fn fmt_rate(bytes_per_sec: f64) -> String {
 }
 
 /// 可选整型：兼容 `i64`/`u64`，缺失 → `None`。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn get_int(v: &Value, k: &str) -> Option<i64> {
     v.get(k)
         .and_then(Value::as_i64)
         .or_else(|| v.get(k).and_then(Value::as_u64).map(|n| n as i64))
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn get_f64(v: &Value, k: &str) -> Option<f64> {
     v.get(k).and_then(Value::as_f64)
 }
 
 /// 跑输出「数组」的 PowerShell 脚本并解析成 `Vec<Value>`
 /// （`json_array_of` 兜底单元素被 `ConvertTo-Json` 折叠成对象的坑）。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn json_arr_of(script: &str, what: &str) -> Result<Vec<Value>, String> {
     let raw = ps_capture(script)?;
     let trimmed = raw.trim().trim_start_matches('\u{feff}');
@@ -64,6 +70,7 @@ pub(crate) fn json_arr_of(script: &str, what: &str) -> Result<Vec<Value>, String
 }
 
 /// 跑输出「对象」的脚本并解析成 `Value`（不做数组折叠）。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn json_of(script: &str, what: &str) -> Result<Value, String> {
     let raw = ps_capture(script)?;
     let trimmed = raw.trim().trim_start_matches('\u{feff}');
@@ -71,6 +78,7 @@ pub(crate) fn json_of(script: &str, what: &str) -> Result<Value, String> {
 }
 
 /// 「无值」判定（PS 常返回 `"N/A"` 占位）。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn is_emptyish(s: &str) -> bool {
     s.is_empty() || s.eq_ignore_ascii_case("N/A")
 }

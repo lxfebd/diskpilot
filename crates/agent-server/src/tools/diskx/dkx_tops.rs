@@ -1,14 +1,20 @@
 //! 目录占用 Top N 域（从 diskx.rs 拆分，2026-10-12）。
 //! collect_top_directories（两平台版）。
 
+// 顶层 import 仅供 cfg(windows) 的 collect_top_directories 使用（Linux 返回降级文案）。
+#[cfg(windows)]
 use std::collections::BTreeMap;
+#[cfg(windows)]
 use std::path::Path;
 
+#[cfg(windows)]
 use crate::tools::{fmt_bytes, parallel_walker};
 
+#[cfg(windows)]
 use super::super::files::PathGuard;
 
 /// 大文件扫描的硬上限：单次遍历最多看这么多文件（超过就 break 并标 truncated）。
+#[cfg(windows)]
 const MAX_FILES_WALK: usize = 500_000;
 
 // ── 4. 目录占用 Top N（jwalk 单遍聚合子目录大小） ─────────────────────────

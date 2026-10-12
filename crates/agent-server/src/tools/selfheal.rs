@@ -33,5 +33,6 @@ mod sh_fix;
 pub use sh_diag::selfheal_diag;
 pub use sh_fix::{fan_control, selfheal_fix};
 
-// 温度域跨模块引用的基础符号。
+// 温度域跨模块引用的基础符号（sh_core 全为 Windows 实现，非 Windows 不引用）。
+#[cfg(windows)]
 pub(crate) use sh_core::{find_fancmd, is_admin};

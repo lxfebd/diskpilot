@@ -1,18 +1,27 @@
 //! 重复文件扫描域（从 diskx.rs 拆分，2026-10-12）。
 //! collect_duplicate_files + read_head_hash（两平台版）。
 
+// 顶层 import 仅供 cfg(windows) 的 collect_duplicate_files 使用（Linux 返回降级文案）。
+#[cfg(windows)]
 use std::collections::BTreeMap;
+#[cfg(windows)]
 use std::hash::Hasher;
+#[cfg(windows)]
 use std::io::Read;
+#[cfg(windows)]
 use std::path::Path;
 
+#[cfg(windows)]
 use crate::tools::{fmt_bytes, parallel_walker};
 
+#[cfg(windows)]
 use super::super::files::PathGuard;
 
 /// 重复文件扫描的硬上限：比大文件扫描略松，因为还要留预算给头部哈希。
+#[cfg(windows)]
 const MAX_FILES_WALK_DUP: usize = 200_000;
 /// 头部哈希读取的字节数：64 KB。够抓绝大多数真实重复，又不会因为扫到几个大文件而拖死。
+#[cfg(windows)]
 const HEAD_HASH_BYTES: usize = 64 * 1024;
 
 // ── 2. 重复文件（size 分组 + 头部 64KB 哈希） ────────────────────────────
@@ -144,6 +153,8 @@ pub fn collect_duplicate_files(path: String, top_n: usize) -> Result<String, Str
 
 /// 读文件头部 [`HEAD_HASH_BYTES`] 字节并计算 `DefaultHasher` 哈希。
 /// 打不开文件（被占用 / 权限 / 已被删）返回 `None`（不计入判定）。
+/// 读文件头部 64KB 计算 FNV-1a 哈希；失败返回 None（文件可能被占用/消失）。
+#[cfg(windows)]
 fn read_head_hash(path: &str) -> Option<u64> {
     let mut f = std::fs::File::open(path).ok()?;
     // 栈上 buffer，避免小文件分配 + 大文件拖死。

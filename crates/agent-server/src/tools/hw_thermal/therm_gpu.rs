@@ -1,6 +1,8 @@
 //! GPU 温度域（从 hw_thermal.rs 拆分，2026-10-12）。
 //! gpu_temp_c：NVIDIA nvidia-smi → AMD ADL 双通道，熔断护栏用。
 
+// N 卡/A 卡实时通道仅 Windows 有实现，随 cfg(windows) 的 gpu_temp_c 一起编译。
+#[cfg(windows)]
 use crate::tools::hw_common::{amd_adl_live, nvidia_gpu_live};
 
 #[cfg(windows)]

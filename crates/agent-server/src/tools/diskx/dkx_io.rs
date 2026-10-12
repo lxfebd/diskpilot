@@ -1,8 +1,12 @@
 //! 磁盘 IO 使用率域（从 diskx.rs 拆分，2026-10-12）。
 //! DISK_IO_PS + collect_disk_io_usage + fmt_rate（两平台版）。
 
+// json_array_of / ps_capture / DISK_IO_PS / fmt_rate 仅供 cfg(windows) 的
+// collect_disk_io_usage 使用（Linux 返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::{json_array_of, ps_capture};
 
+#[cfg(windows)]
 const DISK_IO_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $rows = @(Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk | Where-Object {
@@ -79,6 +83,8 @@ pub fn collect_disk_io_usage(sample_ms: u64) -> Result<String, String> {
 }
 
 /// 字节/秒 → 人类可读速率（`{v} MB/s` / `{v} KB/s` / `{n} B/s`）。
+/// 位速率 → 人类可读（`1.2 MB/s`）。仅供 cfg(windows) 的 collect_disk_io_usage 使用。
+#[cfg(windows)]
 fn fmt_rate(bps: u64) -> String {
     if bps >= 1_024 * 1_024 {
         format!("{:.*} MB/s", 1, bps as f64 / 1024.0 / 1024.0)

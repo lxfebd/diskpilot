@@ -14,7 +14,10 @@
 //! 不会走到这里的非 Windows 实现——它只为让那些模块顶层的 use 能在
 //! macOS/Linux 上通过编译。
 
+// Read/Stdio 仅供 cfg(windows) 的 PowerShell 执行器使用（非 Windows 返回 Err 分支无进程 IO）。
+#[cfg(windows)]
 use std::io::Read;
+#[cfg(windows)]
 use std::process::Stdio;
 use std::time::Duration;
 

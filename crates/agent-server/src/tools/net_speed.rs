@@ -2,10 +2,16 @@
 //!
 //! from tools/net.rs 拆分（2026-10-12）。
 
+// 顶层 import 仅供 cfg(windows) 的 collect_net_speed 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use serde_json::Value;
 
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
+#[cfg(windows)]
 use crate::tools::net_util::{fmt_rate, get_f64, get_int, json_arr_of};
+#[cfg(windows)]
 use crate::tools::v_str;
 
 // ── 3. 实时上下行速率 ──────────────────────────────────────────────────

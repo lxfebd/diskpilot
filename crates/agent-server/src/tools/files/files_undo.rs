@@ -7,6 +7,8 @@ use serde::Serialize;
 
 use crate::tools::parallel_walker;
 
+// PathGuard 仅供 cfg(windows) 的 recycle_file 使用（Linux 降级返回不引用它）。
+#[cfg(windows)]
 use super::files_guard::PathGuard;
 
 #[derive(Debug, Clone, Serialize)]
@@ -64,6 +66,8 @@ pub fn file_tree(
 /// diskpilot-executor，只镜像字段名——主项目 `list_undo` 反序列化的是
 /// JSON 形状，不关心类型来源。
 #[derive(serde::Serialize)]
+// Linux 下仅测试经 files.rs 的 cfg(test) re-export 引用 → 豁免 dead_code。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) struct UndoEntry {
     pub(crate) timestamp: String,
     #[serde(rename = "action")]
@@ -79,6 +83,7 @@ pub(crate) struct UndoEntry {
 /// 主进程 agent.rs spawn agent-server 时注入该环境变量；未注入（直接跑
 /// agent-server / 测试）时静默跳过——写 undo 是增强，不能阻塞回收本身。
 /// 纯追加（OpenOptions append），与主项目 write_log 同语义。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn append_undo(entries: &[UndoEntry]) {
     let Some(path) = std::env::var_os("DISKPILOT_UNDO_LOG") else {
         return;
@@ -102,6 +107,8 @@ pub(crate) fn append_undo(entries: &[UndoEntry]) {
     }
 }
 
+/// 生成 RFC3339 时间戳（undo 条目的 `timestamp` 字段）。
+#[cfg_attr(not(windows), allow(dead_code))]
 fn now_rfc3339() -> String {
     chrono::Utc::now().to_rfc3339()
 }
@@ -109,6 +116,7 @@ fn now_rfc3339() -> String {
 /// 统计路径占用的真实字节：文件取 len；目录递归求和（jwalk，与 scanner
 /// 同款并行遍历）。字节用于 undo 条目的 `bytes_freed`（前端「已清理」展示
 /// 真实值，不再一律标预估）。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn path_bytes(p: &std::path::Path) -> Option<u64> {
     if p.is_file() {
         return p.metadata().ok().map(|m| m.len());

@@ -1,12 +1,21 @@
 //! CPU 温度域（从 hw_thermal.rs 拆分，2026-10-12）。
 //! max_cpu_temp + collect_temperature_fast_parse：熔断用的快速读数。
 
+// 本文件全部采集实现均为 cfg(windows)（Linux 仅保留返回 Err 的降级 fn），
+// 顶层 import 随 Windows 实现一起编译，避免 Linux 下 unused-import 告警。
+#[cfg(windows)]
 use crate::ps::{json_array_of, ps_capture};
+#[cfg(windows)]
 use crate::tools::hw_common::{get_f64, thermal_ready};
+#[cfg(windows)]
 use crate::tools::v_str;
+#[cfg(windows)]
 use serde_json::Value;
 
+// run_fancmd_sensors 仅 Windows 有实现（spawn fancmd.exe），随 cfg(windows) 调用方编译。
+#[cfg(windows)]
 use super::therm_sensors::run_fancmd_sensors;
+#[cfg(windows)]
 use super::therm_temp::THERMAL_PS;
 
 #[cfg(windows)]

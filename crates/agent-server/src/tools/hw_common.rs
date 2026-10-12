@@ -1,25 +1,37 @@
 //! 硬件采集公共底座：JSON 取值工具 + GPU 实时通道（nvidia-smi / ADL）+ 非 Windows 降级文案。
 //!
 //! 从 `hw.rs` 拆分（2026-10-12）：被所有 hw_* 子模块共享，符号全部 `pub(crate)`。
-use crate::ps::{json_array_of, ps_capture, ADL_PROBE_PS};
-use crate::tools::v_str;
+// json_array_of / ps_capture / Value 由跨平台编译的 json_of / json_arr_of 引用
+//（这两个 fn 在 Linux 下虽无调用方，仍编译通过），保持裸 use。
+use crate::ps::{json_array_of, ps_capture};
 use serde_json::Value;
+// ADL_PROBE_PS / v_str 仅供 cfg(windows) 的 AMD ADL 通道使用，随 Windows 编译。
+#[cfg(windows)]
+use crate::ps::ADL_PROBE_PS;
+#[cfg(windows)]
+use crate::tools::v_str;
+// Read 仅供 cfg(windows) 的 nvidia-smi 调用使用。
+#[cfg(windows)]
 use std::io::Read;
 
 // ── JSON 取值小工具（与主项目 hw.rs 的 v_str / arr 同语义）─────────────────
 // v_str 已在 tools/mod.rs 共享，此处不再复刻。
 
 /// 取数组字段；缺失返回空 Vec（配合下面的 `arr().iter()` 直接用）。
+/// 消费方均为 cfg(windows) 采集实现，Linux 下无调用方 → 豁免 dead_code。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn v_arr<'a>(v: &'a Value, k: &str) -> &'a [Value] {
     v.get(k).and_then(Value::as_array).map_or(&[], |a| a)
 }
 
 /// 可选整型：`null` / 缺失 / 非数字 → `None`。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn get_int(v: &Value, k: &str) -> Option<u64> {
     v.get(k).and_then(Value::as_u64)
 }
 
 /// 可选浮点：`null` / 缺失 / 非数字 → `None`。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn get_f64(v: &Value, k: &str) -> Option<f64> {
     v.get(k).and_then(Value::as_f64)
 }
@@ -27,11 +39,13 @@ pub(crate) fn get_f64(v: &Value, k: &str) -> Option<f64> {
 /// 温度是否真实可用：落在 `0..=120℃` 合理区间，且排除 MSACPI 未就绪的
 /// 标记值 2731（= 27.31 ℃ 的假值，恰好落入合理区间，须单独排除）。
 /// 五条温度采集路径共用同一判定，收敛到这里。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn thermal_ready(c: f64) -> bool {
     (0.0..=120.0).contains(&c) && !(27.0..=27.6).contains(&c)
 }
 
 /// 大整数千分位（`1,234,567`），避免累计错误数挤成一团。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn format_num(n: u64) -> String {
     let s = n.to_string();
     let bytes = s.as_bytes();
@@ -51,6 +65,7 @@ pub(crate) fn format_num(n: u64) -> String {
 /// **注意**：本函数只用于输出「对象」的脚本（`[ordered]@{...}`），**不做数组折叠**——
 /// `json_array_of` 会把对象裹成 `[{...}]`，之后 `v_arr()` 取不到顶层键，CPU/主板会静默变空。
 /// 输出「数组」的脚本请直接用下面的 `json_arr_of()`。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn json_of(script: &str, what: &str) -> Result<Value, String> {
     let raw = ps_capture(script)?;
     let raw = raw.trim().trim_start_matches('\u{feff}');
@@ -58,6 +73,7 @@ pub(crate) fn json_of(script: &str, what: &str) -> Result<Value, String> {
 }
 
 /// 跑一段输出数组的脚本并解析成数组（`ConvertTo-Json` 单项折叠成对象的坑在此兜底）。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn json_arr_of(script: &str, what: &str) -> Result<Vec<Value>, String> {
     let raw = ps_capture(script)?;
     let raw = json_array_of(raw.trim().trim_start_matches('\u{feff}'));
@@ -70,6 +86,13 @@ pub(crate) fn json_arr_of(script: &str, what: &str) -> Result<Vec<Value>, String
 /// `Win32_BIOS.ReleaseDate` 在不同系统上可能是 COM 日期串、也可能是
 /// `20200923121500.000+080` 这种数字串；后者只做「前 8 位日期」的安全解析，
 /// 解析不了就原样透传，绝不猜。
+/// WMI 日期字段序列化后是 COM 日期串 `/Date(1668470400000)/`（毫秒时间戳），
+/// 直接透传没人看得懂；能解析就转成 `yyyy-MM-dd`，失败就原样返回。
+///
+/// `Win32_BIOS.ReleaseDate` 在不同系统上可能是 COM 日期串、也可能是
+/// `20200923121500.000+080` 这种数字串；后者只做「前 8 位日期」的安全解析，
+/// 解析不了就原样透传，绝不猜。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn fmt_wmi_date(s: &str) -> String {
     let t = s.trim();
     if let Some(inner) = t.strip_prefix("/Date(").and_then(|x| x.strip_suffix(")/")) {
@@ -103,6 +126,7 @@ pub(crate) fn fmt_wmi_date(s: &str) -> String {
 }
 
 /// COM 毫秒时间戳 → `yyyy-MM-dd`（UTC）。
+#[cfg_attr(not(windows), allow(dead_code))]
 pub(crate) fn com_date_to_iso(ms: i64) -> String {
     let secs = ms.div_euclid(1000);
     // 1970-01-01 起算的天数 → 年/月/日（Howard Hinnant 的 civil_from_days 算法）。

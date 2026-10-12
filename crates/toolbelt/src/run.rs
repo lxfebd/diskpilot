@@ -7,7 +7,10 @@
 
 use std::collections::BTreeMap;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+// PathBuf 仅供 cfg(windows) 的 verbatim 前缀剥离块使用。
+#[cfg(windows)]
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::thread;

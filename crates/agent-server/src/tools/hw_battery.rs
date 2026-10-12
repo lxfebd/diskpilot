@@ -1,13 +1,21 @@
 //! 电池采集：电量/健康度/循环次数（只读，普通权限）。
 //!
 //! 从 hw.rs 拆分（2026-10-12）。
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留返回 Err 的 collect_battery），
+// 顶层 import 随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::tools::fmt_bytes;
+#[cfg(windows)]
 use crate::tools::hw_common::{get_int, json_of, v_arr};
+#[cfg(windows)]
 use crate::tools::v_str;
+#[cfg(windows)]
 use serde_json::Value;
 
 // ── 6. 电池 ───────────────────────────────────────────────────────────────
 
+/// 电池 PS 脚本仅 Windows 运行，Linux 下无消费方。
+#[cfg(windows)]
 const BATTERY_PS: &str = r#"
 $ErrorActionPreference='SilentlyContinue'
 $bats=@(Get-CimInstance Win32_Battery | Select-Object DeviceID,Name,ManufacturerName,SerialNumber,DesignCapacity,FullChargeCapacity,EstimatedChargeRemaining,EstimatedRunTime,BatteryStatus,Temperature,Chemistry)

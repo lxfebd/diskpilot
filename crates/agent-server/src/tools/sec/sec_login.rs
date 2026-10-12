@@ -1,8 +1,12 @@
 //! 3) 登录事件 + PowerShell 脚本块日志域（从 sec.rs 拆分，2026-10-12）。
 
+// ps_capture_timeout / v_str 仅供 cfg(windows) 的 collect_login_events 使用
+//（Linux 仅返回降级文案），随 Windows 实现一起编译。
+#[cfg(windows)]
 use crate::ps::ps_capture_timeout;
 #[cfg(windows)]
 use crate::tools::sec::sec_common::{trunc_msg, v_arr};
+#[cfg(windows)]
 use crate::tools::v_str;
 
 #[cfg(windows)]
@@ -20,6 +24,8 @@ use super::NOT_WINDOWS;
 /// 导致整体工具超时（冒烟发现无 id=2 响应且 60s 后进程存活）。改为：
 /// 按日志名先锚定「最近事件」——历史日志非空即视为可读，规避冷路径长阻塞；
 /// 仍不可读时走既有降级文案。加 -ErrorAction SilentlyContinue 双保险。
+/// 仅 PowerShell 查询使用（Linux 下无消费方）。
+#[cfg(windows)]
 const LOGIN_PS_TMPL: &str = r#"
 $n = __N__
 $secOk = $false

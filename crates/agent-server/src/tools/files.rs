@@ -211,6 +211,7 @@ mod tests {
     /// M1 回归：词法 + 真实路径组合的守卫列表——短名段与 `..` 同时出现也必须拦。
     #[test]
     fn system_dir_mixed_short_and_dotdot() {
+        #[cfg(windows)]
         let g = PathGuard;
         #[cfg(windows)]
         {
@@ -231,6 +232,7 @@ mod tests {
     /// M1 回归：check_for_write 对系统目录**子项**（用 8.3 短名前缀）也必须拒绝。
     #[test]
     fn check_for_write_short_name_prefix_rejected() {
+        #[cfg(windows)]
         let g = PathGuard;
         #[cfg(windows)]
         {
@@ -255,6 +257,7 @@ mod tests {
     /// 但系统目录内容泄漏照样敏感。
     #[test]
     fn check_read_allows_drive_root_but_blocks_system() {
+        #[cfg(windows)]
         let g = PathGuard;
         // 盘根：只读放行（路径不存在时按 Missing 处理，属存在性前置而非守卫拒绝）
         #[cfg(windows)]

@@ -67,7 +67,11 @@ pub use crate::tools::net_wifi::collect_net_wifi;
 
 #[cfg(test)]
 mod tests {
-    use crate::tools::net_status::{adapter_status_cn, collect_adapter_detail, prefix_to_mask};
+    use crate::tools::net_status::collect_adapter_detail;
+    // adapter_status_cn / prefix_to_mask 仅 Windows 实现（net_status 采集内部符号）。
+    #[cfg(windows)]
+    use crate::tools::net_status::{adapter_status_cn, prefix_to_mask};
+    #[cfg(windows)]
     use crate::tools::net_wifi::wifi_profile_security_script;
 
     #[test]
@@ -91,8 +95,9 @@ mod tests {
 
     /// 注入回归：profile 名（恶意 SSID 可控制）必须被 PowerShell **单引号字面量**
     /// 完整包住——双引号里 `$(...)` / 反引号会被 PS 先求值再传给 netsh
-    /// （2026-10-11 实测注入成立后修复）。
+    /// （2026-10-11 实测注入成立后修复）。函数依赖 cfg(windows) 的 sys 转义，仅 Windows 编译。
     #[test]
+    #[cfg(windows)]
     fn wifi_profile_script_is_ps_single_quoted_literal() {
         // 注入载荷原样保留（单引号内 = 字面量）
         let s = wifi_profile_security_script("evil$(Write-Output pwned)`whoami");

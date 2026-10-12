@@ -10,8 +10,9 @@ pub use apps_enum::list_installed_apps;
 pub use apps_licenses::collect_licenses;
 pub use apps_uninstall::uninstall_app;
 
-// 回归测试引用的许可证解析符号。
-#[cfg(test)]
+// 回归测试引用的许可证解析符号：office_activation / parse_activation_text
+// 仅 Windows 实现，对应测试 fn 均带 cfg(windows)。
+#[cfg(all(test, windows))]
 pub(crate) use apps_licenses::{office_activation, parse_activation_text};
 
 // 2026-10-12 拆分：程序枚举 → `apps_enum`，卸载助手 → `apps_uninstall`，

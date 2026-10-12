@@ -2,10 +2,19 @@
 //!
 //! from tools/net.rs 拆分（2026-10-12）。
 
+// 本文件采集实现均为 cfg(windows)（Linux 仅保留 collect_net_wifi 降级 fn），
+// 顶层 import 随 Windows 实现一起编译，避免 Linux 下 unused-import 告警。
+#[cfg(windows)]
 use crate::ps::ps_capture;
+#[cfg(windows)]
 use serde_json::Value;
 
-use crate::tools::net_util::{get_int, is_emptyish, json_arr_of, wide_to_string};
+#[cfg(windows)]
+use crate::tools::net_util::{get_int, is_emptyish, json_arr_of};
+// wide_to_string 仅 Windows 有实现（wlanapi 宽字符回调），随 cfg(windows) 使用方编译。
+#[cfg(windows)]
+use crate::tools::net_util::wide_to_string;
+#[cfg(windows)]
 use crate::tools::v_str;
 
 // ── 5. WiFi ─────────────────────────────────────────────────────────────
@@ -143,6 +152,8 @@ Get-NetWiFiInterface | Where-Object { $_.Name } | ForEach-Object {
 
 /// 构造「查单个 profile 安全类型」的 netsh 命令（抽成纯函数便于回归测试）。
 /// 转义规则见 [`ps_wifi_profile_security`] 的注入防护说明。
+/// 依赖 `sys::escape_ps_single_quoted`（cfg(windows) 重导出），仅 Windows 编译。
+#[cfg(windows)]
 pub(crate) fn wifi_profile_security_script(profile: &str) -> String {
     let escaped = crate::tools::sys::escape_ps_single_quoted(profile);
     format!("netsh wlan show profiles name='{escaped}'")
