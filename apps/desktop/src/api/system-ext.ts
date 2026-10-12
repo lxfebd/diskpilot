@@ -770,6 +770,9 @@ export interface HwDiskHealth {
   reliability?: boolean;
   cdi_report?: Array<Record<string, unknown>>;
   note?: string;
+  /** 映射盘（subst）：`{ letter: 'D', target: 'J:\\D' }`。不是独立物理盘，
+   *  空间与目标卷同一份——清理/用量口径都要按目标卷算。 */
+  substs?: Array<{ letter?: string; target?: string }>;
 }
 
 export interface HwTestReport {

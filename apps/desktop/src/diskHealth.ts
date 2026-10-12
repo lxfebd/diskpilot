@@ -75,13 +75,65 @@ export function pathDriveLetter(p: string): string {
   return m ? m[1].toUpperCase() : '';
 }
 
+/**
+ * 映射盘（`subst D: J:\D` 这类）：它不是独立物理盘，空间和目标卷是同一份。
+ * 后端 hw_disk_health 的 `substs` 原值形如 `{ letter: 'D', target: 'J:\\D' }`。
+ */
+export interface DriveAlias {
+  letter: string;
+  target: string;
+}
+
+/** 健康对象里的 substs → 归一化别名表（字母大写、去重、缺 target 的丢掉）。 */
+export function driveAliasesOf(health: unknown): DriveAlias[] {
+  const raw = (health as Record<string, unknown> | null)?.substs;
+  if (!Array.isArray(raw)) return [];
+  const out: DriveAlias[] = [];
+  const seen = new Set<string>();
+  for (const s of raw) {
+    const letter = String((s as Record<string, unknown>)?.letter ?? '').trim().toUpperCase();
+    const target = String((s as Record<string, unknown>)?.target ?? '').trim();
+    if (letter.length !== 1 || !target) continue;
+    if (seen.has(letter)) continue;
+    seen.add(letter);
+    out.push({ letter, target });
+  }
+  return out;
+}
+
+/**
+ * 盘符 → 真正承载它的盘符：映射盘（`D:` 是 `J:\D` 的 subst）解析成目标卷的字母。
+ * 解析不出目标卷（target 不是盘符路径）时退回原字母，不猜。
+ */
+export function resolveLetter(letter: string, aliases: DriveAlias[]): string {
+  const up = letter.trim().toUpperCase();
+  if (up.length !== 1) return '';
+  const alias = aliases.find((a) => a.letter === up);
+  if (!alias) return up;
+  return pathDriveLetter(alias.target) || up;
+}
+
+/**
+ * 路径 → 真正承载它的盘符。
+ *
+ * 映射盘必须解析：`D:` 若是 `J:\D` 的 subst，文件其实躺在 J: 那块盘上——
+ * 不解析就会「D 没有映射到任何物理盘」而放过一次对坏盘的批量清理。
+ */
+export function resolveDriveLetter(p: string, aliases: DriveAlias[]): string {
+  return resolveLetter(pathDriveLetter(p), aliases);
+}
+
 /** 这批路径落在哪些可疑盘上（空 = 没有可疑盘，或可疑盘映射不到盘符）。 */
-export function pathsOnRiskyDrives(disks: unknown[], paths: string[]): RiskyDrive[] {
+export function pathsOnRiskyDrives(
+  disks: unknown[],
+  paths: string[],
+  aliases: DriveAlias[] = [],
+): RiskyDrive[] {
   const risky = riskyDrives(disks);
   if (risky.length === 0) return [];
   const hit = new Set<string>();
   for (const p of paths) {
-    const l = pathDriveLetter(p);
+    const l = resolveDriveLetter(p, aliases);
     if (l) hit.add(l);
   }
   if (hit.size === 0) return [];

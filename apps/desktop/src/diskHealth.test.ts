@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  driveAliasesOf,
   driveLettersOf,
   gradeDiskHealth,
   pathDriveLetter,
   pathsOnRiskyDrives,
+  resolveDriveLetter,
+  resolveLetter,
   riskyDrives,
 } from './diskHealth';
 
@@ -111,5 +114,53 @@ describe('riskyDrives / pathsOnRiskyDrives（清理前的坏盘提醒）', () =>
   it('UNC / 非盘符路径不命中', () => {
     const disks = [{ friendly: 'X', health: 'Warning', drive_letters: 'C' }];
     expect(pathsOnRiskyDrives(disks, ['\\\\nas\\share\\file.txt'])).toEqual([]);
+  });
+});
+
+// 本机实测：D: 不在 Get-Partition 里，它是 `subst D: J:\D`——同一块 KIOXIA 上的映射盘。
+// 不解析就会「D 没映射到任何物理盘」，对坏盘的清理提醒直接放过。
+describe('映射盘（subst）解析', () => {
+  const ALIASES = [{ letter: 'D', target: 'J:\\D' }];
+
+  it('driveAliasesOf 归一化后端 substs，缺 target / 非单字母丢掉', () => {
+    expect(
+      driveAliasesOf({
+        substs: [
+          { letter: 'd', target: 'J:\\D' },
+          { letter: 'D', target: 'K:\\other' },
+          { letter: 'DD', target: 'J:\\x' },
+          { letter: 'E', target: '' },
+          null,
+        ],
+      }),
+    ).toEqual([{ letter: 'D', target: 'J:\\D' }]);
+    expect(driveAliasesOf({})).toEqual([]);
+    expect(driveAliasesOf(null)).toEqual([]);
+  });
+
+  it('resolveLetter：映射盘解析成目标卷字母，普通盘原样', () => {
+    expect(resolveLetter('D', ALIASES)).toBe('J');
+    expect(resolveLetter('d', ALIASES)).toBe('J');
+    expect(resolveLetter('C', ALIASES)).toBe('C');
+    expect(resolveLetter('', ALIASES)).toBe('');
+  });
+
+  it('映射目标不是盘符路径时退回原字母（不猜）', () => {
+    expect(resolveLetter('D', [{ letter: 'D', target: '\\\\nas\\share' }])).toBe('D');
+    expect(resolveDriveLetter('D:\\Downloads\\a.zip', [{ letter: 'D', target: '\\\\nas\\share' }])).toBe('D');
+  });
+
+  it('resolveDriveLetter：D: 上的路径算到 J: 那块盘', () => {
+    expect(resolveDriveLetter('D:\\Downloads\\a.zip', ALIASES)).toBe('J');
+    expect(resolveDriveLetter('D:\\Downloads\\a.zip', [])).toBe('D');
+  });
+
+  it('可疑盘是 J 时，清理 D: 上的文件同样要被拦', () => {
+    const disks = [{ friendly: 'KIOXIA 2TB', health: 'Unhealthy', drive_letters: 'J' }];
+    const hit = pathsOnRiskyDrives(disks, ['D:\\Downloads\\big.zip'], ALIASES);
+    expect(hit).toHaveLength(1);
+    expect(hit[0].friendly).toBe('KIOXIA 2TB');
+    // 不给别名表就漏掉——这正是修复前的行为。
+    expect(pathsOnRiskyDrives(disks, ['D:\\Downloads\\big.zip'])).toEqual([]);
   });
 });

@@ -260,3 +260,100 @@ pub fn collect_volume_meta() -> Vec<VolumeMeta> {
 pub fn collect_volume_meta() -> Vec<VolumeMeta> {
     Vec::new()
 }
+
+/// 路径开头盘符的大写单字母（`C:\Users\x` → `C`）；UNC / 相对 / 裸字母外一律空串。
+pub fn path_drive_letter(p: &str) -> String {
+    let bytes = p.as_bytes();
+    if bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' {
+        let rest_two = bytes.len() >= 3;
+        if !rest_two || bytes[2] == b'\\' || bytes[2] == b'/' {
+            return (bytes[0] as char).to_ascii_uppercase().to_string();
+        }
+    }
+    String::new()
+}
+
+/// `subst` 的一行输出 → (盘符, 目标路径)。本机实测格式：`D:\: => J:\D`。
+/// 认不出的一律 None，不猜。
+pub fn parse_subst_line(line: &str) -> Option<(String, String)> {
+    let (left, right) = line.split_once("=>")?;
+    let letter = left.trim().trim_end_matches(['\\', ':']);
+    let target = right.trim();
+    let mut chars = letter.chars();
+    let c = chars.next()?;
+    if chars.next().is_some() || !c.is_ascii_alphabetic() || target.is_empty() {
+        return None;
+    }
+    Some((c.to_ascii_uppercase().to_string(), target.to_string()))
+}
+
+/// `subst` 的全部输出 → 映射盘表。
+pub fn parse_subst_output(text: &str) -> Vec<(String, String)> {
+    text.lines().filter_map(parse_subst_line).collect()
+}
+
+/// 映射盘（`subst D: J:\D`）列表。它们不在 `Get-Partition` / `Get-Volume` 里，
+/// 却会被 `GetLogicalDrives` 数成一个盘符——不识别就会把同一份空间算两遍。
+#[cfg(windows)]
+pub fn collect_substs() -> Vec<(String, String)> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let Ok(out) = std::process::Command::new("subst")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    // subst.exe 按控制台代码页输出：路径含中文时 UTF-8 解码会出替换符。
+    // 调用方只靠目标路径开头的盘符（纯 ASCII）判断落在哪块盘，不受影响；
+    // 展示时再按有没有替换符决定要不要原样打印路径。
+    parse_subst_output(&String::from_utf8_lossy(&out.stdout))
+}
+
+#[cfg(not(windows))]
+pub fn collect_substs() -> Vec<(String, String)> {
+    Vec::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn subst_line_parses_real_output_shape() {
+        // 本机实测：`D:\: => J:\D`
+        assert_eq!(
+            parse_subst_line("D:\\: => J:\\D"),
+            Some(("D".into(), "J:\\D".into()))
+        );
+        assert_eq!(
+            parse_subst_line("X:\\: => \\\\nas\\share"),
+            Some(("X".into(), "\\\\nas\\share".into()))
+        );
+        // 认不出的不猜。
+        assert_eq!(parse_subst_line(""), None);
+        assert_eq!(parse_subst_line("No Subst drive entries."), None);
+        assert_eq!(parse_subst_line("D:\\: => "), None);
+        assert_eq!(parse_subst_line("DD:\\: => J:\\D"), None);
+        assert_eq!(
+            parse_subst_output("D:\\: => J:\\D\njunk line\nE:\\: => F:\\x"),
+            vec![
+                ("D".to_string(), "J:\\D".to_string()),
+                ("E".to_string(), "F:\\x".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn path_drive_letter_only_accepts_real_drive_roots() {
+        assert_eq!(path_drive_letter("C:\\Users\\me"), "C");
+        assert_eq!(path_drive_letter("g:/media/x"), "G");
+        assert_eq!(path_drive_letter("D:"), "D");
+        assert_eq!(path_drive_letter("\\\\nas\\share\\f"), "");
+        assert_eq!(path_drive_letter("relative\\path"), "");
+        assert_eq!(path_drive_letter(""), "");
+    }
+}

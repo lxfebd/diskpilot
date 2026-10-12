@@ -12,7 +12,7 @@ import { formatBytes } from '../../format';
 import { useT } from '../../i18n';
 import { type HwDiskHealth } from '../../api';
 import { ensureHwLoaded, getHwCache } from '../../hwCache';
-import { riskyDrives } from '../../diskHealth';
+import { driveAliasesOf, resolveLetter, riskyDrives } from '../../diskHealth';
 import type { DryRunPreview } from '../../cleanup/model';
 import type { RecycleGranularity } from '../../types';
 
@@ -57,8 +57,13 @@ export function DryRunPreviewDialog({
       cancelled = true;
     };
   }, []);
+  // 映射盘（subst D: → J:\D）要先解析成真正承载它的盘，否则「D 没映射到物理盘」
+  // 会放过一次对坏盘的批量清理。
+  const aliases = driveAliasesOf(health);
   const risky = riskyDrives(health?.disks ?? []).filter((d) =>
-    d.letters.some((l) => preview.driveCounts.some((c) => c.letter === l)),
+    d.letters.some((l) =>
+      preview.driveCounts.some((c) => resolveLetter(c.letter, aliases) === l),
+    ),
   );
   const riskyBlocked = risky.length > 0 && !ackRisky;
   const armTimeoutRef = useRef<number | null>(null);
@@ -106,7 +111,9 @@ export function DryRunPreviewDialog({
           <div className="cleanup-preview-drives muted small">
             {t('cleanup.previewDrivesLead')}
             {preview.driveCounts.map((d, i) => {
-              const riskyDrive = risky.some((r) => r.letters.includes(d.letter));
+              const riskyDrive = risky.some((r) =>
+                r.letters.includes(resolveLetter(d.letter, aliases)),
+              );
               return (
                 <span
                   key={d.letter}

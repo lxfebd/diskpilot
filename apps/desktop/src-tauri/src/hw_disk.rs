@@ -30,9 +30,14 @@ Get-Partition -ErrorAction SilentlyContinue | ForEach-Object {
   $g=Get-Disk -Number $_.DiskNumber -ErrorAction SilentlyContinue
   if($g){ $k=[string]$g.FriendlyName; if($dl.ContainsKey($k)){$dl[$k]+=",$($_.DriveLetter)"}else{$dl[$k]=[string]$_.DriveLetter} }
 }
+# 映射盘（subst D: J:\D）：Get-Partition 看不到它们（本机 D: 就是 J:\D 的 subst），
+# 不列出来会被当成多出来的一块盘、可用空间重复计算，清理也会按错的盘做健康提醒。
+$ss=@()
+subst | ForEach-Object { if($_ -match '^([A-Za-z]):\\?: => (.+)$'){ $ss += [ordered]@{ letter=$matches[1].ToUpper(); target=$matches[2].Trim() } } }
 $out=[ordered]@{
   disks=@($disks | ForEach-Object { $rc=$_ | Get-StorageReliabilityCounter; $fn=[string]$_.FriendlyName; [ordered]@{ friendly=$_.FriendlyName; media=$_.MediaType; bus=$_.BusType; size=$_.Size; health=[string]$_.HealthStatus; operational=($_.OperationalStatus -join ','); is_boot=$_.IsBoot; drive_letters=if($dl.ContainsKey($fn)){$dl[$fn]}else{''}; power_on_hours=$rc.PowerOnHours; temperature_c=$rc.Temperature; wear_pct=$rc.Wear; read_errors=$rc.ReadErrorsTotal; write_errors=$rc.WriteErrorsTotal } })
   reliability=@(@($disks | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue).Count -gt 0)
+  substs=$ss
 }
 $out | ConvertTo-Json -Depth 4 -Compress
 "#;

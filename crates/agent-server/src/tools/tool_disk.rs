@@ -41,7 +41,34 @@ impl AgentServer {
                     })
                     .collect::<Vec<_>>()
                     .join("\n");
-                Ok(format!("磁盘概览（{} 个分区）：\n{lines}", disks.len()))
+                // 映射盘（subst）会被 GetLogicalDrives 数成一个盘符，但它没有自己的
+                // 分区与空间：不说清楚，AI 会把同一份可用空间算两遍、把 7 个盘符说成 7 块盘。
+                let mut notes = String::new();
+                for (letter, target) in disk::collect_substs() {
+                    let real = disk::path_drive_letter(&target);
+                    let note = if target.contains('\u{FFFD}') {
+                        // subst.exe 按控制台代码页输出，中文路径解码不出就不贴乱码，
+                        // 只说明它落在哪块盘上。
+                        if real.is_empty() {
+                            format!("\n映射盘 {letter}: 是映射盘（不是独立物理盘，目标卷未识别）")
+                        } else {
+                            format!(
+                                "\n映射盘 {letter}: 实际位于 {real}: 盘上（不是独立物理盘，空间与 {real}: 同一份）"
+                            )
+                        }
+                    } else if real.is_empty() {
+                        format!("\n映射盘 {letter}: → {target}（不是独立物理盘）")
+                    } else {
+                        format!(
+                            "\n映射盘 {letter}: → {target}（不是独立物理盘，空间与 {real}: 同一份，别按两块盘重复计算）"
+                        )
+                    };
+                    notes.push_str(&note);
+                }
+                Ok(format!(
+                    "磁盘概览（{} 个分区）：\n{lines}{notes}",
+                    disks.len()
+                ))
             },
             "磁盘概览读取",
         )

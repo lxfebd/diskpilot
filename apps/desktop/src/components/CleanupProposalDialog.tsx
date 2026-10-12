@@ -4,7 +4,7 @@ import { useStore, type CleanupProposalItem } from '../store';
 import { api } from '../api';
 import type { HwDiskHealth } from '../api';
 import { ensureHwLoaded, getHwCache } from '../hwCache';
-import { pathsOnRiskyDrives } from '../diskHealth';
+import { driveAliasesOf, pathsOnRiskyDrives } from '../diskHealth';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
 import { RISK_META, RISK_ORDER } from './cleanup/RiskBadge';
@@ -124,6 +124,7 @@ export function CleanupProposalDialog() {
   const risky = pathsOnRiskyDrives(
     health?.disks ?? [],
     selectedItems.map((it) => it.path),
+    driveAliasesOf(health),
   );
   const riskyBlocked = risky.length > 0 && !ackRisky;
 
