@@ -20,9 +20,11 @@
 
 mod bench_core;
 mod bench_pattern;
+mod bench_stress;
 mod bench_util;
 
-pub use bench_core::{bench_cpu, bench_disk, bench_memory, mem_test, stress_test, stress_test_gpu};
+pub use bench_core::{bench_cpu, bench_disk, bench_memory};
+pub use bench_stress::{mem_test, stress_test, stress_test_gpu};
 pub use bench_util::stress_cancel;
 
 // 供回归测试引用（pattern 校验与线程数选择辅助）。
