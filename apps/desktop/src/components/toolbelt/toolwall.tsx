@@ -593,6 +593,9 @@ export function CatalogWall({
   // 「AI 可操作」分区：agent-server 的全部 MCP 工具（纯展示不启动 exe；
   // writable 字段区分只读 / 写操作，数字随后端清单动态变化）。
   const [agentTools, setAgentTools] = useState<AgentToolMeta[] | null>(null);
+  // AI 分区不可用的确切原因：'missing' = agent-server.exe 找不到（安装包缺 sidecar /
+  // dev 没编，用户能自己修）；'failed' = 找得到但握手或清单拉取失败。
+  const [agentIssue, setAgentIssue] = useState<'missing' | 'failed' | null>(null);
   const [agentDetail, setAgentDetail] = useState<AgentToolMeta | null>(null);
   // 「隐藏推广」开关：图吧包内自带流量卡/加速器返利链等纯推广 .bat，
   // 标 is_promotion 后默认**隐藏**（用户明确要求去推广）；可手动切回显示。
@@ -604,12 +607,27 @@ export function CatalogWall({
   }, []);
 
   // 「AI 可操作」分区数据：agent-server 全部 MCP 工具清单（数字随真实清单）。
-  // 拉取失败（agent-server 未构建/不可用）时静默降级，不阻塞工具墙本体。
+  // 拉取失败时不再静默消失——探活分出「二进制找不到」与「找得到但握手失败」，
+  // 前者用户能自己修（安装包缺 sidecar / dev 没编 agent-server）。
   useEffect(() => {
     if (!isTauri) return;
     api.listTools()
-      .then((tools) => setAgentTools(tools.length ? tools : null))
-      .catch(() => setAgentTools(null));
+      .then((tools) => {
+        if (tools.length) {
+          setAgentTools(tools);
+          setAgentIssue(null);
+        } else {
+          setAgentTools(null);
+          setAgentIssue('failed');
+        }
+      })
+      .catch(() => {
+        setAgentTools(null);
+        void api
+          .agentReady()
+          .then((ready) => setAgentIssue(ready ? 'failed' : 'missing'))
+          .catch(() => setAgentIssue('failed'));
+      });
   }, []);
 
     // 与后端 find_manifest 同语义的部分匹配：目录名「cpu-z」vs manifest 名
@@ -863,6 +881,20 @@ export function CatalogWall({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* AI 分区不可用：说清原因，而不是整块凭空消失 */}
+            {activeCat === '__all__' && !query && !agentTools && agentIssue && (
+              <div className="toolwall-ai-unavailable">
+                <span className="toolwall-ai-unavailable-title">
+                  <ShieldAlert size={14} /> {t('toolbelt.wall.aiUnavailableTitle')}
+                </span>
+                <span className="muted small">
+                  {agentIssue === 'missing'
+                    ? t('toolbelt.wall.aiUnavailableMissing')
+                    : t('toolbelt.wall.aiUnavailableFailed')}
+                </span>
               </div>
             )}
           </>

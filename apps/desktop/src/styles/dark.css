@@ -394,6 +394,9 @@ html[data-mode="dark"] .toolwall-nav-count { background: rgba(255,255,255,.08); 
 
 /* 「AI 可操作」分区：agent-server 39 个只读 MCP 工具 */
 .toolwall-ai-section { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line, rgba(128,128,128,.25)); }
+/* AI 分区不可用时的说明块：与分区同一视觉位置，避免整块凭空消失 */
+.toolwall-ai-unavailable { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line, rgba(128,128,128,.25)); }
+.toolwall-ai-unavailable-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .toolwall-ai-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 .toolwall-ai-card {
   display: flex; flex-direction: column; gap: 5px; text-align: left;

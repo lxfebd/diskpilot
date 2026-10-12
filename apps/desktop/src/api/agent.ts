@@ -36,4 +36,9 @@ export const agentApi = {
     isTauri
       ? invoke<boolean>('agent_tool_cancel')
       : Promise.resolve(false),
+  /** 探活：agent-server.exe 是否找得到（不 spawn、不握手，纯定位二进制）。
+   *  用于把「AI 工具不可用」说清原因：找不到二进制（安装包缺 sidecar / dev 没编）
+   *  与找得到但握手失败是两回事，前者用户能自己修。 */
+  agentReady: () =>
+    isTauri ? invoke<boolean>('agent_server_ready') : Promise.resolve(false),
 };
