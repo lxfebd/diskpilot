@@ -1,7 +1,8 @@
 //! 系统/文件/进程/程序域工具处理器（从 tools/mod.rs 拆分，2026-10-12）。
+//! 服务/启动 → `tool_sys_services`，盘点/杂项 → `tool_sys_misc`（2026-10-12 再拆分）。
 
 use crate::tools::params::*;
-use crate::tools::{apps, envx, files, hw, process, sec, sys, system};
+use crate::tools::{apps, files, process, sys, system};
 use crate::tools::{blocking_call, fmt_bytes, tool_error, AgentServer};
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_router,
@@ -403,127 +404,4 @@ impl AgentServer {
     ) -> Result<CallToolResult, McpError> {
         Ok(blocking_call(45, apps::collect_licenses, "许可证查询").await)
     }
-
-    // ── 硬件（hw.rs）──────────────────────────────────────────────
-
-    #[tool(
-        description = "列出 Windows 服务：服务名/显示名/状态/启动类型/进程 PID（只读，不需要管理员权限）。可按关键字过滤、可含已禁用服务——服务启动类型与 ImagePath 直接读注册表，准确度高。用户问『什么服务在跑/某服务是干嘛的/怎么启动方式』时调用。"
-    )]
-    async fn sys_services(
-        &self,
-        Parameters(p): Parameters<SysServicesParams>,
-    ) -> Result<CallToolResult, McpError> {
-        let keyword = p.keyword.clone();
-        let show_disabled = p.show_disabled.unwrap_or(false);
-        let top_n = p.top_n.unwrap_or(50);
-        Ok(blocking_call(
-            45,
-            move || sys::collect_services(keyword, show_disabled, top_n),
-            "服务列表读取",
-        )
-        .await)
-    }
-
-    #[tool(
-        description = "列出驱动（设备驱动）：名称/类型/厂商/驱动日期与版本/设备状态（只读，不需要管理员权限）。可按关键字过滤。用户问『装了什么驱动/某驱动是干嘛的/驱动是不是太旧』时调用。"
-    )]
-    async fn sys_drivers(
-        &self,
-        Parameters(p): Parameters<SysDriversParams>,
-    ) -> Result<CallToolResult, McpError> {
-        let keyword = p.keyword.clone();
-        let top_n = p.top_n.unwrap_or(50);
-        Ok(blocking_call(
-            45,
-            move || sys::collect_drivers(keyword, top_n),
-            "驱动列表读取",
-        )
-        .await)
-    }
-
-    #[tool(
-        description = "列出开机启动项：注册表 Run 键（含策略强制项与 32 位视图）+ 启动文件夹（只读，不删除不禁用），可附带计划任务。僵尸启动项（文件已不存在）会标红提示。用户问『开机自动启动了什么/怎么精简开机项』时调用。"
-    )]
-    async fn sys_boot_items(
-        &self,
-        Parameters(p): Parameters<SysBootItemsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        let include_scheduled = p.include_scheduled.unwrap_or(false);
-        Ok(blocking_call(
-            45,
-            move || sys::collect_boot_items(include_scheduled),
-            "启动项读取",
-        )
-        .await)
-    }
-
-    #[tool(
-        description = "控制 Windows 服务：启动 / 停止 / 重启（**写操作，可逆**）。系统关键服务（内核/系统核心）会被安全守卫拒绝。**此工具会改变系统状态，主项目侧会先弹确认门，用户确认后才真正执行**。用户明确要求『帮我停掉某服务/启动某服务/重启某服务』时调用；参数 action 取 start / stop / restart。"
-    )]
-    async fn service_control(
-        &self,
-        Parameters(p): Parameters<ServiceControlParams>,
-    ) -> Result<CallToolResult, McpError> {
-        if let Err(e) = files::require_confirmed() {
-            return Ok(tool_error(e));
-        }
-        let name = p.name.clone();
-        let action = p.action.clone();
-        Ok(blocking_call(60, move || sys::control_service(&name, &action), "服务控制").await)
-    }
-
-    // ── 盘点/建议（steam.rs + cleanup.rs）──────────────────────────────
-
-    #[tool(
-        description = "列出 USB 设备：控制器/集线器/外设 + 厂商/服务/状态（只读，PNP 枚举，普通权限，不读设备内容）。用户问『插了什么 USB 设备/U 盘/键鼠/摄像头识别到没有』时调用。"
-    )]
-    async fn usb_devices(
-        &self,
-        _p: Parameters<UsbDevicesParams>,
-    ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, hw::collect_usb_devices, "USB 设备枚举").await)
-    }
-
-    #[tool(
-        description = "读取 Windows Defender 安全中心状态（只读）：服务状态 + 实时保护开关 + 病毒库/引擎版本 + 最近快速扫描时间。用户问『杀毒软件开没开/Windows 安全中心状态/病毒库新不新』时调用；若系统用第三方杀软（Defender 被替换）会如实说明。"
-    )]
-    async fn sys_defender_status(
-        &self,
-        _p: Parameters<DefenderStatusParams>,
-    ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, sec::collect_defender_status, "Defender 状态读取").await)
-    }
-
-    #[tool(
-        description = "枚举本机用户账户（只读）：账户名/全名/是否禁用/是否锁定/本地或域账户/SID 尾段，排除内置系统账户（defaultuser0 等）。用户问『这台电脑有哪些用户/有几个账户/禁用账户是谁』时调用；无需管理员即可读取，受限时如实降级。隐私红线：绝不输出任何密码/token 信息。"
-    )]
-    async fn sys_user_accounts(
-        &self,
-        _p: Parameters<UserAccountsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(45, sec::collect_user_accounts, "用户账户枚举").await)
-    }
-
-    #[tool(
-        description = "查询本机回收站状态（只读，Windows API）：逐卷文件数与总大小 + 合计。用户问『回收站占了多少空间/回收站里有多少东西/能不能清回收站腾空间』时调用。只读状态，不执行清空。"
-    )]
-    async fn recycle_bin_stats(
-        &self,
-        _p: Parameters<RecycleBinStatsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(30, envx::collect_recycle_bin_stats, "回收站状态查询").await)
-    }
-
-    #[tool(
-        description = "读取环境变量值（只读）：传 name 查指定变量；不传列出常用子集（PATH/TEMP/USERPROFILE/APPDATA 等）。用户问『某个路径在哪/环境变量配没配/命令找不到是不是 PATH 问题』时调用。"
-    )]
-    async fn env_vars(
-        &self,
-        Parameters(p): Parameters<EnvVarsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        let name = p.name.clone();
-        Ok(blocking_call(30, move || envx::collect_env_vars(name), "环境变量读取").await)
-    }
-
-    // ── 磁盘深入（diskx.rs）───────────────────────────────────────
 }

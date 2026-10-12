@@ -44,11 +44,14 @@ pub mod toolbelt;
 
 mod lenient;
 // 工具分发 impl 按域拆分（2026-10-12）：各域独立的 `#[tool_router]` 块，
-// router 在下方 `tool_router()` 合并。
+// router 在下方 `tool_router()` 合并。tool_sys 再按方法群拆为
+// tool_sys / tool_sys_services / tool_sys_misc 三个平级块（2026-10-12）。
 mod tool_disk;
 mod tool_hw;
 mod tool_misc;
 mod tool_sys;
+mod tool_sys_misc;
+mod tool_sys_services;
 
 use rmcp::{
     handler::server::ServerHandler,
@@ -248,6 +251,8 @@ impl AgentServer {
     fn tool_router() -> rmcp::handler::server::router::tool::ToolRouter<Self> {
         Self::tool_router_disk()
             + Self::tool_router_sys()
+            + Self::tool_router_sys_services()
+            + Self::tool_router_sys_misc()
             + Self::tool_router_hw()
             + Self::tool_router_misc()
     }
