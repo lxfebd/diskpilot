@@ -22,8 +22,16 @@ fn hw_disk_snapshot_lock() -> &'static Mutex<Option<HwDiskSnapshot>> {
 
 const HW_DISK_PS: &str = r#"$ErrorActionPreference='SilentlyContinue'
 $disks=Get-PhysicalDisk
+# 物理盘 → 盘符映射（按 Get-Disk.FriendlyName 对齐 Get-PhysicalDisk.FriendlyName）：
+# 用户问的是「我的 C 盘是哪块盘、健康吗」，只有型号名对不上号。映射不到就留空，不猜。
+$dl=@{}
+Get-Partition -ErrorAction SilentlyContinue | ForEach-Object {
+  if(-not $_.DriveLetter){return}
+  $g=Get-Disk -Number $_.DiskNumber -ErrorAction SilentlyContinue
+  if($g){ $k=[string]$g.FriendlyName; if($dl.ContainsKey($k)){$dl[$k]+=",$($_.DriveLetter)"}else{$dl[$k]=[string]$_.DriveLetter} }
+}
 $out=[ordered]@{
-  disks=@($disks | ForEach-Object { $rc=$_ | Get-StorageReliabilityCounter; [ordered]@{ friendly=$_.FriendlyName; media=$_.MediaType; bus=$_.BusType; size=$_.Size; health=[string]$_.HealthStatus; operational=($_.OperationalStatus -join ','); is_boot=$_.IsBoot; power_on_hours=$rc.PowerOnHours; temperature_c=$rc.Temperature; wear_pct=$rc.Wear; read_errors=$rc.ReadErrorsTotal; write_errors=$rc.WriteErrorsTotal } })
+  disks=@($disks | ForEach-Object { $rc=$_ | Get-StorageReliabilityCounter; $fn=[string]$_.FriendlyName; [ordered]@{ friendly=$_.FriendlyName; media=$_.MediaType; bus=$_.BusType; size=$_.Size; health=[string]$_.HealthStatus; operational=($_.OperationalStatus -join ','); is_boot=$_.IsBoot; drive_letters=if($dl.ContainsKey($fn)){$dl[$fn]}else{''}; power_on_hours=$rc.PowerOnHours; temperature_c=$rc.Temperature; wear_pct=$rc.Wear; read_errors=$rc.ReadErrorsTotal; write_errors=$rc.WriteErrorsTotal } })
   reliability=@(@($disks | Get-StorageReliabilityCounter -ErrorAction SilentlyContinue).Count -gt 0)
 }
 $out | ConvertTo-Json -Depth 4 -Compress

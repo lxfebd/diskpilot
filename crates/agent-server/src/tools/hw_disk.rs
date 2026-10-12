@@ -18,12 +18,21 @@ use serde_json::Value;
 #[cfg(windows)]
 pub(crate) const DISK_SMART_PS: &str = r#"$ErrorActionPreference='SilentlyContinue'
 $disks=Get-PhysicalDisk
+# 物理盘 → 盘符映射（Get-Disk.FriendlyName 对齐 Get-PhysicalDisk.FriendlyName）：
+# 用户问的是「我要清的这块 C 盘是哪块盘、健康吗」，只有型号名对不上号。映射不到留空，不猜。
+$dl=@{}
+Get-Partition -ErrorAction SilentlyContinue | ForEach-Object {
+  if(-not $_.DriveLetter){return}
+  $g=Get-Disk -Number $_.DiskNumber -ErrorAction SilentlyContinue
+  if($g){ $k=[string]$g.FriendlyName; if($dl.ContainsKey($k)){$dl[$k]+=",$($_.DriveLetter)"}else{$dl[$k]=[string]$_.DriveLetter} }
+}
 $out=@($disks | ForEach-Object {
   # 计数读不到有两种完全不同的原因（控制器真不上报 vs 普通权限被 CIM 拒绝），
   # 以前 SilentlyContinue 把异常吞了，界面只能显示 8 行「未上报」却不说是为什么。
   # 这里把错误文本带出来，Rust 侧据此给准确解释。
   $rc=$null; $rcErr=''
   try { $rc = $_ | Get-StorageReliabilityCounter -ErrorAction Stop } catch { $rcErr = [string]$_.Exception.Message }
+  $fn=[string]$_.FriendlyName
   [ordered]@{
     friendly=[string]$_.FriendlyName
     media=[string]$_.MediaType
@@ -32,6 +41,7 @@ $out=@($disks | ForEach-Object {
     health=[string]$_.HealthStatus
     operational=[string]$_.OperationalStatus
     is_boot=$_.IsBoot
+    drive_letters=if($dl.ContainsKey($fn)){$dl[$fn]}else{''}
     rc_err=$rcErr
     power_on_hours=if($rc){$rc.PowerOnHours}else{$null}
     temperature=if($rc){$rc.Temperature}else{$null}
@@ -85,8 +95,15 @@ pub fn collect_disk_smart() -> Result<String, String> {
         } else {
             ""
         };
+        // 型号名对不上「C 盘」：映射得到盘符就带上，映射不到什么都不写（不猜）。
+        let letters = v_str(d, "drive_letters");
+        let where_ = if letters.is_empty() {
+            String::new()
+        } else {
+            format!("（盘符 {letters}）")
+        };
         s.push_str(&format!(
-            "- {nm}：{media}，{bus}，{size}，健康状态 {health}{boot}\n"
+            "- {nm}：{media}，{bus}，{size}，健康状态 {health}{boot}{where_}\n"
         ));
         let poh = get_int(d, "power_on_hours").filter(|&n| n > 0);
         if let Some(p) = poh {
@@ -288,6 +305,15 @@ fn render_smart_raw(arr: &[Value]) -> String {
             v_str(d, "health")
         }
     };
+    // 「这块盘对应哪个盘符」：映射不到就什么都不写，不猜。
+    let letters_of = |d: &Value| -> String {
+        let raw = v_str(d, "drive_letters");
+        if raw.is_empty() {
+            String::new()
+        } else {
+            format!("（盘符 {raw}）")
+        }
+    };
 
     let mut s = String::new();
     s.push_str(&format!(
@@ -303,8 +329,9 @@ fn render_smart_raw(arr: &[Value]) -> String {
     if !any_value {
         for d in arr {
             s.push_str(&format!(
-                "- {}：健康 {}（计数未读到）\n",
+                "- {}{}：健康 {}（计数未读到）\n",
                 name_of(d),
+                letters_of(d),
                 health_of(d)
             ));
         }
@@ -327,7 +354,12 @@ fn render_smart_raw(arr: &[Value]) -> String {
     }
 
     for d in arr {
-        s.push_str(&format!("- {}：健康 {}\n", name_of(d), health_of(d)));
+        s.push_str(&format!(
+            "- {}{}：健康 {}\n",
+            name_of(d),
+            letters_of(d),
+            health_of(d)
+        ));
         let f = |k: &str| -> String {
             get_int(d, k)
                 .map(format_num)
@@ -406,5 +438,24 @@ mod tests {
         let out = render_smart_raw(&arr);
         assert!(out.contains("通电时长(小时)：10"), "{out}");
         assert!(out.contains("通电时长(小时)：未上报"), "{out}");
+    }
+
+    #[test]
+    fn drive_letters_show_when_mapped_and_are_omitted_when_not() {
+        // 明细分支：映射到的带上盘符，映射不到的什么都不写（不猜盘符）。
+        let arr = vec![
+            json!({"friendly": "WD_BLACK SN770 1TB", "health": "Healthy",
+                   "drive_letters": "C", "power_on_hours": 100}),
+            json!({"friendly": "USB Disk", "health": "Healthy",
+                   "drive_letters": "", "power_on_hours": 200}),
+        ];
+        let out = render_smart_raw(&arr);
+        assert!(out.contains("WD_BLACK SN770 1TB（盘符 C）"), "{out}");
+        assert!(!out.contains("USB Disk（盘符"), "{out}");
+        // 一行一盘的紧凑分支同样带上盘符。
+        let compact = vec![json!({"friendly": "KIOXIA 2TB", "health": "Warning",
+                                  "drive_letters": "F,G"})];
+        let out2 = render_smart_raw(&compact);
+        assert!(out2.contains("KIOXIA 2TB（盘符 F,G）"), "{out2}");
     }
 }

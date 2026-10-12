@@ -4,6 +4,7 @@ import { isTauri } from '../env';
 import { formatBytes } from '../format';
 import { api } from '../api';
 import { LEVEL_COLORS } from '../colors';
+import { driveLettersOf, gradeDiskHealth } from '../diskHealth';
 import { t, useT } from '../i18n';
 import type { HwInfo, HwDiskHealth, HwSnapshotMeta, HwCompareOut } from '../api';
 
@@ -34,37 +35,6 @@ function arr(v: unknown): unknown[] {
 
 function pick(o: unknown, k: string): unknown {
   return (o as Record<string, unknown>)?.[k];
-}
-
-/// 硬盘健康原值 → 分级。
-///
-/// WMI `Get-PhysicalDisk` 的 `HealthStatus` 实测直出 `Healthy` / `Warning` /
-/// `Unhealthy` / `Unknown`（本机 5 块盘全是 `Healthy`），**不是** `Good`/`Caution`；
-/// 只有 CrystalDiskInfo 的 `cdi_report` 才用 `Good`/`Caution`。两套口径都认，
-/// 认不出的一律归 unknown——此前把 `Healthy` 落进 else 分支，五块好盘全画成红色
-/// 「坏了」的盾牌（2026-10-13 修复）。
-export type DiskHealthGrade = 'good' | 'caution' | 'bad' | 'unknown';
-
-const HEALTH_GOOD_WORDS = ['healthy', 'ok', 'good', '良好', '正常']; // @i18n-keep 后端原值比对
-const HEALTH_CAUTION_WORDS = ['warning', 'caution', '注意']; // @i18n-keep 后端原值比对
-const HEALTH_BAD_WORDS = [
-  'unhealthy',
-  'nonrecoverable',
-  'unrecoverable',
-  'bad',
-  'failed',
-  'failure',
-  '不良', // @i18n-keep 后端原值比对
-  '损坏', // @i18n-keep 后端原值比对
-];
-
-export function gradeDiskHealth(raw: unknown): DiskHealthGrade {
-  const v = String(raw ?? '').trim().toLowerCase();
-  if (!v) return 'unknown';
-  if (HEALTH_GOOD_WORDS.includes(v)) return 'good';
-  if (HEALTH_CAUTION_WORDS.includes(v)) return 'caution';
-  if (HEALTH_BAD_WORDS.includes(v)) return 'bad';
-  return 'unknown';
 }
 
 // 从 GPU 列表里选出"最像物理显卡"的那块：
@@ -221,6 +191,7 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
               const tc = num(pick(d, 'temperature_c'));
               const tempC = tc > 60 ? (tc - 32) * 5 / 9 : tc;
               const healthRaw = String(pick(d, 'health') ?? '');
+              const letters = driveLettersOf(d);
               const grade = gradeDiskHealth(healthRaw);
               const Icon =
                 grade === 'good'
@@ -250,7 +221,10 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
               return (
                 <li key={i} className="hw-row">
                   <Icon size={13} style={color ? { color } : undefined} />
-                  <span className="hw-name">{String(pick(d, 'friendly') ?? t('hw.unknown'))}</span>
+                  <span className="hw-name">
+                    {letters.length > 0 ? `${letters.join(', ')}: ` : ''}
+                    {String(pick(d, 'friendly') ?? t('hw.unknown'))}
+                  </span>
                   <span className="hw-meta">
                     <span title={healthRaw}>{healthLabel}</span> · {ph > 0 ? t('hw.powerOnHours', { hours: ph }) : ''}{' '}
                     {wear >= 0 ? t('hw.lifeSuffix', { pct: Math.max(0, 100 - wear) }) : ''}{' '}

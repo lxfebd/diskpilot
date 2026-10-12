@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Check, Trash2, X, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useStore, type CleanupProposalItem } from '../store';
 import { api } from '../api';
+import type { HwDiskHealth } from '../api';
+import { ensureHwLoaded, getHwCache } from '../hwCache';
+import { pathsOnRiskyDrives } from '../diskHealth';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
 import { RISK_META, RISK_ORDER } from './cleanup/RiskBadge';
@@ -27,6 +30,10 @@ export function CleanupProposalDialog() {
   const [sizes, setSizes] = useState<Record<string, number | null>>({});
   const [measuring, setMeasuring] = useState(true);
   const [busy, setBusy] = useState(false);
+  // 硬盘健康：要清的条目若落在健康可疑的盘上，确认前必须显式承认（清理修不好硬盘）。
+  // 共享缓存已有就直接用，没有才后台读一次；读不到不编造、也不拦。
+  const [health, setHealth] = useState<HwDiskHealth | null>(null);
+  const [ackRisky, setAckRisky] = useState(false);
 
   const items = proposal?.items ?? [];
 
@@ -40,6 +47,29 @@ export function CleanupProposalDialog() {
     setDangerInput({});
     setSizes({});
     setMeasuring(true);
+    setAckRisky(false);
+  }, [proposal]);
+
+  // 硬盘健康只在「正在确认一份提案」时才读：平时不跑 PowerShell。
+  useEffect(() => {
+    if (!proposal) return;
+    const cached = getHwCache().health;
+    if (cached) {
+      setHealth(cached);
+      return;
+    }
+    let cancelled = false;
+    void ensureHwLoaded()
+      .then((c) => {
+        if (!cancelled) setHealth(c.health);
+      })
+      .catch(() => {
+        // 读不到健康数据：不编造，也不因此拦住清理。
+        if (!cancelled) setHealth(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [proposal]);
 
   // 逐项实测大小：AI 给的路径可能不准，字节数以执行前实测为准。
@@ -90,9 +120,15 @@ export function CleanupProposalDialog() {
   const selectedItems = items.filter((it) => checked.has(it.path));
   const selectedBytes = selectedItems.reduce((s, it) => s + sizeOf(it), 0);
   const hasDangerChecked = selectedItems.some((it) => it.risk === 'danger');
+  // 勾选的条目落在健康可疑的盘上？必须先承认「我有备份」才允许执行。
+  const risky = pathsOnRiskyDrives(
+    health?.disks ?? [],
+    selectedItems.map((it) => it.path),
+  );
+  const riskyBlocked = risky.length > 0 && !ackRisky;
 
   const doRecycle = async () => {
-    if (selectedItems.length === 0) return;
+    if (selectedItems.length === 0 || riskyBlocked) return;
     setBusy(true);
     await aiRecyclePaths(
       selectedItems.map((it) => ({ path: it.path, size_hint: sizeOf(it) })),
@@ -129,6 +165,32 @@ export function CleanupProposalDialog() {
             <b>{t('cleanup.hintRecycleBin')}</b>
             {t('cleanup.hintRecycleTail')}
           </div>
+          {risky.length > 0 && (
+            <div className="proposal-risky" role="alert">
+              <div className="proposal-risky-line">
+                <AlertTriangle size={13} />
+                <span>
+                  {risky.map((d) =>
+                    t(
+                      d.grade === 'bad' ? 'cleanup.riskyDriveBad' : 'cleanup.riskyDriveCaution',
+                      {
+                        letters: d.letters.join('、'),
+                        model: d.friendly,
+                      },
+                    ),
+                  ).join(' ')}
+                </span>
+              </div>
+              <label className="proposal-risky-ack">
+                <input
+                  type="checkbox"
+                  checked={ackRisky}
+                  onChange={(e) => setAckRisky(e.target.checked)}
+                />
+                {t('cleanup.riskyAck')}
+              </label>
+            </div>
+          )}
           <div className="proposal-toolbar">
             <button className="ghost" onClick={selectSafe}>
               <ShieldCheck size={12} /> {t('cleanup.selectAllSafe')}
@@ -228,7 +290,7 @@ export function CleanupProposalDialog() {
           <button
             className="primary"
             onClick={doRecycle}
-            disabled={busy || measuring || selectedItems.length === 0}
+            disabled={busy || measuring || selectedItems.length === 0 || riskyBlocked}
           >
             <Trash2 size={14} />
             {busy
