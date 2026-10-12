@@ -60,7 +60,7 @@ mod tool_sys_services;
 
 use rmcp::{
     handler::server::ServerHandler,
-    model::{AnnotateAble, CallToolResult, RawContent, ServerCapabilities, ServerInfo},
+    model::{AnnotateAble, CallToolResult, RawContent, ServerInfo},
     tool_handler,
 };
 use std::sync::Mutex;
@@ -283,10 +283,42 @@ mod params;
 #[tool_handler]
 impl ServerHandler for AgentServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "DiskPilot 的 AI 可操作工具集：只读磁盘/系统/文件/进程/程序清单查询。\
-             所有路径参数受安全守卫保护（盘根/系统目录/主目录根被拒绝）。\
-             回答磁盘空间、系统状态、目录内容、进程、已装软件问题时先用这些工具拿真实数据。",
-        )
+        ServerInfo::new(crate::server::capabilities())
+            .with_instructions(crate::server::instructions())
+    }
+
+    // resources：静态只读资源（system://profile / disk-usage / env），
+    // 实现在 server.rs，转发保持 trait 方法签名与宏生成的工具方法一致。
+    async fn list_resources(
+        &self,
+        _request: Option<rmcp::model::PaginatedRequestParams>,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<rmcp::model::ListResourcesResult, rmcp::ErrorData> {
+        Ok(crate::server::list_resources())
+    }
+
+    async fn read_resource(
+        &self,
+        request: rmcp::model::ReadResourceRequestParams,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<rmcp::model::ReadResourceResult, rmcp::ErrorData> {
+        crate::server::read_resource(request).await
+    }
+
+    // prompts：任务引导模板（system-report / cleanup-plan）。
+    async fn list_prompts(
+        &self,
+        _request: Option<rmcp::model::PaginatedRequestParams>,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<rmcp::model::ListPromptsResult, rmcp::ErrorData> {
+        Ok(crate::server::list_prompts())
+    }
+
+    async fn get_prompt(
+        &self,
+        request: rmcp::model::GetPromptRequestParams,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<rmcp::model::GetPromptResult, rmcp::ErrorData> {
+        crate::server::get_prompt(request).await
     }
 }
