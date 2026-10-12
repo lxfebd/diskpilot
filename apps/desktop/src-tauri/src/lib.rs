@@ -10,6 +10,7 @@ pub(crate) mod hw;
 mod hw_history;
 mod hw_report;
 pub(crate) mod mcp;
+mod mcp_bridge;
 mod plugin_registry;
 mod plugin_remote;
 mod reminder;
