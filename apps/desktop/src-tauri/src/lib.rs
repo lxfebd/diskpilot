@@ -14,6 +14,7 @@ mod hw_report;
 pub(crate) mod mcp;
 mod mcp_bridge;
 mod plugin_registry;
+mod plugin_registry_types;
 mod plugin_remote;
 mod reminder;
 mod scaffold_registry;
