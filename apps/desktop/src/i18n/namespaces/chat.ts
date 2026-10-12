@@ -27,6 +27,20 @@ export const chat = {
     'chat.chip.toolResult': '结果',
     'chat.chip.note': '提示',
 
+    // 工具进度卡（notifications/progress 的 label 本地化）：键名对应
+    // agent-server blocking_call_progress 的 9 个中文 label（服务端固定
+    // 中文，前端按 label 映射到本表；未收录的 label 原样显示）。
+    'chat.progress.topDirs': '子目录占用统计',
+    'chat.progress.bigFiles': '大文件扫描',
+    'chat.progress.dupFiles': '重复文件扫描',
+    'chat.progress.fileSearch': '文件查找',
+    'chat.progress.diskBench': '磁盘基准',
+    'chat.progress.stress': '稳定性压测',
+    'chat.progress.gpuStress': 'GPU 稳定性压测',
+    'chat.progress.memTest': '内存稳定性测试',
+    'chat.progress.report': '体检报告生成',
+    'chat.progress.generic': '工具运行中',
+
     // 建议标签卡
     'chat.advice.riskLabel': '风险',
     'chat.advice.needsInspection': '需要再看看',
@@ -115,6 +129,19 @@ export const chat = {
     'chat.chip.toolCall': 'Tool',
     'chat.chip.toolResult': 'Result',
     'chat.chip.note': 'Note',
+
+    // Tool progress card (localizes the 9 fixed-Chinese labels emitted by
+    // agent-server blocking_call_progress; unknown labels pass through raw).
+    'chat.progress.topDirs': 'Directory size scan',
+    'chat.progress.bigFiles': 'Big file scan',
+    'chat.progress.dupFiles': 'Duplicate file scan',
+    'chat.progress.fileSearch': 'File search',
+    'chat.progress.diskBench': 'Disk benchmark',
+    'chat.progress.stress': 'Stability stress test',
+    'chat.progress.gpuStress': 'GPU stability stress test',
+    'chat.progress.memTest': 'Memory stability test',
+    'chat.progress.report': 'System report generation',
+    'chat.progress.generic': 'Tool running',
 
     // Advice card
     'chat.advice.riskLabel': 'Risk',

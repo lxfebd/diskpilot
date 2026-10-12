@@ -17,17 +17,26 @@ import type { Node, AdvisorResponse, Scaffold } from '../types';
 import { HwReportCard, StressConfirmPanel, HwTestMonitor, useHwTestMonitor, type StressConfirm } from './HwPanels';
 import { useAgentToolProgress, AgentProgressCard } from './AgentProgressMonitor';
 
-// 从 agent-tool-progress message 中提取工具名称（简化版，根据常见关键词）
-const extractToolName = (message: string): string => {
-  const lower = message.toLowerCase();
-  if (lower.includes('压测')) return '稳定性压测';
-  if (lower.includes('磁盘基准') || lower.includes('基准')) return '磁盘基准';
-  if (lower.includes('大文件扫描')) return '大文件扫描';
-  if (lower.includes('重复文件')) return '重复文件扫描';
-  if (lower.includes('内存稳定性')) return '内存稳定性测试';
-  if (lower.includes('GPU') || lower.includes('显卡')) return 'GPU 压测';
-  // fallback：返回原始 message 或空字符串
-  return message || '工具运行中';
+// 后端进度 label（agent-server blocking_call_progress 固定中文）→ i18n 键。
+// 精确匹配全部 9 个已知 label；未收录的 label 原样显示——后端新增进度
+// 工具时前端零改动即可降级，不会显示空白。
+const PROGRESS_LABEL_KEYS: Record<string, string> = {
+  // 键是后端 progress label 的匹配常量（数据，不是待译文案）——@i18n-keep。
+  子目录占用统计: 'chat.progress.topDirs', // @i18n-keep
+  大文件扫描: 'chat.progress.bigFiles', // @i18n-keep
+  重复文件扫描: 'chat.progress.dupFiles', // @i18n-keep
+  文件查找: 'chat.progress.fileSearch', // @i18n-keep
+  磁盘基准: 'chat.progress.diskBench', // @i18n-keep
+  稳定性压测: 'chat.progress.stress', // @i18n-keep
+  'GPU 稳定性压测': 'chat.progress.gpuStress', // @i18n-keep
+  内存稳定性测试: 'chat.progress.memTest', // @i18n-keep
+  体检报告生成: 'chat.progress.report', // @i18n-keep
+};
+
+const extractToolName = (message: string, t: (key: string) => string): string => {
+  const key = PROGRESS_LABEL_KEYS[message];
+  if (key) return t(key);
+  return message || t('chat.progress.generic');
 };
 import { useT } from '../i18n';
 import { isConfigured, loadSettings } from '../advisorClient';
@@ -794,7 +803,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
         {/* Agent 工具进度监控（B2/B3）：disk_find_biggest_files / disk_find_duplicate_files / stress/bench 的实时进度条 */}
         {agentProgress.running && agentProgress.progress && (
           <AgentProgressCard 
-            label={extractToolName(agentProgress.progress.message)} 
+            label={extractToolName(agentProgress.progress.message, t)} 
             progress={agentProgress.progress} 
             onCancel={agentProgress.stop}
             showCancelButton={true}
