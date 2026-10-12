@@ -1,7 +1,7 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { Search, ArrowDown, ArrowUp, Folder, Copy, Trash2 } from 'lucide-react';
 import type { Node } from '../types';
-import { formatBytes } from '../format';
+import { formatBytes, extOf as sharedExtOf } from '../format';
 import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { api } from '../api';
@@ -32,9 +32,9 @@ const EXT_PALETTE = [
  *  渲染时经 extLabel() 换成本地文案，避免切语言后 key 对不上。 */
 const NO_EXT = '(none)';
 
+/** 扩展名（小写）；无扩展名归入分组哨兵。逻辑本体在 format.ts 单源。 */
 function extOf(name: string): string {
-  const i = name.lastIndexOf('.');
-  return i > 0 ? name.slice(i + 1).toLowerCase() : NO_EXT;
+  return sharedExtOf(name) || NO_EXT;
 }
 
 function fillForExt(ext: string): string {

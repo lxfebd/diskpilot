@@ -60,3 +60,14 @@ export function formatDateKey(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+/**
+ * 取文件名扩展名（小写，不含点）。无扩展名返回 `''`。
+ * FileView/TreeView 各有一份私有实现，收敛到此单源；FileView 的
+ * `'(none)'` 分组哨兵是展示层语义，由调用方自行映射。
+ */
+export function extOf(name: string): string {
+  const i = name.lastIndexOf('.');
+  return i > 0 ? name.slice(i + 1).toLowerCase() : '';
+}
+

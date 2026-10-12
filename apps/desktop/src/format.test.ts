@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatBytesTriple, formatCount, ellipsizePath } from './format';
+import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf } from './format';
 
 describe('formatBytes', () => {
   it('bytes below 1 KiB stay in B', () => {
@@ -85,5 +85,20 @@ describe('ellipsizePath', () => {
   it('at exactly maxLen no fold', () => {
     const p = 'a'.repeat(48);
     expect(ellipsizePath(p, 48)).toBe(p);
+  });
+});
+
+describe('extOf', () => {
+  it('extracts lowercase extension without dot', () => {
+    expect(extOf('photo.JPG')).toBe('jpg');
+    expect(extOf('archive.tar.gz')).toBe('gz');
+    expect(extOf('README.md')).toBe('md');
+  });
+
+  it('returns empty string when no extension', () => {
+    expect(extOf('README')).toBe('');
+    expect(extOf('folder.')).toBe('');
+    expect(extOf('.gitignore')).toBe(''); // 点开头视为无扩展名（lastIndexOf 在 0）
+    expect(extOf('.')).toBe('');
   });
 });

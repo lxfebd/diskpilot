@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Node } from '../types';
-import { formatBytes, formatCount } from '../format';
+import { formatBytes, formatCount, extOf } from '../format';
 import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { openDiskpilotMenu } from '../tooltree';
@@ -246,11 +246,6 @@ function FileGlyph({ ext }: { ext: string }) {
       <path d="M10 2 V5 H13" fill="none" stroke="#5b4d57" strokeWidth="0.7" strokeLinejoin="round" />
     </svg>
   );
-}
-
-function extOf(name: string): string {
-  const i = name.lastIndexOf('.');
-  return i > 0 ? name.slice(i + 1).toLowerCase() : '';
 }
 
 const Row = memo(function Row({
