@@ -10,6 +10,9 @@ import { X, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { ProgressButton } from '../ProgressButton';
 import { formatBytes } from '../../format';
 import { useT } from '../../i18n';
+import { type HwDiskHealth } from '../../api';
+import { ensureHwLoaded, getHwCache } from '../../hwCache';
+import { riskyDrives } from '../../diskHealth';
 import type { DryRunPreview } from '../../cleanup/model';
 import type { RecycleGranularity } from '../../types';
 
@@ -32,12 +35,38 @@ export function DryRunPreviewDialog({
 }: Props) {
   const t = useT();
   const [armed, setArmed] = useState(false);
+  // 要清的盘若健康可疑，确认前必须显式承认「我有备份」——与 AI 提案窗同一口径。
+  // 健康数据只在预览窗打开时读一次（共享缓存有就直接用）；读不到不编造、也不拦。
+  const [health, setHealth] = useState<HwDiskHealth | null>(null);
+  const [ackRisky, setAckRisky] = useState(false);
+  useEffect(() => {
+    const cached = getHwCache().health;
+    if (cached) {
+      setHealth(cached);
+      return;
+    }
+    let cancelled = false;
+    void ensureHwLoaded()
+      .then((c) => {
+        if (!cancelled) setHealth(c.health);
+      })
+      .catch(() => {
+        if (!cancelled) setHealth(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const risky = riskyDrives(health?.disks ?? []).filter((d) =>
+    d.letters.some((l) => preview.driveCounts.some((c) => c.letter === l)),
+  );
+  const riskyBlocked = risky.length > 0 && !ackRisky;
   const armTimeoutRef = useRef<number | null>(null);
   useEffect(() => () => {
     if (armTimeoutRef.current !== null) window.clearTimeout(armTimeoutRef.current);
   }, []);
   const armClick = () => {
-    if (running || armed) return;
+    if (running || armed || riskyBlocked) return;
     setArmed(true);
     if (armTimeoutRef.current !== null) window.clearTimeout(armTimeoutRef.current);
     armTimeoutRef.current = window.setTimeout(() => {
@@ -50,6 +79,8 @@ export function DryRunPreviewDialog({
   // unmounting ProgressButton mid-flight and losing its progress state.
   // Cancel the auto-disarm timer though, so a slow clean (>5s) can't trip it.
   const runDelete = async () => {
+    // 健康数据是异步到的：可能先预备、后才知道这块盘在坏。补一道闸。
+    if (riskyBlocked) return;
     if (armTimeoutRef.current !== null) {
       window.clearTimeout(armTimeoutRef.current);
       armTimeoutRef.current = null;
@@ -71,6 +102,51 @@ export function DryRunPreviewDialog({
           </span>
         </div>
 
+        {preview.driveCounts.length > 0 && (
+          <div className="cleanup-preview-drives muted small">
+            {t('cleanup.previewDrivesLead')}
+            {preview.driveCounts.map((d, i) => {
+              const riskyDrive = risky.some((r) => r.letters.includes(d.letter));
+              return (
+                <span
+                  key={d.letter}
+                  className={riskyDrive ? 'cleanup-preview-drive risky' : 'cleanup-preview-drive'}
+                >
+                  {i > 0 ? ' · ' : ''}
+                  {t('cleanup.previewDriveItem', {
+                    letter: d.letter,
+                    files: d.files.toLocaleString(),
+                  })}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {risky.length > 0 && (
+          <div className="cleanup-risky" role="alert">
+            <div className="cleanup-risky-line">
+              <AlertTriangle size={13} />
+              <span>
+                {risky.map((d) =>
+                  t(
+                    d.grade === 'bad' ? 'cleanup.riskyDriveBad' : 'cleanup.riskyDriveCaution',
+                    { letters: d.letters.join('、'), model: d.friendly },
+                  ),
+                ).join(' ')}
+              </span>
+            </div>
+            <label className="cleanup-risky-ack">
+              <input
+                type="checkbox"
+                checked={ackRisky}
+                onChange={(e) => setAckRisky(e.target.checked)}
+              />
+              {t('cleanup.riskyAck')}
+            </label>
+          </div>
+        )}
+
         <div className="cleanup-preview-list">
           {preview.samplePaths.map((p) => (
             <div key={p} className="cleanup-preview-path" title={p}>{p}</div>
@@ -88,7 +164,11 @@ export function DryRunPreviewDialog({
 
         <div className="cleanup-footer">
           <div className="cleanup-summary muted small">
-            {armed ? t('cleanup.armAgainHint') : t('cleanup.twoStepHint')}
+            {riskyBlocked
+              ? t('cleanup.riskyBlockedHint')
+              : armed
+                ? t('cleanup.armAgainHint')
+                : t('cleanup.twoStepHint')}
           </div>
           <div className="cleanup-actions">
             <button className="ghost" onClick={onCancel} disabled={running}>{t('cleanup.back')}</button>
@@ -106,7 +186,7 @@ export function DryRunPreviewDialog({
                 type="button"
                 className="primary cleanup-execute"
                 onClick={armClick}
-                disabled={running}
+                disabled={running || riskyBlocked}
               >
                 {running
                   ? <><Loader2 size={13} className="spin" /> {t('cleanup.cleaning')}</>

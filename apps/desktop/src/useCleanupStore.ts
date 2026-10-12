@@ -19,8 +19,10 @@ import {
   condaDryBytes,
   defaultDaysFor,
   detectVariants,
+  driveBreakdown,
   mergeScopeDays,
   persistScopeDays,
+  tallyDrive,
   type CoverageBreakdown,
   type DryRunPreview,
   type ScopeSize,
@@ -396,6 +398,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       const s = getCur();
       if (!s) return;
       const samplePaths: string[] = [];
+      // 整批路径按盘计数：预览窗只列前 80 条，但「会动到哪几块盘」必须按全量算。
+      const driveTally = new Map<string, number>();
       let totalBytes = 0;
       let totalFiles = 0;
       let scopeIds: string[] = [];
@@ -451,6 +455,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           for (const e of list) {
             totalFiles += 1;
             hitPaths.push(e.source);
+            tallyDrive(driveTally, e.source);
             if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
           }
         }
@@ -494,6 +499,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
         for (const list of lists) {
           for (const e of list) {
             totalFiles += 1;
+            tallyDrive(driveTally, e.source);
             if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
           }
         }
@@ -517,6 +523,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           totalFiles,
           samplePaths,
           truncated: totalFiles > samplePaths.length,
+          driveCounts: driveBreakdown(driveTally),
           daysSnapshot,
           wxidSnapshot,
           envSnapshot,

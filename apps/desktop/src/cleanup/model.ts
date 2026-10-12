@@ -5,6 +5,7 @@
 // 删除语义（先出清单 → 预备 → 真删、失败可见）由 useCleanupStore 的执行链实现；
 // 本文件只放无副作用的计算原语（localStorage 读写除外，且全程 try/catch 兜底）。
 import { t } from '../i18n';
+import { pathDriveLetter } from '../diskHealth';
 import type { CondaEnv, Node, Scope } from '../types';
 
 /** 单个 scope 的大小探测结果。`bytes`/`file_count` 受保留期过滤（=真会清的量），
@@ -36,6 +37,9 @@ export interface DryRunPreview {
   samplePaths: string[];
   /** True when more paths exist than samplePaths shows. */
   truncated: boolean;
+  /** 这批路径分布在哪些盘上（按文件数降序）。整批口径，不受 samplePaths 截断影响——
+   *  预览窗只列前 80 条，用户却需要知道「这次会动到 C 和 F 两块盘」。 */
+  driveCounts: DriveCount[];
   /** 预览时点各 scope 的应用口径快照：真删必须复用同一份 days/wxid/env，
    *  不能取 runRealDelete 时的最新值——预览窗停留期间用户改设置会以新口径误删。 */
   daysSnapshot: Record<string, number>;
@@ -49,6 +53,26 @@ export interface DryRunPreview {
 }
 
 export const DRY_RUN_SAMPLE_CAP = 80;
+
+/** 一次清理会动到哪几块物理盘：盘符 + 该盘上的文件数。 */
+export interface DriveCount {
+  letter: string;
+  files: number;
+}
+
+/** 把一条路径计入它所在的盘；非盘符路径（UNC / 相对）不计——没有本地物理盘。 */
+export function tallyDrive(counts: Map<string, number>, path: string): void {
+  const letter = pathDriveLetter(path);
+  if (letter) counts.set(letter, (counts.get(letter) ?? 0) + 1);
+}
+
+/** 计数表 → 展示顺序：文件数多的盘在前，同数按字母升序。 */
+export function driveBreakdown(counts: Map<string, number>): DriveCount[] {
+  return [...counts.entries()]
+    .filter(([letter]) => /^[A-Z]$/.test(letter))
+    .map(([letter, files]) => ({ letter, files }))
+    .sort((a, b) => b.files - a.files || a.letter.localeCompare(b.letter));
+}
 
 const SCOPE_DAYS_STORAGE_KEY = 'diskpilot.scopeDays';
 

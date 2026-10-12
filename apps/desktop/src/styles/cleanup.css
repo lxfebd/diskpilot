@@ -266,6 +266,38 @@ main.cleanup-page > .cleanup-page {
   line-height: 1.45;
 }
 .cleanup-disclaimer svg { flex-shrink: 0; margin-top: 2px; color: var(--warn-fg); }
+/* 这批文件落在哪几块盘上（整批口径，不受预览前 80 条限制）。 */
+.cleanup-preview-drives {
+  margin: 2px 0 6px;
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+.cleanup-preview-drive.risky {
+  color: var(--risk-caution);
+  font-weight: 700;
+}
+/* 目标盘健康可疑：比免责声明更重——它挡住「确认清理」，必须显式承认有备份。 */
+.cleanup-risky {
+  margin: 2px 0 6px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--risk-caution);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-soft);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.cleanup-risky-line {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 12px; line-height: 1.5;
+  color: var(--warn-fg);
+}
+.cleanup-risky-line svg { flex-shrink: 0; margin-top: 2px; }
+.cleanup-risky-ack {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700; color: var(--ink);
+  cursor: pointer; user-select: none;
+}
+.cleanup-risky-ack input { accent-color: var(--risk-caution); }
 .cleanup-footer {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   margin-top: 4px;

@@ -80,6 +80,9 @@ export const cleanup = {
     'cleanup.previewHead': '预览：将删除以下文件',
     'cleanup.previewSummaryMid': '个文件 · 共',
     'cleanup.previewRecycle': '进系统回收站，可右键还原',
+    'cleanup.previewDrivesLead': '分布在 ',
+    'cleanup.previewDriveItem': '{letter}: 盘 {files} 个',
+    'cleanup.riskyBlockedHint': '先勾上面的备份确认，再点清理',
     'cleanup.previewMore': '… 还有 {n} 个未列出',
     'cleanup.previewDisclaimer':
       '仔细看一眼上面的路径，确认没有你想留的东西。回收站默认 30 天后自动清空。',
@@ -224,6 +227,9 @@ export const cleanup = {
     'cleanup.previewHead': 'Preview: the following files will be deleted',
     'cleanup.previewSummaryMid': 'files · in total',
     'cleanup.previewRecycle': 'Goes to the system Recycle Bin — right-click to restore it',
+    'cleanup.previewDrivesLead': 'spread across ',
+    'cleanup.previewDriveItem': 'drive {letter}: {files}',
+    'cleanup.riskyBlockedHint': 'Tick the backup confirmation above before cleaning',
     'cleanup.previewMore': '… {n} more not listed',
     'cleanup.previewDisclaimer':
       'Look over the paths above and make sure nothing here is worth keeping. The Recycle Bin empties itself after 30 days by default.',

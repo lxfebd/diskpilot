@@ -8,7 +8,9 @@ import {
   condaDryBytes,
   defaultDaysFor,
   detectVariants,
+  driveBreakdown,
   scopeDayOverrides,
+  tallyDrive,
   type ScopeSize,
 } from './model';
 import type { Node, Scope } from '../types';
@@ -245,5 +247,41 @@ describe('applySelectionMode', () => {
   it('不合格项不计入（即使 safe）', () => {
     const s = applySelectionMode('all', items, (it) => it.k !== 'b', keyOf, isSafe);
     expect([...s].sort()).toEqual(['a', 'c']);
+  });
+});
+
+// 预览窗的「这批文件落在哪几块盘」：整批口径，不受 samplePaths 前 80 条截断影响。
+describe('tallyDrive / driveBreakdown（清理会动到哪几块盘）', () => {
+  it('按盘计数，文件数多的排前面', () => {
+    const m = new Map<string, number>();
+    for (const p of [
+      'C:\\Users\\me\\Downloads\\a.tmp',
+      'C:\\Users\\me\\Downloads\\b.tmp',
+      'F:\\Media\\movie.mkv',
+      'c:\\lower\\case\\ok.txt',
+    ]) {
+      tallyDrive(m, p);
+    }
+    expect(driveBreakdown(m)).toEqual([
+      { letter: 'C', files: 3 },
+      { letter: 'F', files: 1 },
+    ]);
+  });
+
+  it('UNC / 相对路径不计入（没有本地物理盘）', () => {
+    const m = new Map<string, number>();
+    tallyDrive(m, '\\\\nas\\share\\f.txt');
+    tallyDrive(m, 'relative\\path');
+    tallyDrive(m, '');
+    expect(driveBreakdown(m)).toEqual([]);
+  });
+
+  it('同文件数按字母升序（展示稳定）', () => {
+    const m = new Map<string, number>([
+      ['J', 5],
+      ['C', 5],
+      ['F', 5],
+    ]);
+    expect(driveBreakdown(m).map((d) => d.letter)).toEqual(['C', 'F', 'J']);
   });
 });
