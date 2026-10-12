@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, lazy, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Folder, ScanLine, ListTree, MessageSquare, X, Trash2 as TrashIcon } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
@@ -6,14 +6,6 @@ import { api } from './api';
 import { isTauri } from './env';
 import { useStore } from './store';
 import { LeftPanel } from './components/LeftPanel';
-import { ChatPanel } from './components/ChatPanel';
-import { Studio } from './components/Studio';
-import { Settings } from './components/Settings';
-import { AssetOverview } from './components/AssetOverview';
-import { Toolbelt } from './components/Toolbelt';
-import { CleanupPage } from './components/cleanup/CleanupPage';
-import { HistoryPage } from './components/history/HistoryPage';
-import { OptimizerPage } from './components/OptimizerPage';
 import { useCleanupStore } from './useCleanupStore';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
@@ -38,6 +30,23 @@ import {
   type PageId,
 } from './nav';
 import type { Node } from './types';
+
+// ── 页面级代码分割：默认页 overview 首屏只拉自己 + arena 的 chunk ──
+// 其余页面（工具集/清理/优化器/历史/AI 侧栏/设置）按需加载。这些组件都是
+// 命名导出，lazy() 需要包一层转 default。
+const ChatPanel = lazy(() => import('./components/ChatPanel').then((m) => ({ default: m.ChatPanel })));
+const Studio = lazy(() => import('./components/Studio').then((m) => ({ default: m.Studio })));
+const Settings = lazy(() => import('./components/Settings').then((m) => ({ default: m.Settings })));
+const AssetOverview = lazy(() => import('./components/AssetOverview').then((m) => ({ default: m.AssetOverview })));
+const Toolbelt = lazy(() => import('./components/Toolbelt').then((m) => ({ default: m.Toolbelt })));
+const CleanupPage = lazy(() => import('./components/cleanup/CleanupPage').then((m) => ({ default: m.CleanupPage })));
+const HistoryPage = lazy(() => import('./components/history/HistoryPage').then((m) => ({ default: m.HistoryPage })));
+const OptimizerPage = lazy(() => import('./components/OptimizerPage').then((m) => ({ default: m.OptimizerPage })));
+
+// lazy chunk 加载完成前的占位：保持骨架布局不塌（高度继承父容器）。
+function PageFallback() {
+  return <div className="page-fallback" />;
+}
 
 interface ScanStatsEvent {
   mode: string;
@@ -463,7 +472,9 @@ export default function App() {
           <button className="ghost icon" onClick={() => setAiOpen(false)} title={t('shell.airail.collapse')}><X size={14} /></button>
         </div>
         <div className="ai-rail-body">
-          <ChatPanel onOpenSettings={() => { setSettingsTab('ai'); setShowSettings(true); }} />
+          <Suspense fallback={<PageFallback />}>
+            <ChatPanel onOpenSettings={() => { setSettingsTab('ai'); setShowSettings(true); }} />
+          </Suspense>
         </div>
       </div>
       {aiOpen && <Splitter onDrag={dragAi} />}
@@ -520,52 +531,64 @@ export default function App() {
       {view === 'overview' ? (
         <main className="overview">
           <ErrorBoundary fallbackLabel={t('shell.boundary.overviewFailed')}>
-            <AssetOverview
-              root={root}
-              drives={drives}
-              scaffolds={scaffolds}
-              scanning={scanning}
-              onScanDrive={(p) => scan([p])}
-              onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
-              onRefresh={(p) => scan([p], { force: true })}
-              onGoWorkspace={() => setView('workspace')}
-              onOpenCleanup={() => openCleanup()}
-            />
+            <Suspense fallback={<PageFallback />}>
+              <AssetOverview
+                root={root}
+                drives={drives}
+                scaffolds={scaffolds}
+                scanning={scanning}
+                onScanDrive={(p) => scan([p])}
+                onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
+                onRefresh={(p) => scan([p], { force: true })}
+                onGoWorkspace={() => setView('workspace')}
+                onOpenCleanup={() => openCleanup()}
+              />
+            </Suspense>
           </ErrorBoundary>
         </main>
       ) : view === 'tools' ? (
         <main className="overview">
-          <Toolbelt
-            drives={drives}
-            scanning={scanning}
-            onScanDrive={(p) => scan([p])}
-            onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
-            onGoWorkspace={() => setView('workspace')}
-            onOpenSettings={(tab) => { setSettingsTab(tab); setShowSettings(true); }}
-          />
+          <Suspense fallback={<PageFallback />}>
+            <Toolbelt
+              drives={drives}
+              scanning={scanning}
+              onScanDrive={(p) => scan([p])}
+              onScanAll={() => drives.length > 0 && scan(drives.map((d) => d.path))}
+              onGoWorkspace={() => setView('workspace')}
+              onOpenSettings={(tab) => { setSettingsTab(tab); setShowSettings(true); }}
+            />
+          </Suspense>
         </main>
       ) : view === 'cleanup' ? (
         <main className="cleanup-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
-            <CleanupPage />
+            <Suspense fallback={<PageFallback />}>
+              <CleanupPage />
+            </Suspense>
           </ErrorBoundary>
         </main>
       ) : view === 'privacy' ? (
         <main className="cleanup-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
-            <CleanupPage tagFilter="privacy" />
+            <Suspense fallback={<PageFallback />}>
+              <CleanupPage tagFilter="privacy" />
+            </Suspense>
           </ErrorBoundary>
         </main>
       ) : view === 'optimizer' ? (
         <main className="optimizer-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>
-            <OptimizerPage />
+            <Suspense fallback={<PageFallback />}>
+              <OptimizerPage />
+            </Suspense>
           </ErrorBoundary>
         </main>
       ) : view === 'history' ? (
         <main className="history-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.historyFailed')}>
-            <HistoryPage />
+            <Suspense fallback={<PageFallback />}>
+              <HistoryPage />
+            </Suspense>
           </ErrorBoundary>
         </main>
       ) : (
@@ -605,7 +628,9 @@ export default function App() {
         {rightVisible && (
         <aside className="right">
           <ErrorBoundary fallbackLabel={t('shell.boundary.studioFailed')}>
-            <Studio onOpenCleanup={(id) => openCleanup(id)} onOpenHistory={openHistory} />
+            <Suspense fallback={<PageFallback />}>
+              <Studio onOpenCleanup={(id) => openCleanup(id)} onOpenHistory={openHistory} />
+            </Suspense>
           </ErrorBoundary>
         </aside>
         )}
@@ -625,7 +650,11 @@ export default function App() {
         </button>
       )}
 
-      {showSettings && <Settings onClose={() => { setShowSettings(false); refreshAdvisorTag(); }} initialTab={settingsTab} />}
+      {showSettings && (
+        <Suspense fallback={<PageFallback />}>
+          <Settings onClose={() => { setShowSettings(false); refreshAdvisorTag(); }} initialTab={settingsTab} />
+        </Suspense>
+      )}
       <CleanupProposalDialog />
 
       <div className="toast-stack">

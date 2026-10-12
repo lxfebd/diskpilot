@@ -1457,3 +1457,8 @@ footer {
   padding: 2px 6px;
 }
 
+
+/* 懒加载页面的占位骨架：保持布局不塌，chunk 就绪后替换为真实页面 */
+.page-fallback {
+  min-height: 200px;
+}
