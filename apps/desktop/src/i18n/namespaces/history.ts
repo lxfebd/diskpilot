@@ -35,6 +35,7 @@ export const history = {
     'history.weekly.genFailed': '生成周报失败：{err}',
     'history.weekly.daysAgo': '{n} 天前',
     'history.weekly.justNow': '刚刚',
+    'history.weekly.goCleanup': '去清理页看明细',
   },
   en: {
     'history.title': 'History',
@@ -67,5 +68,6 @@ export const history = {
     'history.weekly.genFailed': 'Failed to generate the weekly report: {err}',
     'history.weekly.daysAgo': '{n} days ago',
     'history.weekly.justNow': 'Just now',
+    'history.weekly.goCleanup': 'Review and clean',
   },
 };

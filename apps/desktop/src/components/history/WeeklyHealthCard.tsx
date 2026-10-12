@@ -4,7 +4,7 @@
 // 后端同样是只读聚合（扫描建议 + 温度 + 硬件对比），绝不执行清理；真实清理
 // 仍只走总览页确认窗（user_confirmed 硬校验）。
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, Flame, Loader2, Sparkles, Thermometer } from 'lucide-react';
+import { CalendarDays, Eraser, Flame, Loader2, Sparkles, Thermometer } from 'lucide-react';
 import { api } from '../../api';
 import type { WeeklyReport } from '../../api';
 import { formatBytes, formatDateKey } from '../../format';
@@ -22,7 +22,13 @@ export function reportAgeLabel(ts: number, nowSec: number, t: ReturnType<typeof 
   return formatDateKey(new Date(ts * 1000));
 }
 
-export function WeeklyHealthCard({ onGenerated }: { onGenerated?: () => void }) {
+export function WeeklyHealthCard({
+  onGenerated,
+  onOpenCleanup,
+}: {
+  onGenerated?: () => void;
+  onOpenCleanup?: () => void;
+}) {
   const t = useT();
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -95,6 +101,14 @@ export function WeeklyHealthCard({ onGenerated }: { onGenerated?: () => void }) 
               </span>
             </div>
           </div>
+
+          {/* 周报说「可清 X GB」却给不出出口，等于只读了一半：这里直接跳到清理页，
+              真实清理仍走清理页的确认窗（周报本身依旧只读）。 */}
+          {report.total_bytes > 0 && onOpenCleanup && (
+            <button type="button" className="ghost small" onClick={onOpenCleanup}>
+              <Eraser size={11} /> {t('history.weekly.goCleanup')}
+            </button>
+          )}
 
           {report.drives.length > 0 && (
             <ul className="wh-drives">

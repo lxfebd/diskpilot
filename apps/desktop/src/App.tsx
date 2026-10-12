@@ -587,7 +587,7 @@ export default function App() {
         <main className="history-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.historyFailed')}>
             <Suspense fallback={<PageFallback />}>
-              <HistoryPage />
+              <HistoryPage onOpenCleanup={() => openCleanup()} />
             </Suspense>
           </ErrorBoundary>
         </main>

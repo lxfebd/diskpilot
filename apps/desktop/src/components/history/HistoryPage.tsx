@@ -32,7 +32,7 @@ function filterLabel(a: UndoActionFilter, t: ReturnType<typeof useT>): string {
       : t('cleanup.actionDelete');
 }
 
-export function HistoryPage() {
+export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = {}) {
   const t = useT();
   const [entries, setEntries] = useState<UndoEntry[] | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export function HistoryPage() {
 
   return (
       <div className="hp-shell">
-        <WeeklyHealthCard />
+        <WeeklyHealthCard onOpenCleanup={onOpenCleanup} />
         <div className="hp-head">
         <span className="hp-title"><History size={15} /> {t('history.title')}</span>
         <span className="muted small">{t('history.total', { n: summary.total })}</span>
