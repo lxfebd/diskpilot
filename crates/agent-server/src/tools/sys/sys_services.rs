@@ -61,7 +61,9 @@ pub(crate) fn state_zh(s: &str) -> &str {
 
 /// `Win32_Service.StartMode` 的英文枚举值 → 中文。
 /// 仅用于「注册表打不开」的降级路径（fallback）；正常路径走 `start_dword_zh`。
+#[cfg(windows)]
 mod parse;
+#[cfg(windows)]
 pub(crate) use parse::{clean_image_path, parse_ps_services, start_dword_zh, ServiceRow};
 
 /// 枚举服务：混合 PowerShell（运行状态）+ 注册表（`ImagePath` / `Start` / `Type`）。

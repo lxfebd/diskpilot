@@ -28,7 +28,9 @@ $out=@(Get-ScheduledTask | Where-Object { $_.State -ne 'Disabled' } | Select-Obj
 $out | ConvertTo-Json -Depth 4 -Compress
 "#;
 
+#[cfg(windows)]
 mod registry;
+#[cfg(windows)]
 pub(crate) use registry::{enum_run_key, enum_startup_folder, RunEntry};
 
 /// 开机自启项枚举：5 个 Run 键 + 2 个 Startup 文件夹 + 可选计划任务。**只读**，绝不修改/禁用/删除。
