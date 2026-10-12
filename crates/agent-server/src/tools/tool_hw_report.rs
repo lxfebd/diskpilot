@@ -3,7 +3,9 @@
 //! fan_selfheal_fix / fan_control。
 
 use crate::tools::params::*;
-use crate::tools::{blocking_call, files, report, selfheal, tool_error, AgentServer};
+use crate::tools::{
+    blocking_call, blocking_call_progress, files, report, selfheal, tool_error, AgentServer,
+};
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_router,
     ErrorData as McpError,
@@ -17,8 +19,22 @@ impl AgentServer {
     async fn system_report(
         &self,
         _p: Parameters<SystemReportParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(blocking_call(120, report::system_report, "体检报告生成").await)
+        Ok(blocking_call_progress(
+            120,
+            move |slot| {
+                let cb = |done: usize, total: usize| {
+                    if let Some(v) = (done * 1000).checked_div(total) {
+                        slot.set(v as u64);
+                    }
+                };
+                report::system_report(Some(&cb))
+            },
+            "体检报告生成",
+            &ctx,
+        )
+        .await)
     }
 
     #[tool(

@@ -6,12 +6,21 @@ use crate::tools::{hw, system};
 use super::rep_storage::{append_jsonl, read_jsonl, trim_jsonl, ts_secs};
 use super::rep_util::{fmt_ts, fmt_uptime, format_f1, now_str};
 
-pub fn system_report() -> Result<String, String> {
+/// 一键体检报告：8 段串行只读采集（每段 PowerShell/CIM 1-5s，总 10-30s）。
+/// `progress` 每完成一段回调一次 `(done, total)`——前端进度条按段推进，
+/// 用户能看到「采到哪一段了」而不是干等 120s 超时。
+pub fn system_report(progress: Option<&dyn Fn(usize, usize)>) -> Result<String, String> {
     let mut out = String::from("# DiskPilot 系统体检报告\n\n");
     out.push_str(&format!("生成时间：{}", now_str()));
     out.push('\n');
 
     let mut sections: Vec<(&str, String)> = Vec::new();
+    const TOTAL: usize = 8;
+    let report_progress = |done: usize| {
+        if let Some(cb) = progress {
+            cb(done, TOTAL);
+        }
+    };
 
     // CPU / GPU / 内存 / 主板
     for (name, f) in [
@@ -21,17 +30,20 @@ pub fn system_report() -> Result<String, String> {
         ("主板", hw::collect_motherboard),
     ] {
         sections.push((name, f().unwrap_or_else(|e| format!("采集失败：{e}"))));
+        report_progress(sections.len());
     }
     // 温度（fancmd 全量或降级）
     sections.push((
         "温度",
         hw::collect_sensors_fast().unwrap_or_else(|e| format!("采集失败：{e}")),
     ));
+    report_progress(sections.len());
     // 磁盘 SMART + 系统 + 电池
     sections.push((
         "磁盘健康",
         hw::collect_disk_smart().unwrap_or_else(|e| format!("采集失败：{e}")),
     ));
+    report_progress(sections.len());
     let sys = system::collect_system_info();
     sections.push((
         "系统",
@@ -45,10 +57,12 @@ pub fn system_report() -> Result<String, String> {
             fmt_uptime(sys.uptime_secs),
         ),
     ));
+    report_progress(sections.len());
     sections.push((
         "电池",
         hw::collect_battery().unwrap_or_else(|e| format!("采集失败：{e}")),
     ));
+    report_progress(sections.len());
 
     for (name, body) in sections {
         out.push_str(&format!("## {name}\n```\n{body}\n```\n\n"));
