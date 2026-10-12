@@ -84,6 +84,14 @@ export interface SystemProbe {
   sample_ns: number;
 }
 
+/** 内存占用最高的进程（只读快照，来自 run_process_probe）。 */
+export interface ProcessProbe {
+  pid: number;
+  name: string;
+  /** 工作集内存字节数；系统进程读不到时为 0（不是「最大」）。 */
+  mem_bytes: number;
+}
+
 export interface NetworkProbe {
   name: string;
   url: string;

@@ -296,6 +296,12 @@
 .tb-sys-row span { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--ink-3); width: 96px; }
 .tb-sys-row b { font-size: 12.5px; color: var(--ink); }
 .tb-sys-row .tb-sys-ua { font-family: var(--font-mono); font-weight: 400; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* 内存下钻：系统信息说「内存用了 X%」之后的「是谁在用」列表 */
+.tb-procs { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.tb-proc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.tb-proc-row { display: flex; align-items: baseline; gap: 10px; border: 1.5px solid var(--paper-3); border-radius: var(--radius-btn); padding: 6px 10px; background: var(--paper); }
+.tb-proc-name { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tb-proc-mem { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--ink-3); }
 .tb-ping { display: flex; flex-direction: column; gap: 8px; }
 .tb-ping-row { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--paper-3); border-radius: var(--radius-btn); padding: 8px 12px; background: var(--paper); }
 .tb-ping-row > span:first-child { font-weight: 600; font-size: 13px; min-width: 56px; }

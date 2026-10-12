@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { SteamInventory, WorkshopItem, SystemProbe, NetworkProbe } from '../types';
+import type { SteamInventory, WorkshopItem, SystemProbe, NetworkProbe, ProcessProbe } from '../types';
 import { isTauri } from '../env';
 import * as mocks from '../mocks';
 import { t } from '../i18n';
@@ -77,6 +77,12 @@ export const systemExtApi = {
     isTauri
       ? invoke<SystemProbe>('run_system_probe', { sample })
       : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'run_system_probe' }))),
+
+  /** 内存占用最高的进程 Top N（只读快照）。系统信息面板说「内存用了 X%」时的下钻出口。 */
+  runProcessProbe: (limit = 10) =>
+    isTauri
+      ? invoke<ProcessProbe[]>('run_process_probe', { limit })
+      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'run_process_probe' }))),
 
   // 网络检测：走后端 Rust 真实 TCP 连接，不受 WebView CSP 限制
   networkProbe: (targets: string[]) =>

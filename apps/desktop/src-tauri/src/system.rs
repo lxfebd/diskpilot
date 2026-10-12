@@ -156,6 +156,97 @@ pub(crate) async fn run_system_probe(sample: bool) -> Result<SystemProbe, String
     .map_err(|e| e.to_string())
 }
 
+/// 内存占用最高的进程快照条目（只读）。
+/// 字段走 snake_case 序列化，与 SystemProbe / ProbeDrive 同口径。
+#[derive(serde::Serialize, Clone)]
+pub(crate) struct ProbeProcess {
+    /// 进程 PID。
+    pid: u32,
+    /// 进程名（只有 exe 名，不含路径）。
+    name: String,
+    /// 工作集内存（字节）——任务管理器「内存」那一列的口径。
+    mem_bytes: u64,
+}
+
+/// 按内存降序截断。纯函数便于单测（枚举本身要真进程）。
+fn rank_processes(mut procs: Vec<ProbeProcess>, limit: usize) -> Vec<ProbeProcess> {
+    procs.sort_by(|a, b| {
+        b.mem_bytes
+            .cmp(&a.mem_bytes)
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    procs.truncate(limit.max(1));
+    procs
+}
+
+/// Toolhelp32 快照 + 工作集内存。系统进程/无权限进程读不到工作集时按 0 排后，
+/// 不猜数字。
+#[cfg(windows)]
+fn collect_processes() -> Vec<ProbeProcess> {
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+    use windows_sys::Win32::System::ProcessStatus::{
+        GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+    };
+    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+    unsafe {
+        let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if snap.is_null() || snap == INVALID_HANDLE_VALUE {
+            return Vec::new();
+        }
+        let mut entry: PROCESSENTRY32W = std::mem::zeroed();
+        entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+        let mut out = Vec::new();
+        let mut ok = Process32FirstW(snap, &mut entry);
+        while ok != 0 {
+            let name = String::from_utf16_lossy(&entry.szExeFile)
+                .trim_end_matches('\0')
+                .to_string();
+            let pid = entry.th32ProcessID;
+            let mut mem_bytes = 0u64;
+            let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+            if h != INVALID_HANDLE_VALUE {
+                let mut pmc: PROCESS_MEMORY_COUNTERS = std::mem::zeroed();
+                if GetProcessMemoryInfo(
+                    h,
+                    &mut pmc,
+                    std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+                ) != 0
+                {
+                    mem_bytes = pmc.WorkingSetSize as u64;
+                }
+                CloseHandle(h);
+            }
+            out.push(ProbeProcess {
+                pid,
+                name,
+                mem_bytes,
+            });
+            ok = Process32NextW(snap, &mut entry);
+        }
+        CloseHandle(snap);
+        out
+    }
+}
+
+#[cfg(not(windows))]
+fn collect_processes() -> Vec<ProbeProcess> {
+    Vec::new()
+}
+
+/// 内存占用最高的进程 Top N（只读快照，普通权限即可）。
+/// SysInfoPanel 说「内存用了 78%」却答不出是谁在用——这条命令补上那个出口。
+#[tauri::command]
+pub(crate) async fn run_process_probe(limit: u32) -> Result<Vec<ProbeProcess>, String> {
+    let n = (limit as usize).clamp(1, 50);
+    tokio::task::spawn_blocking(move || rank_processes(collect_processes(), n))
+        .await
+        .map_err(|e| e.to_string())
+}
+
 /// 单站点的连通性探测结果。
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -299,5 +390,52 @@ mod tests {
         let (name, url) = normalize_site("http://example.com:8080/a".to_string()).unwrap();
         assert_eq!(name, "example.com:8080");
         assert_eq!(url, "http://example.com:8080/a");
+    }
+
+    fn proc(pid: u32, name: &str, mem: u64) -> ProbeProcess {
+        ProbeProcess {
+            pid,
+            name: name.to_string(),
+            mem_bytes: mem,
+        }
+    }
+
+    #[test]
+    fn rank_processes_sorts_by_memory_desc_and_truncates() {
+        let got = rank_processes(
+            vec![proc(1, "a", 10), proc(2, "b", 90), proc(3, "c", 50)],
+            2,
+        );
+        assert_eq!(
+            got.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(),
+            vec!["b", "c"]
+        );
+    }
+
+    #[test]
+    fn rank_processes_keeps_zero_memory_rows_but_last() {
+        // 读不到工作集的进程不吞掉，但也不许排到前面去（0 不是「未知所以最大」）
+        let got = rank_processes(vec![proc(1, "x", 0), proc(2, "y", 5)], 10);
+        assert_eq!(got.len(), 2);
+        assert_eq!(got[1].name, "x");
+    }
+
+    #[test]
+    fn rank_processes_limit_zero_still_keeps_one() {
+        assert_eq!(rank_processes(vec![proc(1, "x", 1)], 0).len(), 1);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn collect_processes_sees_this_process_with_its_memory() {
+        // 真机验证 Win32 调用链（Toolhelp32 + OpenProcess + GetProcessMemoryInfo）：
+        // 快照里必须能找到自己，且自己的工作集读得到——读不到就是 API 用错了。
+        let list = collect_processes();
+        assert!(list.len() > 10, "快照应枚举到进程，实际 {}", list.len());
+        let mine = list
+            .iter()
+            .find(|p| p.pid == std::process::id())
+            .expect("快照里应能找到自己这个进程");
+        assert!(mine.mem_bytes > 0, "自己的工作集内存应读得到");
     }
 }

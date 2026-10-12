@@ -46,6 +46,12 @@ export const toolbelt = {
     'toolbelt.sys.envBrowser': '浏览器预览',
     'toolbelt.sys.ua': '浏览器标识',
     'toolbelt.sys.adminHint': '清理系统文件需要管理员权限。DiskPilot 启动时已申请管理员权限，可读写系统目录。',
+    'toolbelt.sys.procsShow': '看占内存最多的进程',
+    'toolbelt.sys.procsRefresh': '刷新进程内存排名',
+    'toolbelt.sys.procsLoading': '读取中…',
+    'toolbelt.sys.procsEmpty': '没读到进程列表（非桌面环境或快照失败）。',
+    'toolbelt.sys.procsUnknown': '内存未读到',
+    'toolbelt.sys.procsHint': '按工作集内存排序（任务管理器同口径）；读不到内存的进程排在最后，不会猜数字。',
 
     // 硬件工具箱（图吧工具箱 CLI 直通面板）
     'toolbelt.cli.title': '硬件工具箱',
@@ -558,6 +564,12 @@ export const toolbelt = {
     'toolbelt.sys.envBrowser': 'Browser preview',
     'toolbelt.sys.ua': 'Browser user agent',
     'toolbelt.sys.adminHint': 'Cleaning system files needs administrator rights. DiskPilot already requested them at startup, so it can read and write system directories.',
+    'toolbelt.sys.procsShow': 'Show the processes using most memory',
+    'toolbelt.sys.procsRefresh': 'Refresh the memory ranking',
+    'toolbelt.sys.procsLoading': 'Loading…',
+    'toolbelt.sys.procsEmpty': 'No process list (not the desktop app, or the snapshot failed).',
+    'toolbelt.sys.procsUnknown': 'memory unavailable',
+    'toolbelt.sys.procsHint': 'Sorted by working-set memory (same measure as Task Manager); processes whose memory cannot be read are listed last — no guessed numbers.',
 
     // Hardware toolbox (Tuba toolbox CLI panel)
     'toolbelt.cli.title': 'Hardware toolbox',

@@ -2,7 +2,7 @@
 // 网络走后端 Rust 真实 TCP 连接（reqwest），不受 WebView CSP connect-src 限制。
 // 之前用前端 fetch(mode:'no-cors')，跨域请求被浏览器安全策略拦掉，永远不可达。
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Cpu, Globe, Loader2, RefreshCw } from 'lucide-react';
+import { Activity, Cpu, Globe, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '../../api';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
@@ -10,7 +10,7 @@ import { formatBytes } from '../../format';
 import { useStore } from '../../store';
 import { ensureSysProbe } from '../../hwCache';
 import { usePerfScale, pollIntervalMs } from '../../perfHooks';
-import type { NetworkProbe, SystemProbe } from '../../types';
+import type { NetworkProbe, ProcessProbe, SystemProbe } from '../../types';
 import type { ToolContext, TFunc } from './shared';
 
 // 待测站点：name 只是展示文案（走文案表）；查找后端结果用 url
@@ -96,6 +96,24 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
     ensureSysProbe(false).then(setProbe).catch(() => setProbe(null)).finally(() => setLoading(false));
   }, []);
 
+  // 面板说「内存用了 X%」，用户下一个问题一定是「谁在用」。按需下钻读一次快照，
+  // 不进 5 秒轮询（枚举全表有代价，只在点击时发生）。
+  const [procs, setProcs] = useState<ProcessProbe[] | null>(null);
+  const [procsBusy, setProcsBusy] = useState(false);
+  const [procsErr, setProcsErr] = useState<string | null>(null);
+
+  const loadProcs = async () => {
+    setProcsBusy(true);
+    setProcsErr(null);
+    try {
+      setProcs(await api.runProcessProbe(10));
+    } catch (e) {
+      setProcsErr(String(e instanceof Error ? e.message : e));
+    } finally {
+      setProcsBusy(false);
+    }
+  };
+
   useEffect(() => {
     const visible = () => document.visibilityState === 'visible';
     const startTimer = () => {
@@ -168,6 +186,37 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
         <p className="hint">
           {t('toolbelt.sys.adminHint')}
         </p>
+      )}
+      {isTauri && (
+        <div className="tb-procs">
+          <button type="button" className="ghost small" onClick={loadProcs} disabled={procsBusy}>
+            {procsBusy ? <Loader2 size={11} className="spin" /> : <Activity size={11} />}{' '}
+            {procsBusy
+              ? t('toolbelt.sys.procsLoading')
+              : procs
+                ? t('toolbelt.sys.procsRefresh')
+                : t('toolbelt.sys.procsShow')}
+          </button>
+          {procsErr && <div className="error small">{procsErr}</div>}
+          {procs && procs.length === 0 && (
+            <div className="muted small">{t('toolbelt.sys.procsEmpty')}</div>
+          )}
+          {procs && procs.length > 0 && (
+            <>
+              <ul className="tb-proc-list">
+                {procs.map((p) => (
+                  <li key={p.pid} className="tb-proc-row">
+                    <span className="tb-proc-name" title={`PID ${p.pid}`}>{p.name}</span>
+                    <span className="tb-proc-mem">
+                      {p.mem_bytes > 0 ? formatBytes(p.mem_bytes) : t('toolbelt.sys.procsUnknown')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="hint">{t('toolbelt.sys.procsHint')}</p>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

@@ -41,6 +41,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_cleanup_suggestions: '清理建议读取',
   get_system_info: '系统信息读取',
   run_system_probe: '系统状态实时采集',
+  list_top_processes: '内存占用最高的进程',
   get_cli_tool_usage: '工具箱工具用法',
   get_tool_manifest: '读取工具能力说明书',
   run_cli_tool: '运行工具箱 CLI 工具',

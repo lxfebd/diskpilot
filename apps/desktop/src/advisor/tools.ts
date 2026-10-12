@@ -463,6 +463,29 @@ export const toolRegistry: ToolDef[] = [
     },
   },
   {
+    name: 'list_top_processes',
+    description: '内存占用最高的进程 Top N（只读快照，工作集口径 = 任务管理器「内存」那一列）。用户问『谁在吃内存』『哪个程序占内存最多』『内存用了 80% 是谁干的』『帮我看看有没有进程失控』时调用；和 run_system_probe 的内存使用率配合回答：先说总量吃紧，再说是谁吃的。读不到内存的进程（系统进程）排在最后并标「内存未读到」，不要当成 0 占用或最大占用。',
+    properties: { limit: { type: 'number', description: '最多返回多少个进程（默认 10，上限 50）' } },
+    required: [],
+    tauriOnly: true,
+    execute: async (args) => {
+      const raw = typeof args.limit === 'number' ? args.limit : Number(args.limit);
+      const limit = Number.isFinite(raw) ? Math.max(1, Math.min(50, Math.round(raw))) : 10;
+      const procs = await api.runProcessProbe(limit);
+      if (procs.length === 0) {
+        return '没读到进程列表（非桌面环境或快照失败）。';
+      }
+      const lines = [`内存占用最高的 ${procs.length} 个进程（工作集口径）：`];
+      for (const p of procs) {
+        lines.push(
+          `- ${p.name}（PID ${p.pid}）：${p.mem_bytes > 0 ? formatBytes(p.mem_bytes) : '内存未读到'}`,
+        );
+      }
+      lines.push('标「内存未读到」的是读不到工作集的进程，排在最后，不代表它没占内存。');
+      return lines.join('\n');
+    },
+  },
+  {
     name: 'get_tool_manifest',
     description: '获取图吧工具箱中某个工具的结构化能力说明书（Tool Manifest JSON）：用途、适用场景、调用参数、风险等级、副作用、示例。比 get_cli_tool_usage 更详细（含完整参数表/副作用/官方链接）。执行 run_cli_tool 前若需要确认参数细节可用本工具。',
     properties: { toolName: { type: 'string', description: '工具名，如 WizTree、CrystalDiskInfo、Prime95' } },

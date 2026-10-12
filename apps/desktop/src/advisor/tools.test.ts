@@ -242,7 +242,7 @@ describe('mcpToolRegistry（agent-server 工具集）', () => {
     const builtin = new Set([
       'web_search', 'path_size', 'inspect_dir', 'propose_cleanup_plan', 'get_disk_health',
       'get_steam_library_summary', 'get_cleanup_suggestions', 'get_system_info',
-      'run_system_probe', 'get_tool_manifest', 'get_cli_tool_usage', 'run_cli_tool',
+      'run_system_probe', 'list_top_processes', 'get_tool_manifest', 'get_cli_tool_usage', 'run_cli_tool',
       'get_hardware_info', 'analyze_disk_health', 'generate_hw_report', 'run_hardware_test',
       'adjust_power_plan', 'list_plugins', 'install_plugin', 'uninstall_plugin',
       'market_plugins', 'activate_plugin', 'export_plugin',

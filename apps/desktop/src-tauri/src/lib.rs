@@ -309,6 +309,7 @@ pub fn run() {
             hw::hw_fan::fan_status,
             hw::hw_fan::fan_curve_apply,
             system::run_system_probe,
+            system::run_process_probe,
             system::network_probe,
             startup::list_startup_items,
             startup::set_startup_item,
