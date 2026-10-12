@@ -124,7 +124,7 @@
 | `security_event_logs` | logs:Option<String>, hours:Option<u32>, max_events:Option<usize> | 读取系统事件日志：指定日志名（逗号分隔，默认 System）、最近 hours 小时、最多 max_events 条（只读）。安全日志无管理员权限会降级说明。 |
 | `security_firewall_rules` | direction:Option<String>, action:Option<String>, top_n:Option<usize> | 列出防火墙规则：方向（默认 Inbound 入站）与动作（默认 Allow 允许）过滤，最多 top_n 条（只读，不需要管理员权限）。用户问『防火墙开了什么/某程序被放行了吗』时调用。 |
 | `security_login_events` | max_events:Option<usize> | 读取最近的登录/注销事件（安全日志 4624/4625 + PowerShell 脚本块日志 4104，只读）。需要管理员权限才读得到安全日志，无权限会明确降级。 |
-| `steam_games` | top_n:Option<usize> | 盘点本机 Steam 游戏库：库根/每库游戏数/总占用 + 各游戏（appid/名称/安装目录/大小/上次游玩/是否幽灵安装/是否建议清理及原因）。只读（注册表定位 Steam + 读 ACF 清单）。 |
+| `steam_games` | top_n:Option<usize> | 盘点本机 Steam 游戏库：库根/每库游戏数/总占用 + 各游戏（appid/名称/安装目录/大小/上次游玩/是否幽灵安装/是否建议清理及原因）+ 卸载残留（有目录无 ACF，带完整路径与大小）。只读（注册表定位 Steam + 读 ACF 清单）。 |
 | `toolbelt_list` | — | 列出图吧工具箱集成工具清单（只读 L0）：工具名/分类/CLI|GUI/权限级/风险/用途。AI 判断『这个场景该用工具箱哪个工具』时调用，或先于 toolbelt_run 查询可用工具。 |
 | `toolbelt_run` | tool:String, args:Option<Vec<String>>, confirmed:Option<bool>, timeout_secs:Option<u64> | 执行图吧工具箱的 CLI 工具（**写操作 L2**，三层防线：L3 永久禁止如 FPT64 刷 BIOS；medium/high 风险必须 confirmed=true 用户确认；cli.run 权限未开启拒绝）。参数 tool=工具名（先 toolbelt_list 确认名称，如 crystaldiskinfo/wiztree）、args=参数列表（透传不拼 shell，空则用工具默认）、confirmed=用户已确认（medium+ 风险必须 true）、timeout_secs=超时秒（默认 30）。 |
 
@@ -382,7 +382,7 @@ IPMI 服务器接口探测（只读 L0，复刻 AIDA64 IPMI）：检测主板是
 
 ### `steam_games`
 
-盘点本机 Steam 游戏库：库根/每库游戏数/总占用 + 各游戏（appid/名称/安装目录/大小/上次游玩/是否幽灵安装/是否建议清理及原因）。只读（注册表定位 Steam + 读 ACF 清单）。用户问『装了哪些 Steam 游戏/哪个游戏占地/Steam 该清谁』时调用。
+盘点本机 Steam 游戏库：库根/每库游戏数/总占用 + 各游戏（appid/名称/安装目录/大小/上次游玩/是否幽灵安装/是否建议清理及原因），以及**卸载残留**（有目录无 ACF：游戏列表里完全看不到的真实占用，每处带完整路径与大小）。只读（注册表定位 Steam + 读 ACF 清单）。用户问『装了哪些 Steam 游戏/哪个游戏占地/Steam 该清谁』『Steam 卸载没删干净吗、有没有残留』时调用；用户明确要求清掉某一处残留时，按给出的路径用 `file_recycle` 移入回收站（写操作，先过用户确认门）。
 
 ### `stress_cancel`
 
