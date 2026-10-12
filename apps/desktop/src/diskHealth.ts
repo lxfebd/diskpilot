@@ -8,6 +8,8 @@
 // 为什么要盘符映射：用户问的是「我要清的这块 C 盘是哪块盘、它健康吗」。物理盘只有
 // 型号名时对不上号，清理确认里也就无法提醒「这块盘正在坏」。
 
+import { formatBytes } from './format';
+
 export type DiskHealthGrade = 'good' | 'caution' | 'bad' | 'unknown';
 
 const HEALTH_GOOD_WORDS = ['healthy', 'ok', 'good', '良好', '正常']; // @i18n-keep 后端原值比对
@@ -138,4 +140,71 @@ export function pathsOnRiskyDrives(
   }
   if (hit.size === 0) return [];
   return risky.filter((d) => d.letters.some((l) => hit.has(l)));
+}
+
+const GRADE_LABELS: Record<DiskHealthGrade, string> = {
+  good: '健康',
+  caution: '注意：SMART 有告警',
+  bad: '不良：可能正在坏，先提醒备份',
+  unknown: '未上报：不等于坏，别当成坏盘',
+};
+
+/**
+ * 把 hw_disk_health 的原始 JSON 渲染成给 AI 的文本。
+ *
+ * 为什么不让 AI 直接吃 JSON：JSON 里 `health: "Unknown"` 和一堆 `null` 很容易被模型
+ * 读成「这块盘坏了」，或者凭常识补一个通电小时数（UI 侧已经犯过一次这个错）。
+ * 这里统一成「分级 + 原值 + 盘符」，读不到的字段一律写「未读到」，模型照抄即可。
+ */
+export function renderDiskHealthText(health: unknown): string {
+  const h = (health ?? {}) as Record<string, unknown>;
+  const disks = Array.isArray(h.disks) ? h.disks : [];
+  if (disks.length === 0) {
+    return '未读到任何物理盘健康信息（Get-PhysicalDisk 不可用）。不要凭猜测回答硬盘状况。';
+  }
+  const out: string[] = [`物理盘 ${disks.length} 块（读不到的字段都写了「未读到」，不要猜）：`];
+  for (const d of disks) {
+    const rec = (d ?? {}) as Record<string, unknown>;
+    const letters = driveLettersOf(rec);
+    const raw = String(rec.health ?? '').trim();
+    const grade = gradeDiskHealth(raw);
+    const kind = [String(rec.media ?? '').trim(), String(rec.bus ?? '').trim()].filter(Boolean).join(' / ');
+    const size = typeof rec.size === 'number' && rec.size > 0 ? formatBytes(rec.size) : '容量未读到';
+    const smart = [
+      typeof rec.power_on_hours === 'number' ? `通电 ${rec.power_on_hours} 小时` : '通电时间未读到',
+      typeof rec.temperature_c === 'number' ? `${rec.temperature_c}°C` : '温度未读到',
+      typeof rec.wear_pct === 'number' ? `磨损 ${rec.wear_pct}%` : '磨损未读到',
+      typeof rec.read_errors === 'number' || typeof rec.write_errors === 'number'
+        ? `读错误 ${typeof rec.read_errors === 'number' ? rec.read_errors : '未读到'} / 写错误 ${typeof rec.write_errors === 'number' ? rec.write_errors : '未读到'}`
+        : '读写错误未读到',
+    ];
+    out.push(
+      `- ${letters.length ? letters.join(', ') + ': ' : ''}${String(rec.friendly ?? '') || '未知型号'}：` +
+        `${kind || '类型未读到'}，${size}，健康状态 ${raw || '未上报'}（${GRADE_LABELS[grade]}）`,
+    );
+    out.push(`    ${smart.join(' · ')}`);
+  }
+  const aliases = driveAliasesOf(h);
+  if (aliases.length > 0) {
+    out.push(
+      `映射盘：${aliases.map((a) => `${a.letter}: → ${a.target}`).join('，')}` +
+        '（不是独立物理盘，空间与目标卷同一份，别按两块盘算）',
+    );
+  }
+  if (h.reliability === false) {
+    out.push('SMART 可靠性计数器读不到（非管理员权限常见）：通电/温度/磨损/读写错误都会是「未读到」。');
+  }
+  const cdi = Array.isArray(h.cdi_report) ? h.cdi_report : [];
+  if (cdi.length > 0) {
+    out.push('CrystalDiskInfo 补充（口径与 WMI 不同，它用 Good/Caution）：');
+    for (const c of cdi) {
+      const rec = (c ?? {}) as Record<string, unknown>;
+      const kv = Object.entries(rec)
+        .filter(([k, v]) => k !== 'device' && typeof v === 'string' && v !== '')
+        .map(([k, v]) => `${k} ${v}`);
+      out.push(`- ${String(rec.device ?? '') || '未知设备'}${kv.length ? '：' + kv.join(' · ') : '：没有可读字段'}`);
+    }
+  }
+  if (typeof h.note === 'string' && h.note !== '') out.push(h.note);
+  return out.join('\n');
 }

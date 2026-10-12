@@ -9,6 +9,7 @@
 import { api } from '../api';
 import type { HwInfo, HwDiskHealth, ToolManifest, ToolManifestInvocation } from '../api';
 import { ensureHwLoaded, ensureSysProbe } from '../hwCache';
+import { renderDiskHealthText } from '../diskHealth';
 import { isTauri } from '../env';
 import { formatBytes } from '../format';
 import { prefs } from '../theme';
@@ -610,14 +611,16 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'analyze_disk_health',
-    description: '分析硬盘健康状态：读取 SMART 通电时间 / 温度 / 磨损度 / 读写错误。只读操作，零风险。用户问"我的硬盘还好吗""硬盘寿命多少"时调用。非管理员权限下部分字段可能为 null。',
+    description:
+      '分析硬盘健康状态：读取 SMART 通电时间 / 温度 / 磨损度 / 读写错误，返回已分级的文本（健康 / 注意 / 不良 / 未上报）并带盘符与型号。只读操作，零风险。用户问"我的硬盘还好吗""硬盘寿命多少"时调用。读不到的字段已写明「未读到」——照抄即可，不要凭常识补数或把「未上报」说成坏盘。',
     properties: {},
     required: [],
     tauriOnly: true,
     execute: async (_args, o) => {
       const cache = await ensureHwLoaded();
       o.onHwCard?.({ info: cache.info, health: cache.health });
-      return JSON.stringify(cache.health, null, 2);
+      // 不给模型吃原始 JSON：Unknown 与一堆 null 很容易被读成「盘坏了」或凭常识补数。
+      return renderDiskHealthText(cache.health);
     },
   },
   {

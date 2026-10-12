@@ -5,6 +5,7 @@ import {
   gradeDiskHealth,
   pathDriveLetter,
   pathsOnRiskyDrives,
+  renderDiskHealthText,
   resolveDriveLetter,
   resolveLetter,
   riskyDrives,
@@ -162,5 +163,82 @@ describe('映射盘（subst）解析', () => {
     expect(hit[0].friendly).toBe('KIOXIA 2TB');
     // 不给别名表就漏掉——这正是修复前的行为。
     expect(pathsOnRiskyDrives(disks, ['D:\\Downloads\\big.zip'])).toEqual([]);
+  });
+});
+
+describe('renderDiskHealthText（给 AI 的硬盘健康文本）', () => {
+  const HEALTH = {
+    disks: [
+      {
+        friendly: 'WD_BLACK SN770 1TB',
+        media: 'SSD',
+        bus: 'NVMe',
+        size: 1000000000000,
+        health: 'Healthy',
+        drive_letters: 'C',
+        power_on_hours: 2131,
+        temperature_c: 41,
+        wear_pct: 0,
+        read_errors: 0,
+        write_errors: 0,
+      },
+      {
+        friendly: 'Mystery Disk',
+        media: 'HDD',
+        bus: 'SATA',
+        size: 2000000000000,
+        health: 'Unknown',
+        drive_letters: '',
+        power_on_hours: null,
+        temperature_c: null,
+        wear_pct: null,
+        read_errors: null,
+        write_errors: null,
+      },
+    ],
+    reliability: true,
+    substs: [{ letter: 'D', target: 'J:\\D' }],
+  };
+
+  it('分级 + 原值 + 盘符，模型照抄即可', () => {
+    const text = renderDiskHealthText(HEALTH);
+    expect(text).toContain('物理盘 2 块');
+    expect(text).toContain('C: WD_BLACK SN770 1TB');
+    expect(text).toContain('健康状态 Healthy（健康）');
+    expect(text).toContain('通电 2131 小时');
+  });
+
+  it('Unknown 写成「未上报」并说明不等于坏，读不到的字段写「未读到」', () => {
+    const text = renderDiskHealthText(HEALTH);
+    expect(text).toContain('健康状态 Unknown（未上报：不等于坏，别当成坏盘）');
+    expect(text).toContain('通电时间未读到');
+    expect(text).toContain('磨损未读到');
+    expect(text).toContain('读写错误未读到');
+  });
+
+  it('映射盘单独说明，不混进物理盘计数', () => {
+    const text = renderDiskHealthText(HEALTH);
+    expect(text).toContain('映射盘：D: → J:\\D');
+    expect(text).toContain('别按两块盘算');
+  });
+
+  it('SMART 不可读时说明原因（非管理员权限常见）', () => {
+    const text = renderDiskHealthText({ ...HEALTH, reliability: false });
+    expect(text).toContain('SMART 可靠性计数器读不到');
+  });
+
+  it('CrystalDiskInfo 补充单独一段并标明口径不同', () => {
+    const text = renderDiskHealthText({
+      ...HEALTH,
+      cdi_report: [{ device: 'WD_BLACK SN770', 健康状态: 'Good', 通电时间: '2131' }],
+    });
+    expect(text).toContain('CrystalDiskInfo 补充');
+    expect(text).toContain('它用 Good/Caution');
+    expect(text).toContain('健康状态 Good');
+  });
+
+  it('一块盘都没读到时直说，不给模型留猜测空间', () => {
+    expect(renderDiskHealthText({ disks: [] })).toContain('不要凭猜测');
+    expect(renderDiskHealthText(null)).toContain('不要凭猜测');
   });
 });
