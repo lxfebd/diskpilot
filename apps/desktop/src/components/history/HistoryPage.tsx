@@ -12,6 +12,7 @@ import {
   dayGroupLabel,
   filterUndoEntries,
   groupUndoByDay,
+  restoreKind,
   summarizeUndo,
   type UndoActionFilter,
 } from '../../history/model';
@@ -158,7 +159,7 @@ export function HistoryPage() {
                       <div className="undo-reason">{t('cleanup.bytesFreed', { size: formatBytes(e.bytes_freed) })}</div>
                     )}
                     {e.reason && <div className="undo-reason">{e.reason}</div>}
-                    {e.action === 'quarantine' && (
+                    {restoreKind(e) === 'inline' && (
                       <button
                         type="button"
                         className="ghost undo-restore"
@@ -169,6 +170,18 @@ export function HistoryPage() {
                           ? <><Loader2 size={11} className="spin" /> {t('cleanup.restoring')}</>
                           : <><RotateCcw size={11} /> {t('cleanup.restore')}</>}
                       </button>
+                    )}
+                    {restoreKind(e) === 'osRecycleBin' && (
+                      <div className="undo-restore-hint">
+                        <span className="muted small">{t('cleanup.recycleUndoHint')}</span>
+                        <button
+                          type="button"
+                          className="ghost undo-restore"
+                          onClick={() => void api.openRecycleBin()}
+                        >
+                          {t('cleanup.openRecycleBin')}
+                        </button>
+                      </div>
                     )}
                   </li>
                 );

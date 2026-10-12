@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RotateCcw, History, Loader2 } from 'lucide-react';
 import { api } from '../api';
+import { restoreKind } from '../history/model';
 import { useT } from '../i18n';
 import { formatBytes } from '../format';
 import type { UndoEntry } from '../types';
@@ -105,7 +106,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
               <div className="undo-reason">{t('cleanup.bytesFreed', { size: formatBytes(e.bytes_freed) })}</div>
             )}
             {e.reason && <div className="undo-reason">{e.reason}</div>}
-            {e.action === 'quarantine' && (
+            {restoreKind(e) === 'inline' && (
               <button
                 type="button"
                 className="ghost undo-restore"
@@ -116,6 +117,18 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
                   ? <><Loader2 size={11} className="spin" /> {t('cleanup.restoring')}</>
                   : <><RotateCcw size={11} /> {t('cleanup.restore')}</>}
               </button>
+            )}
+            {restoreKind(e) === 'osRecycleBin' && (
+              <div className="undo-restore-hint">
+                <span className="muted small">{t('cleanup.recycleUndoHint')}</span>
+                <button
+                  type="button"
+                  className="ghost undo-restore"
+                  onClick={() => void api.openRecycleBin()}
+                >
+                  {t('cleanup.openRecycleBin')}
+                </button>
+              </div>
             )}
           </li>
         ))}

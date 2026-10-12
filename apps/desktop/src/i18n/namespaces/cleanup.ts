@@ -145,6 +145,8 @@ export const cleanup = {
     'cleanup.restored': '已恢复：{path}',
     'cleanup.notRestorable': '该记录不可恢复（只有「隔离」可以撤销）',
     'cleanup.restoreFailed': '恢复失败：{msg}',
+    'cleanup.recycleUndoHint': '已移入系统回收站：这里恢复不了，请到系统回收站还原',
+    'cleanup.openRecycleBin': '打开系统回收站',
   },
   en: {
     // ── CleanupModal: title and scope rows ──
@@ -285,5 +287,7 @@ export const cleanup = {
     'cleanup.restored': 'Restored: {path}',
     'cleanup.notRestorable': 'This entry cannot be restored (only Quarantined entries can be undone)',
     'cleanup.restoreFailed': 'Restore failed: {msg}',
+    'cleanup.recycleUndoHint': 'Moved to the system Recycle Bin — restore it there, not here',
+    'cleanup.openRecycleBin': 'Open Recycle Bin',
   },
 };

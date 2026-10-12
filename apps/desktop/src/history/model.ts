@@ -81,3 +81,21 @@ export function dayGroupLabel(key: string, now: Date, t: (k: string) => string):
   if (key === dayKeyOf(yesterday.toISOString())) return t('history.yesterday');
   return key;
 }
+
+/**
+ * 还原出口口径（与后端一致，别在组件里各写各的）：
+ * - `inline`：quarantine —— 东西还在隔离区，应用内一键还原（`api.undo`）；
+ * - `osRecycleBin`：recycle —— 东西在**系统回收站**，应用内还原不了
+ *   （后端 `restore_quarantined` 明确拒绝非隔离区条目），只能去系统回收站还原；
+ * - `none`：delete —— 按设计不可还原。
+ *
+ * 为什么要有这个函数：台账里写着「可撤销」，但界面上 recycle 条目以前什么都不说，
+ * 用户看不到出口就等于没出口。
+ */
+export type UndoRestoreKind = 'inline' | 'osRecycleBin' | 'none';
+
+export function restoreKind(e: UndoEntry): UndoRestoreKind {
+  if (e.action === 'quarantine') return 'inline';
+  if (e.action === 'recycle') return 'osRecycleBin';
+  return 'none';
+}

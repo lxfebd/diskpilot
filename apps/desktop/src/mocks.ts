@@ -460,13 +460,61 @@ export async function inspect(path: string, n: number): Promise<string[]> {
 
 export async function recyclePaths(paths: string[], reason: string): Promise<UndoEntry[]> {
   await wait(400);
-  return paths.map((src) => ({
+  const entries = paths.map((src) => ({
     timestamp: new Date().toISOString(),
     action: 'recycle' as const,
     source: src,
     destination: null,
     reason,
   }));
+  UNDO_LEDGER.push(...entries);
+  return entries;
+}
+
+/**
+ * mock 台账：与后端 undo.jsonl 同语义（最新在前），回收动作会真的追加进来，
+ * 所以「回收 → 历史页看到 → 给出还原出口」这条链路在浏览器 mock 模式里可跑通。
+ */
+const UNDO_LEDGER: UndoEntry[] = [
+  {
+    timestamp: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    action: 'quarantine',
+    source: 'C:\\Users\\demo\\Documents\\旧报告.docx',
+    destination: 'C:\\Users\\demo\\AppData\\Roaming\\diskpilot\\quarantine\\旧报告.docx',
+    reason: '隔离而非删除',
+    bytes_freed: 3.2 * GB,
+  },
+  {
+    timestamp: new Date(Date.now() - 5 * 3_600_000).toISOString(),
+    action: 'recycle',
+    source: 'D:\\SteamLibrary\\steamapps\\common\\Leftover Game',
+    reason: 'Steam 卸载残留',
+    bytes_freed: 12 * GB,
+  },
+  {
+    timestamp: new Date(Date.now() - 86_400_000).toISOString(),
+    action: 'delete',
+    source: 'C:\\Users\\demo\\AppData\\Local\\Temp\\crash.log',
+    reason: '临时日志',
+    bytes_freed: 120 * 1024 * 1024,
+  },
+];
+
+export async function listUndo(limit?: number): Promise<UndoEntry[]> {
+  await wait(120);
+  const sorted = [...UNDO_LEDGER].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  return limit && limit > 0 ? sorted.slice(0, limit) : sorted;
+}
+
+/** 只有隔离条目能原地还原（与后端 restore_quarantined 同口径）；回收条目返回 null。 */
+export async function undo(index: number, source: string): Promise<UndoEntry | null> {
+  await wait(300);
+  const sorted = [...UNDO_LEDGER].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const e = sorted[index];
+  if (!e || e.action !== 'quarantine' || e.source !== source) return null;
+  const at = UNDO_LEDGER.indexOf(e);
+  if (at >= 0) UNDO_LEDGER.splice(at, 1);
+  return e;
 }
 
 function wait(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }

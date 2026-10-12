@@ -135,3 +135,52 @@ pub(crate) async fn recycle_paths(
     crate::cleanup_logic::remove_cache_entries(&state, &invalidate_roots);
     Ok(out)
 }
+
+/// 打开系统回收站：给台账里的「回收」条目一个明确的还原出口。
+///
+/// 为什么要单独一条命令，而不是复用 `reveal_in_explorer`：回收站是 shell 特殊
+/// 文件夹（`shell:RecycleBinFolder`），不是文件系统路径，`reveal_in_explorer`
+/// 第一句 `path.exists()` 就把它拒了。
+///
+/// 只开窗口，**不代用户还原任何文件**——还原由用户在系统回收站里自己点，
+/// 应用不猜「哪一条对应回收站里的哪个条目」（回收站里的名字与原始路径的映射
+/// 只有 shell 知道）。
+#[tauri::command]
+pub(crate) fn open_recycle_bin() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg("shell:RecycleBinFolder")
+            .spawn()
+            .map_err(|e| format!("open_recycle_bin: {e}"))?;
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let trash = std::env::var("HOME")
+            .map(|h| PathBuf::from(h).join(".Trash"))
+            .map_err(|_| "open_recycle_bin: 找不到 HOME".to_string())?;
+        std::process::Command::new("open")
+            .arg(&trash)
+            .spawn()
+            .map_err(|e| format!("open_recycle_bin: {e}"))?;
+        Ok(())
+    }
+    #[cfg(all(not(windows), not(target_os = "macos")))]
+    {
+        let trash = std::env::var("HOME")
+            .map(|h| PathBuf::from(h).join(".local/share/Trash"))
+            .map_err(|_| "open_recycle_bin: 找不到 HOME".to_string())?;
+        if !trash.exists() {
+            return Err(format!(
+                "open_recycle_bin: 回收站目录不存在（{}）——该桌面的回收站还没被用过。",
+                trash.display()
+            ));
+        }
+        std::process::Command::new("xdg-open")
+            .arg(&trash)
+            .spawn()
+            .map_err(|e| format!("open_recycle_bin: {e}"))?;
+        Ok(())
+    }
+}

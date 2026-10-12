@@ -231,6 +231,7 @@ pub fn run() {
             conda::inspect_path,
             conda::reveal_in_explorer,
             executor::exec_glob::recycle_paths,
+            executor::exec_glob::open_recycle_bin,
             executor::exec_aiplan::execute_ai_plan,
             executor::exec_undo::list_undo,
             executor::exec_undo_core::undo,

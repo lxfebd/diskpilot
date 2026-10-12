@@ -7,6 +7,7 @@ import {
   summarizeUndo,
   groupUndoByDay,
   dayGroupLabel,
+  restoreKind,
 } from './model';
 import type { UndoEntry } from '../types';
 
@@ -114,5 +115,20 @@ describe('dayGroupLabel', () => {
   it('跨月/跨年边界按日期字符串判断，不受月份天数影响', () => {
     const now = new Date(2026, 2, 1, 0, 30); // 3 月 1 日
     expect(dayGroupLabel('2026-02-28', now, t)).toBe('history.yesterday');
+  });
+});
+
+describe('restoreKind', () => {
+  const ts = iso(new Date(2026, 8, 29, 10, 0));
+
+  it('隔离条目可原地恢复；回收条目只能去系统回收站；删除无出口', () => {
+    expect(restoreKind(entry({ timestamp: ts, action: 'quarantine' }))).toBe('inline');
+    expect(restoreKind(entry({ timestamp: ts, action: 'recycle' }))).toBe('osRecycleBin');
+    expect(restoreKind(entry({ timestamp: ts, action: 'delete' }))).toBe('none');
+  });
+
+  it('回收条目绝不给原地恢复（后端 restore_quarantined 会拒绝非隔离区条目）', () => {
+    // 这条断言挡的是「界面上给了按钮、点了必失败」的回归。
+    expect(restoreKind(entry({ timestamp: ts, action: 'recycle', destination: null }))).not.toBe('inline');
   });
 });

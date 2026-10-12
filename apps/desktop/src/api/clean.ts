@@ -130,7 +130,7 @@ export const cleanApi = {
   },
 
   listUndo: (limit?: number) =>
-    isTauri ? invoke<UndoEntry[]>('list_undo', { limit: limit ?? null }) : Promise.resolve([]),
+    isTauri ? invoke<UndoEntry[]>('list_undo', { limit: limit ?? null }) : mocks.listUndo(limit),
 
   // P2b 清理预检（只读）：建议退出的进程里还在跑的 + 推荐预选 scope id。
   // 绝不在这里杀进程——杀进程是独立写路径，走 toolbelt 的确认闸。
@@ -142,7 +142,11 @@ export const cleanApi = {
   // index 是展示列表位置；source 是与后端对齐的条目路径（防列表在两次
   // 刷新之间变化导致 index 漂移、恢复错条目——后端会双重校验）。
   undo: (index: number, source: string) =>
-    isTauri ? invoke<UndoEntry | null>('undo', { index, source }) : Promise.resolve(null),
+    isTauri ? invoke<UndoEntry | null>('undo', { index, source }) : mocks.undo(index, source),
+
+  /** 打开系统回收站（只开窗口，不代还原）——「回收」类条目的还原出口。 */
+  openRecycleBin: () =>
+    isTauri ? invoke<void>('open_recycle_bin') : Promise.resolve(),
 
   listCondaEnvs: (condaRoot: string) =>
     isTauri
