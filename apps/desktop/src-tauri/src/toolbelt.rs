@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use tauri::AppHandle;
 
-use crate::general_config_at;
+use crate::general_tray::general_config_at;
 
 /// 工具墙 catalog 缓存：`catalog_tree` 全目录扫描 + 每目录抽取 exe 图标较重
 /// （实测 ~百 ms~秒级），同一会话内反复切工具墙直接命中缓存秒回；TTL 过期后
