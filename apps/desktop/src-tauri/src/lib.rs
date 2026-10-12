@@ -8,6 +8,7 @@ mod dups;
 mod executor;
 pub(crate) mod hw;
 mod hw_history;
+mod hw_report;
 pub(crate) mod mcp;
 mod plugin_registry;
 mod plugin_remote;
