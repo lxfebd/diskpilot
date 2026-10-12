@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '../api';
+import { useStore } from '../store';
 import type { SteamGame, SteamInventory } from '../types';
 import { formatBytes } from '../format';
 import { t, useT } from '../i18n';
@@ -225,6 +226,42 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     setToast(text);
     later(() => setToast(null), ms);
   }, [later]);
+
+  // 卸载残留的可执行出口：检测到 → 移入回收站。走 store.recyclePaths 而不是自己
+  // 调 api——那条链已经包含后端 recycle_paths（动作写死 Recycle、逐个校验
+  // protected_path、写 undo.jsonl 可撤销）+ reclaimed 记账 + toast，别处怎么回收
+  // 这里就怎么回收，不另开一条清理路径。
+  // 铁律：破坏性动作禁一步即执行——垃圾桶按钮只挂出确认条，点「移入回收站」才真跑。
+  const recycle = useStore((s) => s.recyclePaths);
+  const [residueConfirm, setResidueConfirm] = useState<string | null>(null);
+  const [residueBusy, setResidueBusy] = useState<string | null>(null);
+
+  const doRecycleResidue = useCallback(
+    async (r: { path: string; libRoot: string; size_bytes: number }) => {
+      setResidueConfirm(null);
+      setResidueBusy(r.path);
+      const res = await recycle([{ path: r.path, size_hint: r.size_bytes }], t('steam.residueReason'));
+      if (res.done > 0) {
+        // 本地即时剔除这一条：为一条残留重扫整库不值得（扫描要遍历全库目录）。
+        setInventory((prev) =>
+          prev && {
+            ...prev,
+            libraries: prev.libraries.map((l) =>
+              l.root === r.libRoot
+                ? {
+                    ...l,
+                    residue: l.residue.filter((x) => x.path !== r.path),
+                    residue_size_bytes: Math.max(0, l.residue_size_bytes - r.size_bytes),
+                  }
+                : l,
+            ),
+          },
+        );
+      }
+      setResidueBusy(null);
+    },
+    [recycle, t],
+  );
 
   const doRevealManifest = useCallback(
     async (g: SteamGame) => {
@@ -524,29 +561,59 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
                 </div>
                 <div className="steam-residue-lead">{t('steam.residueLead')}</div>
                 {residueItems.slice(0, 12).map((r) => (
-                  <div key={`${r.libRoot}-${r.path}`} className="steam-residue-row">
-                    <span className="steam-residue-kind">
-                      {r.kind === 'workshop' ? t('steam.residueWorkshop') : t('steam.residueInstall')}
-                    </span>
-                    <span className="steam-residue-name" title={r.path}>
-                      {r.appid_hint != null ? `appid ${r.appid_hint}` : r.dir_name}
-                    </span>
-                    <span className="steam-residue-size">{formatBytes(r.size_bytes)}</span>
-                    {r.last_modified_ts > 0 && (
-                      <span className="steam-residue-age">
-                        {t('steam.residueAge', {
-                          days: Math.max(0, Math.floor((Date.now() / 1000 - r.last_modified_ts) / 86400)),
-                        })}
+                  <div key={`${r.libRoot}-${r.path}`} className="steam-residue-item">
+                    <div className="steam-residue-row">
+                      <span className="steam-residue-kind">
+                        {r.kind === 'workshop' ? t('steam.residueWorkshop') : t('steam.residueInstall')}
                       </span>
+                      <span className="steam-residue-name" title={r.path}>
+                        {r.appid_hint != null ? `appid ${r.appid_hint}` : r.dir_name}
+                      </span>
+                      <span className="steam-residue-size">{formatBytes(r.size_bytes)}</span>
+                      {r.last_modified_ts > 0 && (
+                        <span className="steam-residue-age">
+                          {t('steam.residueAge', {
+                            days: Math.max(0, Math.floor((Date.now() / 1000 - r.last_modified_ts) / 86400)),
+                          })}
+                        </span>
+                      )}
+                      <button
+                        className="steam-icon-btn"
+                        onClick={() => void api.revealInExplorer(r.path)}
+                        title={t('steam.residueOpenTitle')}
+                        aria-label={t('steam.residueOpenTitle')}
+                      >
+                        <FolderOpen size={12} />
+                      </button>
+                      {residueBusy === r.path ? (
+                        <span className="steam-residue-busy">{t('steam.residueRecycling')}</span>
+                      ) : (
+                        <button
+                          className="steam-icon-btn steam-residue-recycle"
+                          onClick={() => setResidueConfirm(r.path)}
+                          title={t('steam.residueRecycleTitle')}
+                          aria-label={t('steam.residueRecycleTitle')}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                    {residueConfirm === r.path && (
+                      <div className="steam-residue-confirm">
+                        <span>
+                          {t('steam.residueConfirmLead', {
+                            name: r.appid_hint != null ? `appid ${r.appid_hint}` : r.dir_name,
+                            size: formatBytes(r.size_bytes),
+                          })}
+                        </span>
+                        <button className="primary small" onClick={() => void doRecycleResidue(r)}>
+                          {t('steam.residueConfirmGo')}
+                        </button>
+                        <button className="ghost small" onClick={() => setResidueConfirm(null)}>
+                          {t('steam.residueConfirmCancel')}
+                        </button>
+                      </div>
                     )}
-                    <button
-                      className="steam-icon-btn"
-                      onClick={() => void api.revealInExplorer(r.path)}
-                      title={t('steam.residueOpenTitle')}
-                      aria-label={t('steam.residueOpenTitle')}
-                    >
-                      <FolderOpen size={12} />
-                    </button>
                   </div>
                 ))}
               </div>

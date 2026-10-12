@@ -463,6 +463,20 @@
 }
 .steam-residue-size { color: var(--ink); font-variant-numeric: tabular-nums; }
 .steam-residue-age { color: var(--ink-3); white-space: nowrap; }
+/* 残留条目外壳：一行 + 展开的两步确认条（破坏性动作禁一步即执行） */
+.steam-residue-item { margin-top: 6px; }
+.steam-residue-item > .steam-residue-row { margin-top: 0; }
+.steam-residue-recycle { color: var(--warn); }
+.steam-residue-busy { color: var(--ink-3); white-space: nowrap; }
+.steam-residue-confirm {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 4px; padding: 6px 8px;
+  border: 1px solid var(--warn); border-radius: 4px;
+  background: var(--warn-soft); color: var(--ink);
+}
+.steam-residue-confirm > span { flex: 1; min-width: 0; }
+/* 确认条内按钮统一紧凑尺寸（button.primary.small 全局没有定义，别依赖 .small） */
+.steam-residue-confirm button { padding: 5px 10px; font-size: 12px; min-height: 28px; }
 
 .steam-row {
   display: grid;
