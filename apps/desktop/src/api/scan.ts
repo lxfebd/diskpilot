@@ -44,7 +44,9 @@ export const scanApi = {
 
   listDrives: () =>
     isTauri
-      ? invoke<{ total_bytes: number; used_bytes: number; free_bytes: number; path: string }[]>('list_drives')
+      ? invoke<
+          { total_bytes: number; used_bytes: number; free_bytes: number; path: string; mapped_to: string }[]
+        >('list_drives')
       : Promise.resolve([]),
 
   estimateSize: (path: string) =>

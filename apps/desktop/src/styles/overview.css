@@ -94,6 +94,12 @@
   border-radius: 999px; padding: 1px 7px; white-space: nowrap;
 }
 .ao-strip-danger + .ao-strip-done { margin-left: 0; }
+/* 映射盘角标：这个盘符不是独立物理盘（subst 映射到别的盘），说清楚免得看成两块盘 */
+.ao-strip-map {
+  font-size: 10px; font-weight: 600; color: var(--ink-2);
+  background: var(--surface-3); border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 7px; white-space: nowrap;
+}
 .ao-spin { animation: spin 1s linear infinite; }
 
 /* ── 今日体检条：全只读汇总，一行四格（红盘/可回收/温度/启动项）── */

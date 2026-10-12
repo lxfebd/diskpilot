@@ -9,6 +9,8 @@ interface DriveInfo {
   total_bytes: number;
   used_bytes: number;
   free_bytes: number;
+  /** 映射盘（subst）的目标路径，普通盘为空。 */
+  mapped_to?: string;
 }
 
 
@@ -76,6 +78,14 @@ export function DriveStrip({ drives, scanning, onScanAll, onScanDrive, onRefresh
             <span className="ao-strip-top">
               <span className="ao-strip-ic"><HardDrive size={15} /></span>
               <b>{driveLetter(d.path)}:</b>
+              {d.mapped_to && (
+                <span
+                  className="ao-strip-map"
+                  title={t('shell.drivestrip.mappedTitle', { target: d.mapped_to })}
+                >
+                  {t('shell.drivestrip.mappedBadge')}
+                </span>
+              )}
               {usedPct >= 95 && <span className="ao-strip-danger">{t('shell.drivestrip.lowSpace')}</span>}
               {scanned && <span className="ao-strip-done"><Check size={10} /> {t('shell.drivestrip.scanned')}</span>}
             </span>

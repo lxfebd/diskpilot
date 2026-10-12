@@ -11,17 +11,66 @@ pub(crate) struct VolumeInfo {
     pub(crate) total_bytes: u64,
     pub(crate) used_bytes: u64,
     pub(crate) free_bytes: u64,
+    /// 映射盘（`subst D: J:\D`）的目标路径；普通盘为空。
+    /// 映射盘没有自己的分区与空间——不说清楚，首页就是两块一模一样的盘。
+    #[serde(default)]
+    pub(crate) mapped_to: String,
+}
+
+/// `subst` 的一行输出 → (盘符, 目标路径)。本机实测格式：`D:\: => J:\D`。
+/// 认不出的一律 None，不猜。
+pub(crate) fn parse_subst_line(line: &str) -> Option<(char, String)> {
+    let (left, right) = line.split_once("=>")?;
+    let letter = left.trim().trim_end_matches(['\\', ':']);
+    let target = right.trim();
+    let mut chars = letter.chars();
+    let c = chars.next()?;
+    if chars.next().is_some() || !c.is_ascii_alphabetic() || target.is_empty() {
+        return None;
+    }
+    Some((c.to_ascii_uppercase(), target.to_string()))
+}
+
+/// 映射盘表。`Get-Partition` / `Get-Volume` 里没有它们，但 `GetLogicalDrives`
+/// 会数成一个盘符——不识别就会把同一份空间当成两块盘。
+#[cfg(windows)]
+pub(crate) fn collect_substs() -> Vec<(char, String)> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let Ok(out) = std::process::Command::new("subst")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    // subst.exe 按控制台代码页输出：路径含中文时 UTF-8 解码会出替换符。
+    // 这里只要把「这个盘符是谁的映射」说清楚，解码不出完整路径也照样能用。
+    let text = String::from_utf8_lossy(&out.stdout);
+    text.lines().filter_map(parse_subst_line).collect()
+}
+
+#[cfg(not(windows))]
+pub(crate) fn collect_substs() -> Vec<(char, String)> {
+    Vec::new()
 }
 
 /// 枚举本机所有可用磁盘，返回盘符与空间信息。供"全盘扫描"首页直出，
-/// 长辈不必再手动选文件夹。
+/// 长辈不必再手动选文件夹。映射盘（subst）也列出来——用户确实在用那个盘符，
+/// 但带上 `mapped_to` 说明它落在哪块真盘上。
 #[tauri::command]
 pub(crate) fn list_drives() -> Vec<VolumeInfo> {
+    let substs = collect_substs();
     let mut out = Vec::new();
     for letter in b'C'..=b'Z' {
         let root = format!("{}:\\", letter as char);
         if let Ok(mut info) = volume_info(root.clone()) {
             info.path = root;
+            if let Some((_, target)) = substs.iter().find(|(l, _)| *l == letter as char) {
+                info.mapped_to = target.clone();
+            }
             // used_bytes == 0 且经 GetDiskFreeSpaceExW 成功 -> 普通可读盘
             out.push(info);
         }
@@ -71,6 +120,8 @@ pub(crate) fn volume_info(path: String) -> Result<VolumeInfo, String> {
             total_bytes: total,
             used_bytes: total.saturating_sub(total_free),
             free_bytes: total_free,
+            // 单查不判映射盘（subst 表只在 list_drives 里查一次）；list_drives 会填上。
+            mapped_to: String::new(),
         })
     }
     #[cfg(not(windows))]
@@ -101,4 +152,27 @@ pub(crate) async fn estimate_size(path: String) -> Result<u64, String> {
     })
     .await
     .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn subst_line_parses_real_output_shape() {
+        // 本机实测：`D:\: => J:\D`
+        assert_eq!(
+            parse_subst_line("D:\\: => J:\\D"),
+            Some(('D', "J:\\D".to_string()))
+        );
+        assert_eq!(
+            parse_subst_line("x:\\: => F:\\x"),
+            Some(('X', "F:\\x".to_string()))
+        );
+        // 认不出的不猜。
+        assert_eq!(parse_subst_line(""), None);
+        assert_eq!(parse_subst_line("No Subst drive entries."), None);
+        assert_eq!(parse_subst_line("D:\\: => "), None);
+        assert_eq!(parse_subst_line("DD:\\: => J:\\D"), None);
+    }
 }
