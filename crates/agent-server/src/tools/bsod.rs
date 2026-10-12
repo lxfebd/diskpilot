@@ -186,7 +186,7 @@ pub fn analyze_bsod(
                         .map(|s| s.to_string_lossy().into_owned())
                         .unwrap_or_default(),
                     mtime,
-                    fmt_bytes(f)
+                    crate::tools::fmt_bytes(f.metadata().map(|m| m.len()).unwrap_or(0))
                 ));
                 out.push_str(&format!("  BugCheck 代码：0x{:08X} {}\n", h.code, name));
                 out.push_str(&format!(
@@ -304,17 +304,6 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
     let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
     (if m <= 2 { y + 1 } else { y }, m, d)
-}
-
-fn fmt_bytes(p: &std::path::Path) -> String {
-    let len = std::fs::metadata(p).map(|m| m.len()).unwrap_or(0);
-    if len >= 1024 * 1024 * 1024 {
-        format!("{:.1} GB", len as f64 / 1024.0 / 1024.0 / 1024.0)
-    } else if len >= 1024 * 1024 {
-        format!("{:.1} MB", len as f64 / 1024.0 / 1024.0)
-    } else {
-        format!("{len} B")
-    }
 }
 
 #[cfg(test)]
