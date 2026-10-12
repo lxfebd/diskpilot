@@ -52,6 +52,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   为 nightly-only 选项，stable rustfmt 静默忽略并持续告警，CI（stable）永远
   无法验证该声明——移除，stable 语义成为事实标准。
 
+#### 工程专项：重复代码收敛（`b9cb596` `7f79811`）
+
+- **修复（中）** agent-server `bsod.rs` 本地 `fmt_bytes`（GB/MB/B 三档）与
+  `tools/mod.rs` 共享版（B/KB/MB/GB/TB 五档）重复——删除本地版改用共享版
+  （净 -12 行；dump 大小 1KB~1MB 区间输出从原始字节变 KB，更可读）。
+- **修复（低）** 前端 `extOf`（取扩展名）在 FileView/TreeView 各有一份私有
+  实现——逻辑收敛 `format.ts` 单源（无扩展名返回 `''`），FileView 保留
+  `'(none)'` 分组哨兵映射；+2 单测。
+- **排查排除**：`emit` 3 行惯用模式（i18n/hwCache）不抽公共层（收益为零）；
+  `ToolCard` 两组件同名不同义（目录卡 vs 图标卡）非重复；`fmtTime`/
+  `relativeTime` 输出格式与 i18n key 不同，非真重复。
+
 #### 第 5 轮（`d0815a5`）
 
 - **修复（Bug 风险）** `agent-server report.rs` `extract_free_gb`：
