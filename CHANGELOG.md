@@ -43,6 +43,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 > 第 6–8 轮（UI/UX 视觉审查，`e403751` `d4a01bc` `740ba54`）见下方
 > 「UI/UX 视觉审查」section。
 
+#### 工程专项：fmt 存量清零（`b4c5a9a`）
+
+- **修复（工程·中）** 全 workspace 43 处存量 fmt 差异（19 文件，HEAD 即
+  dirty）——CI 三平台 `cargo fmt --all -- --check` 一直在红，护栏形同虚设；
+  `cargo fmt --all` 机械重排清零，clippy/test 验证全绿。
+- **修复（工程·低）** `rustfmt.toml` 的 `imports_granularity` / `group_imports`
+  为 nightly-only 选项，stable rustfmt 静默忽略并持续告警，CI（stable）永远
+  无法验证该声明——移除，stable 语义成为事实标准。
+
 #### 第 5 轮（`d0815a5`）
 
 - **修复（Bug 风险）** `agent-server report.rs` `extract_free_gb`：
