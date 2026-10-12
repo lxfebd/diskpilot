@@ -193,7 +193,7 @@ pub fn run() {
             // 清理提醒后台线程：配置开启后定时算建议 + emit（只出清单，不删）。
             reminder::spawn_cleanup_reminder(app.handle().clone());
             // 插件 update/rollback 崩溃残留的 *.dp-old-tmp 目录启动清扫。
-            plugin_registry::sweep_orphaned_tmp_dirs(app.handle());
+            plugin_registry::preg_misc::sweep_orphaned_tmp_dirs(app.handle());
             Ok(())
         })
         // 托盘常驻：点窗口关闭按钮时查 close_to_tray 配置，开 → 隐藏到托盘。
@@ -286,16 +286,16 @@ pub fn run() {
             toolbelt::plugin_deactivate,
             toolbelt::plugin_export,
             plugin_remote::plugin_install_url,
-            plugin_registry::plugin_registry_list,
-            plugin_registry::plugin_registry_search,
+            plugin_registry::preg_read::plugin_registry_list,
+            plugin_registry::preg_read::plugin_registry_search,
             plugin_registry::plugin_mutate::plugin_registry_install,
-            plugin_registry::plugin_registry_verify,
-            plugin_registry::plugin_registry_refresh,
+            plugin_registry::preg_read::plugin_registry_verify,
+            plugin_registry::preg_refresh::plugin_registry_refresh,
             plugin_registry::plugin_mutate::plugin_registry_update,
             plugin_registry::plugin_mutate::plugin_registry_rollback,
-            plugin_registry::plugin_list_installed,
-            plugin_registry::plugin_registry_config,
-            plugin_registry::plugin_set_registry_url,
+            plugin_registry::preg_read::plugin_list_installed,
+            plugin_registry::preg_read::plugin_registry_config,
+            plugin_registry::preg_url::plugin_set_registry_url,
             toolbelt::toolbelt_recycle,
             updates::check_update,
             hw::hw_disk::hw_info,
