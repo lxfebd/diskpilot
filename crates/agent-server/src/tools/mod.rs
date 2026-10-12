@@ -48,6 +48,10 @@ mod lenient;
 // tool_sys / tool_sys_services / tool_sys_misc 三个平级块（2026-10-12）。
 mod tool_disk;
 mod tool_hw;
+mod tool_hw_bench;
+mod tool_hw_core;
+mod tool_hw_ext;
+mod tool_hw_report;
 mod tool_misc;
 mod tool_sys;
 mod tool_sys_apps;
@@ -255,7 +259,10 @@ impl AgentServer {
             + Self::tool_router_sys_apps()
             + Self::tool_router_sys_services()
             + Self::tool_router_sys_misc()
-            + Self::tool_router_hw()
+            + Self::tool_router_hw_core()
+            + Self::tool_router_hw_ext()
+            + Self::tool_router_hw_bench()
+            + Self::tool_router_hw_report()
             + Self::tool_router_misc()
     }
 }
