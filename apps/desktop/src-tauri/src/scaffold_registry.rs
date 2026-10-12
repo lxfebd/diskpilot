@@ -8,7 +8,7 @@
 //!   签名对象 = toml 内容（与插件包验签同一算法，见 toolbelt::signature）。
 //!   没有完整签名的一律拒绝（未签名脚本只能本地粘贴安装）。
 //! - 下载 url 强制 https（拒绝 http / 任意协议）。
-//! - 安装核心复用 lib.rs `install_scaffold_inner`：id 校验 → 运行时红线
+//! - 安装核心复用 `scaffold_cmds::install_scaffold_inner`：id 校验 → 运行时红线
 //!   校验 → 写入用户目录 → 热重载。绝不在安装路径放宽红线。
 
 use serde::{Deserialize, Serialize};
@@ -198,7 +198,7 @@ pub(crate) async fn scaffold_registry_install(
     .map_err(|e| format!("脚本签名校验失败：{e}"))?;
 
     // 复用安装核心（id / 红线校验 + 写入 + 热重载），不放宽任何一步。
-    crate::install_scaffold_inner(&app, &state, toml)
+    crate::scaffold_cmds::install_scaffold_inner(&app, &state, toml)
 }
 
 #[cfg(test)]
