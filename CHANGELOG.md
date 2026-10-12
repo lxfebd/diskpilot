@@ -64,7 +64,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   `ToolCard` 两组件同名不同义（目录卡 vs 图标卡）非重复；`fmtTime`/
   `relativeTime` 输出格式与 i18n key 不同，非真重复。
 
-#### 工程专项：巨型文件拆分（`7568df9` `3af6564`）
+#### 工程专项：巨型文件拆分（`7568df9` `3af6564` `6e6f7d0`）
 
 - **修复（工程·中）** desktop `hw.rs`（2259 行）按边界拆分：报告 Markdown/
   HTML 格式化（`html_escape`/`html_wrap`/`is_vram_overflow`/`fmt_gb`/`v_str`/
@@ -75,10 +75,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   校验（`validate_http_url`/`validate_stdio`/`connect_stdio`/`connect_http`/
   `connect_server` + `McpService` 别名）连同 2 条单测搬入 `mcp_bridge.rs`；
   `mcp.rs` 降到 921 行。
+- **修复（工程·中）** desktop `ai.rs`（944 行）拆分：免 key 联网搜索
+  （`web_search` 命令 + `SearchHit` + `bing_parse`/`ddg_lite_parse`/
+  `html_decode`/`strip_tags`/`attr_value`/`text_between`/`url_encode`/
+  `fetch_limited`）搬入 `ai_net.rs`；`ai.rs` 保留请求代理层（SSRF 防护/
+  手动重定向/取消），降到 723 行。命令注册改 `ai_net::web_search`。
 - **方式**：同 crate 内模块移动、`pub(crate)` 导出、零行为变化——仅移动
   不改逻辑；130 passed / 2 ignored，clippy/fmt 全绿。
 - **排查排除**：`cleanup.rs`（1009 行）命令层与逻辑层交织（命令内联引用
-  多个逻辑函数、测试混居），拆分收益递减风险上升，留待后续。
+  多个逻辑函数、测试混居）；`plugin_registry.rs`（1546 行）类型/命令/
+  持久化高度交织（`RegistryEnvelope`/`RegistryPlugin`/`LedgerEntry` 等
+  结构体 + `verify` 验签内聚在头部），两者拆分收益递减风险上升，留待后续。
 
 #### 第 5 轮（`d0815a5`）
 
