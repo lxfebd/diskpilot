@@ -170,10 +170,30 @@ export interface WorkshopItem {
   path: string;
 }
 
+/// Mirror of Rust's SteamResidueKind. `install` = a folder under
+/// steamapps/common with no ACF referencing it; `workshop` = a
+/// workshop/content/<appid> subscription folder with no game owning it.
+export type SteamResidueKind = 'install' | 'workshop';
+
+/// Mirror of Rust's SteamResidue: uninstall residue — the inverse of a ghost.
+/// A ghost is "ACF without a folder" (no disk used); residue is "folder
+/// without an ACF" — **real disk usage invisible to the game list**.
+export interface SteamResidue {
+  kind: SteamResidueKind;
+  dir_name: string;
+  path: string;
+  size_bytes: number;
+  appid_hint: number | null;
+  last_modified_ts: number;
+}
+
 export interface SteamLibrary {
   root: string;
   games: SteamGame[];
   total_size_bytes: number;
+  /// Uninstall residue folders (see SteamResidue), size-descending.
+  residue: SteamResidue[];
+  residue_size_bytes: number;
 }
 
 export interface SteamInventory {

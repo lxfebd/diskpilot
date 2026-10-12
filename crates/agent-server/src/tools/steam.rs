@@ -58,6 +58,7 @@ pub fn collect_steam_games(top_n: usize) -> Result<String, String> {
     let mut out = String::new();
     let mut total_games = 0usize;
     let mut total_size: u64 = 0;
+    let mut total_residue: u64 = 0;
 
     for lib in &inv.libraries {
         total_games += lib.games.len();
@@ -114,6 +115,27 @@ pub fn collect_steam_games(top_n: usize) -> Result<String, String> {
                 games.len()
             ));
         }
+
+        // 卸载残留：有目录无 ACF——游戏列表里完全看不到的真实占用。
+        if !lib.residue.is_empty() {
+            out.push_str(&format!(
+                "⚠ 卸载残留 {}（{} 处，不在游戏列表里）：\n",
+                fmt_bytes(lib.residue_size_bytes),
+                lib.residue.len()
+            ));
+            for r in lib.residue.iter().take(10) {
+                let kind = match r.kind {
+                    diskpilot_steam_inspector::SteamResidueKind::Install => "安装目录残留",
+                    diskpilot_steam_inspector::SteamResidueKind::Workshop => "创意工坊残留",
+                };
+                let what = match r.appid_hint {
+                    Some(id) => format!("{kind}（appid {id}）"),
+                    None => format!("{kind}（{}）", r.dir_name),
+                };
+                out.push_str(&format!("- {} · {}\n", what, fmt_bytes(r.size_bytes)));
+            }
+            total_residue = total_residue.saturating_add(lib.residue_size_bytes);
+        }
     }
 
     out.push_str(&format!(
@@ -124,6 +146,12 @@ pub fn collect_steam_games(top_n: usize) -> Result<String, String> {
         total_games,
         fmt_bytes(total_size)
     ));
+    if total_residue > 0 {
+        out.push_str(&format!(
+            "\n另有卸载残留 {}：目录还在但没有任何游戏记录，通常可直接删除（Steam 卸载没清干净的部分）。",
+            fmt_bytes(total_residue)
+        ));
+    }
     Ok(out)
 }
 

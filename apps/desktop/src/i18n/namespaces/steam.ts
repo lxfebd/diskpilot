@@ -39,6 +39,15 @@ export const steam = {
     'steam.noMatches': '没有匹配的游戏。',
     'steam.translateSrc': '翻译：Steam Storefront',
 
+    // 卸载残留（有目录无 ACF——ghost 的反方向，真实占用）
+    'steam.residueTitle': '卸载残留',
+    'steam.residueLead': '这些目录还在，但没有任何游戏记录——Steam 卸载没清干净的真实占用。',
+    'steam.residueInstall': '安装目录残留',
+    'steam.residueWorkshop': '创意工坊残留',
+    'steam.residueAge': '{days} 天未变动',
+    'steam.residueOpenTitle': '在资源管理器中打开',
+    'steam.residueMeta': '{n} 处 · {size}',
+
     // 详情栏
     'steam.ghostTitle': '检测到鬼魂安装',
     'steam.ghostBody': 'ACF 元数据存在但安装目录已缺失或不完整。建议在 Steam 中右键卸载，或属性 → 已安装文件 → 验证完整性。Inspector 不替你清 ACF。',
@@ -156,6 +165,15 @@ export const steam = {
     'steam.clear': 'Clear',
     'steam.noMatches': 'No games match.',
     'steam.translateSrc': 'Translated via: Steam Storefront',
+
+    // Uninstall residue (folder without an ACF — the inverse of a ghost)
+    'steam.residueTitle': 'Uninstall residue',
+    'steam.residueLead': 'These folders are still on disk but no game references them — real usage Steam left behind.',
+    'steam.residueInstall': 'Leftover install folder',
+    'steam.residueWorkshop': 'Leftover workshop',
+    'steam.residueAge': 'untouched for {days} days',
+    'steam.residueOpenTitle': 'Open in Explorer',
+    'steam.residueMeta': '{n} items · {size}',
 
     // Detail rail
     'steam.ghostTitle': 'Ghost install detected',

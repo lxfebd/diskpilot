@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use super::{
     compute_recommendation, norm_path, now_unix_secs, parse_appmanifest, parse_libraryfolders,
-    SteamGame, SteamInventory, SteamLibrary, WorkshopItem,
+    SteamGame, SteamInventory, SteamLibrary, SteamResidue, SteamResidueKind, WorkshopItem,
 };
 
 /// Inspect a Steam install at `steam_root`. Pure read-only: parses
@@ -59,6 +59,8 @@ fn read_library(lib_root: &Path, now_secs: u64) -> Result<SteamLibrary> {
             root: norm_path(lib_root),
             games,
             total_size_bytes: 0,
+            residue: Vec::new(),
+            residue_size_bytes: 0,
         });
     }
 
@@ -140,10 +142,14 @@ fn read_library(lib_root: &Path, now_secs: u64) -> Result<SteamLibrary> {
         .filter(|g| !g.is_ghost)
         .map(|g| g.size_bytes)
         .sum();
+    let residue = collect_residue(&steamapps, &games);
+    let residue_size_bytes = residue.iter().map(|r| r.size_bytes).sum();
     Ok(SteamLibrary {
         root: norm_path(lib_root),
         games,
         total_size_bytes,
+        residue,
+        residue_size_bytes,
     })
 }
 
@@ -233,6 +239,98 @@ fn dir_size_recursive(path: &Path) -> u64 {
         }
     }
     total
+}
+
+/// 卸载残留检测：`steamapps/common` 与 `steamapps/workshop/content` 里
+/// **存在目录但没有任何 ACF 引用**——Steam 卸载（尤其带 DLC/模组/第三方
+/// 删除时）常留下的真实占用。与 ghost（有 ACF 无目录）是相反方向的漏点：
+/// ghost 不占磁盘，residue 占磁盘却在游戏列表里完全隐形。
+///
+/// 规则：
+/// - `common/<dir>`：目录名（大小写不敏感，Windows 语义）不在任何游戏的
+///   `installdir` 里 → 残留；
+/// - `Steamworks Shared` 白名单跳过——多游戏共享运行库，删了会连带坏游戏；
+/// - `workshop/content/<appid>`：该库没有任何游戏有这个 appid → 订阅残留
+///   （ghost 游戏的 appid 仍算「有游戏」，避免与 ghost 条目重复报）。
+fn collect_residue(steamapps: &Path, games: &[SteamGame]) -> Vec<SteamResidue> {
+    let referenced_dirs: std::collections::HashSet<String> = games
+        .iter()
+        .map(|g| g.install_dir_name.to_lowercase())
+        .filter(|n| !n.is_empty())
+        .collect();
+    let referenced_appids: std::collections::HashSet<u32> = games.iter().map(|g| g.appid).collect();
+
+    let mut out: Vec<SteamResidue> = Vec::new();
+
+    let common = steamapps.join("common");
+    if let Ok(iter) = std::fs::read_dir(&common) {
+        for entry in iter.flatten() {
+            if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') || name.eq_ignore_ascii_case("Steamworks Shared") {
+                continue;
+            }
+            if referenced_dirs.contains(&name.to_lowercase()) {
+                continue;
+            }
+            out.push(make_residue(
+                SteamResidueKind::Install,
+                &entry.path(),
+                &name,
+                None,
+            ));
+        }
+    }
+
+    let content = steamapps.join("workshop").join("content");
+    if let Ok(iter) = std::fs::read_dir(&content) {
+        for entry in iter.flatten() {
+            if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            let Ok(appid) = name.parse::<u32>() else {
+                // "downloads" 等非数字目录不是订阅内容
+                continue;
+            };
+            if referenced_appids.contains(&appid) {
+                continue;
+            }
+            out.push(make_residue(
+                SteamResidueKind::Workshop,
+                &entry.path(),
+                &name,
+                Some(appid),
+            ));
+        }
+    }
+
+    out.sort_by_key(|r| std::cmp::Reverse(r.size_bytes));
+    out
+}
+
+fn make_residue(
+    kind: SteamResidueKind,
+    path: &Path,
+    dir_name: &str,
+    appid_hint: Option<u32>,
+) -> SteamResidue {
+    SteamResidue {
+        kind,
+        dir_name: dir_name.to_string(),
+        path: norm_path(path),
+        size_bytes: dir_size_recursive(path),
+        appid_hint,
+        last_modified_ts: path
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0),
+    }
 }
 
 pub(crate) fn is_appmanifest_filename(name: &str) -> bool {

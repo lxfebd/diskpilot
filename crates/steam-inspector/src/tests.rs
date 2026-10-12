@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::recommend::SECONDS_PER_MONTH;
+use std::path::{Path, PathBuf};
 
 #[test]
 fn parses_simple_kv() {
@@ -248,4 +249,100 @@ fn appmanifest_filename_matcher() {
     assert!(!is_appmanifest_filename("appmanifest_abc.acf"));
     // Empty appid.
     assert!(!is_appmanifest_filename("appmanifest_.acf"));
+}
+
+// -----------------------------------------------------------------
+// 卸载残留检测（有目录无 ACF）
+// -----------------------------------------------------------------
+
+fn residue_tmp(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("steam-residue-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    dir
+}
+
+fn write_files(dir: &Path, count: usize, size: usize) {
+    std::fs::create_dir_all(dir).unwrap();
+    for i in 0..count {
+        std::fs::write(dir.join(format!("f{i}.bin")), vec![0u8; size]).unwrap();
+    }
+}
+
+fn acf(appid: u32, installdir: &str) -> String {
+    format!(
+        "\n\"AppState\"\n{{\n\"appid\"        \"{appid}\"\n\"name\"         \"Game {appid}\"\n\"installdir\"   \"{installdir}\"\n\"StateFlags\"   \"4\"\n\"SizeOnDisk\"   \"1000\"\n}}\n"
+    )
+}
+
+#[test]
+fn residue_detects_leftover_install_dirs_and_orphan_workshop() {
+    let dir = residue_tmp("basic");
+    let steamapps = dir.join("steamapps");
+    let common = steamapps.join("common");
+
+    // 已安装（ACF 引用）——不应报残留
+    write_files(&common.join("Counter-Strike Global Offensive"), 3, 4096);
+    // 卸载残留：目录在、没有任何 ACF 引用 → 真实占用、游戏列表隐形
+    write_files(&common.join("Old Game Leftover"), 2, 1024);
+    // 白名单：多游戏共享运行库，删了会连带坏游戏 → 不报
+    write_files(&common.join("Steamworks Shared"), 1, 8192);
+    // workshop：440 有游戏；999 没有任何游戏 → 订阅残留
+    write_files(&steamapps.join("workshop/content/440/12345"), 1, 512);
+    write_files(&steamapps.join("workshop/content/999/6789"), 1, 700);
+    // 非数字目录不是订阅内容
+    write_files(&steamapps.join("workshop/content/downloads"), 1, 128);
+
+    std::fs::write(
+        steamapps.join("appmanifest_440.acf"),
+        acf(440, "Counter-Strike Global Offensive"),
+    )
+    .unwrap();
+
+    let inv = inspect_at_with_clock(&dir, TEST_NOW).unwrap();
+    let lib = &inv.libraries[0];
+    assert_eq!(lib.games.len(), 1);
+    assert!(!lib.games[0].is_ghost);
+
+    let names: Vec<&str> = lib.residue.iter().map(|r| r.dir_name.as_str()).collect();
+    assert_eq!(names, vec!["Old Game Leftover", "999"], "残留识别不符");
+    assert_eq!(lib.residue[0].kind, SteamResidueKind::Install);
+    assert_eq!(lib.residue[0].appid_hint, None);
+    assert_eq!(lib.residue[1].kind, SteamResidueKind::Workshop);
+    assert_eq!(lib.residue[1].appid_hint, Some(999));
+    // 递归大小：2×1024 与 1×700
+    assert_eq!(lib.residue[0].size_bytes, 2048);
+    assert_eq!(lib.residue[1].size_bytes, 700);
+    assert_eq!(lib.residue_size_bytes, 2748);
+    // 残留不计入「真实安装」总量
+    assert_eq!(lib.total_size_bytes, 1000);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn residue_case_insensitive_and_ghost_appid_not_double_reported() {
+    let dir = residue_tmp("case");
+    let steamapps = dir.join("steamapps");
+    let common = steamapps.join("common");
+
+    // ACF 写 "Portal 2"，磁盘目录实际是 "PORTAL 2"（Windows 大小写不敏感）
+    write_files(&common.join("PORTAL 2"), 1, 512);
+    std::fs::write(steamapps.join("appmanifest_620.acf"), acf(620, "Portal 2")).unwrap();
+    // ghost 游戏（ACF 在、目录不在）的 workshop 内容：游戏条目仍在（appid 630），
+    // 不重复报成残留——避免与 ghost 条目双重计数。
+    write_files(&steamapps.join("workshop/content/630/111"), 1, 256);
+    std::fs::write(
+        steamapps.join("appmanifest_630.acf"),
+        acf(630, "Ghost Game"),
+    )
+    .unwrap();
+
+    let inv = inspect_at_with_clock(&dir, TEST_NOW).unwrap();
+    let lib = &inv.libraries[0];
+    assert!(lib.games.iter().any(|g| g.is_ghost));
+    assert!(
+        lib.residue.is_empty(),
+        "大小写不同的已安装目录与 ghost appid 都不应报残留，got {:?}",
+        lib.residue.iter().map(|r| &r.dir_name).collect::<Vec<_>>()
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

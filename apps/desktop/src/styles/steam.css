@@ -432,6 +432,38 @@
   font-size: 13px;
 }
 
+/* ----- MIDDLE: 卸载残留卡片（有目录无 ACF） ----- */
+.steam-residue {
+  margin: 8px 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: 6px;
+  background: var(--warn-soft);
+  font-size: 12px;
+}
+.steam-residue-head {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--warn);
+}
+.steam-residue-head > svg { flex-shrink: 0; }
+.steam-residue-meta { margin-left: auto; color: var(--ink-3); }
+.steam-residue-lead { margin-top: 4px; color: var(--ink-2); }
+.steam-residue-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: var(--card);
+}
+.steam-residue-kind { color: var(--warn); white-space: nowrap; }
+.steam-residue-name {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.steam-residue-size { color: var(--ink); font-variant-numeric: tabular-nums; }
+.steam-residue-age { color: var(--ink-3); white-space: nowrap; }
+
 .steam-row {
   display: grid;
   grid-template-columns: 24px 1fr 90px 100px 18px;

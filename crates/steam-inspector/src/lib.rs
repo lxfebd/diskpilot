@@ -169,11 +169,41 @@ pub struct WorkshopItem {
     pub path: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SteamResidueKind {
+    /// `steamapps/common/<dir>`：目录在、没有任何 ACF 引用它。
+    Install,
+    /// `steamapps/workshop/content/<appid>`：订阅内容在、该库没有任何游戏有这个 appid。
+    Workshop,
+}
+
+/// 卸载残留：Steam 卸载（或第三方删除）后留下的目录——与 ghost 相反的方向。
+/// ghost 是「有 ACF 无目录」（不占磁盘，只是记录脏）；residue 是「有目录无
+/// ACF」，**真实占用磁盘但游戏列表里完全看不到**，正是磁盘清理工具该抓的那类。
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SteamResidue {
+    pub kind: SteamResidueKind,
+    /// 目录名（Install 是文件夹名，Workshop 是 appid 目录名）。
+    pub dir_name: String,
+    pub path: String,
+    /// 递归目录大小（字节）。
+    pub size_bytes: u64,
+    /// Workshop 残留时从目录名解析出的 appid；Install 残留为 None。
+    pub appid_hint: Option<u32>,
+    /// 目录 mtime（Unix 秒）——UI 用它显示「多久没动过」。
+    pub last_modified_ts: u64,
+}
+
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SteamLibrary {
     pub root: String,
     pub games: Vec<SteamGame>,
     pub total_size_bytes: u64,
+    /// 卸载残留目录（见 [`SteamResidue`]），按大小倒序。
+    pub residue: Vec<SteamResidue>,
+    /// 残留目录合计占用（字节）——不计入 `total_size_bytes`（那是真实安装）。
+    pub residue_size_bytes: u64,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

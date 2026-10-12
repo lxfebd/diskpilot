@@ -12,6 +12,7 @@ import {
   Copy,
   ChevronRight,
   Boxes,
+  FolderOpen,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '../api';
@@ -396,6 +397,15 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
   // ------------------------------------------------------------------
   const totalGames = inventory?.libraries.reduce((s, l) => s + l.games.length, 0) ?? 0;
   const totalSize = inventory?.libraries.reduce((s, l) => s + l.total_size_bytes, 0) ?? 0;
+  // 卸载残留（有目录无 ACF）：只统计勾选启用的库，与游戏列表口径一致。
+  const residueItems =
+    inventory?.libraries
+      .filter((l) => enabledLibraries.has(l.root))
+      .flatMap((l) => l.residue.map((r) => ({ ...r, libRoot: l.root }))) ?? [];
+  const residueSize =
+    inventory?.libraries
+      .filter((l) => enabledLibraries.has(l.root))
+      .reduce((s, l) => s + l.residue_size_bytes, 0) ?? 0;
 
   return (
     <div className="steam-inspector">
@@ -420,12 +430,12 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
       {!loading && !error && inventory && !inventory.steam_root && (
         <SteamNotFound candidates={inventory.candidates_checked} onRetry={refresh} />
       )}
-      {!loading && !error && inventory && inventory.steam_root && totalGames === 0 && (
+      {!loading && !error && inventory && inventory.steam_root && totalGames === 0 && residueItems.length === 0 && (
         <SteamEmpty steamRoot={inventory.steam_root} onRetry={refresh} />
       )}
 
       {/* ------ main 3-column body ------ */}
-      {!loading && !error && inventory && inventory.steam_root && totalGames > 0 && (
+      {!loading && !error && inventory && inventory.steam_root && (totalGames > 0 || residueItems.length > 0) && (
         <div className="steam-body">
           {/* LEFT: filters & pivots */}
           <aside className="steam-filters">
@@ -486,6 +496,44 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
 
           {/* MIDDLE: list */}
           <section className="steam-list-wrap">
+            {residueItems.length > 0 && (
+              <div className="steam-residue">
+                <div className="steam-residue-head">
+                  <AlertTriangle size={13} />
+                  <b>{t('steam.residueTitle')}</b>
+                  <span className="steam-residue-meta">
+                    {t('steam.residueMeta', { n: residueItems.length, size: formatBytes(residueSize) })}
+                  </span>
+                </div>
+                <div className="steam-residue-lead">{t('steam.residueLead')}</div>
+                {residueItems.slice(0, 12).map((r) => (
+                  <div key={`${r.libRoot}-${r.path}`} className="steam-residue-row">
+                    <span className="steam-residue-kind">
+                      {r.kind === 'workshop' ? t('steam.residueWorkshop') : t('steam.residueInstall')}
+                    </span>
+                    <span className="steam-residue-name" title={r.path}>
+                      {r.appid_hint != null ? `appid ${r.appid_hint}` : r.dir_name}
+                    </span>
+                    <span className="steam-residue-size">{formatBytes(r.size_bytes)}</span>
+                    {r.last_modified_ts > 0 && (
+                      <span className="steam-residue-age">
+                        {t('steam.residueAge', {
+                          days: Math.max(0, Math.floor((Date.now() / 1000 - r.last_modified_ts) / 86400)),
+                        })}
+                      </span>
+                    )}
+                    <button
+                      className="steam-icon-btn"
+                      onClick={() => void api.revealInExplorer(r.path)}
+                      title={t('steam.residueOpenTitle')}
+                      aria-label={t('steam.residueOpenTitle')}
+                    >
+                      <FolderOpen size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="steam-search">
               <Search size={13} />
               <input

@@ -492,6 +492,8 @@ export const STEAM_INVENTORY: SteamInventory = {
     {
       root: 'C:/Program Files (x86)/Steam',
       total_size_bytes: 80 * GB,
+      residue: [],
+      residue_size_bytes: 0,
       games: [
         {
           appid: 730,
@@ -538,6 +540,25 @@ export const STEAM_INVENTORY: SteamInventory = {
     {
       root: 'D:/SteamLibrary',
       total_size_bytes: 192 * GB,
+      residue: [
+        {
+          kind: 'install',
+          dir_name: 'Leftover Game (uninstalled)',
+          path: 'D:/SteamLibrary/steamapps/common/Leftover Game (uninstalled)',
+          size_bytes: 12 * GB,
+          appid_hint: null,
+          last_modified_ts: NOW - 210 * DAY,
+        },
+        {
+          kind: 'workshop',
+          dir_name: '999',
+          path: 'D:/SteamLibrary/steamapps/workshop/content/999',
+          size_bytes: 1.2 * GB,
+          appid_hint: 999,
+          last_modified_ts: NOW - 95 * DAY,
+        },
+      ],
+      residue_size_bytes: 12 * GB + 1.2 * GB,
       games: [
         {
           appid: 1091500,
