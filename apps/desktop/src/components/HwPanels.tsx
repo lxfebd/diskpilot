@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Cpu, HardDrive, Gauge, Loader2, ShieldCheck, ShieldAlert, ShieldX, X, Zap, StopCircle, ThermometerSun, Clock, RefreshCw } from 'lucide-react';
+import { Cpu, HardDrive, Gauge, Loader2, ShieldCheck, ShieldAlert, ShieldQuestion, ShieldX, X, Zap, StopCircle, ThermometerSun, Clock, RefreshCw } from 'lucide-react';
 import { isTauri } from '../env';
 import { formatBytes } from '../format';
 import { api } from '../api';
@@ -34,6 +34,37 @@ function arr(v: unknown): unknown[] {
 
 function pick(o: unknown, k: string): unknown {
   return (o as Record<string, unknown>)?.[k];
+}
+
+/// 硬盘健康原值 → 分级。
+///
+/// WMI `Get-PhysicalDisk` 的 `HealthStatus` 实测直出 `Healthy` / `Warning` /
+/// `Unhealthy` / `Unknown`（本机 5 块盘全是 `Healthy`），**不是** `Good`/`Caution`；
+/// 只有 CrystalDiskInfo 的 `cdi_report` 才用 `Good`/`Caution`。两套口径都认，
+/// 认不出的一律归 unknown——此前把 `Healthy` 落进 else 分支，五块好盘全画成红色
+/// 「坏了」的盾牌（2026-10-13 修复）。
+export type DiskHealthGrade = 'good' | 'caution' | 'bad' | 'unknown';
+
+const HEALTH_GOOD_WORDS = ['healthy', 'ok', 'good', '良好', '正常']; // @i18n-keep 后端原值比对
+const HEALTH_CAUTION_WORDS = ['warning', 'caution', '注意']; // @i18n-keep 后端原值比对
+const HEALTH_BAD_WORDS = [
+  'unhealthy',
+  'nonrecoverable',
+  'unrecoverable',
+  'bad',
+  'failed',
+  'failure',
+  '不良', // @i18n-keep 后端原值比对
+  '损坏', // @i18n-keep 后端原值比对
+];
+
+export function gradeDiskHealth(raw: unknown): DiskHealthGrade {
+  const v = String(raw ?? '').trim().toLowerCase();
+  if (!v) return 'unknown';
+  if (HEALTH_GOOD_WORDS.includes(v)) return 'good';
+  if (HEALTH_CAUTION_WORDS.includes(v)) return 'caution';
+  if (HEALTH_BAD_WORDS.includes(v)) return 'bad';
+  return 'unknown';
 }
 
 // 从 GPU 列表里选出"最像物理显卡"的那块：
@@ -189,19 +220,39 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
               const wear = num(pick(d, 'wear_pct'));
               const tc = num(pick(d, 'temperature_c'));
               const tempC = tc > 60 ? (tc - 32) * 5 / 9 : tc;
-              const health = String(pick(d, 'health') ?? '');
-              // 'Good'/'良好'、'Caution'/'注意' 是后端 WMI 直出的健康原值（中英都认），
-              // 只用于比对取图标/配色，属比较常量不译。
-              const Icon = health === 'Good' || health === '良好' ? ShieldCheck // @i18n-keep 后端原值比对
-                : health === 'Caution' || health === '注意' ? ShieldAlert : ShieldX; // @i18n-keep 后端原值比对
-              const color = health === 'Good' || health === '良好' ? LEVEL_COLORS.L0 // @i18n-keep 后端原值比对
-                : health === 'Caution' || health === '注意' ? LEVEL_COLORS.L2 : LEVEL_COLORS.L3; // @i18n-keep 后端原值比对
+              const healthRaw = String(pick(d, 'health') ?? '');
+              const grade = gradeDiskHealth(healthRaw);
+              const Icon =
+                grade === 'good'
+                  ? ShieldCheck
+                  : grade === 'caution'
+                    ? ShieldAlert
+                    : grade === 'bad'
+                      ? ShieldX
+                      : ShieldQuestion;
+              const color =
+                grade === 'good'
+                  ? LEVEL_COLORS.L0
+                  : grade === 'caution'
+                    ? LEVEL_COLORS.L2
+                    : grade === 'bad'
+                      ? LEVEL_COLORS.L3
+                      : undefined; // 未上报：不给颜色，别把「没读到」画成「坏了」
+              const healthLabel = t(
+                grade === 'good'
+                  ? 'hw.healthGood'
+                  : grade === 'caution'
+                    ? 'hw.healthCaution'
+                    : grade === 'bad'
+                      ? 'hw.healthBad'
+                      : 'hw.healthUnknown',
+              );
               return (
                 <li key={i} className="hw-row">
-                  <Icon size={13} style={{ color }} />
+                  <Icon size={13} style={color ? { color } : undefined} />
                   <span className="hw-name">{String(pick(d, 'friendly') ?? t('hw.unknown'))}</span>
                   <span className="hw-meta">
-                    {String(pick(d, 'health'))} · {ph > 0 ? t('hw.powerOnHours', { hours: ph }) : ''}{' '}
+                    <span title={healthRaw}>{healthLabel}</span> · {ph > 0 ? t('hw.powerOnHours', { hours: ph }) : ''}{' '}
                     {wear >= 0 ? t('hw.lifeSuffix', { pct: Math.max(0, 100 - wear) }) : ''}{' '}
                     {tempC > 0 ? `· ${tempC.toFixed(0)}℃` : ''}
                   </span>

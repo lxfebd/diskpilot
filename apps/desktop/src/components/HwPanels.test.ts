@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { fmtHwTime, gpuLiveSource, vramStr } from './HwPanels';
+import { fmtHwTime, gpuLiveSource, gradeDiskHealth, vramStr } from './HwPanels';
 import { setLang } from '../i18n';
 
 // fmtHwTime：把归档 Unix 秒转成本地可读时间；非法/空输入返回空串（展示层兜底）。
@@ -69,5 +69,36 @@ describe('vramStr（AdapterRAM 溢出区判定）', () => {
     expect(vramStr(0)).toBe('未知');
     expect(vramStr(-1)).toBe('未知');
     expect(vramStr('n/a')).toBe('未知');
+  });
+});
+
+// 硬盘健康分级回归：WMI `Get-PhysicalDisk` 的 HealthStatus 实测直出
+// Healthy / Warning / Unhealthy / Unknown（本机 5 块盘全是 Healthy），而原代码
+// 只认 Good/Caution，Healthy 落进 else 分支——五块好盘全被画成红色「坏了」盾牌。
+describe('gradeDiskHealth（硬盘健康原值分级）', () => {
+  it('WMI 实测 Healthy → good（原 bug：画成坏盘）', () => {
+    expect(gradeDiskHealth('Healthy')).toBe('good');
+    expect(gradeDiskHealth('healthy')).toBe('good');
+    expect(gradeDiskHealth('OK')).toBe('good');
+    expect(gradeDiskHealth('良好')).toBe('good');
+  });
+
+  it('Warning / Caution → caution', () => {
+    expect(gradeDiskHealth('Warning')).toBe('caution');
+    expect(gradeDiskHealth('Caution')).toBe('caution');
+    expect(gradeDiskHealth('注意')).toBe('caution');
+  });
+
+  it('Unhealthy / NonRecoverable → bad', () => {
+    expect(gradeDiskHealth('Unhealthy')).toBe('bad');
+    expect(gradeDiskHealth('NonRecoverable')).toBe('bad');
+    expect(gradeDiskHealth('不良')).toBe('bad');
+  });
+
+  it('Unknown / 空 / 没读到 → unknown，不当成坏盘', () => {
+    expect(gradeDiskHealth('Unknown')).toBe('unknown');
+    expect(gradeDiskHealth('')).toBe('unknown');
+    expect(gradeDiskHealth(undefined)).toBe('unknown');
+    expect(gradeDiskHealth(null)).toBe('unknown');
   });
 });

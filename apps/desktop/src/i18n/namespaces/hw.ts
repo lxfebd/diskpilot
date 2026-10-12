@@ -44,6 +44,10 @@ export const hw = {
     'hw.smartLimited': '受限',
     'hw.powerOnHours': '通电 {hours}h',
     'hw.lifeSuffix': '· 寿命 {pct}%',
+    'hw.healthGood': '健康',
+    'hw.healthCaution': '注意',
+    'hw.healthBad': '不良',
+    'hw.healthUnknown': '未上报',
 
     // 压测确认面板（L1：逐项确认才执行）
     'hw.stressTitle': '硬件压力测试确认',
@@ -124,6 +128,10 @@ export const hw = {
     'hw.smartLimited': 'limited',
     'hw.powerOnHours': '{hours} h powered on',
     'hw.lifeSuffix': '· life left {pct}%',
+    'hw.healthGood': 'healthy',
+    'hw.healthCaution': 'caution',
+    'hw.healthBad': 'failing',
+    'hw.healthUnknown': 'not reported',
 
     // Stress-test confirmation panel (L1: runs only after explicit confirmation)
     'hw.stressTitle': 'Hardware stress test confirmation',
