@@ -153,14 +153,15 @@ pub(crate) async fn execute_scope(
     if dry_run && exec_roots.len() == 1 {
         if let Ok(trees) = state.scan_tree.lock() {
             // 多槽缓存按盘 key 精确命中；请求路径不在任何盘根时找覆盖它的最深根。
-            let req_key = crate::cleanup::norm_path_key(&root);
+            let req_key = crate::cleanup_logic::norm_path_key(&root);
             let node = trees.get(&req_key).or_else(|| {
                 trees
                     .values()
                     .filter(|t| {
-                        req_key.starts_with(&crate::cleanup::norm_path_key(Path::new(&t.path)))
+                        req_key
+                            .starts_with(&crate::cleanup_logic::norm_path_key(Path::new(&t.path)))
                     })
-                    .max_by_key(|t| crate::cleanup::norm_path_key(Path::new(&t.path)).len())
+                    .max_by_key(|t| crate::cleanup_logic::norm_path_key(Path::new(&t.path)).len())
             });
             if let Some(sub) = node.and_then(|t| locate_subtree(t, &root)) {
                 tree_matched = match granularity {
@@ -298,7 +299,7 @@ pub(crate) async fn execute_scope(
     // 真实执行后按根做 cleanup_cache key 级失效，避免 30 分钟 TTL 内继续
     // 返回「已回收」的旧字节。
     if !dry_run {
-        crate::cleanup::remove_cache_entries(&state, &invalidate_roots);
+        crate::cleanup_logic::remove_cache_entries(&state, &invalidate_roots);
     }
     Ok(out)
 }
@@ -425,7 +426,7 @@ pub(crate) async fn recycle_paths(
     })
     .await
     .map_err(|e| e.to_string())??;
-    crate::cleanup::remove_cache_entries(&state, &invalidate_roots);
+    crate::cleanup_logic::remove_cache_entries(&state, &invalidate_roots);
     Ok(out)
 }
 
@@ -492,7 +493,7 @@ pub(crate) async fn execute_ai_plan(
     .map_err(|e| e.to_string())?;
     // 真实执行后按路径做 cleanup_cache key 级失效（同 execute_scope 末尾）。
     if !dry_run {
-        crate::cleanup::remove_cache_entries(&state, &invalidate_roots);
+        crate::cleanup_logic::remove_cache_entries(&state, &invalidate_roots);
     }
     out
 }

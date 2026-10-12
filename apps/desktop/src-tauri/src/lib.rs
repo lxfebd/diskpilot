@@ -3,6 +3,7 @@ pub(crate) mod agent;
 pub(crate) mod ai;
 mod ai_net;
 mod cleanup;
+mod cleanup_logic;
 mod conda;
 mod drivers;
 mod dups;
@@ -35,7 +36,7 @@ use diskpilot_scanner::Node;
 use include_dir::{include_dir, Dir};
 use tauri::{AppHandle, Manager, State};
 
-pub(crate) use cleanup::CleanupCacheEntry;
+pub(crate) use cleanup_logic::CleanupCacheEntry;
 
 // 进程级共享 HTTP 客户端：网络搜索 / Steam 标题 / AI 代理都复用同一份
 // 连接池与 TLS 会话缓存，避免每个请求重新握手、连接池打不满。
@@ -1730,7 +1731,7 @@ mode = "delete"
         }
         let mut rows: Vec<Row> = Vec::new();
         for sc in &scaffolds {
-            for b in crate::cleanup::build_scope_builds(sc).expect("glob 编译") {
+            for b in crate::cleanup_logic::build_scope_builds(sc).expect("glob 编译") {
                 rows.push(Row {
                     scaffold: sc.id.clone(),
                     id: b.id,
@@ -1869,7 +1870,7 @@ mode = "delete"
             test_scope("pycache", "**/__pycache__"),
             test_scope("conda_pkgs", "**/pkgs/*"),
         ]);
-        let builds = crate::cleanup::build_scope_builds(&s).unwrap();
+        let builds = crate::cleanup_logic::build_scope_builds(&s).unwrap();
         assert_eq!(builds.len(), 2);
         assert_eq!(builds[0].id, "pycache");
         // 默认 File 粒度
@@ -1885,7 +1886,7 @@ mode = "delete"
     #[test]
     fn build_scope_builds_rejects_invalid_glob() {
         let s = test_scaffold(vec![test_scope("bad", "[")]);
-        let err = crate::cleanup::build_scope_builds(&s).unwrap_err();
+        let err = crate::cleanup_logic::build_scope_builds(&s).unwrap_err();
         assert!(err.contains("scope `bad`"), "err: {err}");
         assert!(err.contains("invalid glob"), "err: {err}");
     }
@@ -1894,7 +1895,7 @@ mode = "delete"
     fn build_scope_builds_expands_env_vars() {
         // scope glob 里的 ${USERPROFILE} 先展开再编译，命中展开后的真实路径
         let s = test_scaffold(vec![test_scope("env", "${USERPROFILE}/tmpcache/**")]);
-        let builds = crate::cleanup::build_scope_builds(&s).unwrap();
+        let builds = crate::cleanup_logic::build_scope_builds(&s).unwrap();
         // USERPROFILE 是 Windows 变量；非 Windows 上它不被展开（glob 原样编译），
         // 该用例只验证「展开后命中」这一行为，非 Windows 直接跳过断言。
         let Ok(up_raw) = std::env::var("USERPROFILE") else {

@@ -22,8 +22,8 @@ use diskpilot_scanner::ScanOptions;
 use diskpilot_scanner::{scan_with_stats_cancellable, Node, ScanStats};
 use tauri::{AppHandle, Emitter, State};
 
-use crate::cleanup::{suggestions_from_tree, CleanupSuggestion};
-use crate::{AppState, CleanupCacheEntry};
+use crate::cleanup_logic::{suggestions_from_tree, CleanupSuggestion};
+use crate::{cleanup_logic::CleanupCacheEntry, AppState};
 
 /// 一次扫描（全量或增量）的产出。`node` 是截断后返回前端的树，`node_full`
 /// 是完整树（tag_and_truncate 之前），供 suggestions / scan_tree 缓存使用。
@@ -161,7 +161,7 @@ pub(crate) async fn scan_path_usn(
     keep_files_per_dir: Option<u32>,
 ) -> Result<Node, String> {
     let p = PathBuf::from(&path);
-    let key = crate::cleanup::norm_path_key(&p);
+    let key = crate::cleanup_logic::norm_path_key(&p);
 
     // 增量需要两样东西，且必须同盘（同 key）：该盘的完整缓存树 + 该盘的基线
     // 游标。缺一即回退全量。按 key 取树保证不会把别的盘的树当成本盘的缓存
@@ -319,7 +319,7 @@ async fn run_full_scan(
     match outcome {
         Ok(outcome) => {
             // 基线游标在扫描开始前已采样（见上）；这里连同扫描结果一起提交。
-            let key = crate::cleanup::norm_path_key(&p_for_key);
+            let key = crate::cleanup_logic::norm_path_key(&p_for_key);
             commit_scan(app, state, &key, outcome, baseline.as_ref()).await
         }
         Err(e) => Err(e.to_string()),
