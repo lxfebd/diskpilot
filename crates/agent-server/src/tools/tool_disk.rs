@@ -228,16 +228,25 @@ impl AgentServer {
     async fn disk_top_directories(
         &self,
         Parameters(p): Parameters<TopDirectoriesParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
         if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
-        Ok(blocking_call(
+        Ok(blocking_call_progress(
             45,
-            move || diskx::collect_top_directories(p.path.clone(), p.top_n.unwrap_or(20)),
+            move |slot| {
+                let cb = |seen: usize, total: usize| {
+                    if let Some(v) = (seen * 1000).checked_div(total) {
+                        slot.set(v as u64);
+                    }
+                };
+                diskx::collect_top_directories(p.path.clone(), p.top_n.unwrap_or(20), Some(&cb))
+            },
             "子目录占用统计",
+            &ctx,
         )
         .await)
     }

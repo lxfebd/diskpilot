@@ -3,7 +3,7 @@
 //! 盘点/杂项 → `tool_sys_misc`（2026-10-12 再拆分）。
 
 use crate::tools::params::*;
-use crate::tools::{blocking_call, fmt_bytes, tool_error, AgentServer};
+use crate::tools::{blocking_call, blocking_call_progress, fmt_bytes, tool_error, AgentServer};
 use crate::tools::{files, process, sys, system};
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_router,
@@ -134,6 +134,7 @@ impl AgentServer {
     async fn find_files(
         &self,
         Parameters(p): Parameters<FindFilesParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let root = std::path::PathBuf::from(&p.root);
@@ -143,11 +144,16 @@ impl AgentServer {
         let max_hits = p.max_hits.unwrap_or(50).clamp(1, 500);
         let root_str = p.root.clone();
         let keyword = p.keyword.clone();
-        Ok(blocking_call(
+        Ok(blocking_call_progress(
             45,
-            move || -> Result<String, String> {
+            move |slot| -> Result<String, String> {
                 let rb = std::path::PathBuf::from(&root_str);
-                match files::find_files(&rb, &keyword, max_hits) {
+                let cb = |seen: usize, total: usize| {
+                    if let Some(v) = (seen * 1000).checked_div(total) {
+                        slot.set(v as u64);
+                    }
+                };
+                match files::find_files(&rb, &keyword, max_hits, Some(&cb)) {
                     Ok((hits, truncated)) => {
                         if hits.is_empty() {
                             return Ok(format!("{root_str} 下没有文件名包含「{keyword}」的项目"));
@@ -179,6 +185,7 @@ impl AgentServer {
                 }
             },
             "文件查找",
+            &ctx,
         )
         .await)
     }

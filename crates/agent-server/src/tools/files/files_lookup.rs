@@ -100,6 +100,7 @@ pub fn find_files(
     root: &Path,
     keyword: &str,
     max_hits: usize,
+    progress: Option<&dyn Fn(usize, usize)>,
 ) -> Result<(Vec<FindHit>, bool), String> {
     let kw = keyword.to_ascii_lowercase();
     if kw.is_empty() {
@@ -116,6 +117,13 @@ pub fn find_files(
         if hits.len() >= max_hits || seen > MAX_SEEN {
             truncated = true;
             break;
+        }
+        // 进度回调：每 4096 项报一次（无命中时最坏要遍历到 MAX_SEEN，
+        // 前端进度条据此显示真实推进，而不是干等 45s 超时）。
+        if seen.is_multiple_of(4096) {
+            if let Some(cb) = progress {
+                cb(seen, MAX_SEEN);
+            }
         }
         // 跳符号链接防环
         if entry.path_is_symlink() {

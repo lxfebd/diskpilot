@@ -26,7 +26,11 @@ const MAX_FILES_WALK: usize = 500_000;
 /// 占了大头」要的是同级对比）；单遍 jwalk 并行遍历，每遇到 `root/xxx/...`
 /// 的路径就把文件大小累加到第一层子目录名下。文件上限 [`MAX_FILES_WALK`]。
 #[cfg(windows)]
-pub fn collect_top_directories(path: String, top_n: usize) -> Result<String, String> {
+pub fn collect_top_directories(
+    path: String,
+    top_n: usize,
+    progress: Option<&dyn Fn(usize, usize)>,
+) -> Result<String, String> {
     let p = Path::new(&path);
     // 只读口径（check_read）：放行盘根枚举——统计盘根直接子目录占用是 AI
     // 分析空间分布的核心入口，不修改任何东西。系统目录/主目录根仍拒绝。
@@ -59,6 +63,12 @@ pub fn collect_top_directories(path: String, top_n: usize) -> Result<String, Str
         };
         total_files += 1;
         total_bytes = total_bytes.saturating_add(len);
+        // 进度回调：每 4096 个文件报一次（避免高频调用拖慢遍历）。
+        if total_files.is_multiple_of(4096) {
+            if let Some(cb) = progress {
+                cb(total_files, MAX_FILES_WALK);
+            }
+        }
         // 取 root 之后的第一个路径段作为「第一层子目录」名。
         let entry_path = entry.path();
         let rel = entry_path.strip_prefix(p).unwrap_or(entry_path.as_path());
@@ -113,6 +123,10 @@ pub fn collect_top_directories(path: String, top_n: usize) -> Result<String, Str
 }
 
 #[cfg(not(windows))]
-pub fn collect_top_directories(_path: String, _top_n: usize) -> Result<String, String> {
+pub fn collect_top_directories(
+    _path: String,
+    _top_n: usize,
+    _progress: Option<&dyn Fn(usize, usize)>,
+) -> Result<String, String> {
     Ok("当前平台不是 Windows，目录占用统计不可用".into())
 }
