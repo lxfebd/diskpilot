@@ -5,10 +5,9 @@
 //! 「图吧工具箱」绿色版 tools 目录的兜底扫描（find_tuba_green_tools）。
 
 use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::catalog::{ToolPluginMeta, ToolbeltError};
-use crate::root::looks_like_tools_root;
 
 /// 从本地 `.zip` 插件包安装：解析包内 `tool.plugin.json` 的 id/category，
 /// 解压到 Tools 根对应分类下（插件目录 = `<分类>/<id>`），已存在则报错（避免
@@ -210,81 +209,11 @@ pub fn install_plugin_zip(zip_path: &Path, tools_root: &Path) -> Result<String, 
         .unwrap_or_default())
 }
 
-/// 插件 id 必须是 kebab-case（小写字母/数字开头，可含 `-`），与市场/AI 工具
-/// 注册共用同一身份约束。除格式外天然排除 `..`、`/`、`\`、空格等目录越界字符。
-fn validate_plugin_id(id: &str) -> Result<String, ToolbeltError> {
-    let t = id.trim();
-    let valid = !t.is_empty()
-        && t.len() <= 64
-        && t.as_bytes()[0].is_ascii_lowercase()
-        && t.bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
-    if !valid {
-        return Err(ToolbeltError::BadArgs(format!(
-            "插件 id「{id}」非法：只允许小写字母/数字/连字符（kebab-case，1-64 位）"
-        )));
-    }
-    Ok(t.to_string())
-}
-
-/// 把任意工具/插件「显示名」净化成稳定的 kebab-case 插件 id：
-/// 小写化 → 非字母数字字符折叠为 `-` → 去首尾/重复 `-` → 前缀补 `t`（数字开头），
-/// 保证结果一定通过 [`validate_plugin_id`]（市场索引/AI 工具注册的持久化身份）。
-/// 空输入返回 Err。
-pub fn plugin_id_from_name(name: &str) -> Result<String, ToolbeltError> {
-    let mut out = String::with_capacity(name.len());
-    let mut last_dash = false;
-    for b in name.to_ascii_lowercase().bytes() {
-        if b.is_ascii_lowercase() || b.is_ascii_digit() {
-            out.push(b as char);
-            last_dash = false;
-        } else if !last_dash {
-            out.push('-');
-            last_dash = true;
-        }
-    }
-    while out.ends_with('-') {
-        out.pop();
-    }
-    if out.is_empty() {
-        return Err(ToolbeltError::BadArgs(format!(
-            "无法从名称「{name}」生成插件 id（没有可用字符）"
-        )));
-    }
-    // 数字开头非法：补一个稳定前缀
-    let mut final_id = out;
-    if final_id.as_bytes()[0].is_ascii_digit() {
-        final_id.insert(0, 't');
-    }
-    if final_id.len() > 64 {
-        final_id.truncate(64);
-        while final_id.ends_with('-') {
-            final_id.pop();
-        }
-    }
-    Ok(final_id)
-}
-
-/// 插件分类必须落到 Tools 根下已存在的分类目录（'' 映射已在上层处理）。
-/// 既防 `../`、绝对路径注入，也避免「安装即新建一个误拼的分类目录」。
-fn validate_plugin_category(cat: &str, tools_root: &Path) -> Result<String, ToolbeltError> {
-    let t = cat.trim();
-    let bad_seg = t
-        .split(['/', '\\'])
-        .any(|seg| seg.is_empty() || seg == "." || seg == ".." || seg.contains(':'));
-    if t.is_empty() || t.len() > 64 || bad_seg || t.contains('\0') {
-        return Err(ToolbeltError::BadArgs(format!(
-            "插件分类「{cat}」非法：请用 Tools 下已有的分类目录名"
-        )));
-    }
-    let cand = tools_root.join(t);
-    if !cand.is_dir() {
-        return Err(ToolbeltError::BadArgs(format!(
-            "插件分类「{cat}」不存在于 Tools 根（可用分类见工具墙左侧导航）"
-        )));
-    }
-    Ok(t.to_string())
-}
+mod green;
+mod validate;
+pub(crate) use green::find_tuba_green_tools;
+pub use validate::plugin_id_from_name;
+pub(crate) use validate::{validate_plugin_category, validate_plugin_id};
 
 /// 把已安装插件目录（根含 `tool.plugin.json`）打包成可分发的 zip，返回
 /// 生成的 zip 路径。zip 内结构与 [`install_plugin_zip`] 一致：
@@ -354,63 +283,4 @@ pub fn export_plugin_zip(plugin_dir: &Path, out_zip: &Path) -> Result<(), Toolbe
     zw.finish()
         .map_err(|e| ToolbeltError::BadArgs(format!("封包失败: {e}")))?;
     Ok(())
-}
-
-/// 扫描本机固定盘，定位「图吧工具箱」绿色版的 tools 目录。
-/// 图吧绿色版通常在盘根放一个「图吧工具箱20xx」文件夹，内含 tools 分类目录。
-/// 命中多个时取目录名里版本号最大（最新）的一份，方便用户升级后自动切到新版。
-pub(crate) fn find_tuba_green_tools() -> Option<PathBuf> {
-    let mut best: Option<(PathBuf, u64)> = None;
-    // 只探盘根下三层以内，避免全盘递归拖慢启动。
-    let mut probe = |p: &Path, depth: u8| {
-        if depth > 3 || !p.is_dir() {
-            return;
-        }
-        let Ok(rd) = std::fs::read_dir(p) else { return };
-        for ent in rd.flatten() {
-            let sub = ent.path();
-            if !sub.is_dir() {
-                continue;
-            }
-            let Some(fname) = sub.file_name() else {
-                continue;
-            };
-            let name = fname.to_string_lossy().to_lowercase();
-            let is_tuba = name.contains("图吧")
-                || name.contains("工具箱")
-                || name.contains("tubagongju")
-                || name.contains("tuba");
-            if !is_tuba {
-                continue;
-            }
-            let tools_dir = sub.join("tools");
-            if looks_like_tools_root(&tools_dir) {
-                let ver = parse_green_version(&name);
-                if best.as_ref().is_none_or(|(_, bv)| ver > *bv) {
-                    best = Some((tools_dir.clone(), ver));
-                }
-            }
-        }
-    };
-    for letter in b'C'..=b'Z' {
-        let root = format!("{}:\\", letter as char);
-        probe(std::path::Path::new(&root), 0);
-    }
-    best.map(|(p, _)| p)
-}
-
-/// 从「图吧工具箱202406」这类目录名里解析版本号，用于多份间选最新；解析不出返回 0。
-fn parse_green_version(name: &str) -> u64 {
-    let mut v: u64 = 0;
-    for chunk in name
-        .chars()
-        .collect::<Vec<_>>()
-        .chunk_by(|a, b| a.is_ascii_digit() == b.is_ascii_digit())
-    {
-        let s: String = chunk.iter().collect();
-        if let Ok(n) = s.parse::<u64>() {
-            v = v * 100 + n;
-        }
-    }
-    v
 }
