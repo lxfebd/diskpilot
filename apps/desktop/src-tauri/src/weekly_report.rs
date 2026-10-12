@@ -33,6 +33,20 @@ pub(crate) struct WeeklyReport {
     pub hw_snapshots: usize,
     /// 周内硬件变化简要（首尾温度差 / 通电差），无则空。
     pub hw_delta: Vec<String>,
+    /// 每块物理盘的健康摘要（带盘符）。旧归档没有这个字段 → 前端按空处理。
+    #[serde(default)]
+    pub disks: Vec<DiskHealthBrief>,
+}
+
+/// 周报里的单块盘健康摘要。`health` 是后端原值（Healthy / Warning / …），
+/// `grade` 是统一分级（good / caution / bad / unknown），`letters` 可能为空
+/// （映射不到盘符时不猜）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct DiskHealthBrief {
+    pub friendly: String,
+    pub letters: String,
+    pub health: String,
+    pub grade: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,6 +169,39 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         Vec::new()
     };
 
+    // 4) 每块物理盘的健康摘要（hw_disk_cached 带 5 分钟 TTL，周报是后台作业，跑一次
+    //    PowerShell 可以接受）。读不到就留空数组：不编造，也不让周报假装盘都好。
+    let disks: Vec<DiskHealthBrief> = crate::hw::hw_disk::hw_disk_cached(app, false)
+        .ok()
+        .and_then(|v| v.get("disks").cloned())
+        .and_then(|d| d.as_array().cloned())
+        .map(|arr| {
+            arr.iter()
+                .map(|d| {
+                    let health = d
+                        .get("health")
+                        .and_then(|x| x.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    DiskHealthBrief {
+                        friendly: d
+                            .get("friendly")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        letters: d
+                            .get("drive_letters")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        grade: crate::hw::hw_disk::grade_health(&health).to_string(),
+                        health,
+                    }
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     Ok(WeeklyReport {
         ts: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -165,6 +212,7 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         temp_max_c,
         hw_snapshots,
         hw_delta,
+        disks,
     })
 }
 
@@ -260,6 +308,20 @@ mod tests {
             temp_max_c: Some(72.5),
             hw_snapshots: 2,
             hw_delta: vec!["C temp +3".into()],
+            disks: vec![
+                DiskHealthBrief {
+                    friendly: "WD_BLACK SN770 1TB".into(),
+                    letters: "C".into(),
+                    health: "Healthy".into(),
+                    grade: "good".into(),
+                },
+                DiskHealthBrief {
+                    friendly: "Old HDD".into(),
+                    letters: "F,G".into(),
+                    health: "Warning".into(),
+                    grade: "caution".into(),
+                },
+            ],
         };
         let text = serde_json::to_string_pretty(&r).unwrap();
         let back: WeeklyReport = serde_json::from_str(&text).unwrap();
@@ -267,5 +329,17 @@ mod tests {
         assert_eq!(back.total_bytes, 100);
         assert_eq!(back.temp_max_c, Some(72.5));
         assert_eq!(back.hw_delta, vec!["C temp +3"]);
+        assert_eq!(back.disks.len(), 2);
+        assert_eq!(back.disks[1].letters, "F,G");
+        assert_eq!(back.disks[1].grade, "caution");
+    }
+
+    #[test]
+    fn old_archive_without_disk_field_still_reads() {
+        // 已归档的旧周报没有 disks：serde(default) 必须让它照样读得出来，
+        // 否则历史页读旧档会整份失败。
+        let json = r#"{"ts":1,"drives":[],"total_bytes":0,"temp_max_c":null,"hw_snapshots":0,"hw_delta":[]}"#;
+        let back: WeeklyReport = serde_json::from_str(json).unwrap();
+        assert!(back.disks.is_empty());
     }
 }

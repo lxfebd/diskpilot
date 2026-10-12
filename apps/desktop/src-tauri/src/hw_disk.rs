@@ -188,3 +188,38 @@ fn parse_cdi_report(txt: &str) -> Vec<serde_json::Value> {
     }
     out
 }
+
+/// 健康原值 → 分级（good / caution / bad / unknown），与前端 `diskHealth.ts` 同一口径。
+///
+/// WMI `Get-PhysicalDisk` 的 `HealthStatus` 实测直出 `Healthy` / `Warning` /
+/// `Unhealthy` / `Unknown`，只有 CrystalDiskInfo 才用 `Good` / `Caution`：两套都认，
+/// 认不出的一律 unknown——「没读到」不能当成「坏了」。
+pub(crate) fn grade_health(raw: &str) -> &'static str {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "healthy" | "ok" | "good" | "良好" | "正常" => "good",
+        "warning" | "caution" | "注意" => "caution",
+        "unhealthy" | "nonrecoverable" | "unrecoverable" | "bad" | "failed" | "failure"
+        | "不良" | "损坏" => "bad",
+        _ => "unknown",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::grade_health;
+
+    #[test]
+    fn wmi_health_words_grade_and_unknown_is_not_bad() {
+        // 本机实测：5 块盘的 HealthStatus 全是 Healthy。
+        assert_eq!(grade_health("Healthy"), "good");
+        assert_eq!(grade_health("OK"), "good");
+        assert_eq!(grade_health("Warning"), "caution");
+        assert_eq!(grade_health("Caution"), "caution");
+        assert_eq!(grade_health("Unhealthy"), "bad");
+        assert_eq!(grade_health("Nonrecoverable"), "bad");
+        // 读不到 / 不认识的值一律 unknown：不能画成「坏了」。
+        assert_eq!(grade_health("Unknown"), "unknown");
+        assert_eq!(grade_health(""), "unknown");
+        assert_eq!(grade_health("   "), "unknown");
+    }
+}

@@ -334,11 +334,30 @@ export interface WeeklyReport {
   hw_snapshots: number;
   /** 周内硬件变化简要（温度 / 通电差），无则空 */
   hw_delta: string[];
+  /** 每块物理盘的健康摘要（带盘符）。旧归档没有这个字段 → 按空处理。 */
+  disks?: WeeklyDiskHealth[];
+}
+
+/** 周报里的单块盘健康：health 是后端原值，grade 是统一分级（good/caution/bad/unknown）。 */
+export interface WeeklyDiskHealth {
+  friendly: string;
+  /** 该盘覆盖的盘符（`C` / `F,G`）；映射不到时为空串。 */
+  letters: string;
+  health: string;
+  grade: string;
 }
 
 /** 非 Tauri/清空态兜底：字段类型齐全但不产生真实数据。 */
 export function emptyWeeklyReport(): WeeklyReport {
-  return { ts: 0, drives: [], total_bytes: 0, temp_max_c: null, hw_snapshots: 0, hw_delta: [] };
+  return {
+    ts: 0,
+    drives: [],
+    total_bytes: 0,
+    temp_max_c: null,
+    hw_snapshots: 0,
+    hw_delta: [],
+    disks: [],
+  };
 }
 
 // ── 磁盘空间历史（R6，后端 space_history.rs 返回形状）──

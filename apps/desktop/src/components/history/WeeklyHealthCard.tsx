@@ -4,7 +4,7 @@
 // 后端同样是只读聚合（扫描建议 + 温度 + 硬件对比），绝不执行清理；真实清理
 // 仍只走总览页确认窗（user_confirmed 硬校验）。
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, Eraser, Flame, Loader2, Sparkles, Thermometer } from 'lucide-react';
+import { CalendarDays, Eraser, Flame, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles, Thermometer } from 'lucide-react';
 import { api } from '../../api';
 import type { WeeklyReport } from '../../api';
 import { formatBytes, formatDateKey } from '../../format';
@@ -59,6 +59,11 @@ export function WeeklyHealthCard({
       setBusy(false);
     }
   };
+
+  // 盘健康摘要：旧归档没有 disks → 空数组，整块不显示（不猜盘是好是坏）。
+  const disks = report?.disks ?? [];
+  const riskyDisks = disks.filter((d) => d.grade === 'caution' || d.grade === 'bad');
+  const unknownDisks = disks.filter((d) => d.grade === 'unknown');
 
   return (
     <section className="wh-card">
@@ -119,6 +124,57 @@ export function WeeklyHealthCard({
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* 周报只报「可清多少」却不报盘的健康，等于把最要紧的一件事漏掉了。
+              旧归档没有 disks：整块不显示，不猜。 */}
+          {disks.length > 0 && (
+            <div className="wh-disks">
+              <div className="wh-delta-title">{t('history.weekly.diskHead')}</div>
+              {riskyDisks.length > 0 ? (
+                <>
+                  <ul className="wh-disks-list">
+                    {riskyDisks.map((d, i) => (
+                      <li
+                        key={`${d.friendly}-${i}`}
+                        className={d.grade === 'bad' ? 'wh-disks-item bad' : 'wh-disks-item caution'}
+                      >
+                        <ShieldAlert size={12} />
+                        <span className="wh-disks-name">
+                          {d.letters ? `${d.letters}: ${d.friendly}` : d.friendly}
+                        </span>
+                        <span className="wh-disks-grade" title={d.health}>
+                          {t(d.grade === 'bad' ? 'hw.healthBad' : 'hw.healthCaution')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {disks.length > riskyDisks.length && (
+                    <div className="muted small">
+                      {t('history.weekly.diskRest', { n: disks.length - riskyDisks.length })}
+                    </div>
+                  )}
+                </>
+              ) : unknownDisks.length === disks.length ? (
+                <div className="wh-disks-ok">
+                  <ShieldQuestion size={12} />
+                  {t('history.weekly.diskNoneReported', { m: unknownDisks.length })}
+                </div>
+              ) : unknownDisks.length > 0 ? (
+                <div className="wh-disks-ok">
+                  <ShieldQuestion size={12} />
+                  {t('history.weekly.diskMixed', {
+                    n: disks.length - unknownDisks.length,
+                    m: unknownDisks.length,
+                  })}
+                </div>
+              ) : (
+                <div className="wh-disks-ok">
+                  <ShieldCheck size={12} />
+                  {t('history.weekly.diskAllGood', { n: disks.length })}
+                </div>
+              )}
+            </div>
           )}
 
           <div className="wh-delta">
