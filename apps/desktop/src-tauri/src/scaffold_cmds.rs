@@ -60,13 +60,9 @@ pub(crate) fn list_scaffolds(state: State<'_, AppState>) -> Vec<Scaffold> {
     state.scaffolds.lock().unwrap().clone()
 }
 
-#[tauri::command]
-pub(crate) fn detect_scaffold(state: State<'_, AppState>, path: String) -> Option<String> {
-    diskpilot_scaffold::detect_for(
-        &state.scaffolds.lock().unwrap(),
-        std::path::Path::new(&path),
-    )
-}
+// 曾经这里有个 `detect_scaffold(path)` 命令：前端零调用，且扫描期
+// `scan/tag.rs` 已给每个节点打上 scaffold_id，命令是重复入口——删掉，
+// 少一个「注册了但没人用」的假功能面。
 
 /// scaffold id 合法性校验（防路径穿越：id 会拼进文件名）。
 /// 只允许小写字母/数字/连字符，禁止空串。

@@ -217,7 +217,6 @@ pub fn run() {
             drives::estimate_size,
             scaffold_cmds::sync_perms,
             scaffold_cmds::list_scaffolds,
-            scaffold_cmds::detect_scaffold,
             scaffold_cmds::install_scaffold,
             scaffold_cmds::parse_winapp2,
             scaffold_cmds::uninstall_scaffold,
