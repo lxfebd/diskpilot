@@ -51,7 +51,8 @@ export const toolbelt = {
     'toolbelt.sys.procsLoading': '读取中…',
     'toolbelt.sys.procsEmpty': '没读到进程列表（非桌面环境或快照失败）。',
     'toolbelt.sys.procsUnknown': '内存未读到',
-    'toolbelt.sys.procsHint': '按工作集内存排序（任务管理器同口径）；读不到内存的进程排在最后，不会猜数字。',
+    'toolbelt.sys.procsReveal': '在文件夹里找到这个程序',
+    'toolbelt.sys.procsHint': '按工作集内存排序（任务管理器同口径）；读不到内存的进程排在最后，不会猜数字。读得到路径的条目可以直接在文件夹里找到它——想知道「这玩意是哪个软件」时最有用的就是这一步。',
 
     // 硬件工具箱（图吧工具箱 CLI 直通面板）
     'toolbelt.cli.title': '硬件工具箱',
@@ -569,7 +570,8 @@ export const toolbelt = {
     'toolbelt.sys.procsLoading': 'Loading…',
     'toolbelt.sys.procsEmpty': 'No process list (not the desktop app, or the snapshot failed).',
     'toolbelt.sys.procsUnknown': 'memory unavailable',
-    'toolbelt.sys.procsHint': 'Sorted by working-set memory (same measure as Task Manager); processes whose memory cannot be read are listed last — no guessed numbers.',
+    'toolbelt.sys.procsReveal': 'Find this program in its folder',
+    'toolbelt.sys.procsHint': 'Sorted by working-set memory (same measure as Task Manager); processes whose memory cannot be read are listed last — no guessed numbers. Rows with a known path can be revealed in their folder — the most useful step when you wonder "which program is this?".',
 
     // Hardware toolbox (Tuba toolbox CLI panel)
     'toolbelt.cli.title': 'Hardware toolbox',

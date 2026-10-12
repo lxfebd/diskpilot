@@ -90,6 +90,8 @@ export interface ProcessProbe {
   name: string;
   /** 工作集内存字节数；系统进程读不到时为 0（不是「最大」）。 */
   mem_bytes: number;
+  /** 可执行文件全路径；受保护进程读不到时为 null（不给「打开所在文件夹」）。 */
+  exe_path: string | null;
 }
 
 export interface NetworkProbe {

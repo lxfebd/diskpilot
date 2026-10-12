@@ -166,6 +166,8 @@ pub(crate) struct ProbeProcess {
     name: String,
     /// 工作集内存（字节）——任务管理器「内存」那一列的口径。
     mem_bytes: u64,
+    /// 可执行文件全路径；受保护进程读不到时为 None（前端就不给「打开所在文件夹」）。
+    exe_path: Option<String>,
 }
 
 /// 按内存降序截断。纯函数便于单测（枚举本身要真进程）。
@@ -191,7 +193,9 @@ fn collect_processes() -> Vec<ProbeProcess> {
     use windows_sys::Win32::System::ProcessStatus::{
         GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
     };
-    use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
     unsafe {
         let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if snap.is_null() || snap == INVALID_HANDLE_VALUE {
@@ -207,6 +211,7 @@ fn collect_processes() -> Vec<ProbeProcess> {
                 .to_string();
             let pid = entry.th32ProcessID;
             let mut mem_bytes = 0u64;
+            let mut exe_path: Option<String> = None;
             let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
             if h != INVALID_HANDLE_VALUE {
                 let mut pmc: PROCESS_MEMORY_COUNTERS = std::mem::zeroed();
@@ -218,12 +223,21 @@ fn collect_processes() -> Vec<ProbeProcess> {
                 {
                     mem_bytes = pmc.WorkingSetSize as u64;
                 }
+                let mut buf = vec![0u16; 1024];
+                let mut len = buf.len() as u32;
+                if QueryFullProcessImageNameW(h, 0, buf.as_mut_ptr(), &mut len) != 0 {
+                    let path = String::from_utf16_lossy(&buf[..len as usize]);
+                    if !path.is_empty() {
+                        exe_path = Some(path);
+                    }
+                }
                 CloseHandle(h);
             }
             out.push(ProbeProcess {
                 pid,
                 name,
                 mem_bytes,
+                exe_path,
             });
             ok = Process32NextW(snap, &mut entry);
         }
@@ -397,6 +411,7 @@ mod tests {
             pid,
             name: name.to_string(),
             mem_bytes: mem,
+            exe_path: None,
         }
     }
 
@@ -437,5 +452,11 @@ mod tests {
             .find(|p| p.pid == std::process::id())
             .expect("快照里应能找到自己这个进程");
         assert!(mine.mem_bytes > 0, "自己的工作集内存应读得到");
+        // 路径也要读得到：这是「打开所在文件夹」按钮的依据，读不到按钮就消失了。
+        let exe = mine.exe_path.clone().expect("自己的 exe 全路径应读得到");
+        assert!(
+            exe.to_lowercase().ends_with(".exe"),
+            "路径应是 exe 全路径，实际 {exe}"
+        );
     }
 }

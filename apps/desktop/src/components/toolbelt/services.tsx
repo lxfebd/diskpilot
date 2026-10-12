@@ -2,7 +2,7 @@
 // 网络走后端 Rust 真实 TCP 连接（reqwest），不受 WebView CSP connect-src 限制。
 // 之前用前端 fetch(mode:'no-cors')，跨域请求被浏览器安全策略拦掉，永远不可达。
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, Cpu, Globe, Loader2, RefreshCw } from 'lucide-react';
+import { Activity, Cpu, FolderOpen, Globe, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '../../api';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
@@ -82,6 +82,7 @@ export function NetworkPanel({ ctx: _ctx }: { ctx: ToolContext }) {
 
 export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
   const t = useT();
+  const toast = useStore((s) => s.toast);
   const [probe, setProbe] = useState<SystemProbe | null>(null);
   const [loading, setLoading] = useState(true);
   const timerRef = useRef<number | null>(null);
@@ -204,14 +205,32 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
           {procs && procs.length > 0 && (
             <>
               <ul className="tb-proc-list">
-                {procs.map((p) => (
-                  <li key={p.pid} className="tb-proc-row">
-                    <span className="tb-proc-name" title={`PID ${p.pid}`}>{p.name}</span>
-                    <span className="tb-proc-mem">
-                      {p.mem_bytes > 0 ? formatBytes(p.mem_bytes) : t('toolbelt.sys.procsUnknown')}
-                    </span>
-                  </li>
-                ))}
+                {procs.map((p) => {
+                  const exe = p.exe_path;
+                  return (
+                    <li key={p.pid} className="tb-proc-row">
+                      <span className="tb-proc-name" title={exe ?? `PID ${p.pid}`}>{p.name}</span>
+                      <span className="tb-proc-mem">
+                        {p.mem_bytes > 0 ? formatBytes(p.mem_bytes) : t('toolbelt.sys.procsUnknown')}
+                      </span>
+                      {exe && (
+                        <button
+                          type="button"
+                          className="ghost small"
+                          title={t('toolbelt.sys.procsReveal')}
+                          aria-label={t('toolbelt.sys.procsReveal')}
+                          onClick={() => {
+                            api.revealInExplorer(exe).catch((e) => {
+                              toast(String(e instanceof Error ? e.message : e), 'err');
+                            });
+                          }}
+                        >
+                          <FolderOpen size={11} />
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <p className="hint">{t('toolbelt.sys.procsHint')}</p>
             </>
