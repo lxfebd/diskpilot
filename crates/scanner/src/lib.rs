@@ -34,6 +34,10 @@ pub mod mft_bench {
 /// 解析层跨平台纯函数，DeviceIoControl 层仅在 Windows 编译。
 #[cfg(windows)]
 pub mod usn;
+/// USN 变更在缓存树上的合并/应用/删除逻辑（从 usn.rs 拆出，2026-10-12）。
+/// 纯树操作，无 DeviceIoControl；经 usn.rs `pub use` 重导出保持旧路径。
+#[cfg(windows)]
+pub mod usn_tree;
 /// 路径剪枝 / glob 匹配 / 目录 scope 统计原语。desktop 的 scaffold 扫描
 /// 与 scanner 的主扫共用同一份 PRUNED_SYSTEM_DIRS 黑名单与 walker 策略，
 /// 避免两份不一致的剪枝名单再次漂移。
