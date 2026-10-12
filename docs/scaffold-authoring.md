@@ -18,6 +18,16 @@
 
 ## 2. 写 TOML
 
+**用脚手架 CLI 起一份新脚本**（自动填 id/name/risk、写盘前自检、输出后续步骤）：
+
+```bash
+cargo run -p diskpilot-scaffold-lint -- new <id> [--name "显示名"] [--risk low|medium|high]
+# 例：cargo run -p diskpilot-scaffold-lint -- new some-app --name "某应用" --risk low
+cargo run -p diskpilot-scaffold-lint -- list     # 看现有脚本格式与风险分布
+```
+
+生成的 `scaffolds/<id>.toml` 带完整模板注释，再按下面的要点填充 scope。
+
 结构要点：
 
 - `detect`：路径存在性规则，决定 Studio 卡片是否出现
