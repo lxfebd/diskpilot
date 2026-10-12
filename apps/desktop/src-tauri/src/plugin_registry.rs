@@ -25,8 +25,7 @@
 use tauri::{AppHandle, Manager, State};
 
 use crate::plugin_registry_types::{
-    InstalledPlugin, LedgerEntry, PluginVersion, RegistryConfig, RegistryEnvelope, RegistryPlugin,
-    REGISTRY_SCHEMA,
+    InstalledPlugin, LedgerEntry, RegistryConfig, RegistryEnvelope, RegistryPlugin, REGISTRY_SCHEMA,
 };
 
 const REGISTRY_FILE: &str = "plugins-registry.json";
@@ -1023,6 +1022,7 @@ pub(crate) async fn plugin_registry_rollback(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::plugin_registry_types::PluginVersion;
 
     #[test]
     fn resolve_latest_from_versions() {
