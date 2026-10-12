@@ -118,9 +118,15 @@ async fn agent_call_tool_disk_health_returns_data() {
         eprintln!("skip: agent-server.exe 未构建");
         return;
     }
-    let r = agent_call_tool_core("disk_health".into(), serde_json::json!({}), None, None)
-        .await
-        .expect("call_tool 应成功");
+    let r = agent_call_tool_core(
+        "disk_health".into(),
+        serde_json::json!({}),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("call_tool 应成功");
     // Windows 上 agent-server 用 GetLogicalDrives 枚举真实磁盘，必有数据；
     // 非 Windows collect_disks 返回空 → 工具如实报错（功能降级），测试接受：
     // 链路通（call_tool 不 panic）即视为通过，只有 Windows 才钉死内容断言。
@@ -150,6 +156,7 @@ async fn agent_call_tool_list_dir_drive_root_readonly_allowed() {
     let r = agent_call_tool_core(
         "list_dir".into(),
         serde_json::json!({ "path": "C:\\" }),
+        None,
         None,
         None,
     )
@@ -190,6 +197,7 @@ async fn agent_call_tool_list_dir_real_subdir_readonly_allowed() {
         serde_json::json!({ "path": real_dir.to_string_lossy().into_owned() }),
         None,
         None,
+        None,
     )
     .await
     .expect("call_tool 应成功");
@@ -213,6 +221,7 @@ async fn agent_call_tool_disk_top_directories_drive_root_readonly_allowed() {
     let r = agent_call_tool_core(
         "disk_top_directories".into(),
         serde_json::json!({ "path": "C:\\", "top_n": 5 }),
+        None,
         None,
         None,
     )

@@ -15,6 +15,20 @@ import { lastToolCall, runningSecs } from '../advisor/traceTimer';
 import { prefs } from '../theme';
 import type { Node, AdvisorResponse, Scaffold } from '../types';
 import { HwReportCard, StressConfirmPanel, HwTestMonitor, useHwTestMonitor, type StressConfirm } from './HwPanels';
+import { useAgentToolProgress, AgentProgressCard } from './AgentProgressMonitor';
+
+// 从 agent-tool-progress message 中提取工具名称（简化版，根据常见关键词）
+const extractToolName = (message: string): string => {
+  const lower = message.toLowerCase();
+  if (lower.includes('压测')) return '稳定性压测';
+  if (lower.includes('磁盘基准') || lower.includes('基准')) return '磁盘基准';
+  if (lower.includes('大文件扫描')) return '大文件扫描';
+  if (lower.includes('重复文件')) return '重复文件扫描';
+  if (lower.includes('内存稳定性')) return '内存稳定性测试';
+  if (lower.includes('GPU') || lower.includes('显卡')) return 'GPU 压测';
+  // fallback：返回原始 message 或空字符串
+  return message || '工具运行中';
+};
 import { useT } from '../i18n';
 import { isConfigured, loadSettings } from '../advisorClient';
 
@@ -163,6 +177,10 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
 
   // 硬件压测监控条：后端每 2 秒推 hw-test-progress 事件，用户可随时停止。
   const monitor = useHwTestMonitor(() => setPendingStress(null));
+
+  // Agent 工具进度监控（B2/B3）：监听 MCP notifications/progress → agent-tool-progress 事件，
+  // 为 stress/bench/disk_find_biggest_files 等长任务提供实时进度条。
+  const agentProgress = useAgentToolProgress(() => {});
 
   const node = chatNode;
 
@@ -768,9 +786,21 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
       )}
 
       <div className="chat-input-wrap">
+        {/* HW 压测监控（stress_test / stress_test_gpu / bench_disk） */}
         {monitor.running && (
           <HwTestMonitor progress={monitor.progress} onStop={monitor.stop} onClose={monitor.clear} />
         )}
+        
+        {/* Agent 工具进度监控（B2/B3）：disk_find_biggest_files / disk_find_duplicate_files / stress/bench 的实时进度条 */}
+        {agentProgress.running && agentProgress.progress && (
+          <AgentProgressCard 
+            label={extractToolName(agentProgress.progress.message)} 
+            progress={agentProgress.progress} 
+            onCancel={agentProgress.stop}
+            showCancelButton={true}
+          />
+        )}
+        
         {pendingDrops.length > 0 && (
           <div className="chat-pills">
             {pendingDrops.map((d) => (

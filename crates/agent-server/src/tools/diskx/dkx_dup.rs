@@ -32,8 +32,16 @@ const HEAD_HASH_BYTES: usize = 64 * 1024;
 /// - 只比对文件头 64KB，未做全文件哈希；
 /// - 同 size 组内文件数 > top_n 时不深比对，只报"N 个同大小文件（未深度比对）"；
 /// - 跳符号链接；文件数上限 200,000。
+///
+/// `progress` 可选进度回调：遍历阶段每 4096 个文件调一次 `(files_seen, MAX_FILES_WALK_DUP)`，
+/// 头部哈希阶段每 4096 次哈希调一次（files_seen 继续累加做分子）；传 `None` 时行为
+/// 与旧版完全一致。
 #[cfg(windows)]
-pub fn collect_duplicate_files(path: String, top_n: usize) -> Result<String, String> {
+pub fn collect_duplicate_files(
+    path: String,
+    top_n: usize,
+    progress: Option<&dyn Fn(usize, usize)>,
+) -> Result<String, String> {
     let p = Path::new(&path);
     // 只读口径（check_read）：放行盘根枚举（AI 查全盘重复文件的核心入口）。
     PathGuard
@@ -69,6 +77,12 @@ pub fn collect_duplicate_files(path: String, top_n: usize) -> Result<String, Str
             .entry(len)
             .or_default()
             .push(entry.path().display().to_string());
+        // 遍历阶段进度：每 4096 个文件报一次。
+        if files_seen.is_multiple_of(4096) {
+            if let Some(cb) = progress {
+                cb(files_seen, MAX_FILES_WALK_DUP);
+            }
+        }
     }
 
     // 候选：size 分组内文件数 ≥ 2。
@@ -108,7 +122,14 @@ pub fn collect_duplicate_files(path: String, top_n: usize) -> Result<String, Str
                     continue;
                 }
             };
+            files_seen += 1;
             hash_map.entry(hash).or_default().push(m.clone());
+            // 哈希阶段进度：每 4096 次续报（files_seen 继续上涨，分子单调）。
+            if files_seen.is_multiple_of(4096) {
+                if let Some(cb) = progress {
+                    cb(files_seen, MAX_FILES_WALK_DUP * 2);
+                }
+            }
         }
         // 头部哈希相同 → 判为重复组。
         for group in hash_map.values() {
@@ -167,6 +188,10 @@ fn read_head_hash(path: &str) -> Option<u64> {
 }
 
 #[cfg(not(windows))]
-pub fn collect_duplicate_files(_path: String, _top_n: usize) -> Result<String, String> {
+pub fn collect_duplicate_files(
+    _path: String,
+    _top_n: usize,
+    _progress: Option<&dyn Fn(usize, usize)>,
+) -> Result<String, String> {
     Ok("当前平台不是 Windows，重复文件扫描不可用".into())
 }

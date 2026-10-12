@@ -3,7 +3,10 @@
 //! stress_test / stress_test_gpu / stress_cancel / mem_test / bsod_analyze。
 
 use crate::tools::params::*;
-use crate::tools::{bench, blocking_call, bsod, files, hw, text_result, tool_error, AgentServer};
+use crate::tools::{
+    bench, blocking_call, blocking_call_progress, bsod, files, hw, text_result, tool_error,
+    AgentServer,
+};
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_router,
     ErrorData as McpError,
@@ -61,6 +64,7 @@ impl AgentServer {
     async fn bench_disk(
         &self,
         Parameters(p): Parameters<BenchDiskParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         let dry_run = p.dry_run.unwrap_or(true);
         // 真跑（dry_run=false）会在目标目录创建临时文件写入——写操作，必须过确认门
@@ -71,13 +75,30 @@ impl AgentServer {
         }
         let path = p.path.clone();
         let size_mb = p.size_mb;
-        match tokio::task::spawn_blocking(move || bench::bench_disk(path, size_mb, Some(dry_run)))
-            .await
-        {
-            Ok(Ok(s)) => Ok(text_result(s)),
-            Ok(Err(e)) => Ok(tool_error(e)),
-            Err(e) => Ok(tool_error(format!("磁盘基准任务崩溃: {e}"))),
+        // dry-run 秒回无需进度；真跑（数分钟）走带进度通道。
+        if dry_run {
+            return Ok(
+                match tokio::task::spawn_blocking(move || {
+                    bench::bench_disk(path, size_mb, Some(true), None)
+                })
+                .await
+                {
+                    Ok(Ok(s)) => text_result(s),
+                    Ok(Err(e)) => tool_error(e),
+                    Err(e) => tool_error(format!("磁盘基准任务崩溃: {e}")),
+                },
+            );
         }
+        Ok(blocking_call_progress(
+            600,
+            move |slot| {
+                let cb = move |pct: u64| slot.set(pct);
+                bench::bench_disk(path, size_mb, Some(false), Some(std::sync::Arc::new(cb)))
+            },
+            "磁盘基准",
+            &ctx,
+        )
+        .await)
     }
 
     #[tool(
@@ -93,6 +114,7 @@ impl AgentServer {
     async fn stress_test(
         &self,
         Parameters(p): Parameters<StressTestParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         if let Err(e) = files::require_confirmed() {
             return Ok(tool_error(e));
@@ -100,12 +122,17 @@ impl AgentServer {
         let secs = p.secs;
         let max_temp = p.max_temp;
         let threads = p.threads;
-        match tokio::task::spawn_blocking(move || bench::stress_test(secs, max_temp, threads)).await
-        {
-            Ok(Ok(s)) => Ok(text_result(s)),
-            Ok(Err(e)) => Ok(tool_error(e)),
-            Err(e) => Ok(tool_error(format!("压测任务崩溃: {e}"))),
-        }
+        Ok(blocking_call_progress(
+            // 压测参数硬顶 600s + 收尾裕量（与桌面侧 tool_budget 同量级）
+            660,
+            move |slot| {
+                let cb = move |pct: u64| slot.set(pct);
+                bench::stress_test(secs, max_temp, threads, Some(std::sync::Arc::new(cb)))
+            },
+            "稳定性压测",
+            &ctx,
+        )
+        .await)
     }
 
     #[tool(
@@ -114,17 +141,23 @@ impl AgentServer {
     async fn stress_test_gpu(
         &self,
         Parameters(p): Parameters<StressTestGpuParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         if let Err(e) = files::require_confirmed() {
             return Ok(tool_error(e));
         }
         let secs = p.secs;
         let max_temp = p.max_temp;
-        match tokio::task::spawn_blocking(move || bench::stress_test_gpu(secs, max_temp)).await {
-            Ok(Ok(s)) => Ok(text_result(s)),
-            Ok(Err(e)) => Ok(tool_error(e)),
-            Err(e) => Ok(tool_error(format!("GPU 压测任务崩溃: {e}"))),
-        }
+        Ok(blocking_call_progress(
+            180, // 参数硬顶 120s + 收尾裕量
+            move |slot| {
+                let cb = move |pct: u64| slot.set(pct);
+                bench::stress_test_gpu(secs, max_temp, Some(std::sync::Arc::new(cb)))
+            },
+            "GPU 稳定性压测",
+            &ctx,
+        )
+        .await)
     }
 
     #[tool(
@@ -145,14 +178,20 @@ impl AgentServer {
     async fn mem_test(
         &self,
         Parameters(p): Parameters<MemTestParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         let size_mb = p.size_mb;
         let rounds = p.rounds;
-        match tokio::task::spawn_blocking(move || bench::mem_test(size_mb, rounds)).await {
-            Ok(Ok(s)) => Ok(text_result(s)),
-            Ok(Err(e)) => Ok(tool_error(e)),
-            Err(e) => Ok(tool_error(format!("内存测试任务崩溃: {e}"))),
-        }
+        Ok(blocking_call_progress(
+            300,
+            move |slot| {
+                let cb = move |pct: u64| slot.set(pct);
+                bench::mem_test(size_mb, rounds, Some(std::sync::Arc::new(cb)))
+            },
+            "内存稳定性测试",
+            &ctx,
+        )
+        .await)
     }
 
     #[tool(

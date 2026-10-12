@@ -4,7 +4,7 @@
 //! 平级 impl 块，各自生成独立 router，mod.rs 用 `+` 合并后交给 `#[tool_handler]`。
 
 use crate::tools::params::*;
-use crate::tools::{blocking_call, fmt_bytes, tool_error, AgentServer};
+use crate::tools::{blocking_call, blocking_call_progress, fmt_bytes, tool_error, AgentServer};
 use crate::tools::{disk, diskx, files, hw};
 use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_router,
@@ -260,16 +260,25 @@ impl AgentServer {
     async fn disk_find_biggest_files(
         &self,
         Parameters(p): Parameters<BiggestFilesParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
         if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
-        Ok(blocking_call(
+        Ok(blocking_call_progress(
             45,
-            move || diskx::collect_biggest_files(p.path.clone(), p.top_n.unwrap_or(20)),
+            move |slot| {
+                let cb = |seen: usize, total: usize| {
+                    if let Some(p) = (seen * 1000).checked_div(total) {
+                        slot.set(p as u64);
+                    }
+                };
+                diskx::collect_biggest_files(p.path.clone(), p.top_n.unwrap_or(20), Some(&cb))
+            },
             "大文件扫描",
+            &ctx,
         )
         .await)
     }
@@ -280,16 +289,25 @@ impl AgentServer {
     async fn disk_find_duplicate_files(
         &self,
         Parameters(p): Parameters<DuplicateFilesParams>,
+        ctx: rmcp::service::RequestContext<rmcp::RoleServer>,
     ) -> Result<CallToolResult, McpError> {
         let guard = files::PathGuard;
         let path = std::path::PathBuf::from(&p.path);
         if let Err(e) = guard.check_read(&path) {
             return Ok(tool_error(format!("路径被安全守卫拒绝：{e}")));
         }
-        Ok(blocking_call(
+        Ok(blocking_call_progress(
             45,
-            move || diskx::collect_duplicate_files(p.path.clone(), p.top_n.unwrap_or(20)),
+            move |slot| {
+                let cb = |seen: usize, total: usize| {
+                    if let Some(p) = (seen * 1000).checked_div(total) {
+                        slot.set(p as u64);
+                    }
+                };
+                diskx::collect_duplicate_files(p.path.clone(), p.top_n.unwrap_or(20), Some(&cb))
+            },
             "重复文件扫描",
+            &ctx,
         )
         .await)
     }

@@ -33,6 +33,7 @@ pub mod net_status;
 pub mod net_util;
 pub mod net_wifi;
 pub mod process;
+pub mod progress;
 pub mod report;
 pub mod sec;
 pub mod selfheal;
@@ -90,6 +91,45 @@ where
     )
     .await
     {
+        Ok(Ok(Ok(v))) => text_result(v.to_string()),
+        Ok(Ok(Err(e))) => tool_error(e),
+        Ok(Err(_)) => tool_error(format!("{label}线程异常退出")),
+        Err(_) => tool_error(format!("{label}执行超时（>{secs}s），已中断防止挂起")),
+    }
+}
+
+/// 带进度的阻塞任务壳：同 [`blocking_call`]，但长任务闭包每轮把千分比进度写进
+/// `ProgressSlot`，本函数侧启动转发任务把进度推给 MCP 客户端（`notifications/progress`）。
+///
+/// `ctx` 提供 peer + progress token（客户端请求 meta 里显式带的 `progressToken` 优先，
+/// 否则自造）。`label` 同时用作通知 message。适合压测/大文件扫描这类需要让调用方
+/// 看到「还在跑、跑到哪了」的长任务。
+async fn blocking_call_progress<T>(
+    secs: u64,
+    f: impl FnOnce(progress::ProgressSlot) -> Result<T, String> + Send + 'static,
+    label: &'static str,
+    ctx: &rmcp::service::RequestContext<rmcp::RoleServer>,
+) -> CallToolResult
+where
+    T: std::fmt::Display + Send + 'static,
+{
+    let peer = ctx.peer.clone();
+    let token = progress::progress_token_from(ctx);
+    let slot = progress::ProgressSlot::new();
+    let fwd = progress::spawn_progress_forwarder(
+        peer,
+        token,
+        slot.clone(),
+        label,
+        std::time::Duration::from_millis(500),
+    );
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(secs),
+        tokio::task::spawn_blocking(move || f(slot)),
+    )
+    .await;
+    fwd.abort();
+    match result {
         Ok(Ok(Ok(v))) => text_result(v.to_string()),
         Ok(Ok(Err(e))) => tool_error(e),
         Ok(Err(_)) => tool_error(format!("{label}线程异常退出")),

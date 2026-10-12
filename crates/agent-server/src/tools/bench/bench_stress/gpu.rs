@@ -29,7 +29,11 @@ use crate::tools::bench::bench_util::{
 /// 即报熔断信号保护硬件。无 N 卡 / 无 nvidia-smi → 如实降级「无温度护栏」。
 ///
 /// **写类 L1**（长时间占资源/升温，需用户确认，走 hw.stress 权限门）。
-pub fn stress_test_gpu(secs: Option<u64>, max_temp: Option<f64>) -> Result<String, String> {
+pub fn stress_test_gpu(
+    secs: Option<u64>,
+    max_temp: Option<f64>,
+    progress: Option<std::sync::Arc<dyn Fn(u64) + Send + Sync>>,
+) -> Result<String, String> {
     let secs = secs.unwrap_or(5).clamp(1, 120);
     let max_temp = max_temp.unwrap_or(90.0).clamp(60.0, 110.0);
     set_cancel(false);
@@ -74,6 +78,11 @@ pub fn stress_test_gpu(secs: Option<u64>, max_temp: Option<f64>) -> Result<Strin
             if cancel_requested() {
                 cancelled = true;
                 break;
+            }
+            // 进度回调（千分比 = 已守门/计划秒数），让 MCP 客户端看到监控进度。
+            if let Some(cb) = progress.as_deref() {
+                let done_ms = (start.elapsed().as_secs_f64() / secs as f64 * 1000.0) as u64;
+                cb(done_ms.min(990));
             }
             if last.elapsed() >= Duration::from_secs(1) {
                 if let Ok(t) = hw::gpu_temp_c() {

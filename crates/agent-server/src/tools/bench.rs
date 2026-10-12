@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn bench_disk_dry_run_plan() {
-        let r = bench_disk(None, Some(64), Some(true)).unwrap();
+        let r = bench_disk(None, Some(64), Some(true), None).unwrap();
         assert!(r.contains("dry-run"));
         assert!(r.contains("临时文件"));
     }
@@ -63,7 +63,7 @@ mod tests {
         // dry_run=false 真跑前必须过写守卫：系统目录（C:\Windows）直接拒绝，
         // 防止 AI 把磁盘基准目标指到系统目录写临时文件。
         let sys = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string());
-        let r = bench_disk(Some(sys), Some(16), Some(false));
+        let r = bench_disk(Some(sys), Some(16), Some(false), None);
         let e = r.expect_err("系统目录必须被写守卫拒绝");
         assert!(
             e.contains("安全守卫") || e.contains("系统目录不可操作"),
@@ -75,7 +75,7 @@ mod tests {
     fn bench_disk_real_run_rejects_drive_root() {
         // 盘根（C:\）也应拒绝
         let root = if cfg!(windows) { "C:\\" } else { "/" };
-        let r = bench_disk(Some(root.to_string()), Some(16), Some(false));
+        let r = bench_disk(Some(root.to_string()), Some(16), Some(false), None);
         let e = r.expect_err("盘根必须被写守卫拒绝");
         assert!(
             e.contains("安全守卫") || e.contains("盘根目录不可操作"),
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn stress_test_short_run() {
-        let r = stress_test(Some(1), Some(60.0), Some(2)).unwrap();
+        let r = stress_test(Some(1), Some(60.0), Some(2), None).unwrap();
         assert!(r.contains("稳定性压测结果"));
         assert!(r.contains("峰值 CPU 温度"));
         // 温度曲线行：有温度读时输出「温度曲线：」行，格式 秒数s=温度°C
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn mem_test_short_run() {
         // 64MB 最小尺寸，1 轮：应通过（无位翻转），校验 MB 计数出现
-        let r = mem_test(Some(64), Some(1)).unwrap();
+        let r = mem_test(Some(64), Some(1), None).unwrap();
         assert!(r.contains("内存稳定性测试结果"));
         assert!(r.contains("校验通过") || r.contains("校验失败"));
         assert!(r.contains("MB"));
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn stress_test_gpu_short_run() {
         // 1s 守门短跑：无 N 卡/无 nvidia-smi 时如实降级，不 panic
-        let r = stress_test_gpu(Some(1), Some(90.0)).unwrap();
+        let r = stress_test_gpu(Some(1), Some(90.0), None).unwrap();
         assert!(r.contains("GPU 稳定性压测结果"));
         assert!(r.contains("显卡"));
     }

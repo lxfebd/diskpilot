@@ -5,11 +5,12 @@
 //!
 //! ## 导出函数清单
 //!
-//! 1. `pub fn collect_biggest_files(path: String, top_n: usize) -> Result<String, String>`
+//! 1. `pub fn collect_biggest_files(path: String, top_n: usize, progress: Option<&dyn Fn(usize, usize)>) -> Result<String, String>`
 //!    递归扫描某目录下所有文件大小，返回 Top N（默认 20，钳 5..=100）。
 //!    降序：同大小按路径字典序。最多看 500,000 个文件，超过标 truncated。
+//!    `progress` 可选回调（files_seen, 上限），供长扫描时上报进度。
 //!
-//! 2. `pub fn collect_duplicate_files(path: String, top_n: usize) -> Result<String, String>`
+//! 2. `pub fn collect_duplicate_files(path: String, top_n: usize, progress: Option<&dyn Fn(usize, usize)>) -> Result<String, String>`
 //!    按 `size` 分组（≥2 才是候选）→ 组内做头部 64KB `DefaultHasher` 判定，输出重复组。
 //!    最多看 200,000 个文件；同 size 组内文件数 > top_n 时不深比对，只报"未深度比对"。
 //!

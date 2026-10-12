@@ -21,6 +21,7 @@ pub fn stress_test(
     secs: Option<u64>,
     max_temp: Option<f64>,
     threads: Option<usize>,
+    progress: Option<std::sync::Arc<dyn Fn(u64) + Send + Sync>>,
 ) -> Result<String, String> {
     let secs = secs.unwrap_or(5).clamp(1, 600);
     let max_temp = max_temp.unwrap_or(95.0).clamp(60.0, 110.0);
@@ -101,6 +102,12 @@ pub fn stress_test(
                 if cancel_requested() {
                     cancelled = true;
                     break;
+                }
+                // 进度回调（千分比 = 已运行/计划时长）：每轮采样报一次，
+                // 让 MCP 客户端看到压测「跑到哪了」。
+                if let Some(cb) = progress.as_deref() {
+                    let done_ms = (start.elapsed().as_secs_f64() / secs as f64 * 1000.0) as u64;
+                    cb(done_ms.min(990)); // 留 10 给收尾，避免提前报 1000
                 }
                 if last_sample.elapsed() >= s_interval {
                     if let Ok(t) = hw_probe_temp() {
@@ -244,7 +251,11 @@ pub fn stress_test(
 ///
 /// - `size_mb` 缓冲大小（默认 256，64-4096）
 /// - `rounds` 轮数（默认 1，1-10）
-pub fn mem_test(size_mb: Option<u64>, rounds: Option<u32>) -> Result<String, String> {
+pub fn mem_test(
+    size_mb: Option<u64>,
+    rounds: Option<u32>,
+    progress: Option<std::sync::Arc<dyn Fn(u64) + Send + Sync>>,
+) -> Result<String, String> {
     let size_mb = size_mb.unwrap_or(256).clamp(64, 4096);
     let rounds = rounds.unwrap_or(1).clamp(1, 10);
     let n = (size_mb * 1024 * 1024) as usize;
@@ -256,6 +267,7 @@ pub fn mem_test(size_mb: Option<u64>, rounds: Option<u32>) -> Result<String, Str
     let mut global_first: Option<usize> = None;
     let mut failed_patterns: Vec<String> = Vec::new();
 
+    let total_steps = rounds as u64 * 5;
     for r in 1..=rounds {
         for (pi, &kind) in [0u8, 1, 2, 3, 4].iter().enumerate() {
             fill_pattern(&mut buf, kind);
@@ -266,6 +278,13 @@ pub fn mem_test(size_mb: Option<u64>, rounds: Option<u32>) -> Result<String, Str
             }
             if errs > 0 {
                 failed_patterns.push(format!("第{r}轮·{}：{errs} 字节不匹配", name_of[pi]));
+            }
+            if let Some(cb) = progress.as_deref() {
+                // 每完成一个 (轮, pattern) 单元报一次：第 r 轮完成后才到
+                // r/total 的真实进度，pattern 内按 5 均分。
+                let base = (r as u64 - 1) * 5;
+                let pct = (base + pi as u64 + 1) * 1000 / total_steps;
+                cb(pct.min(990)); // 留 10 给收尾
             }
         }
     }

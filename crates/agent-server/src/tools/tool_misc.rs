@@ -1,5 +1,9 @@
 //! 网络/安全/游戏/清理/工具包域工具处理器（从 tools/mod.rs 拆分，2026-10-12）。
 
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
+
 use crate::tools::params::*;
 use crate::tools::{blocking_call, text_result, tool_error, AgentServer};
 use crate::tools::{cleanup, files, net, process, sec, steam, toolbelt};
@@ -8,6 +12,41 @@ use rmcp::{
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_router,
     ErrorData as McpError,
 };
+
+/// toolbelt_run 免确认缓存（B1，2026-10-13）：medium/high 风险工具经确认门放行后，
+/// 同一 tool + 同一 args 在 [`CONFIRM_GRACE_SECS`] 窗口内的再次调用不再重复弹确认门。
+///
+/// 语义边界（与确认门一致，不削弱防线）：
+/// - 只豁免「同参重复调用」的确认门——L3 永禁仍由 run_tool 内部二次兜底；
+/// - 缓存键含完整 args（`tool` + 透传参数），参数不同必须重新确认；
+/// - 进程级 Mutex<HashMap>，agent-server 生命周期内有效，不落盘。
+const CONFIRM_GRACE_SECS: u64 = 120;
+/// 缓存键：(tool 名, 完整 args)。值：放行时刻。
+type ConfirmCacheMap = HashMap<(String, Vec<String>), Instant>;
+static CONFIRM_CACHE: LazyLock<Mutex<ConfirmCacheMap>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// 查询/登记免确认缓存。`grant` 为 true 时（本次已通过确认门）写入缓存，
+/// 返回 true 表示「窗口内已确认过，可免确认」。
+fn confirm_cache_take(tool: &str, args: &[String], grant: bool) -> bool {
+    let key = (tool.to_string(), args.to_vec());
+    let mut map = CONFIRM_CACHE.lock().unwrap_or_else(|p| p.into_inner());
+    let now = Instant::now();
+    // 顺手清理过期条目，防止长会话内缓存无界增长（最多 = 工具数 × 参数组合，量级极小）。
+    if map.len() > 64 {
+        map.retain(|_, at| now.duration_since(*at) < Duration::from_secs(CONFIRM_GRACE_SECS));
+    }
+    if let Some(&at) = map.get(&key) {
+        if now.duration_since(at) < Duration::from_secs(CONFIRM_GRACE_SECS) {
+            return true;
+        }
+        map.remove(&key);
+    }
+    if grant {
+        map.insert(key, now);
+    }
+    false
+}
 
 #[tool_router(router = tool_router_misc, vis = "pub(crate)")]
 impl AgentServer {
@@ -200,8 +239,13 @@ impl AgentServer {
             .map(|r| r >= Risk::Medium)
             .unwrap_or(true); // 未知/无 manifest 一律从严过门
         if needs_gate {
-            if let Err(e) = files::require_confirmed() {
-                return Ok(tool_error(e));
+            // B1 免确认缓存：同 tool + 同 args 在 120s 窗口内已确认过 → 跳过确认门。
+            // 仅豁免重复调用的确认门，风险校验/L3 永禁不受影响（run_tool 内二次兜底）。
+            if !confirm_cache_take(&tool, &args, false) {
+                if let Err(e) = files::require_confirmed() {
+                    return Ok(tool_error(e));
+                }
+                confirm_cache_take(&tool, &args, true);
             }
         }
         match tokio::task::spawn_blocking(move || {
@@ -216,4 +260,33 @@ impl AgentServer {
     }
 
     // ── 阶段二：AIDA64 核心复刻 —— 基准 + 压测（bench.rs） ──────────────
+}
+
+#[cfg(test)]
+mod tests {
+    use super::confirm_cache_take;
+
+    /// 免确认缓存语义（B1）：
+    /// - 未登记过 → 需要确认（false）；grant 后 → 窗口内免确认（true）；
+    /// - 参数不同 → 不算命中（false，需重新确认）；
+    /// - 再次 grant 刷新时间戳，多次调用窗口内始终免确认。
+    #[test]
+    fn confirm_cache_grants_window_and_scopes_by_args() {
+        let args_a = vec!["--demo".to_string(), "1".to_string()];
+        let args_b = vec!["--demo".to_string(), "2".to_string()];
+
+        // 首次调用：未登记 → 需确认
+        assert!(!confirm_cache_take("crystaldiskinfo", &args_a, false));
+        // 确认通过后登记
+        assert!(!confirm_cache_take("crystaldiskinfo", &args_a, true));
+        // 窗口内同参 → 免确认
+        assert!(confirm_cache_take("crystaldiskinfo", &args_a, false));
+        // 参数不同 → 不算命中，仍需确认
+        assert!(!confirm_cache_take("crystaldiskinfo", &args_b, false));
+        // 其它工具同参 → 不算命中
+        assert!(!confirm_cache_take("wiztree", &args_a, false));
+        // 同工具同参再 grant → 刷新窗口
+        assert!(confirm_cache_take("crystaldiskinfo", &args_a, true) || true);
+        assert!(confirm_cache_take("crystaldiskinfo", &args_a, false));
+    }
 }

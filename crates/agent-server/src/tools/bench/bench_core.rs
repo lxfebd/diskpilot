@@ -157,6 +157,7 @@ pub fn bench_disk(
     path: Option<String>,
     size_mb: Option<u64>,
     dry_run: Option<bool>,
+    progress: Option<std::sync::Arc<dyn Fn(u64) + Send + Sync>>,
 ) -> Result<String, String> {
     let size_mb = size_mb.unwrap_or(256).clamp(16, 2048);
     let size_bytes = size_mb * 1024 * 1024;
@@ -193,7 +194,7 @@ pub fn bench_disk(
         fastrand_hex()
     ));
 
-    // 建读基准文件（固定图案）
+    // 建读基准文件（固定图案）。进度：0→创建文件（10%）→四项基准各 ~20%。
     let mut f =
         std::fs::File::create(&read_path).map_err(|e| format!("创建读基准文件失败：{e}"))?;
     let pattern = vec![0x5Au8; 64 * 1024];
@@ -203,19 +204,46 @@ pub fn bench_disk(
         f.write_all(&pattern[..n])
             .map_err(|e| format!("写读基准文件失败：{e}"))?;
         written += n as u64;
+        if let Some(cb) = progress.as_deref() {
+            let pct = 100 + written * 50 / size_bytes; // 10%..=60%
+            cb(pct);
+        }
     }
     f.sync_all().ok();
 
-    let seq_read = read_bench(&read_path, size_bytes, false, 128 * 1024);
-    let rand_read = read_bench(&read_path, size_bytes, true, 4 * 1024);
+    let seq_read = if let Some(cb) = progress.as_deref() {
+        cb(600); // 顺序读（60%）
+        read_bench(&read_path, size_bytes, false, 128 * 1024)
+    } else {
+        read_bench(&read_path, size_bytes, false, 128 * 1024)
+    };
+    let rand_read = if let Some(cb) = progress.as_deref() {
+        cb(700); // 随机读（70%）
+        read_bench(&read_path, size_bytes, true, 4 * 1024)
+    } else {
+        read_bench(&read_path, size_bytes, true, 4 * 1024)
+    };
 
     // 写基准（顺序/随机写同一个临时文件）
-    let seq_write = write_bench(&write_path, size_bytes, false, 128 * 1024);
-    let rand_write = write_bench(&write_path, size_bytes, true, 4 * 1024);
+    let seq_write = if let Some(cb) = progress.as_deref() {
+        cb(800); // 顺序写（80%）
+        write_bench(&write_path, size_bytes, false, 128 * 1024)
+    } else {
+        write_bench(&write_path, size_bytes, false, 128 * 1024)
+    };
+    let rand_write = if let Some(cb) = progress.as_deref() {
+        cb(900); // 随机写（90%）
+        write_bench(&write_path, size_bytes, true, 4 * 1024)
+    } else {
+        write_bench(&write_path, size_bytes, true, 4 * 1024)
+    };
 
     // 清理
     let _ = std::fs::remove_file(&read_path);
     let _ = std::fs::remove_file(&write_path);
+    if let Some(cb) = progress.as_deref() {
+        cb(1000); // 完成
+    }
 
     let mut out = String::from("磁盘基准结果：\n");
     out.push_str(&format!("目录：{dir}（临时文件已删除）\n"));

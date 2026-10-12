@@ -21,8 +21,15 @@ const MAX_FILES_WALK: usize = 500_000;
 ///
 /// 内存保护：最多看 [`MAX_FILES_WALK`] 个文件（超过就 break 并标 truncated）。
 /// 排序：大小降序，同大小按路径字典序（BTreeMap 内部已按路径升序，稳定且确定）。
+///
+/// `progress` 可选进度回调：每处理 4096 个文件调一次 `(files_seen, MAX_FILES_WALK)`，
+/// 供 handler 侧映射成 MCP progress 通知；传 `None` 时行为与旧版完全一致。
 #[cfg(windows)]
-pub fn collect_biggest_files(path: String, top_n: usize) -> Result<String, String> {
+pub fn collect_biggest_files(
+    path: String,
+    top_n: usize,
+    progress: Option<&dyn Fn(usize, usize)>,
+) -> Result<String, String> {
     let p = Path::new(&path);
     // 只读口径（check_read）：放行盘根枚举（AI 分析全盘大文件分布的核心入口）。
     // 系统目录 / 用户主目录根仍拒绝。
@@ -59,6 +66,12 @@ pub fn collect_biggest_files(path: String, top_n: usize) -> Result<String, Strin
         };
         files_seen += 1;
         files.push((len, entry.path().display().to_string()));
+        // 进度回调：每 4096 个文件报一次（避免高频调用拖慢遍历）。
+        if files_seen.is_multiple_of(4096) {
+            if let Some(cb) = progress {
+                cb(files_seen, MAX_FILES_WALK);
+            }
+        }
     }
 
     if files.is_empty() {
@@ -88,6 +101,10 @@ pub fn collect_biggest_files(path: String, top_n: usize) -> Result<String, Strin
 }
 
 #[cfg(not(windows))]
-pub fn collect_biggest_files(_path: String, _top_n: usize) -> Result<String, String> {
+pub fn collect_biggest_files(
+    _path: String,
+    _top_n: usize,
+    _progress: Option<&dyn Fn(usize, usize)>,
+) -> Result<String, String> {
     Ok("当前平台不是 Windows，大文件扫描不可用".into())
 }

@@ -30,13 +30,54 @@
 //! 换来进程隔离 + 崩溃自愈天然成立（一次调用失败不影响下一次）。
 
 use std::process::Stdio;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use rmcp::{model::CallToolRequestParams, service::ServiceExt, transport::TokioChildProcess};
-use tauri::State;
+use rmcp::service::{NotificationContext, RoleClient};
+use rmcp::{
+    model::{CallToolRequestParams, ProgressNotificationParam},
+    service::ServiceExt,
+    transport::TokioChildProcess,
+};
+use tauri::{AppHandle, Emitter, State};
 use tokio::process::Command;
 use tokio::sync::watch;
+
+/// 工具调用进度载荷：`notifications/progress` 的参数（千分比 + message 文案）。
+/// `pct` = 0..=1000（与服务端口径一致，前端转百分比 /10）。
+#[derive(Clone, serde::Serialize)]
+pub struct AgentToolProgress {
+    pub pct: u64,
+    pub progress: f64,
+    pub total: Option<f64>,
+    pub message: String,
+}
+
+/// 最小进度接收 handler：实现 `ClientHandler::on_progress`，把 MCP 标准进度
+/// 通知转发给前端（`agent-tool-progress` 事件）。其余 ClientHandler 方法全部
+/// 走默认实现（no-op）。`() impl ClientHandler` 会静默丢弃进度通知，长工具
+/// （stress_test / bench_disk / 大文件扫描）干等到结果——这是 B2/B3 的桌面侧缺口。
+struct ProgressClientHandler {
+    /// 进度回调：参数 (pct 千分比, message)。None = 静默丢弃（list_tools 等
+    /// 非长任务场景不需要进度通道）。
+    on_progress: Option<Arc<dyn Fn(u64, String) + Send + Sync + 'static>>,
+}
+
+impl rmcp::ClientHandler for ProgressClientHandler {
+    fn on_progress(
+        &self,
+        params: ProgressNotificationParam,
+        _context: NotificationContext<RoleClient>,
+    ) -> impl std::future::Future<Output = ()> + Send + '_ {
+        let Some(cb) = &self.on_progress else {
+            return std::future::ready(());
+        };
+        let pct = params.progress.clamp(0.0, 1000.0) as u64;
+        let msg = params.message.unwrap_or_default();
+        cb(pct, msg);
+        std::future::ready(())
+    }
+}
 
 /// 工具调用取消广播（generation 计数）：`agent_tool_cancel` 命令把计数 +1，
 /// 所有在飞的 `agent_call_tool_core` 通过 `watch::changed()` 察觉并立即中断。
@@ -177,9 +218,14 @@ fn resolve_scaffolds_dir() -> Option<std::path::PathBuf> {
 /// `DISKPILOT_UNDO_LOG`，让 agent-server 的 `file_recycle` 等写操作也能把
 /// 条目写进同一份日志（兑现「一切删除可撤销」，agent-server 与主项目共享
 /// undo 链）。None（如只读工具调用）则不注入。
+///
+/// `progress` 可选进度回调：agent-server 推送 `notifications/progress` 时触发
+/// `(pct 千分比, message)`。None = 静默丢弃（list_tools 等短任务不需要）。
 async fn connect(
     undo_log: Option<&std::path::Path>,
-) -> Result<rmcp::service::RunningService<rmcp::service::RoleClient, ()>, String> {
+    progress: Option<Arc<dyn Fn(u64, String) + Send + Sync + 'static>>,
+) -> Result<rmcp::service::RunningService<rmcp::service::RoleClient, ProgressClientHandler>, String>
+{
     let bin = agent_server_binary()
         .ok_or_else(|| "找不到 agent-server.exe（AI 工具集未构建）。请先 cargo build -p agent-server，或设置 DISKPILOT_AGENT_SERVER 指向其路径。".to_string())?;
     let mut cmd = Command::new(&bin);
@@ -210,10 +256,13 @@ async fn connect(
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
         cmd.creation_flags(CREATE_NO_WINDOW);
     }
-    let service =
-        ().serve(TokioChildProcess::new(cmd).map_err(|e| format!("spawn agent-server 失败：{e}"))?)
-            .await
-            .map_err(|e| format!("agent-server MCP 握手失败：{e}"))?;
+    let handler = ProgressClientHandler {
+        on_progress: progress,
+    };
+    let service = handler
+        .serve(TokioChildProcess::new(cmd).map_err(|e| format!("spawn agent-server 失败：{e}"))?)
+        .await
+        .map_err(|e| format!("agent-server MCP 握手失败：{e}"))?;
     Ok(service)
 }
 
@@ -238,7 +287,7 @@ const WRITE_TOOLS: &[&str] = &[
 /// 用于注册进工具墙与 toolRegistry。
 #[tauri::command]
 pub async fn agent_list_tools() -> Result<Vec<AgentToolMeta>, String> {
-    let service = connect(None).await?;
+    let service = connect(None, None).await?;
     let tools = service
         .list_all_tools()
         .await
@@ -260,16 +309,23 @@ pub async fn agent_list_tools() -> Result<Vec<AgentToolMeta>, String> {
 /// 写工具（`process_kill` / `service_control`）要求 confirmed==Some(true) 硬校验：
 /// AI 无法绕过确认门直接改变系统状态（铁律：清理/控制必须先确认）。
 /// `undo_log` 为 `None` 时不向子进程注入 `DISKPILOT_UNDO_LOG`（只读调用）。
+/// `progress` 为 `None` 时进度通知静默丢弃（测试场景）。
+///
+/// 注意：core/inner 刻意不收 `AppHandle`——收了会把 tauri Wry 窗口子系统
+/// （comctl32 v6 的 TaskDialogIndirect 等）单态化进测试二进制，而测试 exe
+/// 没有 v6 manifest，直接 STATUS_ENTRYPOINT_NOT_FOUND（2026-10-13 实测）。
+/// 事件闭包由 `agent_call_tool` 命令层构造后传进来，core 保持可脱离 UI 测试。
 pub async fn agent_call_tool_core(
     name: String,
     arguments: serde_json::Value,
     confirmed: Option<bool>,
     undo_log: Option<&std::path::Path>,
+    progress: Option<Arc<dyn Fn(u64, String) + Send + Sync + 'static>>,
 ) -> Result<AgentToolCall, String> {
     let budget = tool_budget(&name);
     let mut cancel_rx = tool_cancel_tx().subscribe();
     tokio::select! {
-        r = agent_call_tool_inner(name.clone(), arguments, confirmed, undo_log) => r,
+        r = agent_call_tool_inner(name.clone(), arguments, confirmed, undo_log, progress) => r,
         _ = tokio::time::sleep(budget) => Err(format!(
             "agent:timeout: 工具 {name} 超过 {}s 未返回（含 agent-server 启动/握手），已中断防止永久挂起。可重试，或改用其他工具。",
             budget.as_secs()
@@ -279,11 +335,16 @@ pub async fn agent_call_tool_core(
 }
 
 /// 内层：确认门校验 + spawn agent-server + MCP tools/call（无超时，由外层 select 兜底）。
+///
+/// `progress` 闭包把 agent-server 的 `notifications/progress` 实时转发为
+/// `agent-tool-progress` 事件（前端监控条驱动源）。None 时进度静默丢弃
+/// （测试/无 UI 场景）。
 async fn agent_call_tool_inner(
     name: String,
     arguments: serde_json::Value,
     confirmed: Option<bool>,
     undo_log: Option<&std::path::Path>,
+    progress: Option<Arc<dyn Fn(u64, String) + Send + Sync + 'static>>,
 ) -> Result<AgentToolCall, String> {
     if WRITE_TOOLS.contains(&name.as_str()) && confirmed != Some(true) {
         return Err(format!(
@@ -317,7 +378,10 @@ async fn agent_call_tool_inner(
     } else {
         None
     };
-    let service = connect(undo_log).await?;
+    // 进度转发闭包由命令层构造（见 agent_call_tool）：agent-server 推
+    // notifications/progress → Tauri 事件，前端监控条（ChatPanel 订阅
+    // agent-tool-progress）实时渲染。这里只透传，不碰 AppHandle。
+    let service = connect(undo_log, progress).await?;
     let args_obj = match arguments {
         serde_json::Value::Object(m) => Some(m),
         serde_json::Value::Null => None,
@@ -346,15 +410,38 @@ async fn agent_call_tool_inner(
     })
 }
 
-/// Tauri 命令包装：取应用状态里的 undo 日志路径（写工具用）后走 core。
+/// Tauri 命令包装：取应用状态里的 undo 日志路径（写工具用），构造进度事件
+/// 闭包（notifications/progress → `agent-tool-progress` 事件）后走 core。
+/// 闭包在这里构造而不是 core 里——core 不收 AppHandle，测试二进制就不会
+/// 单态化进 tauri 窗口子系统（comctl32 v6 入口点缺失崩溃，见 core 注释）。
 #[tauri::command]
 pub async fn agent_call_tool(
+    app: AppHandle,
     state: State<'_, crate::AppState>,
     name: String,
     arguments: serde_json::Value,
     confirmed: Option<bool>,
 ) -> Result<AgentToolCall, String> {
-    agent_call_tool_core(name, arguments, confirmed, Some(state.undo_log.as_path())).await
+    let progress: Arc<dyn Fn(u64, String) + Send + Sync + 'static> =
+        Arc::new(move |pct: u64, message: String| {
+            let _ = app.emit(
+                "agent-tool-progress",
+                &AgentToolProgress {
+                    pct,
+                    progress: pct as f64 / 10.0, // 千分比 → 0-100 百分比
+                    total: Some(100.0),
+                    message,
+                },
+            );
+        });
+    agent_call_tool_core(
+        name,
+        arguments,
+        confirmed,
+        Some(state.undo_log.as_path()),
+        Some(progress),
+    )
+    .await
 }
 
 /// 探活：agent-server.exe 是否可用（找不到二进制时前端提示降级）。
