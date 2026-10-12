@@ -191,6 +191,31 @@ fn v_num_takes_first_token_not_concatenated_digits() {
 }
 
 #[test]
+fn parse_meta_falls_back_to_filename_datetime() {
+    let dir = tmp_dir("meta-fallback");
+    // 手改/损坏的归档：JSON 里没有 "at"，只能靠文件名 hw-YYYYMMDD-HHMMSS.json。
+    std::fs::write(
+        dir.join("hw-20260910-153000.json"),
+        r#"{ "info": {}, "note": "", "machine": "X" }"#,
+    )
+    .unwrap();
+    let m = parse_meta(&dir.join("hw-20260910-153000.json")).unwrap();
+    let expect = chrono::NaiveDateTime::parse_from_str("20260910-153000", "%Y%m%d-%H%M%S")
+        .unwrap()
+        .and_utc()
+        .timestamp() as u64;
+    assert_eq!(m.at, expect);
+    // 旧实现「把文件名数字拼起来」会得到 20260910153000 秒（公元 640 万年），
+    // 按 at 倒序排序时这份快照会排到最前、UI 显示荒谬日期。
+    assert!(m.at < 4_000_000_000, "at 应是合理 Unix 秒，got {}", m.at);
+
+    // 文件名不是时间格式：回退 0（排到最后），不产生垃圾时间戳。
+    std::fs::write(dir.join("hw-manual.json"), r#"{ "machine": "X" }"#).unwrap();
+    assert_eq!(parse_meta(&dir.join("hw-manual.json")).unwrap().at, 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn path_traversal_rejected() {
     // read_snapshot 的文件名白名单：只允许 hw-*.json 且不含 ..
     assert!(!safe_snapshot_file("..\\evil.json"));

@@ -147,10 +147,13 @@ fn parse_meta(path: &Path) -> Option<HwSnapshotMeta> {
     let text = std::fs::read_to_string(path).ok()?;
     let v: serde_json::Value = serde_json::from_str(&text).ok()?;
     let at = v.get("at").and_then(|x| x.as_u64()).unwrap_or_else(|| {
-        name.chars()
-            .filter(|c| c.is_ascii_digit())
-            .collect::<String>()
-            .parse()
+        // JSON 里缺 "at"（手改/损坏的归档）时从文件名取时间：hw-YYYYMMDD-HHMMSS.json
+        // 由 chrono::Utc 写入，按 UTC 解析回秒级时间戳。
+        // 旧实现「把文件名里所有数字拼起来」得到 20260910153000 秒——公元 640 万年，
+        // 排序（按 at 倒序）会把这份快照排到最前，UI 显示荒谬日期。
+        let stamp = name.trim_start_matches("hw-").trim_end_matches(".json");
+        chrono::NaiveDateTime::parse_from_str(stamp, "%Y%m%d-%H%M%S")
+            .map(|dt| dt.and_utc().timestamp().max(0) as u64)
             .unwrap_or(0)
     });
     let machine = v
