@@ -25,6 +25,8 @@ pub use rep_report::{sensor_trend, system_report};
 
 // 回归测试引用的内部符号。
 #[cfg(test)]
+pub(crate) use rep_alert::disk_current_temps;
+#[cfg(test)]
 pub(crate) use rep_report::trend_point;
 #[cfg(test)]
 pub(crate) use rep_util::{extract_first_f64, extract_free_gb, fmt_uptime};
@@ -41,6 +43,22 @@ mod tests {
         assert_eq!(extract_first_f64("CPU 温度: 56.3 ℃"), Some(56.3));
         assert_eq!(extract_first_f64("disk temp=45.0 C"), Some(45.0));
         assert_eq!(extract_first_f64("无数字"), None);
+    }
+
+    #[test]
+    fn extract_first_f64_ignores_bullet_dash() {
+        // SMART/传感器读数行的列表符号 `-` 不是负号：旧实现把它当数字起点
+        // （num="-" → 遇空格截断 → parse 失败 → None），磁盘温度 / GPU 温度
+        // 告警全部静默失效。
+        assert_eq!(
+            extract_first_f64("  - 当前温度：45 ℃（原始读数 45）"),
+            Some(45.0)
+        );
+        assert_eq!(extract_first_f64("- GPU 温度：63.5 ℃"), Some(63.5));
+        assert_eq!(extract_first_f64("  - 历史最高温度：71 ℃"), Some(71.0));
+        // 真负号（紧跟数字）仍识别为数字起点（下游 >0 过滤会拒掉负值）
+        assert_eq!(extract_first_f64("偏差 -3.5 dB"), None); // 负值被 >0 过滤
+        assert_eq!(extract_first_f64("温度 -12 ℃ 环境"), None);
     }
 
     #[test]
@@ -89,6 +107,31 @@ mod tests {
         // 无容量单位（GB/TB）不去猜
         assert_eq!(extract_free_gb("剩余 300\n"), None);
         assert_eq!(extract_free_gb("无剩余空间信息"), None);
+    }
+
+    #[test]
+    fn disk_current_temps_reads_every_disk_and_ignores_history_max() {
+        // 真 collect_disk_smart 的段落形状：盘名段头 + 「当前温度」/「历史最高温度」。
+        let smart = "- 磁盘 SMART（共 2 块物理磁盘）：\n\
+                     - Samsung SSD 980 PRO：SSD，NVMe，1 TB，健康状态 良好（系统盘）\n\
+                     \x20 - 通电时长：1,234 小时（约 51 天 / 0 年）\n\
+                     \x20 - 当前温度：45 ℃（原始读数 45，>60 视为华氏并换算）\n\
+                     \x20 - 历史最高温度：71 ℃\n\
+                     - WDC WD20EZAZ：HDD，SATA，2 TB，健康状态 良好\n\
+                     \x20 - 当前温度：61 ℃（原始读数 61，>60 视为华氏并换算）\n\
+                     \x20 - 磨损度：机械盘无磨损百分比概念（Wear 仅对 SSD 有意义）\n";
+        let temps = disk_current_temps(smart);
+        // 两块盘都读到（旧实现只取第一块，第二块 61℃ 过热会被漏掉）；
+        // 「历史最高温度 71℃」不作为实时读数。
+        assert_eq!(
+            temps,
+            vec![
+                ("Samsung SSD 980 PRO".to_string(), 45.0),
+                ("WDC WD20EZAZ".to_string(), 61.0),
+            ]
+        );
+        // 无温度上报的降级文本 → 空列表，不报错
+        assert!(disk_current_temps("磁盘 SMART 不可读：权限不足\n").is_empty());
     }
 
     #[test]

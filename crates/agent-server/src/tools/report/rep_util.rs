@@ -47,11 +47,24 @@ pub(crate) fn format_f1(v: f64) -> String {
 }
 
 /// 从一行文本里提取第一个浮点数。
+///
+/// 子弹头防错：SMART/传感器文本的读数行长这样 `  - 当前温度：45 ℃（原始读数 45…）`，
+/// 行首的列表符号 `-` 不是负号——旧实现把它当作数字起点（num="-"），遇空格截断后
+/// parse 失败返回 None，磁盘温度 / GPU 温度告警因此全部静默失效。现在 `-` 只有
+/// 紧跟数字或小数点时才作为负号起点。
 pub(crate) fn extract_first_f64(line: &str) -> Option<f64> {
     let cleaned = line.replace(['℃', '°'], " ");
+    let chars: Vec<char> = cleaned.chars().collect();
     let mut num = String::new();
-    for c in cleaned.chars() {
-        if c.is_ascii_digit() || c == '.' || c == '-' {
+    for (i, &c) in chars.iter().enumerate() {
+        let starts_number = c.is_ascii_digit()
+            || c == '.'
+            || (c == '-'
+                && num.is_empty()
+                && chars
+                    .get(i + 1)
+                    .is_some_and(|n| n.is_ascii_digit() || *n == '.'));
+        if starts_number {
             num.push(c);
         } else if !num.is_empty() {
             break;
@@ -73,6 +86,11 @@ pub(crate) fn extract_first_f64(line: &str) -> Option<f64> {
 ///    磨损行一旦被命中，健康 SSD 会收到虚假的「磁盘剩余低于阈值」告警；
 /// 3. 「已用 XGB / 剩余 YGB」结构以关键词为锚取词**之后**的值（剩余），
 ///    不取行首数字（已用）。
+///
+/// 2026-10-13：`sensor_alert` 的磁盘剩余改用 `disk::collect_disks()` 真数据
+/// 后，本函数不再有生产调用方（SMART 文本里本来就没有剩余行，旧路径永远
+/// 挑不到）。保留并只挂给回归测试——三条防错规则仍是解析类代码的教材。
+#[cfg(test)]
 pub(crate) fn extract_free_gb(text: &str) -> Option<(f64, String)> {
     for l in text.lines() {
         let low = l.to_lowercase();
