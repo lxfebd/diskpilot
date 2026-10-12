@@ -49,13 +49,12 @@ use crate::tools::{reg_read_dword, reg_read_str, v_str};
 
 // ── Windows 平台专用工具 ────────────────────────────────────────────────
 
-/// PS 单引号字符串字面量转义：单引号翻倍（`''`）是 PS 里唯一需要的转义。
-/// 所有把 AI/用户可控文本放进 PowerShell 源码字面量的位置都必须过这里，
-/// 否则 `'` 可逃出字符串、`;` 后接任意命令（命令注入）。
+// PS 单引号字符串字面量转义（单引号翻倍 `''` 是 PS 唯一需要的转义）已统一
+// 收进共享 crate `diskpilot-psutil`（原桌面 startup.rs 与 agent-server sys.rs
+// 各一份，防漂移合并）。所有把 AI/用户可控文本放进 PowerShell 源码字面量的
+// 位置都必须过它，否则 `'` 可逃出字符串、`;` 后接任意命令（命令注入）。
 #[cfg(windows)]
-pub(crate) fn escape_ps_single_quoted(s: &str) -> String {
-    s.replace('\'', "''")
-}
+pub(crate) use diskpilot_psutil::escape_ps_single_quoted;
 
 /// UTF-16 宽字符串（注册表 API 输入用）。
 #[cfg(windows)]
@@ -1157,7 +1156,10 @@ mod tests {
         // 注入防护回归：单引号必须翻倍，且翻倍后字符串仍是合法 PS 字面量。
         assert_eq!(escape_ps_single_quoted("plain"), "plain");
         assert_eq!(escape_ps_single_quoted("a'b"), "a''b");
-        assert_eq!(escape_ps_single_quoted("'; calc.exe; '"), "''; calc.exe; ''");
+        assert_eq!(
+            escape_ps_single_quoted("'; calc.exe; '"),
+            "''; calc.exe; ''"
+        );
         // 真正的逃逸条件：字面量里出现奇数长度的连续引号串会让字符串提前
         // 闭合（如 `'` 单独出现、或 `'''` 剩一个单引号）。翻倍转义后任何
         // 引号串长度必须是偶数——这是「无法逃逸」的充要条件。

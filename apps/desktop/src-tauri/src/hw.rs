@@ -8,6 +8,14 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::toolbelt::toolbelt_explicit_root;
 use crate::AppState;
+
+/// PowerShell 执行器（psutil 共享实现，带 UTF-8 首行注入 + GBK 兜底）。
+/// desktop 历史签名是 `(script, timeout)` 两参；共享 crate 提供一参版
+/// `ps_capture(script)`（默认 30s）与 `ps_capture_timeout`。这里薄封装保持
+/// 本文件全部调用点不变。
+pub(crate) fn ps_capture(script: &str, timeout: Duration) -> Result<String, String> {
+    diskpilot_psutil::ps_capture_timeout(script, timeout)
+}
 /// 硬件静态信息 TTL：CPU/内存/主板/BIOS/显卡等基本不变，5 分钟内直接复用，
 /// 切页/多轮 AI 查询不再每次重跑 PowerShell。
 const HW_SNAPSHOT_TTL: Duration = Duration::from_secs(300);
@@ -153,12 +161,11 @@ fn nvidia_smi_live() -> Result<Option<serde_json::Value>, String> {
 
 /// AMD atiadlxx.dll ADL 实时 GPU 指标（DLL 缺失 / 初始化失败 / 无 A 卡 → None）。
 /// 与 `nvidia_smi_live()` 同结构的 JSON：N 卡缺席时用它顶上 `gpu_live`。
-/// 实现：PowerShell Add-Type 动态 P/Invoke（零新增 Rust 依赖），签名对齐 ADL SDK
-/// 官方头文件（ADL_GetTemperature 为 2 参数，个别旧 DLL 用 4 参数变体容错）；
-/// 温度单位按值域启发式（>300 视为千分之一摄氏度）。PowerShell 子进程崩了 →
+/// 探针脚本统一在共享 crate `diskpilot-psutil`（desktop 与 agent-server 共用，
+/// 原双份 2927 字符完全相同，迁入防漂移）。PowerShell 子进程崩了 →
 /// ps_capture Err → 外层吞 None → 静默降级，绝不报错。
 fn amd_adl_live() -> Result<Option<serde_json::Value>, String> {
-    let raw = ps_capture(ADL_PROBE_PS, Duration::from_secs(30))?;
+    let raw = ps_capture(diskpilot_psutil::ADL_PROBE_PS, Duration::from_secs(30))?;
     let raw = raw.trim().trim_start_matches('\u{feff}');
     let v: serde_json::Value = match serde_json::from_str(raw) {
         Ok(v) => v,
@@ -196,148 +203,6 @@ fn amd_adl_live() -> Result<Option<serde_json::Value>, String> {
         }
     }
     Ok(None)
-}
-
-/// AMD ADL 探针脚本：atiadlxx.dll P/Invoke 读 A 卡温度/占用。
-/// 签名与 `crates/agent-server/src/tools/hw.rs` 的 `ADL_PROBE_PS` 保持一致（双 EntryPoint
-/// 容错 + 千分位温度换算）。DLL 不存在 → `note='NO_AMD_ADL'`，静默降级。
-const ADL_PROBE_PS: &str = r#"
-$ErrorActionPreference='SilentlyContinue'
-$dll='C:\Windows\System32\atiadlxx.dll'
-$result=@{ init_rc=-1; note=''; adapters=@() }
-if(-not (Test-Path $dll)) {
-  $result.note='NO_AMD_ADL'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-try {
-  Add-Type -Namespace DiskPilot -Name ADL -TypeDefinition @'
-using System.Runtime.InteropServices;
-public static class ADL {
-  public delegate System.IntPtr ADL_Main_Memory_Alloc(int size);
-  public static System.IntPtr Alloc(int size) { return System.Runtime.InteropServices.Marshal.AllocHGlobal(size); }
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall)]
-  public static extern int ADL_Main_Control_Create(ADL_Main_Memory_Alloc cb, int iEnumConnectedAdapters);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall)]
-  public static extern int ADL_Adapter_NumberOfAdapters_Get(out int lpNumAdapters);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall, EntryPoint="ADL_GetTemperature")]
-  public static extern int ADL_GetTemperature2(int iAdapterIndex, out int lpTemperature);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall, EntryPoint="ADL_GetTemperature")]
-  public static extern int ADL_GetTemperature4(int iAdapterIndex, out int lpTemperature, int flag, int unused);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall)]
-  public static extern int ADL_GLUtilization_Get(int iAdapterIndex, out int gpu, out int mem, out int eng);
-}
-'@
-} catch {
-  $result.note='ADD_TYPE_FAILED'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-$create=[DiskPilot.ADL]::ADL_Main_Control_Create([DiskPilot.ADL+ADL_Main_Memory_Alloc][DiskPilot.ADL]::Alloc, 0)
-if($create -ne 0) {
-  $result.init_rc=[int]$create
-  $result.note='CREATE_FAILED'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-$num=0
-$rc=[DiskPilot.ADL]::ADL_Adapter_NumberOfAdapters_Get([ref]$num)
-if($rc -ne 0 -or $num -le 0) {
-  $result.init_rc=[int]$rc
-  $result.note='ENUM_FAILED'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-$list=@()
-for($i=0; $i -lt $num; $i++) {
-  $o=[ordered]@{ index=[int]$i }
-  $temp=0; $trc=-1
-  $trc=[DiskPilot.ADL]::ADL_GetTemperature2($i,[ref]$temp)
-  if($trc -ne 0) { $trc=[DiskPilot.ADL]::ADL_GetTemperature4($i,[ref]$temp,0,0) }
-  if($trc -eq 0 -and $temp -ne 0) {
-    if($temp -gt 300) { $o.temp_c=[int][Math]::Round($temp/1000.0) } else { $o.temp_c=[int]$temp }
-  } else { $o.temp_c=$null }
-  $gpu=0; $mem=0; $eng=0
-  $urc=[DiskPilot.ADL]::ADL_GLUtilization_Get($i,[ref]$gpu,[ref]$mem,[ref]$eng)
-  if($urc -eq 0) { $o.gpu_util=[int]$gpu; $o.mem_util=[int]$mem; $o.engine_util=[int]$eng } else { $o.gpu_util=$null; $o.mem_util=$null; $o.engine_util=$null }
-  $list += $o
-}
-$result.init_rc=[int]$create
-$result.note='OK'
-$result.adapters=$list
-$result | ConvertTo-Json -Depth 4 -Compress
-"#;
-/// 运行一段 PowerShell 脚本并捕获 stdout（CREATE_NO_WINDOW，超时强杀）。
-/// 硬件查询全走 CIM，不需要管理员权限；中文系统上控制台输出是 GBK，
-/// UTF-8 失败时按 GBK 解码兜底。
-pub(crate) fn ps_capture(script: &str, timeout: Duration) -> Result<String, String> {
-    use std::io::Read;
-    use std::process::Stdio;
-    let mut cmd = std::process::Command::new("powershell.exe");
-    cmd.args([
-        "-NoProfile",
-        "-NonInteractive",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        script,
-    ])
-    .stdin(Stdio::null())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("启动 PowerShell 失败：{e}"))?;
-    let started = std::time::Instant::now();
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(st)) => break st,
-            Ok(None) => {}
-            Err(e) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(format!("等待 PowerShell 失败：{e}"));
-            }
-        }
-        if started.elapsed() >= timeout {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err(format!("PowerShell 查询超时（{}s）", timeout.as_secs()));
-        }
-        std::thread::sleep(Duration::from_millis(60));
-    };
-    let mut raw = Vec::new();
-    if let Some(mut so) = child.stdout.take() {
-        let _ = so.read_to_end(&mut raw);
-    }
-    // 进程一退出就不存在 std::process::Child::try_wait 返回 Ok(None)
-    // 的可能；但 kill 过（超时/错误分支）的进程 stderr 可能带内容，
-    // 这里统一把 stderr 读走，避免管道 buffer 残留导致句柄泄漏。
-    if let Some(mut se) = child.stderr.take() {
-        let mut sink = Vec::new();
-        let _ = se.read_to_end(&mut sink);
-    }
-    if !status.success() && raw.is_empty() {
-        return Err(format!("PowerShell 退出码 {:?}", status.code()));
-    }
-    match std::str::from_utf8(&raw) {
-        Ok(s) => Ok(s.to_string()),
-        Err(_) => {
-            #[cfg(windows)]
-            {
-                let (cow, _, _) = encoding_rs::GBK.decode(&raw);
-                Ok(cow.into_owned())
-            }
-            #[cfg(not(windows))]
-            Ok(String::from_utf8_lossy(&raw).into_owned())
-        }
-    }
 }
 
 const HW_INFO_PS: &str = r#"$ErrorActionPreference='SilentlyContinue'
@@ -2198,12 +2063,18 @@ mod tests {
     #[test]
     fn vram_overflow_detects_saturation_not_normal_cards() {
         // 正常显存绝不能被标成溢出（这正是原 bug：2GB 卡被误标）
-        assert!(!is_vram_overflow(2 * 1024 * 1024 * 1024), "2GB 卡不得标溢出");
+        assert!(
+            !is_vram_overflow(2 * 1024 * 1024 * 1024),
+            "2GB 卡不得标溢出"
+        );
         assert!(!is_vram_overflow(1024 * 1024 * 1024), "1GB 卡不得标溢出");
         // u32 饱和区与 ≥4GiB-1MiB 的读数必须标溢出
         assert!(is_vram_overflow(4_294_967_295), "u32::MAX 必须标溢出");
         assert!(is_vram_overflow(4_294_967_294), "u32 饱和值必须标溢出");
-        assert!(is_vram_overflow(4_293_918_720), "4GiB-1MiB 阈值本身必须标溢出");
+        assert!(
+            is_vram_overflow(4_293_918_720),
+            "4GiB-1MiB 阈值本身必须标溢出"
+        );
         assert!(is_vram_overflow(4_294_967_000), "溢出窗口内读数必须标溢出");
     }
 

@@ -37,7 +37,7 @@
 use serde_json::Value;
 use std::io::Read;
 
-use crate::ps::{json_array_of, ps_capture};
+use crate::ps::{json_array_of, ps_capture, ADL_PROBE_PS};
 use crate::tools::{fmt_bytes, v_str};
 
 // ── JSON 取值小工具（与主项目 hw.rs 的 v_str / arr 同语义）─────────────────
@@ -267,73 +267,6 @@ fn nvidia_gpu_live() -> Result<Option<NvidiaGpuLive>, String> {
 //   ADL_GLUtilization_Get(int iAdapterIndex, int* gpu, int* mem, int* eng)
 // 温度单位：官方文档是千分之一摄氏度（65 ℃ → 65000），个别旧 DLL 直接摄氏，
 // 脚本按值域启发式换算（>300 视为 milli）。
-#[cfg(windows)]
-const ADL_PROBE_PS: &str = r#"
-$ErrorActionPreference='SilentlyContinue'
-$dll='C:\Windows\System32\atiadlxx.dll'
-$result=@{ init_rc=-1; note=''; adapters=@() }
-if(-not (Test-Path $dll)) {
-  $result.note='NO_AMD_ADL'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-try {
-  Add-Type -Namespace DiskPilot -Name ADL -TypeDefinition @'
-using System.Runtime.InteropServices;
-public static class ADL {
-  public delegate System.IntPtr ADL_Main_Memory_Alloc(int size);
-  public static System.IntPtr Alloc(int size) { return System.Runtime.InteropServices.Marshal.AllocHGlobal(size); }
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall)]
-  public static extern int ADL_Main_Control_Create(ADL_Main_Memory_Alloc cb, int iEnumConnectedAdapters);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall)]
-  public static extern int ADL_Adapter_NumberOfAdapters_Get(out int lpNumAdapters);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall, EntryPoint="ADL_GetTemperature")]
-  public static extern int ADL_GetTemperature2(int iAdapterIndex, out int lpTemperature);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall, EntryPoint="ADL_GetTemperature")]
-  public static extern int ADL_GetTemperature4(int iAdapterIndex, out int lpTemperature, int flag, int unused);
-  [DllImport("atiadlxx.dll", CallingConvention=CallingConvention.StdCall)]
-  public static extern int ADL_GLUtilization_Get(int iAdapterIndex, out int gpu, out int mem, out int eng);
-}
-'@
-} catch {
-  $result.note='ADD_TYPE_FAILED'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-$create=[DiskPilot.ADL]::ADL_Main_Control_Create([DiskPilot.ADL+ADL_Main_Memory_Alloc][DiskPilot.ADL]::Alloc, 0)
-if($create -ne 0) {
-  $result.init_rc=[int]$create
-  $result.note='CREATE_FAILED'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-$num=0
-$rc=[DiskPilot.ADL]::ADL_Adapter_NumberOfAdapters_Get([ref]$num)
-if($rc -ne 0 -or $num -le 0) {
-  $result.init_rc=[int]$rc
-  $result.note='ENUM_FAILED'
-  $result | ConvertTo-Json -Depth 4 -Compress
-  exit 0
-}
-$list=@()
-for($i=0; $i -lt $num; $i++) {
-  $o=[ordered]@{ index=[int]$i }
-  $temp=0; $trc=-1
-  $trc=[DiskPilot.ADL]::ADL_GetTemperature2($i,[ref]$temp)
-  if($trc -ne 0) { $trc=[DiskPilot.ADL]::ADL_GetTemperature4($i,[ref]$temp,0,0) }
-  if($trc -eq 0 -and $temp -ne 0) {
-    if($temp -gt 300) { $o.temp_c=[int][Math]::Round($temp/1000.0) } else { $o.temp_c=[int]$temp }
-  } else { $o.temp_c=$null }
-  $gpu=0; $mem=0; $eng=0
-  $urc=[DiskPilot.ADL]::ADL_GLUtilization_Get($i,[ref]$gpu,[ref]$mem,[ref]$eng)
-  if($urc -eq 0) { $o.gpu_util=[int]$gpu; $o.mem_util=[int]$mem; $o.engine_util=[int]$eng } else { $o.gpu_util=$null; $o.mem_util=$null; $o.engine_util=$null }
-  $list += $o
-}
-$result.init_rc=[int]$create
-$result.note='OK'
-$result.adapters=$list
-$result | ConvertTo-Json -Depth 4 -Compress
-"#;
 
 /// AMD 卡实时指标（ADL 通道）。DLL 缺失/初始化失败/无 A 卡 → `Ok(Some(vec))` 可能为空或
 /// `Ok(None)`（正常情况，不算错误）；PowerShell 子进程崩了 → ps_capture Err → 外层吞 None。

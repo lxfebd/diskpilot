@@ -14,6 +14,7 @@ version = "0.2.3"
 dependencies = [
  "anyhow",
  "chrono",
+ "diskpilot-psutil",
  "diskpilot-scaffold",
  "diskpilot-steam-inspector",
  "diskpilot-toolbelt",
@@ -991,6 +992,7 @@ dependencies = [
  "chrono",
  "dirs 5.0.1",
  "diskpilot-executor",
+ "diskpilot-psutil",
  "diskpilot-scaffold",
  "diskpilot-scanner",
  "diskpilot-steam-inspector",
@@ -1031,6 +1033,13 @@ dependencies = [
  "tracing",
  "trash",
  "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "diskpilot-psutil"
+version = "0.2.3"
+dependencies = [
+ "encoding_rs",
 ]
 
 [[package]]

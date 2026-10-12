@@ -5,11 +5,43 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
-### 代码审查修复汇总（第 1–5 轮）
+### 代码审查修复汇总（第 1–9 轮）
 
 对全仓库（desktop 应用 / agent-server / scanner / executor / toolbelt）执行了
-5 轮深度代码审查，覆盖：PS 注入面、写路径确认门、SSRF/路径守卫、资源上限、
-二进制解析、前端 XSS/竞态。以下为每轮修复清单，按严重度排序。
+9 轮深度代码审查，覆盖：PS 注入面、写路径确认门、SSRF/路径守卫、资源上限、
+二进制解析、前端 XSS/竞态、UI/UX 视觉、整体架构。以下为每轮修复清单。
+
+#### 第 9 轮（整体架构优化）
+
+**架构重构（消除跨进程重复）** 新增共享 crate `crates/psutil`（diskpilot-psutil），
+把 desktop 与 agent-server 双份维护的 PowerShell 原语收敛为单源：
+
+- **修复（高）** `ps_capture` 执行器双份漂移：desktop `hw.rs` 版无 UTF-8 首行
+  注入（中文系统 GBK 乱码只能靠兜底解码），agent-server `ps.rs` 版有改良
+  ——统一迁入 psutil（UTF-8 注入 + GBK 兜底 + CREATE_NO_WINDOW + 超时强杀），
+  desktop 保留 `(script, timeout)` 两参薄封装转发，**desktop 同时获得 UTF-8
+  根治能力**（此前缺失）；agent-server `ps.rs` 变为纯 re-export 薄壳，
+  两调用面不变。
+- **修复（高）** AMD ADL 显卡探针脚本 `ADL_PROBE_PS`（2927 字符）desktop
+  `hw.rs` 与 agent-server `tools/hw.rs` **逐字节相同却双份维护**，任何一侧
+  修改即漂移——迁入 psutil 单源，两侧 `use` 同一常量。
+- **修复（中）** `escape_ps_single_quoted`（PS 单引号转义，命令注入铁律）
+  desktop `startup.rs` 与 agent-server `sys.rs` 双份——迁入 psutil 单源；
+  回归测试随迁（psutil 新增 +2 测试，desktop 侧删本地重复测试）。
+- **净效果**：`-372/+66` 行（抽取共享），workspace 零横向依赖约束保持
+  （psutil 为纯叶 crate，仅依赖 encoding_rs）。
+- **验证**：`cargo check/clippy --workspace --all-targets` 0 新警告；
+  workspace 测试全绿（psutil 2 项新测试通过）；前端 tsc/eslint/vitest 不受影响。
+
+**架构审查结论（本轮确认健康，无需改动）**
+- AppState 短生命周期作用域锁、无 await 持锁——并发模型无死锁面；
+- 前端 `api.ts` 按域聚合、`format.ts` 字节格式化单源——无跨文件重复；
+- workspace 各 crate 零横向依赖（ci.yml 声明与实现一致）；
+- agent-server 13 个细分采集脚本与 desktop 3 个聚合脚本为不同封装层级
+  （面向不同消费方），非重复，内容级比对无 >50% 重叠。
+
+> 第 6–8 轮（UI/UX 视觉审查，`e403751` `d4a01bc` `740ba54`）见下方
+> 「UI/UX 视觉审查」section。
 
 #### 第 5 轮（`d0815a5`）
 

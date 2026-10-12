@@ -48,10 +48,12 @@ diskpilot-scaffold         = { path = "../../../crates/scaffold" }
 diskpilot-executor         = { path = "../../../crates/executor" }
 diskpilot-steam-inspector  = { path = "../../../crates/steam-inspector" }
 diskpilot-toolbelt         = { path = "../../../crates/toolbelt" }
+diskpilot-psutil           = { path = "../../../crates/psutil" }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys.workspace    = true
 # powercfg / CIM 等控制台输出在中文系统上是 GBK，UTF-8 解码失败时兜底
+# （psutil 已注入 UTF-8 首行，此兜底为二阶保险；hw.rs 直接使用）
 encoding_rs              = "0.8"
 
 [dev-dependencies]

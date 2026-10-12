@@ -27,8 +27,9 @@ trash = { workspace = true }
 diskpilot-scaffold = { path = "../scaffold" }
 diskpilot-steam-inspector = { path = "../steam-inspector" }
 diskpilot-toolbelt = { path = "../toolbelt" }
+diskpilot-psutil = { path = "../psutil" }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true }
-# PowerShell 输出 GBK 解码兜底（与主项目 hw.rs 同款）
+# PowerShell 输出 GBK 解码兜底（psutil 共享执行器内部 + apps.rs/selfheal.rs 直接解码均使用）
 encoding_rs = { workspace = true }
