@@ -47,6 +47,9 @@ export const steam = {
     'steam.residueAge': '{days} 天未变动',
     'steam.residueOpenTitle': '在资源管理器中打开',
     'steam.residueMeta': '{n} 处 · {size}',
+    'steam.reportResidueTitle': '## 卸载残留（目录还在，但没有游戏记录）',
+    'steam.reportResidueLead': '共 {n} 处、{size}：Steam 卸载没清干净的真实占用，通常可直接删除。',
+    'steam.reportResidueHeader': '| 类型 | 目录 | 大小 |',
 
     // 详情栏
     'steam.ghostTitle': '检测到鬼魂安装',
@@ -174,6 +177,9 @@ export const steam = {
     'steam.residueAge': 'untouched for {days} days',
     'steam.residueOpenTitle': 'Open in Explorer',
     'steam.residueMeta': '{n} items · {size}',
+    'steam.reportResidueTitle': '## Uninstall residue (folders still on disk, no game record)',
+    'steam.reportResidueLead': '{n} items totaling {size}: real usage Steam left behind, usually safe to delete.',
+    'steam.reportResidueHeader': '| Kind | Folder | Size |',
 
     // Detail rail
     'steam.ghostTitle': 'Ghost install detected',

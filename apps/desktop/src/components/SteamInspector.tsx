@@ -288,6 +288,23 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
       const rec = g.recommendation_reason ?? '—';
       lines.push(`| ${name} | ${formatBytes(g.size_bytes)} | ${relativeTime(g.last_played_ts)} | ${rec} |`);
     }
+    // 卸载残留：报告里单独一节——用户正是靠这份报告决定清什么。
+    const residue = inventory.libraries.flatMap((l) => l.residue);
+    if (residue.length > 0) {
+      const residueTotal = inventory.libraries.reduce((s, l) => s + l.residue_size_bytes, 0);
+      lines.push(
+        '',
+        t('steam.reportResidueTitle'),
+        t('steam.reportResidueLead', { n: residue.length, size: formatBytes(residueTotal) }),
+        t('steam.reportResidueHeader'),
+        '| --- | --- | --- |',
+      );
+      for (const r of residue) {
+        const kind = r.kind === 'workshop' ? t('steam.residueWorkshop') : t('steam.residueInstall');
+        const what = r.appid_hint != null ? `appid ${r.appid_hint}` : r.dir_name;
+        lines.push(`| ${kind} | ${what} | ${formatBytes(r.size_bytes)} |`);
+      }
+    }
     lines.push('', t('steam.reportFooter'));
     const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
