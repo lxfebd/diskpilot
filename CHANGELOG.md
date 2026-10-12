@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 维护
+
+- **MCP 补齐 resources 与 prompts 能力面**：此前只实现 `tools`，现新增三个
+  只读资源（`system://profile` 系统摘要 / `system://disk-usage` 磁盘分区用量 /
+  `system://env` 关键环境变量，内容与同名工具同一口径）与两个任务模板
+  （`system-report` 体检报告 / `cleanup-plan` 目录清理计划，供 AI 客户端一键填入），
+  能力声明与 instructions 同步补全。协议冒烟实测通过。
+- **Linux 交叉编译 cfg 技术债全量清偿**：Windows-only 子系统（hw/sys/sec/net/
+  diskx 等）的 import / re-export / PS 常量 / helper 函数按消费方补
+  `#[cfg(windows)]` 或 `#[cfg_attr(not(windows), allow(dead_code))]`，
+  累计 49 个文件；`cargo check --target x86_64-unknown-linux-gnu --all-targets`
+  从 25 errors + 120 warnings 清到 **0 errors 0 warnings**（agent-server 及
+  全部 7 个 workspace crate），Windows 侧 check/test/clippy/fmt 全绿。
+
 ### 代码审查修复汇总（第 1–9 轮）
 
 对全仓库（desktop 应用 / agent-server / scanner / executor / toolbelt）执行了

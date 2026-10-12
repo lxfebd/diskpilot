@@ -199,6 +199,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 ## 文档
 
 - [docs/](docs/README.md) — 架构详解、使用说明书、清理脚本编写指南
+- [docs/mcp-tools.md](docs/mcp-tools.md) — 内置 75 个 MCP 工具参考（参数与安全分级）
 - [docs/plugin-market-index.md](docs/plugin-market-index.md) — 插件市场社区索引契约（建官方索引仓库时照此执行）
 - [docs/publish-plugin-guide.md](docs/publish-plugin-guide.md) — 发布插件到社区市场（作者快速上手）
 - [website/index.html](website/index.html) — 项目宣传站（本地浏览器直接打开即可预览）
