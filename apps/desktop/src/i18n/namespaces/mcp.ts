@@ -5,6 +5,7 @@ export const mcp = {
   zh: {
     'mcp.hint': '添加任意标准 MCP 服务器（本地 stdio 进程或远程 https 地址），它暴露的工具会自动接入 AI 工具表，AI 对话时可直接调用。连接不上不影响使用——工具会自动跳过失败服务器。',
     'mcp.serverCount': 'MCP 服务器（{n}）',
+    'mcp.serverCountUnread': 'MCP 服务器（未读到）',
     'mcp.add': '添加服务器',
     'mcp.addTitle': '添加一个 MCP 服务器',
     'mcp.needPermTitle': '需在「AI 权限中心」开启 mcp.manage 权限',
@@ -23,6 +24,7 @@ export const mcp = {
     'mcp.auditArgs': '参数 {keys}',
     'mcp.close': '关闭',
     'mcp.loading': '加载中…',
+    'mcp.listUnread': '没能读取服务器列表（不代表没有配置）。',
     'mcp.jsonPanelTitle': '粘贴 JSON 导入（Claude Desktop 风格）',
     'mcp.jsonHelpIntro': '把 Claude Desktop / 其它 MCP 客户端的配置粘进来，一键添加多台服务器。支持：',
     'mcp.jsonShapeExample': '{"mcpServers": {"名字": {"command": "...", "args": [...], "env": {...}}}}',
@@ -114,6 +116,7 @@ export const mcp = {
   en: {
     'mcp.hint': 'Add any standard MCP server — a local stdio process or a remote https URL — and the tools it exposes are registered into the AI tool table automatically, ready to call from chat. Unreachable servers never get in the way: they are skipped.',
     'mcp.serverCount': 'MCP servers ({n})',
+    'mcp.serverCountUnread': 'MCP servers (unread)',
     'mcp.add': 'Add server',
     'mcp.addTitle': 'Add an MCP server',
     'mcp.needPermTitle': 'Enable the mcp.manage permission under "AI Permissions" first',
@@ -132,6 +135,7 @@ export const mcp = {
     'mcp.auditArgs': 'args {keys}',
     'mcp.close': 'Close',
     'mcp.loading': 'Loading…',
+    'mcp.listUnread': 'Could not read the server list (that does not mean none are configured).',
     'mcp.jsonPanelTitle': 'Import from JSON (Claude Desktop style)',
     'mcp.jsonHelpIntro': 'Paste a Claude Desktop or other MCP client config here to add several servers at once. Accepted forms: ',
     'mcp.jsonShapeExample': '{"mcpServers": {"name": {"command": "...", "args": [...], "env": {...}}}}',

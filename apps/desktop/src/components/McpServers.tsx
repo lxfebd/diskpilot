@@ -75,7 +75,7 @@ function McpServersInner() {
       setServers(await api.mcpListServers());
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e));
-      setServers([]);
+      setServers(null);
     } finally {
       setBusy(false);
     }
@@ -288,7 +288,13 @@ function McpServersInner() {
       </p>
 
       <div className="settings-group-title mcp-head-row" style={{ marginTop: 12 }}>
-        <span className="mcp-head-label">{t('mcp.serverCount', { n: servers?.length ?? 0 })}</span>
+        <span className="mcp-head-label">
+          {servers === null && !err
+            ? t('mcp.loading')
+            : err && servers === null
+              ? t('mcp.serverCountUnread')
+              : t('mcp.serverCount', { n: servers?.length ?? 0 })}
+        </span>
         <div className="mcp-head-actions">
           <button
             className="ghost small"
@@ -430,8 +436,13 @@ function McpServersInner() {
       {err && <div className="error">{err}</div>}
       {msg && <div className="ok">{msg}</div>}
 
-      {servers === null && <p className="muted small">{t('mcp.loading')}</p>}
-      {servers !== null && servers.length === 0 && (
+      {servers === null && !err && <p className="muted small">{t('mcp.loading')}</p>}
+      {servers === null && err && (
+        <p className="muted small" style={{ marginTop: 8 }}>
+          {t('mcp.listUnread')}
+        </p>
+      )}
+      {servers !== null && servers.length === 0 && !err && (
         <p className="muted small mcp-empty-hint" style={{ marginTop: 8 }}>
           {t('mcp.emptyServers')}
           <code> npx -y @modelcontextprotocol/server-filesystem </code>{t('mcp.emptyServersTail')}
