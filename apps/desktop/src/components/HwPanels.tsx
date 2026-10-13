@@ -91,6 +91,9 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
   const threads = pick(cpu, 'NumberOfLogicalProcessors');
   const cpuLoad = num(pick(cpu, 'LoadPercentage'));
   const cpuUsage = num(pick(arr(info?.cpu_usage)[0], 'PercentProcessorTime'));
+  // M13：缺失不归 0——cores/threads 无值显示「（不可读）」而非 0/undefined
+  const coresStr = cores == null ? t('hw.notReadable') : String(cores);
+  const threadsStr = threads == null ? t('hw.notReadable') : String(threads);
 
   const healthDisks = arr(health?.disks) as Record<string, unknown>[];
   const smartOk = health?.reliability ?? false;
@@ -129,7 +132,7 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
           <div className="hw-cell-label">CPU</div>
           <div className="hw-cell-main">{String(cpu ? pick(cpu, 'Name') : t('hw.notReadable'))}</div>
           <div className="hw-cell-sub">
-            {t('hw.cpuSpec', { cores: String(cores), threads: String(threads), mhz: maxCpuMhz })}
+            {t('hw.cpuSpec', { cores: coresStr, threads: threadsStr, mhz: maxCpuMhz })}
             {curCpuMhz ? t('hw.nowSuffix', { mhz: curCpuMhz }) : ''}
             {cpuUsage > 0 ? t('hw.loadSuffix', { pct: cpuUsage }) : cpuLoad > 0 ? t('hw.loadSuffix', { pct: cpuLoad }) : ''}
           </div>
@@ -137,9 +140,12 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
 
         <div className="hw-cell">
           <div className="hw-cell-label">{t('hw.cellMem')}</div>
-          <div className="hw-cell-main">{formatBytes(totalMem)}</div>
+          <div className="hw-cell-main">{totalMem > 0 ? formatBytes(totalMem) : t('hw.notReadable')}</div>
           <div className="hw-cell-sub">
-            {t('hw.memSpec', { count: mems.length, mhz: maxSpeed })}{maxConf ? t('hw.nowSuffix', { mhz: maxConf }) : ''} {xmp}
+            {mems.length > 0
+              ? (maxSpeed > 0 ? t('hw.memSpec', { count: mems.length, mhz: maxSpeed }) : t('hw.memCount', { count: mems.length }))
+              : t('hw.notReadable')}
+            {maxConf ? t('hw.nowSuffix', { mhz: maxConf }) : ''} {xmp}
           </div>
         </div>
 
