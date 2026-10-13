@@ -8,6 +8,35 @@ export interface TrendPoint {
   mem_percent?: number | null;
 }
 
+/// 解析 sensor_trend format=json 的结构化输出 → 温度点序列。
+/// 与 parseStressCurve（文本行）互补：这个是压测期内高频轮询的实时通道。
+/// 宽松解析：非法/字段缺失的点跳过；不足 2 点返回 null（调用方不画线）。
+/// 导出以便单测锁定与后端 rep_report.rs 的 JSON 契约（ts + cpu_temp_c 可空）。
+export function parseTrendJson(text: string): TrendPoint[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object') return null;
+  const arr = (parsed as { points?: unknown }).points;
+  if (!Array.isArray(arr)) return null;
+  const points: TrendPoint[] = [];
+  for (const item of arr) {
+    if (!item || typeof item !== 'object') continue;
+    const ts = (item as { ts?: unknown }).ts;
+    if (typeof ts !== 'number') continue;
+    const cpu = (item as { cpu_temp_c?: unknown }).cpu_temp_c;
+    const mem = (item as { mem_percent?: unknown }).mem_percent;
+    const p: TrendPoint = { ts };
+    if (typeof cpu === 'number') p.cpu_temp_c = cpu;
+    if (typeof mem === 'number') p.mem_percent = mem;
+    points.push(p);
+  }
+  return points.length >= 2 ? points : null;
+}
+
 export function TrendChart({ points }: { points: TrendPoint[] }) {
   const t = useT();
   const W = 720;

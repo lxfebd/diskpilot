@@ -482,6 +482,40 @@ html[data-theme="pro"] .tb-tab.active { border-color: var(--accent-strong); back
 }
 .bench-trend-err { margin-top: 8px; }
 
+/* ── R111 压测实时温度监护：时长选择 + 压测中实时曲线 ── */
+.bench-stress-secs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bench-stress-secs select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  padding: 2px 6px;
+}
+.bench-stress-live {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper-3);
+}
+.bench-stress-live-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.bench-stress-live-peak {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--accent-strong);
+}
+
 /* ── GPU 甜甜圈压测（FurMark 简化版全屏渲染层）── */
 .gpu-donut-overlay {
   position: fixed;

@@ -2,7 +2,7 @@
 // 全部走 agent-server 已验收的 MCP 工具（bench_cpu / bench_memory / bench_disk /
 // stress_test / system_report / sensor_trend），手动触发 + 结果历史对比（localStorage）。
 // stress_test 是写操作（hw.stress 权限），走两步确认；其余只读 L0 直接跑。
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Activity, Copy, Flame, Gauge, Loader2, Monitor, ShieldAlert, Square, TrendingUp, X,
 } from 'lucide-react';
@@ -12,7 +12,7 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart } from './charts';
+import { TrendChart, StressTempChart, parseTrendJson } from './charts';
 import type { TrendPoint } from './charts';
 
 interface BenchHistoryEntry {
@@ -104,6 +104,15 @@ export function BenchPanel() {
     }
   };
 
+  // 压测时长选择：AIDA64 风格可选手动时长（默认 5s 演示，上限 300s）。
+  // 压测是同步 call，期间用实时温度监护（下方轮询）而非黑盒转圈。
+  const STRESS_SECS_OPTS = [5, 30, 60, 120, 300] as const;
+  const [stressSecs, setStressSecs] = useState<number>(5);
+  // 实时温度监护：压测进行中并行轮询只读 sensor_trend（L0），画实时 CPU 温度
+  // 折线 + 峰值/熔断阈值警戒；失败不拦主流程（监护只是增强，压测本身照常）。
+  const [liveTemp, setLiveTemp] = useState<{ points: TrendPoint[]; err: string | null } | null>(null);
+  const liveTimer = useRef<number | null>(null);
+
   // 停止正在跑的压测（stress_test / stress_test_gpu）：agent.rs 每次调用重新
   // spawn agent-server 进程，压测与停止按钮是两个进程实例；stress_cancel 写
   // 跨进程停止文件（%TEMP%/diskpilot-stress-stop.flag），压测监控循环检测到
@@ -125,7 +134,22 @@ export function BenchPanel() {
   const runStress = async () => {
     setConfirmStress(false);
     setStressCurve(null);
-    const text = await run('stress_test', t('toolbelt.bench.stress.name'), { secs: 5, max_temp: 95 }, true);
+    // 压测开始：并行轮询只读 sensor_trend 做实时温度监护（每 2s 一次）。
+    // 只读 L0 无需确认；失败只标记监护错误，压测本体照常。
+    setLiveTemp({ points: [], err: null });
+    const poll = async () => {
+      try {
+        const r = await api.callTool('sensor_trend', { n: 1, format: 'json' });
+        if (r.is_error) { setLiveTemp((prev) => prev ? { ...prev, err: t('toolbelt.bench.stress.liveFail') } : prev); return; }
+        const pts = parseTrendJson(r.text);
+        if (pts) setLiveTemp((prev) => prev ? { ...prev, points: [...prev.points, ...pts].slice(-60) } : prev);
+      } catch { setLiveTemp((prev) => prev ? { ...prev, err: t('toolbelt.bench.stress.liveFail') } : prev); }
+    };
+    void poll();
+    liveTimer.current = window.setInterval(() => void poll(), 2000);
+    const text = await run('stress_test', t('toolbelt.bench.stress.name'), { secs: stressSecs, max_temp: 95 }, true);
+    if (liveTimer.current !== null) { window.clearInterval(liveTimer.current); liveTimer.current = null; }
+    setLiveTemp(null);
     // 从结果解析「温度曲线：0.0s=52.1°C; …」行，渲染压测实时温度折线
     if (text) {
       const points = parseStressCurve(text);
@@ -306,13 +330,38 @@ export function BenchPanel() {
             </button>
           ) : (
             <button className="primary" disabled={busy !== null} onClick={() => setConfirmStress(true)}>
-              <Flame size={14} /> {t('toolbelt.bench.stress.start')}
+              <Flame size={14} /> {t('toolbelt.bench.stress.start', { s: stressSecs })}
             </button>
           )}
+          {/* R111：可选手动时长（AIDA64 风格）；压测进行中禁用 */}
+          <label className="bench-stress-secs muted small">
+            {t('toolbelt.bench.stress.secsLabel')}
+            <select value={stressSecs} disabled={busy !== null} onChange={(e) => setStressSecs(Number(e.target.value))}>
+              {STRESS_SECS_OPTS.map((s) => <option key={s} value={s}>{s}s</option>)}
+            </select>
+          </label>
           {historyOf('stress_test').length > 0 && (
             <span className="muted small">{t('toolbelt.bench.lastRuns', { n: historyOf('stress_test').length })}</span>
           )}
         </div>
+        {/* R111 实时温度监护：压测进行中并行轮询只读 sensor_trend，画实时曲线 */}
+        {busy === 'stress_test' && liveTemp && (
+          <div className="bench-stress-live">
+            <div className="muted small bench-stress-live-head">
+              <Loader2 size={11} className="spin" /> {t('toolbelt.bench.stress.liveTitle')}
+              {liveTemp.points.length > 0 && (
+                <b className="bench-stress-live-peak">
+                  {t('toolbelt.bench.stress.livePeak', { temp: Math.max(...liveTemp.points.map((p) => p.cpu_temp_c ?? 0)).toFixed(1) })}
+                </b>
+              )}
+            </div>
+            {liveTemp.err && <p className="muted small bench-trend-err">{liveTemp.err}</p>}
+            {liveTemp.points.length >= 2 && <TrendChart points={liveTemp.points} />}
+            {liveTemp.points.length < 2 && !liveTemp.err && (
+              <p className="muted small">{t('toolbelt.bench.stress.liveWaiting')}</p>
+            )}
+          </div>
+        )}
         {results['stress_test'] && <pre className="bench-out">{results['stress_test']}</pre>}
         {stressCurve && stressCurve.length > 1 && (
           <StressTempChart points={stressCurve} />
@@ -396,7 +445,7 @@ export function BenchPanel() {
             </div>
             <div className="modal-body">
               <p>
-                {t('toolbelt.bench.stress.confirmA')}{' '}<b>{t('toolbelt.bench.stress.confirmSecs')}</b>{t('toolbelt.bench.stress.confirmB')}{' '}<b className="tb-risk tb-risk-medium">{t('toolbelt.bench.stress.confirmRisk')}</b>{t('toolbelt.bench.stress.confirmC')}
+                {t('toolbelt.bench.stress.confirmA')}{' '}<b>{t('toolbelt.bench.stress.confirmSecs', { s: stressSecs })}</b>{t('toolbelt.bench.stress.confirmB')}{' '}<b className="tb-risk tb-risk-medium">{t('toolbelt.bench.stress.confirmRisk')}</b>{t('toolbelt.bench.stress.confirmC')}
               </p>
               <p className="muted small">{t('toolbelt.bench.stress.confirmHint')}</p>
             </div>
