@@ -681,11 +681,11 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'run_hardware_test',
-    description: '运行硬件压力/基准测试。🔴 这是高负载操作，会导致 CPU/GPU 满载、温度升高。必须在用户明确确认后才会执行，AI 不得自行执行。测试期间持续监控温度，超过上限自动停止；用户也可随时在监控条上点击停止。支持：cpu_stress（Prime95 CPU 烤机）、gpu_stress（FurMark GPU 烤机）、gpu_benchmark（FurMark 基准）、cpu_benchmark（AIDA64 基准）。内存专项与磁盘专项暂未开放。',
+    description: '运行硬件压力/基准测试。🔴 这是高负载操作，会导致 CPU/GPU 满载、温度升高。必须在用户明确确认后才会执行，AI 不得自行执行。测试期间持续监控温度，超过上限自动停止；用户也可随时在监控条上点击停止。支持：cpu_stress（Prime95 CPU 烤机）、gpu_stress（FurMark GPU 烤机）、gpu_benchmark（FurMark 基准）、cpu_benchmark（AIDA64 基准）、disk_benchmark（CrystalDiskMark 磁盘读写基准，会真实读写磁盘）。内存专项暂未开放。',
     properties: {
       testType: {
         type: 'string',
-        enum: ['cpu_stress', 'gpu_stress', 'gpu_benchmark', 'cpu_benchmark'],
+        enum: ['cpu_stress', 'gpu_stress', 'gpu_benchmark', 'cpu_benchmark', 'disk_benchmark'],
         description: '测试类型',
       },
       durationSeconds: { type: 'number', description: '测试持续时间（秒），默认 300，范围 30~1800' },
@@ -1550,7 +1550,7 @@ async function execCliTool(
 async function runHardwareTest(args: Record<string, unknown>): Promise<string> {
   if (!isTauri) return '硬件压测仅在桌面端可用';
   const testType = String(args.testType ?? '').trim();
-  if (!testType) return '请提供 testType（cpu_stress / gpu_stress / gpu_benchmark / cpu_benchmark）';
+  if (!testType) return '请提供 testType（cpu_stress / gpu_stress / gpu_benchmark / cpu_benchmark / disk_benchmark）';
   if (!isPermEnabled('hw.stress')) {
     return '压力测试未授权：请前往「设置 → AI 权限中心」开启「压力测试」后重试。';
   }
@@ -1561,6 +1561,7 @@ async function runHardwareTest(args: Record<string, unknown>): Promise<string> {
     : testType === 'gpu_stress' ? 'GPU 烤机（FurMark）'
     : testType === 'gpu_benchmark' ? 'GPU 基准（FurMark）'
     : testType === 'cpu_benchmark' ? 'CPU 基准（AIDA64）'
+    : testType === 'disk_benchmark' ? '磁盘读写基准（CrystalDiskMark）'
     : testType;
 
   if (hasSessionAuth('hw.stress')) {
@@ -1574,7 +1575,11 @@ async function runHardwareTest(args: Record<string, unknown>): Promise<string> {
       durationSeconds: durationSecs ?? 300,
       tempLimitCelsius: tempLimit ?? 90,
       label,
-      tool: testType === 'cpu_benchmark' ? 'AIDA64' : 'FurMark',
+      // 确认面板必须说出真正会被拉起的那个工具，不能一律写 FurMark。
+      tool: testType === 'cpu_stress' ? 'Prime95'
+        : testType === 'cpu_benchmark' ? 'AIDA64'
+        : testType === 'disk_benchmark' ? 'CrystalDiskMark'
+        : 'FurMark',
     };
     pendingStressResolve = resolve;
   });
