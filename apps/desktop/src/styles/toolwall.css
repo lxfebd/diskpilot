@@ -509,6 +509,22 @@ html[data-theme="pro"] .tb-tab.active { border-color: var(--accent-strong); back
   font-weight: 700;
   color: #7dfc9f;
 }
+/* R101：FPS 实时迷你趋势——归一到自身 min/max，随 HUD 半透明底 */
+.gpu-donut-row.gpu-donut-trend {
+  align-items: center;
+  gap: 8px;
+}
+.gpu-donut-spark {
+  width: 120px;
+  height: 34px;
+  display: block;
+  color: #7dfc9f;
+  flex: none;
+}
+.gpu-donut-minmax {
+  font-size: 10px;
+  color: var(--muted);
+}
 .gpu-donut-exit {
   position: absolute;
   top: 16px;

@@ -399,6 +399,7 @@ export const toolbelt = {
     'toolbelt.donut.tripped': '⚠️ 超温熔断：GPU 温度达到 {temp}℃（阈值 {max}℃），已自动退出压测保护硬件。',
     'toolbelt.donut.hudTime': '时长',
     'toolbelt.donut.hudTemp': 'GPU 温度',
+    'toolbelt.donut.hudTrend': 'FPS 趋势',
     'toolbelt.donut.exit': '退出（Esc）',
 
     // 传感器趋势折线图
@@ -932,6 +933,7 @@ export const toolbelt = {
     'toolbelt.donut.tripped': '⚠️ Thermal trip: the GPU reached {temp}℃ (threshold {max}℃) — the stress test exited on its own to protect the hardware.',
     'toolbelt.donut.hudTime': 'Duration',
     'toolbelt.donut.hudTemp': 'GPU temperature',
+    'toolbelt.donut.hudTrend': 'FPS trend',
     'toolbelt.donut.exit': 'Exit (Esc)',
 
     // Sensor trend line chart

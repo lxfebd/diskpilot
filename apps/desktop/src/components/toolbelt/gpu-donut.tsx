@@ -70,6 +70,30 @@ export function parseGpuTemp(text: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+/** SVG 迷你折线 path：归一化到相对自身 min/max（值平=水平中线）。
+ *  与 `spaceSparkPath`（R96）同哲学，但入参是原始数值数组（FPS 采样），
+ *  W×H 固定、上下留 3px。不足 2 点返回空串（无画面）。 */
+export function fpsSparkPath(vals: number[], w = 120, h = 34): string {
+  if (vals.length < 2) return '';
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = max - min;
+  return vals
+    .map((v, i) => {
+      const x = (i / (vals.length - 1)) * w;
+      // 值平（span=0）画水平中线；否则归一化到上下 3px 内。
+      const y = span === 0 ? h / 2 : h - 3 - ((v - min) / span) * (h - 6);
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
+/** 迷你折线的数值范围（给 HUD 标注 min/max 用）：空数组 → null。 */
+export function fpsRange(vals: number[]): { min: number; max: number } | null {
+  if (vals.length === 0) return null;
+  return { min: Math.min(...vals), max: Math.max(...vals) };
+}
+
 interface GpuDonutProps {
   onDone: (summary: string, canceled: boolean) => void;
 }
@@ -77,10 +101,11 @@ interface GpuDonutProps {
 export function GpuDonut({ onDone }: GpuDonutProps) {
   const t = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [stats, setStats] = useState<{ fps: number; secs: number; temp: string }>({
+  const [stats, setStats] = useState<{ fps: number; secs: number; temp: string; fpsHist: number[] }>({
     fps: 0,
     secs: 0,
     temp: 'N/A',
+    fpsHist: [],
   });
   const doneRef = useRef(false);
   // 真实帧计数：frame() 每渲染一帧 +1，每秒的 statTimer 读取差值为 FPS
@@ -591,7 +616,14 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
       lastCount = frames.current;
       lastAt = now;
       fpsRef.current = fps;
-      setStats((s) => ({ ...s, fps: Math.round(fps), secs: Math.round((now - start) / 1000) }));
+      setStats((s) => ({
+        ...s,
+        fps: Math.round(fps),
+        secs: Math.round((now - start) / 1000),
+        // FPS 滚动窗口：最近 60 个每秒采样（画 HUD 迷你趋势）。截断在最前，
+        // 保序；60s 后旧点自然滑出。
+        fpsHist: [...s.fpsHist, Math.round(fps)].slice(-60),
+      }));
     }, 1000);
 
     return () => {
@@ -640,6 +672,22 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
           <span className="gpu-donut-label">{t('toolbelt.donut.hudTemp')}</span>
           <span className="gpu-donut-val">{stats.temp}</span>
         </div>
+        {stats.fpsHist.length >= 2 && (
+          <div className="gpu-donut-row gpu-donut-trend">
+            <span className="gpu-donut-label">{t('toolbelt.donut.hudTrend')}</span>
+            <svg viewBox={`0 0 120 34`} className="gpu-donut-spark" role="img" aria-label={t('toolbelt.donut.hudTrend')}>
+              <path d={fpsSparkPath(stats.fpsHist)} fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            {(() => {
+              const r = fpsRange(stats.fpsHist);
+              return r ? (
+                <span className="gpu-donut-minmax">
+                  {r.min}–{r.max} FPS
+                </span>
+              ) : null;
+            })()}
+          </div>
+        )}
       </div>
       <button className="gpu-donut-exit" onClick={() => finish(true)}>
         <X size={14} /> {t('toolbelt.donut.exit')}
