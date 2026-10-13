@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, truncatePaths, previewSummary } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, truncatePaths, previewSummary, previewTotalBytes } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -332,5 +332,20 @@ describe('R102 预览标题 previewSummary', () => {
   it('文案函数透传（i18n 键由调用方注入）', () => {
     const en = (o: { n: number }) => `${o.n} file(s)`;
     expect(previewSummary(2, null, en)).toBe('2 file(s)');
+  });
+});
+
+describe('R105 预览合计 previewTotalBytes', () => {
+  it('空数组 → null', () => {
+    expect(previewTotalBytes([])).toBeNull();
+  });
+  it('全部实测 → 求和', () => {
+    expect(previewTotalBytes([{ bytes: 1024 }, { bytes: 2048 }, { bytes: 10 }])).toBe(3082);
+  });
+  it('部分缺失 → 按已知求和（缺失的不计入）', () => {
+    expect(previewTotalBytes([{ bytes: 1024 }, { bytes: null }, { bytes: 512 }])).toBe(1536);
+  });
+  it('全部缺失 → null（后端未统计时不显示假合计）', () => {
+    expect(previewTotalBytes([{ bytes: null }, { bytes: null }])).toBeNull();
   });
 });

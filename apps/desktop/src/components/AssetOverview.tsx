@@ -484,26 +484,46 @@ function peekBase(p: string): string {
   return i >= 0 ? p.slice(i + 1) : p;
 }
 
-function ScopePreview({ files }: { files: readonly string[] }) {
+/** R105：预览项合计字节。全部项 bytes 为 null（后端未统计）时返回 null，
+ *  部分缺失则按已知求和（展示口径：有实测才算，缺的省略）。 */
+export function previewTotalBytes(items: readonly { bytes: number | null }[]): number | null {
+  if (items.length === 0) return null;
+  let known = 0;
+  let anyKnown = false;
+  for (const it of items) {
+    if (it.bytes != null) {
+      known += it.bytes;
+      anyKnown = true;
+    }
+  }
+  return anyKnown ? known : null;
+}
+
+function ScopePreview({ items }: { items: readonly { path: string; bytes: number | null }[] }) {
   const t = useT();
+  const files = items.map((i) => i.path);
   const { shown, more } = truncatePaths(files, PEEK_LIMIT);
-  // 逐文件大小预览需要再次 dry-run（executeScope 每项都实测字节）；
-  // 这里只展示路径清单 + 份数，字节以行内大小为准——预览定位「要删什么」，
-  // 精确总量在确认环节由实测兜底。
+  // 头部合计：同一份 dry-run 返回的实测字节求和（部分缺失 → 按已知合计，
+  // 缺失的只影响精度不影响「要删哪些」——执行时以实测为准）。
+  const totalBytes = previewTotalBytes(items);
   return (
     <div className="ao-clean-preview-box">
       <div className="ao-clean-preview-head">
-        <span>{t('overview.clean.peekFiles', { n: files.length })}</span>
+        <span>{previewSummary(files.length, totalBytes, (o) => t('overview.clean.peekFiles', o))}</span>
         <span className="muted small">{t('overview.clean.peekHint')}</span>
       </div>
       <ul className="ao-clean-preview-list">
-        {shown.map((p) => (
-          <li key={p} className="ao-clean-preview-file" title={p}>
-            <File size={11} />
-            <span className="ao-clean-preview-name">{peekBase(p)}</span>
-            <span className="ao-clean-preview-dir">{p.slice(0, Math.max(0, p.lastIndexOf('\\')))}</span>
-          </li>
-        ))}
+        {shown.map((p) => {
+          const it = items.find((i) => i.path === p);
+          return (
+            <li key={p} className="ao-clean-preview-file" title={p}>
+              <File size={11} />
+              <span className="ao-clean-preview-name">{peekBase(p)}</span>
+              <span className="ao-clean-preview-dir">{p.slice(0, Math.max(0, p.lastIndexOf('\\')))}</span>
+              {it?.bytes != null && <span className="ao-clean-preview-size">{formatBytes(it.bytes)}</span>}
+            </li>
+          );
+        })}
       </ul>
       {more > 0 && (
         <div className="ao-clean-preview-more">{t('overview.clean.peekMore', { n: more })}</div>
@@ -690,10 +710,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [cleaning, setCleaning] = useState(false);
   const [cleanLoading, setCleanLoading] = useState(false);
   const [cleanErr, setCleanErr] = useState<string | null>(null);
-  // R102 scope 逐文件预览：展开的 key → { files, err }。files 是 dry-run 预览
-  // （与执行同 olderThanDays 口径），err 单独记录——读失败 ≠ 空清单（诚实）。
+  // R102 scope 逐文件预览：展开的 key → { items, err }。items 是 dry-run 预览
+  // （与执行同 olderThanDays 口径），每项带实测字节（bytes_freed，后端 dry-run
+  // 分支逐文件实测返回）；err 单独记录——读失败 ≠ 空清单（诚实）。
   const [previewOpen, setPreviewOpen] = useState<Record<string, boolean>>({});
-  const [previews, setPreviews] = useState<Record<string, { files: string[]; err: string | null }>>({});
+  const [previews, setPreviews] = useState<Record<string, { items: { path: string; bytes: number | null }[]; err: string | null }>>({});
   const [previewing, setPreviewing] = useState<Record<string, boolean>>({});
 
   // 展开一项：dry-run 拿将删文件明细。只读（dryRun=true），绝不落盘。
@@ -708,10 +729,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       const entries = await api.executeScope(it.scaffoldId, it.scopeId, selDrive.path, true, {
         olderThanDays: it.days,
       });
-      // dry-run 每条 UndoEntry.source = 匹配文件路径（bytes_freed 为实测字节）。
-      setPreviews((p) => ({ ...p, [it.key]: { files: entries.map((e) => e.source), err: null } }));
+      // dry-run 每条 UndoEntry.source = 匹配文件路径，bytes_freed = 实测字节——
+      // 预览的每文件大小与执行口径一致（同一份后端返回，无需再次扫描）。
+      setPreviews((p) => ({
+        ...p,
+        [it.key]: { items: entries.map((e) => ({ path: e.source, bytes: e.bytes_freed ?? null })), err: null },
+      }));
     } catch (e) {
-      setPreviews((p) => ({ ...p, [it.key]: { files: [], err: String(e instanceof Error ? e.message : e) } }));
+      setPreviews((p) => ({ ...p, [it.key]: { items: [], err: String(e instanceof Error ? e.message : e) } }));
     } finally {
       setPreviewing((p) => ({ ...p, [it.key]: false }));
     }
@@ -1166,11 +1191,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                         ) : previews[it.key]?.err ? (
                           // 读失败 ≠ 空清单：明确说明预览失败（不代表没有文件）。
                           <div className="ao-clean-preview-note err">{t('overview.clean.peekFailed', { msg: previews[it.key]!.err ?? '' })}</div>
-                        ) : ((previews[it.key]?.files.length ?? 0) === 0) ? (
+                        ) : ((previews[it.key]?.items.length ?? 0) === 0) ? (
                           <div className="ao-clean-preview-note">{t('overview.clean.peekEmpty')}</div>
                         ) : (
                           <ScopePreview
-                            files={previews[it.key]!.files}
+                            items={previews[it.key]!.items}
                           />
                         )}
                       </div>

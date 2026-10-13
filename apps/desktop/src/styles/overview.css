@@ -498,6 +498,14 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   text-overflow: ellipsis;
   min-width: 0;
 }
+.ao-clean-preview-size {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: var(--ink-3);
+  margin-left: auto;
+  padding-left: 8px;
+}
 .ao-clean-preview-more {
   font-size: 11px;
   color: var(--ink-3);
