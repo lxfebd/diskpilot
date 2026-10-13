@@ -527,6 +527,13 @@ export default function App() {
       />
 
       <ScanBar scanning={scanning} ref={scanBarRef} />
+      {/* R97 浏览器预览模式：非 Tauri 环境全部数据来自 mock，顶部横幅标识
+          「模拟数据」——诚实性：不许把演示数据当成真实扫描结果。 */}
+      {!isTauri && (
+        <div className="banner preview" role="note">
+          {t('shell.previewBanner')}
+        </div>
+      )}
       {err && <div className="banner error">{err}</div>}
       {!err && !scanning && diag?.backend?.mode === 'walkdir' && (
         <div className="hint">{t('shell.scan.adminHint')}</div>

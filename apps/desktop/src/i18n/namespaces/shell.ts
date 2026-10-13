@@ -80,6 +80,10 @@ export const shell = {
     'shell.empty.layout': '扫完之后：左边是文件夹列表，中间可以问 AI，右边是一键清理。',
     'shell.empty.instant': '已扫过的盘再点会秒开上次结果，点盘符上的刷新图标才会重新扫描。',
 
+    // 浏览器预览模式横幅（R97）：非 Tauri 环境整个应用跑 mock 数据，
+    // 顶部一条醒目标识，避免把演示数据当成真实扫描结果。
+    'shell.previewBanner': '浏览器预览模式：当前显示的是模拟数据，不是真实磁盘扫描结果。',
+
     // 中部详情面板
     'shell.fdp.pickFolder': '👈 从左侧选一个文件夹',
     'shell.fdp.pickHint': '这里会显示选中项的占用详情、可回收项，以及 AI 分析入口。',
@@ -232,6 +236,10 @@ export const shell = {
     'shell.empty.howto': 'Click a drive above (C: for example), or click "Scan all drives", to see how much space each folder takes.',
     'shell.empty.layout': 'When the scan finishes: folders on the left, ask the AI in the middle, one-click cleanup on the right.',
     'shell.empty.instant': 'Clicking a drive you already scanned opens the last result instantly; use the refresh badge to rescan it.',
+
+    // Browser-preview banner (R97): outside Tauri the whole app runs on mock data —
+    // a prominent top banner so demo data is never mistaken for a real scan.
+    'shell.previewBanner': 'Browser preview: showing simulated data, not a real disk scan.',
 
     // 中部详情面板
     'shell.fdp.pickFolder': '👈 Pick a folder on the left',
