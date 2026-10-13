@@ -168,6 +168,7 @@ export const toolbelt = {
 
     // 工具墙（12 分类导航 + 图标网格 + 就地启动确认 + 「AI 可操作」分区）
     'toolbelt.wall.scanning': '正在扫描工具箱目录…',
+    'toolbelt.wall.loadFailed': '没能读取工具箱目录（不代表没有工具）：{msg}',
     'toolbelt.wall.noRoot': '未找到图吧工具箱的 Tools 目录，请在 CLI 直通页设置工具箱根路径。',
     'toolbelt.wall.searchPlaceholder': '搜索工具（名称 / 说明 / 标签）…',
     'toolbelt.wall.clear': '清空',
@@ -699,6 +700,7 @@ export const toolbelt = {
 
     // Tool wall (12-category nav + icon grid + inline launch confirmation + "AI controllable" section)
     'toolbelt.wall.scanning': 'Scanning the toolbox directory…',
+    'toolbelt.wall.loadFailed': 'Could not read the toolbox directory (this does not mean there are no tools): {msg}',
     'toolbelt.wall.noRoot': 'No Tools directory of the Tuba toolbox found — set the toolbox root path on the "CLI direct" tab.',
     'toolbelt.wall.searchPlaceholder': 'Search tools (name / description / tags)…',
     'toolbelt.wall.clear': 'Clear',

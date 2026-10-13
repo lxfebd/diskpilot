@@ -31,10 +31,16 @@ export function Toolbelt({ drives, scanning, onScanDrive, onScanAll, onGoWorkspa
   // view: 'wall' = 主工具墙（默认）；'network' / 'sysinfo' / 'hardware' / 'bench' 为附带的检测工具
   const [view, setView] = useState<'wall' | 'network' | 'sysinfo' | 'hardware' | 'bench' | 'plugins'>('wall');
   const [catalog, setCatalog] = useState<ToolbeltCatalog | null>(null);
+  const [catalogErr, setCatalogErr] = useState<string | null>(null);
 
   useEffect(() => {
     // 非 Tauri（浏览器预览）走 api 的 mock catalog；Tauri 走真实后端。
-    api.toolbeltCatalog().then(setCatalog).catch(() => setCatalog(null));
+    setCatalogErr(null);
+    api.toolbeltCatalog().then(setCatalog).catch((e) => {
+      // 读失败 ≠ 扫描中：记原因，让工具墙显示失败而非永远「正在扫描」。
+      setCatalog(null);
+      setCatalogErr(String(e instanceof Error ? e.message : e));
+    });
   }, []);
 
   const ctx: ToolContext = useMemo(
@@ -96,7 +102,7 @@ export function Toolbelt({ drives, scanning, onScanDrive, onScanAll, onGoWorkspa
       </div>
 
       {view === 'wall' ? (
-        <CatalogWall catalog={catalog} onOpenSettings={onOpenSettings} />
+        <CatalogWall catalog={catalog} catalogErr={catalogErr} onOpenSettings={onOpenSettings} />
       ) : view === 'network' ? (
         <NetworkPanel ctx={ctx} />
       ) : view === 'sysinfo' ? (

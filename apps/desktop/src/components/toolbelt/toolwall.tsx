@@ -576,9 +576,11 @@ function pushRecent(name: string): string[] {
 
 export function CatalogWall({
   catalog,
+  catalogErr,
   onOpenSettings,
 }: {
   catalog: ToolbeltCatalog | null;
+  catalogErr?: string | null;
   onOpenSettings?: (tab?: SettingsTab) => void;
 }) {
   const t = useT();
@@ -730,6 +732,13 @@ export function CatalogWall({
     setConfirmLaunch(tool);
   };
 
+  if (catalogErr) {
+    return (
+      <div className="tb-empty">
+        <div>{t('toolbelt.wall.loadFailed', { msg: catalogErr })}</div>
+      </div>
+    );
+  }
   if (!catalog) {
     return <div className="tb-empty"><div>{t('toolbelt.wall.scanning')}</div></div>;
   }
