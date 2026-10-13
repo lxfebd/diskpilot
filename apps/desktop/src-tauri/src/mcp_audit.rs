@@ -47,18 +47,26 @@ pub(crate) fn audit_args_snapshot(args: &serde_json::Value) -> serde_json::Value
 }
 
 /// 审计日志读取（只读 L0）：返回最近 N 条。
+/// 读失败必须报错：否则前端把「读失败」当「暂无审计记录」展示
+/// （诚实性族规 R81 同族）；文件不存在 = 从未有过审计 = 空列表是诚实的。
 #[tauri::command]
-pub(crate) fn mcp_audit_tail(app: AppHandle, limit: Option<usize>) -> Vec<serde_json::Value> {
+pub(crate) fn mcp_audit_tail(
+    app: AppHandle,
+    limit: Option<usize>,
+) -> Result<Vec<serde_json::Value>, String> {
     let Some(p) = audit_path(&app) else {
-        return Vec::new();
+        return Err("无法定位数据目录".into());
     };
-    let Ok(text) = std::fs::read_to_string(&p) else {
-        return Vec::new();
-    };
+    if !p.exists() {
+        // 文件不存在 = 从未有过审计记录（真空态），不是读失败。
+        return Ok(Vec::new());
+    }
+    let text = std::fs::read_to_string(&p).map_err(|e| format!("读取审计日志失败: {e}"))?;
     let n = limit.unwrap_or(50).clamp(1, 200);
-    text.lines()
+    Ok(text
+        .lines()
         .rev()
         .filter_map(|l| serde_json::from_str(l).ok())
         .take(n)
-        .collect()
+        .collect())
 }
