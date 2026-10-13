@@ -56,6 +56,7 @@ export const cleanup = {
     'cleanup.errNoCondaItems': '没有勾选任何要清理的项目（未使用的 environments 或包缓存）',
     'cleanup.errNoScopes': '没有勾选任何要清理的 scope',
     'cleanup.errPreviewEmpty': '预览结果为空 · 没有可清理的文件（可能都在保留期内）',
+    'cleanup.errPreviewProbeFailed': '预览探测失败 · 没探到任何文件（不代表没有，可能后端扫描出错）',
     'cleanup.errPreview': '预览失败：{msg}',
     'cleanup.errCleanup': '清理失败：{msg}',
     'cleanup.allFailed':
@@ -206,6 +207,7 @@ export const cleanup = {
     'cleanup.errNoCondaItems': 'Nothing is ticked to clean (unused environments or package cache)',
     'cleanup.errNoScopes': 'No scopes are ticked for cleanup',
     'cleanup.errPreviewEmpty': 'Preview is empty · no files qualify (they may all be within retention)',
+    'cleanup.errPreviewProbeFailed': 'Preview probe failed · no files found (that does not mean there are none; the backend scan may have failed)',
     'cleanup.errPreview': 'Preview failed: {msg}',
     'cleanup.errCleanup': 'Cleanup failed: {msg}',
     'cleanup.allFailed':

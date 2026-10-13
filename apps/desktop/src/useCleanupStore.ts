@@ -388,8 +388,9 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
     await useCleanupStore.getState().runRealDelete();
   },
 
-  // 第一步：只探测不落盘。dry-run 失败仅 console.warn（单 scope 失败不该让整批
-  // 崩掉），但「一个都没探到」必须报 err（errPreviewEmpty），不弹空窗。
+  // 第一步：只探测不落盘。单 scope 探测失败不崩整批（console.warn + 失败计数），
+  // 但「一个都没探到」时必须区分「真没有文件」（errPreviewEmpty）和
+  // 「探测失败」（errPreviewProbeFailed）——读失败 ≠ 空。
   runDryRun: async () => {
     const s0 = getCur();
     if (!s0) return;
@@ -403,6 +404,9 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       let totalBytes = 0;
       let totalFiles = 0;
       let scopeIds: string[] = [];
+      // 探测失败计数：单 scope 失败不该让整批崩掉，但「全都没探到」必须和
+      // 「真没有文件」区分——失败是失败，不是空（读失败 ≠ 空）。
+      let probeFailures = 0;
 
       if (s.isConda) {
         if (s.matches.length === 0) {
@@ -419,7 +423,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           patchInSession(() => ({ err: t('cleanup.errNoCondaItems') }));
           return;
         }
-        const tasks: Promise<{ source: string }[]>[] = [];
+        const tasks: Promise<{ ok: boolean; entries: { source: string }[] }>[] = [];
         const hitPaths: string[] = [];
         for (const scopeId of scopeIds) {
           if (scopeId === 'envs-stale') {
@@ -428,10 +432,13 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
                 .executeScope(s.scaffold.id, scopeId, s.matches[0].path, true, {
                   envFilter: [...s.selectedEnvs],
                 })
-                .catch((e) => {
-                  console.warn(`[diskpilot] dry-run ${s.scaffold.id}/${scopeId} failed:`, e);
-                  return [] as { source: string }[];
-                }),
+                .then(
+                  (entries) => ({ ok: true, entries }),
+                  (e) => {
+                    console.warn(`[diskpilot] dry-run ${s.scaffold.id}/${scopeId} failed:`, e);
+                    return { ok: false, entries: [] as { source: string }[] };
+                  },
+                ),
             );
           } else {
             const days = s.daysByScope[scopeId];
@@ -439,20 +446,24 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
               tasks.push(
                 api
                   .executeScope(s.scaffold.id, scopeId, m.path, true, { olderThanDays: days })
-                  .catch((e) => {
-                    console.warn(
-                      `[diskpilot] dry-run ${s.scaffold.id}/${scopeId} on ${m.path} failed:`,
-                      e,
-                    );
-                    return [] as { source: string }[];
-                  }),
+                  .then(
+                    (entries) => ({ ok: true, entries }),
+                    (e) => {
+                      console.warn(
+                        `[diskpilot] dry-run ${s.scaffold.id}/${scopeId} on ${m.path} failed:`,
+                        e,
+                      );
+                      return { ok: false, entries: [] as { source: string }[] };
+                    },
+                  ),
               );
             }
           }
         }
         const lists = await Promise.all(tasks);
         for (const list of lists) {
-          for (const e of list) {
+          if (!list.ok) probeFailures += 1;
+          for (const e of list.entries) {
             totalFiles += 1;
             hitPaths.push(e.source);
             tallyDrive(driveTally, e.source);
@@ -475,7 +486,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           s.wxids.length > 0 && s.selectedWxids.size < s.wxids.length
             ? [...s.selectedWxids]
             : undefined;
-        const tasks: Promise<{ source: string }[]>[] = [];
+        const tasks: Promise<{ ok: boolean; entries: { source: string }[] }>[] = [];
         for (const scopeId of scopeIds) {
           const days = s.daysByScope[scopeId];
           for (const m of s.matches) {
@@ -485,19 +496,23 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
                   olderThanDays: days,
                   wxidFilter,
                 })
-                .catch((e) => {
-                  console.warn(
-                    `[diskpilot] dry-run ${s.scaffold.id}/${scopeId} on ${m.path} failed:`,
-                    e,
-                  );
-                  return [] as { source: string }[];
-                }),
+                .then(
+                  (entries) => ({ ok: true, entries }),
+                  (e) => {
+                    console.warn(
+                      `[diskpilot] dry-run ${s.scaffold.id}/${scopeId} on ${m.path} failed:`,
+                      e,
+                    );
+                    return { ok: false, entries: [] as { source: string }[] };
+                  },
+                ),
             );
           }
         }
         const lists = await Promise.all(tasks);
         for (const list of lists) {
-          for (const e of list) {
+          if (!list.ok) probeFailures += 1;
+          for (const e of list.entries) {
             totalFiles += 1;
             tallyDrive(driveTally, e.source);
             if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
@@ -506,7 +521,10 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       }
 
       if (totalFiles === 0) {
-        patchInSession(() => ({ err: t('cleanup.errPreviewEmpty') }));
+        // 一个都没探到：若存在探测失败，那是「读失败」而非「真空」。
+        patchInSession(() => ({
+          err: probeFailures > 0 ? t('cleanup.errPreviewProbeFailed') : t('cleanup.errPreviewEmpty'),
+        }));
         return;
       }
       // 快照当前口径：真删复用这份，预览窗停留期间改 days/wxid/env 不会影响。
