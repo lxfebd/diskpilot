@@ -32,12 +32,14 @@ export function WeeklyHealthCard({
   const t = useT();
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(() => {
+    setLoadErr(null);
     api.getWeeklyReports(1)
       .then((list) => { setReport(list[0] ?? null); })
-      .catch(() => { setReport(null); })
+      .catch((e) => { setReport(null); setLoadErr(String(e instanceof Error ? e.message : e)); })
       .finally(() => setLoaded(true));
   }, []);
 
@@ -80,6 +82,8 @@ export function WeeklyHealthCard({
 
       {!loaded ? (
         <div className="wh-loading"><Loader2 size={14} className="spin" /></div>
+      ) : loadErr !== null ? (
+        <div className="wh-empty">{t('history.weekly.loadFailed', { msg: loadErr })}</div>
       ) : !report ? (
         <div className="wh-empty">{t('history.weekly.empty')}</div>
       ) : (
