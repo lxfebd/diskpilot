@@ -342,7 +342,7 @@ function HealthCheckupCard({
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
-  // 硬盘健康走快路径：只跑 WMI，家页不启动 CrystalDiskInfo（那是系统优化页该做的事）。
+  // 硬盘健康走快路径：只跑 WMI，家页不启动 CrystalDiskInfo（那是「工具」页该做的事，详情见工具页的硬盘健康面板）。
   const [tempC, setTempC] = useState<number | null>(null);
   const [startup, setStartup] = useState<StartupItem[] | null>(null);
   const [diskHealth, setDiskHealth] = useState<HwDiskHealth | null>(null);
@@ -780,6 +780,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                   <li><i className="ao-detail-dot" style={{ background: 'var(--accent-strong)' }} />{t('overview.detail.total')}<b>{cap[0]}</b></li>
                   <li><i className="ao-detail-dot" style={{ background: 'var(--risk-caution)' }} />{t('overview.detail.used')}<b>{cap[1]}</b></li>
                   <li><i className="ao-detail-dot" style={{ background: 'var(--risk-safe)' }} />{t('overview.detail.free')}<b>{cap[2]}</b></li>
+                  {/* 映射盘（subst）不是独立物理盘：详情里也要说清这份空间在哪个卷上，
+                      否则用户会以为这是两块盘、两份空间。 */}
+                  {selDrive.mapped_to && (
+                    <li><i className="ao-detail-dot" style={{ background: 'var(--accent-strong)' }} />{t('overview.detail.mapped')}<b>{selDrive.mapped_to}</b></li>
+                  )}
                 </ul>
               </>
             ) : (

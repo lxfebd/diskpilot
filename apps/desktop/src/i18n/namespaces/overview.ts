@@ -26,6 +26,7 @@ export const overview = {
     'overview.detail.total': '总容量',
     'overview.detail.used': '已用空间',
     'overview.detail.free': '可用空间',
+    'overview.detail.mapped': '映射盘（空间实际在）',
     'overview.noDrive': '未检测到磁盘',
 
     // 磁盘空间趋势（R6）
@@ -176,6 +177,7 @@ export const overview = {
     'overview.detail.total': 'Capacity',
     'overview.detail.used': 'Used',
     'overview.detail.free': 'Free',
+    'overview.detail.mapped': 'Mapped drive (space lives on)',
     'overview.noDrive': 'No drives detected',
 
     // Space trend (R6)
