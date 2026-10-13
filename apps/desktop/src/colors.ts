@@ -59,6 +59,18 @@ export function categoryColor(name: string): string {
   return CATEGORY_COLORS[name] ?? CATEGORY_FALLBACK;
 }
 
+// 温度色阶（R116）：CPU 温度区间 → 颜色，从「清凉」到「过热」的连续感知。
+// 用于长期历史温度分布条（HeatDistributionBar）；阈值口径与 hw_report 的
+// 温度告警一致（85℃ 警告线）。
+export const TEMP_RAMP = [
+  { label: '<50℃', to: 50, color: '#3fbf7f' },   // 清凉
+  { label: '50-60℃', to: 60, color: '#8bc34a' }, // 日常负载
+  { label: '60-70℃', to: 70, color: '#f2a33c' }, // 高负载
+  { label: '70-80℃', to: 80, color: '#ea8600' }, // 偏高
+  { label: '≥80℃', to: Infinity, color: '#e05252' }, // 过热区
+] as const;
+export const TEMP_RAMP_FALLBACK = '#64748b';
+
 // 首页磁盘分类占用卡片（AssetOverview）的柱状色板
 export const CAT_COLORS = ['#8a93a6', '#5b8def', '#3fbf7f', '#9b6de0', '#f2a33c', '#e05252', '#c9d0da', '#f0a0c0'];
 

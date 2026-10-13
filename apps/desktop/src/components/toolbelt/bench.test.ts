@@ -167,3 +167,55 @@ describe('buildScoreSeries（历次跑分 → 对比序列）', () => {
     expect(buildScoreSeries([], '整数（质数筛）')).toEqual([]);
   });
 });
+
+// R116：温度分布色阶条——锁定 TEMP_RAMP 分层口径（<50/50-60/60-70/70-80/≥80℃）
+// 与摘要统计（只统计数字温度，非有限值跳过不猜 0）。
+import { buildTempBuckets, tempSummary } from './charts';
+
+describe('buildTempBuckets（温度分布桶）', () => {
+  it('按区间分层，边界值归入下一档', () => {
+    const buckets = buildTempBuckets([45, 50, 59.9, 60, 69, 70, 79, 80, 85]);
+    expect(buckets.map((b) => b.count)).toEqual([1, 2, 2, 2, 2]); // <50 | 50-60 | 60-70 | 70-80 | ≥80
+  });
+
+  it('非有限值跳过（不猜 0），全空输入 → 各桶 0', () => {
+    const buckets = buildTempBuckets([55, NaN, Infinity, 65]);
+    expect(buckets.map((b) => b.count)).toEqual([0, 1, 1, 0, 0]);
+    expect(buildTempBuckets([]).every((b) => b.count === 0)).toBe(true);
+  });
+
+  it('负值是有限数、合法落入第一桶（-1℃ 记 <50℃ 而非丢弃）', () => {
+    expect(buildTempBuckets([-1])[0].count).toBe(1);
+  });
+
+  it('桶顺序与颜色来自 TEMP_RAMP（色阶单源）', () => {
+    const buckets = buildTempBuckets([50]);
+    expect(buckets[0].label).toBe('<50℃');
+    expect(buckets[1].label).toBe('50-60℃');
+    expect(buckets[4].label).toBe('≥80℃');
+    // 颜色已从 colors.ts 注入，非空即可
+    expect(buckets.every((b) => b.color.length > 0)).toBe(true);
+  });
+});
+
+describe('tempSummary（温度摘要）', () => {
+  it('峰值/均值/样本数/高温占比', () => {
+    const s = tempSummary([50, 60, 70, 80]);
+    expect(s).not.toBeNull();
+    expect(s!.peak).toBe(80);
+    expect(s!.mean).toBe(65);
+    expect(s!.n).toBe(4);
+    expect(s!.hotRatio).toBe(0.5); // ≥70 两个
+  });
+
+  it('无有效样本 → null（调用方不渲染摘要）', () => {
+    expect(tempSummary([])).toBeNull();
+    expect(tempSummary([NaN, Infinity])).toBeNull();
+  });
+
+  it('全部低温 → hotRatio 0', () => {
+    const s = tempSummary([40, 45, 49]);
+    expect(s!.hotRatio).toBe(0);
+    expect(s!.mean).toBe(44.666666666666664);
+  });
+});

@@ -12,7 +12,7 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, parseTrendJson, buildScoreSeries } from './charts';
+import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, parseTrendJson, buildScoreSeries } from './charts';
 import type { TrendPoint } from './charts';
 
 interface BenchHistoryEntry {
@@ -469,6 +469,14 @@ export function BenchPanel() {
               <div className="bench-trend-err muted small">{t('toolbelt.bench.trend.longNote')}</div>
             )}
             <TrendChart points={trendData.points} />
+            {/* R116：长期历史的温度分布色阶条——只统计有温度的样本 */}
+            {trendData.range === 'long' && (
+              <HeatDistributionBar
+                temps={trendData.points
+                  .map((p) => p.cpu_temp_c)
+                  .filter((v): v is number => typeof v === 'number')}
+              />
+            )}
           </>
         )}
         {trendData && trendData.points.length === 0 && (

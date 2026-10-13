@@ -431,6 +431,12 @@ export const toolbelt = {
     'toolbelt.scoreChart.minLabel': '最低 {min}',
     'toolbelt.scoreChart.bestLabel': '最佳（强调色）',
     'toolbelt.scoreChart.countLabel': '共 {n} 次 · 单位 {unit}',
+    'toolbelt.heatDist.title': '长期历史温度分布（CPU 最高温，按区间）',
+    'toolbelt.heatDist.aria': '长期历史 CPU 温度分布色阶条',
+    'toolbelt.heatDist.summary': '样本 {n} · 峰值 {peak}℃ · 均值 {mean}℃',
+    'toolbelt.heatDist.hot': '其中 ≥70℃ 占 {pct}%（高负载/压测占比）',
+    'toolbelt.heatDist.hotNone': '没有 ≥70℃ 的高温样本',
+    'toolbelt.heatDist.note': '只统计有温度读数的样本；区间口径与告警阈值一致',
 
     // 插件市场（内置工具插件化 + 社区注册表 / 远端索引分发）
     'toolbelt.mkt.loadFailed': '社区注册表加载失败：{msg}',
@@ -983,6 +989,12 @@ export const toolbelt = {
     'toolbelt.scoreChart.minLabel': 'low {min}',
     'toolbelt.scoreChart.bestLabel': 'best (highlighted)',
     'toolbelt.scoreChart.countLabel': '{n} runs · unit {unit}',
+    'toolbelt.heatDist.title': 'Temperature distribution across history (CPU peak, by range)',
+    'toolbelt.heatDist.aria': 'Historical CPU temperature distribution color bar',
+    'toolbelt.heatDist.summary': '{n} samples · peak {peak}°C · mean {mean}°C',
+    'toolbelt.heatDist.hot': '{pct}% above 70°C (high-load / stress share)',
+    'toolbelt.heatDist.hotNone': 'No samples above 70°C',
+    'toolbelt.heatDist.note': 'Only samples with a temperature reading count; ranges match alert thresholds',
 
     // Plugin market (plugin-ising built-in tools + community registry / remote index)
     'toolbelt.mkt.loadFailed': 'Community registry failed to load: {msg}',

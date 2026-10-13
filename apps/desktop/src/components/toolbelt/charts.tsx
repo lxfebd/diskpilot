@@ -1,5 +1,6 @@
 // ── 轻量 SVG 图表（无第三方图表库）：传感器趋势折线 + 稳定性压测温度折线 ──
 import { useT } from '../../i18n';
+import { TEMP_RAMP } from '../../colors';
 
 // ── G15 传感器趋势折线图（轻量 SVG，无第三方图表库）──
 export interface TrendPoint {
@@ -282,6 +283,95 @@ export function StressHistoryChart({ series }: { series: StressHistorySeries[] }
           </span>
         ))}
         <span className="muted small">{t('toolbelt.stressChart.historyNote')}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── R116 温度分布色阶条 ──
+// 把长期历史里的 CPU 温度样本按区间（TEMP_RAMP 色阶）统计，画成一条分段
+// 色带 + 峰值/均值/样本摘要——「这台机器日常散热表现如何」一眼可见。
+// 只统计有温度的样本；无温度（null / 采集失败）的样本如实跳过。
+
+export interface TempBucket {
+  label: string;
+  count: number;
+  color: string;
+}
+
+/// 温度样本 → 分布桶（纯函数，可单测）。分层口径与 TEMP_RAMP 一致；
+/// 只统计数字温度，非数字 / 非有限值跳过（不猜 0）。
+export function buildTempBuckets(temps: number[]): TempBucket[] {
+  const buckets = TEMP_RAMP.map((r) => ({ label: r.label, count: 0, color: r.color }));
+  for (const v of temps) {
+    if (!Number.isFinite(v)) continue;
+    const idx = TEMP_RAMP.findIndex((r) => v < r.to);
+    if (idx >= 0) buckets[idx].count += 1;
+    else buckets[buckets.length - 1].count += 1;
+  }
+  return buckets;
+}
+
+/// 分布摘要（纯函数，可单测）：峰值 / 均值 / 有效样本数 / 过热占比。
+/// 有效样本为 0 时返回 null（调用方不渲染摘要）。
+export function tempSummary(temps: number[]): {
+  peak: number;
+  mean: number;
+  n: number;
+  hotRatio: number;
+} | null {
+  const valid = temps.filter((v) => Number.isFinite(v));
+  if (valid.length === 0) return null;
+  return {
+    peak: Math.max(...valid),
+    mean: valid.reduce((a, b) => a + b, 0) / valid.length,
+    n: valid.length,
+    // 过热占比：≥70℃（压测/高负载阈值，与告警口径接近；80℃ 是熔断护栏线）
+    hotRatio: valid.filter((v) => v >= 70).length / valid.length,
+  };
+}
+
+export function HeatDistributionBar({ temps }: { temps: number[] }) {
+  const t = useT();
+  if (temps.length === 0) return null;
+  const buckets = buildTempBuckets(temps);
+  const sum = buckets.reduce((a, b) => a + b.count, 0) || 1;
+  const summary = tempSummary(temps);
+
+  return (
+    <div className="bench-trend" style={{ marginTop: 10 }}>
+      <div className="bench-stress-hist-title muted small">{t('toolbelt.heatDist.title')}</div>
+      <div className="heat-dist-bar" role="img" aria-label={t('toolbelt.heatDist.aria')}>
+        {buckets.map((b) =>
+          b.count > 0 ? (
+            <div
+              key={b.label}
+              className="heat-dist-seg"
+              style={{ width: `${(b.count / sum) * 100}%`, background: b.color }}
+              title={`${b.label}: ${b.count}`}
+            />
+          ) : null,
+        )}
+      </div>
+      <div className="heat-dist-legend">
+        {buckets.map((b) => (
+          <span key={b.label} className="heat-dist-item muted small">
+            <i style={{ background: b.color }} /> {b.label}
+            <b>{b.count}</b>
+          </span>
+        ))}
+      </div>
+      {summary && (
+        <p className="muted small heat-dist-summary">
+          {t('toolbelt.heatDist.summary', { n: summary.n, peak: summary.peak.toFixed(1), mean: summary.mean.toFixed(1) })}
+          {' · '}
+          {summary.hotRatio > 0.1
+            ? t('toolbelt.heatDist.hot', { pct: (summary.hotRatio * 100).toFixed(0) })
+            : t('toolbelt.heatDist.hotNone')}
+        </p>
+      )}
+      <div className="bench-trend-legend">
+        <span className="muted small">{t('toolbelt.heatDist.note')}</span>
       </div>
     </div>
   );

@@ -535,6 +535,46 @@ html[data-theme="pro"] .tb-tab.active { border-color: var(--accent-strong); back
   color: var(--ink-2);
 }
 
+/* ── R116 温度分布色阶条（HeatDistributionBar）── */
+.heat-dist-bar {
+  display: flex;
+  width: 100%;
+  height: 18px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.heat-dist-seg {
+  height: 100%;
+  min-width: 3px;
+}
+.heat-dist-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.heat-dist-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.heat-dist-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.heat-dist-item b {
+  font-weight: 700;
+  color: var(--ink);
+}
+.heat-dist-summary {
+  margin-top: 6px;
+}
+
 /* ── GPU 甜甜圈压测（FurMark 简化版全屏渲染层）── */
 .gpu-donut-overlay {
   position: fixed;
