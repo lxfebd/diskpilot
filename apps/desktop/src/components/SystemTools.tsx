@@ -37,6 +37,9 @@ function SystemToolsInner() {
   const [fanLoading, setFanLoading] = useState(false);
   // 风扇控制（fan.control，L2）：状态 + 档位 + 确认 + 熔断通知。
   const [fanStatus, setFanStatus] = useState<FanStatus | null>(null);
+  // fanStatus 读失败单独记：探测失败 ≠ 「无通道」（控制区会禁用，但标签不能
+  // 说成"当前无可用调速通道"——那是把读失败伪装成不存在）。
+  const [fanStatusErr, setFanStatusErr] = useState<string | null>(null);
   const [fanCtrlErr, setFanCtrlErr] = useState<string | null>(null);
   const [fanLevel, setFanLevel] = useState<string>('balanced');
   const [fanCtrlBusy, setFanCtrlBusy] = useState(false);
@@ -77,8 +80,11 @@ function SystemToolsInner() {
   const loadFanStatus = async () => {
     try {
       setFanStatus(await api.fanStatus());
-    } catch {
-      // 只读状态读不到不致命（探测失败保持现状）。
+      setFanStatusErr(null);
+    } catch (e) {
+      // 只读状态读不到不致命（控制按钮禁用即可），但不能把「读失败」说成
+      // 「无可用通道」——状态未知 ≠ 不存在。
+      setFanStatusErr(String(e instanceof Error ? e.message : e));
     }
   };
 
@@ -232,6 +238,8 @@ function SystemToolsInner() {
             <span className="muted small"><Fan size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('system.fan.controlTitle')}</span>
             {fanStatus?.writable ? (
               <span className="sys-tag sys-tag-green">{t('system.fan.channelOk', { name: fanStatus.probe?.cli?.name ?? 'CLI' })}</span>
+            ) : fanStatusErr ? (
+              <span className="sys-tag sys-tag-grey" title={fanStatusErr}>{t('system.fan.channelUnread')}</span>
             ) : (
               <span className="sys-tag sys-tag-grey">{t('system.fan.channelNone')}</span>
             )}
