@@ -299,49 +299,64 @@ export interface TempBucket {
   color: string;
 }
 
-/// 温度样本 → 分布桶（纯函数，可单测）。分层口径与 TEMP_RAMP 一致；
-/// 只统计数字温度，非数字 / 非有限值跳过（不猜 0）。
-export function buildTempBuckets(temps: number[]): TempBucket[] {
-  const buckets = TEMP_RAMP.map((r) => ({ label: r.label, count: 0, color: r.color }));
-  for (const v of temps) {
+export type Ramp = ReadonlyArray<{ label: string; to: number; color: string }>;
+
+/// 数值样本 → 分布桶（纯函数，可单测）。分层口径与传入 ramp 一致；
+/// 只统计数字值，非数字 / 非有限值跳过（不猜 0）。
+export function buildBuckets(values: number[], ramp: Ramp): TempBucket[] {
+  const buckets = ramp.map((r) => ({ label: r.label, count: 0, color: r.color }));
+  for (const v of values) {
     if (!Number.isFinite(v)) continue;
-    const idx = TEMP_RAMP.findIndex((r) => v < r.to);
+    const idx = ramp.findIndex((r) => v < r.to);
     if (idx >= 0) buckets[idx].count += 1;
     else buckets[buckets.length - 1].count += 1;
   }
   return buckets;
 }
 
-/// 分布摘要（纯函数，可单测）：峰值 / 均值 / 有效样本数 / 过热占比。
+/// 分布摘要（纯函数，可单测）：峰值 / 均值 / 有效样本数 / 高值占比
+/// （≥ highThreshold，阈值由调用方按维度界定：温度 70℃ / 内存 85%）。
 /// 有效样本为 0 时返回 null（调用方不渲染摘要）。
-export function tempSummary(temps: number[]): {
+export function distSummary(values: number[], highThreshold: number): {
   peak: number;
   mean: number;
   n: number;
-  hotRatio: number;
+  highRatio: number;
 } | null {
-  const valid = temps.filter((v) => Number.isFinite(v));
+  const valid = values.filter((v) => Number.isFinite(v));
   if (valid.length === 0) return null;
   return {
     peak: Math.max(...valid),
     mean: valid.reduce((a, b) => a + b, 0) / valid.length,
     n: valid.length,
-    // 过热占比：≥70℃（压测/高负载阈值，与告警口径接近；80℃ 是熔断护栏线）
-    hotRatio: valid.filter((v) => v >= 70).length / valid.length,
+    highRatio: valid.filter((v) => v >= highThreshold).length / valid.length,
   };
 }
 
-export function HeatDistributionBar({ temps }: { temps: number[] }) {
+/// 通用分布色阶条（R117 泛化）：把数值样本按 ramp 区间统计成分段色带 +
+/// 峰值/均值/摘要 + 高值占比解读。i18n 文案按 ns 取（heatDist / memDist
+/// 两组键同构）。温度与内存占用两路复用。
+export function DistributionBar({
+  values,
+  ramp,
+  highThreshold,
+  ns,
+}: {
+  values: number[];
+  ramp: Ramp;
+  highThreshold: number;
+  ns: 'toolbelt.heatDist' | 'toolbelt.memDist';
+}) {
   const t = useT();
-  if (temps.length === 0) return null;
-  const buckets = buildTempBuckets(temps);
+  if (values.length === 0) return null;
+  const buckets = buildBuckets(values, ramp);
   const sum = buckets.reduce((a, b) => a + b.count, 0) || 1;
-  const summary = tempSummary(temps);
+  const summary = distSummary(values, highThreshold);
 
   return (
     <div className="bench-trend" style={{ marginTop: 10 }}>
-      <div className="bench-stress-hist-title muted small">{t('toolbelt.heatDist.title')}</div>
-      <div className="heat-dist-bar" role="img" aria-label={t('toolbelt.heatDist.aria')}>
+      <div className="bench-stress-hist-title muted small">{t(`${ns}.title`)}</div>
+      <div className="heat-dist-bar" role="img" aria-label={t(`${ns}.aria`)}>
         {buckets.map((b) =>
           b.count > 0 ? (
             <div
@@ -363,18 +378,29 @@ export function HeatDistributionBar({ temps }: { temps: number[] }) {
       </div>
       {summary && (
         <p className="muted small heat-dist-summary">
-          {t('toolbelt.heatDist.summary', { n: summary.n, peak: summary.peak.toFixed(1), mean: summary.mean.toFixed(1) })}
+          {t(`${ns}.summary`, { n: summary.n, peak: summary.peak.toFixed(1), mean: summary.mean.toFixed(1) })}
           {' · '}
-          {summary.hotRatio > 0.1
-            ? t('toolbelt.heatDist.hot', { pct: (summary.hotRatio * 100).toFixed(0) })
-            : t('toolbelt.heatDist.hotNone')}
+          {summary.highRatio > 0.1
+            ? t(`${ns}.hot`, { pct: (summary.highRatio * 100).toFixed(0) })
+            : t(`${ns}.hotNone`)}
         </p>
       )}
       <div className="bench-trend-legend">
-        <span className="muted small">{t('toolbelt.heatDist.note')}</span>
+        <span className="muted small">{t(`${ns}.note`)}</span>
       </div>
     </div>
   );
+}
+
+// ── R116 温度分布（兼容薄封装：R116 单测与 bench.tsx 接线不变）──
+export function buildTempBuckets(temps: number[]): TempBucket[] {
+  return buildBuckets(temps, TEMP_RAMP);
+}
+export function tempSummary(temps: number[]): ReturnType<typeof distSummary> {
+  return distSummary(temps, 70);
+}
+export function HeatDistributionBar({ temps }: { temps: number[] }) {
+  return <DistributionBar values={temps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.heatDist" />;
 }
 
 

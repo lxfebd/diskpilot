@@ -71,6 +71,17 @@ export const TEMP_RAMP = [
 ] as const;
 export const TEMP_RAMP_FALLBACK = '#64748b';
 
+// 内存占用色阶（R117）：占用百分比区间 → 颜色，「日常宽松」到「快满」。
+// 用于长期历史内存占用分布条；阈值口径与 sensor_alert 的内存告警一致
+// （90% 告警线）。
+export const MEM_RAMP = [
+  { label: '<50%', to: 50, color: '#3fbf7f' },   // 宽松
+  { label: '50-70%', to: 70, color: '#8bc34a' }, // 日常
+  { label: '70-85%', to: 85, color: '#f2a33c' }, // 偏紧
+  { label: '85-95%', to: 95, color: '#ea8600' }, // 很紧
+  { label: '≥95%', to: Infinity, color: '#e05252' }, // 快满
+] as const;
+
 // 首页磁盘分类占用卡片（AssetOverview）的柱状色板
 export const CAT_COLORS = ['#8a93a6', '#5b8def', '#3fbf7f', '#9b6de0', '#f2a33c', '#e05252', '#c9d0da', '#f0a0c0'];
 

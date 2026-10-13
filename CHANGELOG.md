@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 内存占用分布（R117）
+
+- **分布条泛化**：R116 的温度分布条重构为通用 `DistributionBar`（ramp 区间
+  色阶 + 高值阈值 + i18n 命名空间三参数注入），温度 / 内存两路复用；`buildBuckets`
+  / `distSummary` 纯函数替代 `buildTempBuckets`/`tempSummary`（旧名薄封装保留，
+  R116 单测与接线不动）。
+- **内存占用分布条**：长期历史的 `mem_percent` 样本按 <50 / 50–70 / 70–85 /
+  85–95 / ≥95% 分层（`MEM_RAMP` 单源，阈值口径与 sensor_alert 内存告警一致），
+  摘要 + ≥85% 吃紧占比解读——「32GB 日常够不够挤」一眼可见。
+- 单测 +4（泛化分层边界与阈值注入语义，32 files · 374 tests）。
+
 ### 2026-10-13 温度分布色阶条（R116）
 
 - **长期历史温度分布条**：点「长期历史（只读）」后，除折线回放外再渲染一条

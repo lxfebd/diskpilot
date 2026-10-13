@@ -205,7 +205,7 @@ describe('tempSummary（温度摘要）', () => {
     expect(s!.peak).toBe(80);
     expect(s!.mean).toBe(65);
     expect(s!.n).toBe(4);
-    expect(s!.hotRatio).toBe(0.5); // ≥70 两个
+    expect(s!.highRatio).toBe(0.5); // ≥70 两个
   });
 
   it('无有效样本 → null（调用方不渲染摘要）', () => {
@@ -213,9 +213,43 @@ describe('tempSummary（温度摘要）', () => {
     expect(tempSummary([NaN, Infinity])).toBeNull();
   });
 
-  it('全部低温 → hotRatio 0', () => {
+  it('全部低温 → highRatio 0', () => {
     const s = tempSummary([40, 45, 49]);
-    expect(s!.hotRatio).toBe(0);
+    expect(s!.highRatio).toBe(0);
     expect(s!.mean).toBe(44.666666666666664);
+  });
+});
+
+// R117：分布条泛化（buildBuckets / distSummary 带 MEM_RAMP 语义）——
+// 温度与内存复用同一套分层/统计逻辑，阈值按维度注入。
+import { buildBuckets, distSummary } from './charts';
+import { MEM_RAMP } from '../../colors';
+
+describe('buildBuckets（泛化分布桶，内存 RAMP）', () => {
+  it('按 MEM_RAMP 分层：<50 / 50-70 / 70-85 / 85-95 / ≥95', () => {
+    const buckets = buildBuckets([30, 50, 69, 70, 84, 85, 94, 95, 100], MEM_RAMP);
+    expect(buckets.map((b) => b.count)).toEqual([1, 2, 2, 2, 2]);
+    expect(buckets[0].label).toBe('<50%');
+    expect(buckets[4].label).toBe('≥95%');
+  });
+
+  it('非有限值跳过；空输入 → 各桶 0', () => {
+    expect(buildBuckets([55, NaN, Infinity], MEM_RAMP).map((b) => b.count)).toEqual([0, 1, 0, 0, 0]);
+    expect(buildBuckets([], MEM_RAMP).every((b) => b.count === 0)).toBe(true);
+  });
+});
+
+describe('distSummary（泛化摘要，阈值按维度）', () => {
+  it('内存阈值 85%：高值占比', () => {
+    const s = distSummary([50, 60, 85, 95], 85);
+    expect(s).not.toBeNull();
+    expect(s!.peak).toBe(95);
+    expect(s!.mean).toBe(72.5);
+    expect(s!.highRatio).toBe(0.5); // ≥85 两个
+  });
+
+  it('无有效样本 → null', () => {
+    expect(distSummary([], 85)).toBeNull();
+    expect(distSummary([NaN], 70)).toBeNull();
   });
 });

@@ -12,8 +12,9 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, parseTrendJson, buildScoreSeries } from './charts';
+import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, parseTrendJson, buildScoreSeries } from './charts';
 import type { TrendPoint } from './charts';
+import { MEM_RAMP } from '../../colors';
 
 interface BenchHistoryEntry {
   at: number;
@@ -475,6 +476,17 @@ export function BenchPanel() {
                 temps={trendData.points
                   .map((p) => p.cpu_temp_c)
                   .filter((v): v is number => typeof v === 'number')}
+              />
+            )}
+            {/* R117：长期历史的内存占用分布色阶条——回答「内存日常够不够挤」 */}
+            {trendData.range === 'long' && (
+              <DistributionBar
+                values={trendData.points
+                  .map((p) => p.mem_percent)
+                  .filter((v): v is number => typeof v === 'number')}
+                ramp={MEM_RAMP}
+                highThreshold={85}
+                ns="toolbelt.memDist"
               />
             )}
           </>

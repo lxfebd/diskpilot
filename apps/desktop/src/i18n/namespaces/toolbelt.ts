@@ -437,6 +437,12 @@ export const toolbelt = {
     'toolbelt.heatDist.hot': '其中 ≥70℃ 占 {pct}%（高负载/压测占比）',
     'toolbelt.heatDist.hotNone': '没有 ≥70℃ 的高温样本',
     'toolbelt.heatDist.note': '只统计有温度读数的样本；区间口径与告警阈值一致',
+    'toolbelt.memDist.title': '长期历史内存占用分布（按区间）',
+    'toolbelt.memDist.aria': '长期历史内存占用分布色阶条',
+    'toolbelt.memDist.summary': '样本 {n} · 峰值 {peak}% · 均值 {mean}%',
+    'toolbelt.memDist.hot': '其中 ≥85% 占 {pct}%（内存吃紧占比）',
+    'toolbelt.memDist.hotNone': '没有 ≥85% 的高占用样本',
+    'toolbelt.memDist.note': '只统计有占用读数的样本；区间口径与 sensor_alert 内存告警一致',
 
     // 插件市场（内置工具插件化 + 社区注册表 / 远端索引分发）
     'toolbelt.mkt.loadFailed': '社区注册表加载失败：{msg}',
@@ -995,6 +1001,12 @@ export const toolbelt = {
     'toolbelt.heatDist.hot': '{pct}% above 70°C (high-load / stress share)',
     'toolbelt.heatDist.hotNone': 'No samples above 70°C',
     'toolbelt.heatDist.note': 'Only samples with a temperature reading count; ranges match alert thresholds',
+    'toolbelt.memDist.title': 'Memory usage distribution across history (by range)',
+    'toolbelt.memDist.aria': 'Historical memory usage distribution color bar',
+    'toolbelt.memDist.summary': '{n} samples · peak {peak}% · mean {mean}%',
+    'toolbelt.memDist.hot': '{pct}% above 85% (memory pressure share)',
+    'toolbelt.memDist.hotNone': 'No samples above 85%',
+    'toolbelt.memDist.note': 'Only samples with a usage reading count; ranges match sensor_alert memory thresholds',
 
     // Plugin market (plugin-ising built-in tools + community registry / remote index)
     'toolbelt.mkt.loadFailed': 'Community registry failed to load: {msg}',
