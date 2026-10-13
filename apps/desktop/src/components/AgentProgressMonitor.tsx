@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import { isTauri } from '../env';
 import { api } from '../api';
+import { useT } from '../i18n';
 
 export interface AgentToolProgressPayload {
   pct: number; // 千分比 0..1000
@@ -112,56 +113,34 @@ export function AgentProgressCard({
   onCancel,
   showCancelButton = true,
 }: ProgressCardProps) {
+  const t = useT();
   if (!progress) return null;
 
   const pctPercent = Math.round(progress.progress); // progress 是 0..100
 
+  // R107：内联样式/硬编码中文 → CSS 类 + i18n（token 走主题，「停止」多语言）。
   return (
-    <div style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <span style={{ fontWeight: 500 }}>{label}</span>
+    <div className="agent-progress-card">
+      <div className="agent-progress-top">
+        <span>{label}</span>
         {showCancelButton && onCancel && (
-          <button
-            onClick={onCancel}
-            style={{
-              background: '#f44336',
-              color: 'white',
-              border: 'none',
-              padding: '4px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-            }}
-          >
-            停止
+          <button className="agent-progress-stop" onClick={onCancel}>
+            {t('chat.input.stop')}
           </button>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                width: `${pctPercent}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #4caf50, #66bb6a)',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
+      <div className="agent-progress-row">
+        <div className="agent-progress-track">
+          <div
+            className="agent-progress-fill"
+            style={{ width: `${pctPercent}%` }}
+          />
         </div>
-        <div style={{ minWidth: '50px', textAlign: 'right', fontSize: '14px', fontWeight: 600 }}>
-          {Math.round(progress.progress)}%
-        </div>
+        <div className="agent-progress-pct">{pctPercent}%</div>
       </div>
       {progress.message && (
-        <div style={{ marginTop: '6px', fontSize: '12px', color: '#666' }}>
-          {progress.message}
-        </div>
+        <div className="agent-progress-msg">{progress.message}</div>
       )}
-      <div style={{ marginTop: '4px', fontSize: '11px', color: '#999' }}>
-        （千分比：{progress.pct}/1000）
-      </div>
     </div>
   );
 }
