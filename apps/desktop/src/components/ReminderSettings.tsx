@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Play, BellOff } from 'lucide-react';
+import { Play, BellOff, TrendingUp } from 'lucide-react';
 import { api } from '../api';
-import type { ReminderConfig, ReminderPayload } from '../api';
+import type { ReminderConfig, ReminderPayload, SpaceForecast } from '../api';
 import { formatBytes } from '../format';
 import { useStore } from '../store';
 import { useT } from '../i18n';
@@ -19,6 +19,10 @@ export function ReminderSettings() {
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastPayload, setLastPayload] = useState<ReminderPayload | null>(null);
+  // R100 逐盘趋势检查：独立忙碌态 + 结果 + 读失败原因（失败 ≠ 空列表）。
+  const [forecastBusy, setForecastBusy] = useState(false);
+  const [forecast, setForecast] = useState<SpaceForecast[] | null>(null);
+  const [forecastErr, setForecastErr] = useState<string | null>(null);
 
   // 打开时同步后端配置
   useEffect(() => {
@@ -58,6 +62,22 @@ export function ReminderSettings() {
       useStore.getState().toast(t('system.reminder.toastCheckFailed', { err: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
       setBusy(false);
+    }
+  };
+
+  // R100：立即检查各盘空间趋势（只读，外推已有采样，绝不触发扫描/清理）。
+  const checkForecast = async () => {
+    setForecastBusy(true);
+    setForecastErr(null);
+    try {
+      const rows = await api.checkSpaceForecast();
+      setForecast(rows);
+    } catch (e) {
+      // 读失败 ≠ 空列表：记录原因展示，不伪装成「没有趋势」。
+      setForecast(null);
+      setForecastErr(String(e instanceof Error ? e.message : e));
+    } finally {
+      setForecastBusy(false);
     }
   };
 
@@ -179,6 +199,41 @@ export function ReminderSettings() {
       <div className="muted small" style={{ marginTop: 6 }}>
         {t('system.reminder.fullWarnHint')}
       </div>
+
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.forecastTitle')}</div>
+      <button className="ghost" onClick={checkForecast} disabled={forecastBusy}>
+        <TrendingUp size={13} /> {forecastBusy ? t('system.reminder.forecastChecking') : t('system.reminder.forecastCheck')}
+      </button>
+      {forecastErr && (
+        <div className="error small" style={{ marginTop: 8 }}>
+          {t('system.reminder.loadFailed', { err: forecastErr })}
+        </div>
+      )}
+      {forecast && forecast.length === 0 && !forecastErr && (
+        <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.forecastEmpty')}</div>
+      )}
+      {forecast && forecast.length > 0 && (
+        <div className="reminder-result" style={{ marginTop: 8 }}>
+          {forecast.map((f) => {
+            const status =
+              f.reason === 'ok' && f.days !== null
+                ? f.days === 0
+                  ? t('system.reminder.forecastNow')
+                  : t('system.reminder.forecastOk', { n: f.days })
+                : f.reason === 'no_history'
+                  ? t('system.reminder.forecastNoHistory')
+                  : f.reason === 'not_enough'
+                    ? t('system.reminder.forecastNotEnough')
+                    : t('system.reminder.forecastReleasing');
+            return (
+              <div key={f.path} className="muted small">
+                {f.path} · {status}
+                {f.warn && t('system.reminder.forecastWarn')}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.runNowTitle')}</div>
       <button className="ghost" onClick={runNow} disabled={busy || !cfg.enabled}>

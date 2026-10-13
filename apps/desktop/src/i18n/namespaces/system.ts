@@ -136,6 +136,18 @@ export const system = {
     'system.reminder.fullWarnOff': '关闭',
     'system.reminder.fullWarnDays': '{n} 天',
     'system.reminder.fullWarnHint': '需要至少两次扫描记录才有趋势；清理或卸载后释放空间，预警会自动解除。',
+
+    // ── R100 空间趋势逐盘检查 ──
+    'system.reminder.forecastTitle': '各盘空间趋势',
+    'system.reminder.forecastCheck': '检查趋势',
+    'system.reminder.forecastChecking': '检查中…',
+    'system.reminder.forecastEmpty': '暂无空间历史记录（需至少两次扫描采样）',
+    'system.reminder.forecastOk': '约 {n} 天后满',
+    'system.reminder.forecastNow': '已满',
+    'system.reminder.forecastNoHistory': '未读到历史（尚无采样）',
+    'system.reminder.forecastNotEnough': '记录不足（需至少两次采样）',
+    'system.reminder.forecastReleasing': '释放中/持平（无需预警）',
+    'system.reminder.forecastWarn': ' ⚠ 预警中',
   },
   en: {
     // ── Shared short words ──
@@ -270,5 +282,17 @@ export const system = {
     'system.reminder.fullWarnOff': 'Off',
     'system.reminder.fullWarnDays': '{n} days',
     'system.reminder.fullWarnHint': 'Needs at least two scan samples to have a trend; freeing space by cleaning or uninstalling clears the warning automatically.',
+
+    // ── R100 per-drive space trend check ──
+    'system.reminder.forecastTitle': 'Space trend per drive',
+    'system.reminder.forecastCheck': 'Check trends',
+    'system.reminder.forecastChecking': 'Checking…',
+    'system.reminder.forecastEmpty': 'No space history yet (needs at least two scan samples)',
+    'system.reminder.forecastOk': 'Full in about {n} day(s)',
+    'system.reminder.forecastNow': 'Full now',
+    'system.reminder.forecastNoHistory': 'No history read (no samples yet)',
+    'system.reminder.forecastNotEnough': 'Not enough samples (need at least two)',
+    'system.reminder.forecastReleasing': 'Releasing / flat (no warning needed)',
+    'system.reminder.forecastWarn': ' ⚠ warning',
   },
 };

@@ -225,6 +225,64 @@ pub(crate) fn collect_full_warns(
     Ok(out)
 }
 
+/// R100 空间趋势逐盘检查结果（`check_space_forecast_cmd` 返回，展示用）。
+/// 诚实三态：`days = Some` 才有预测；`None` 时 `reason` 说明为什么预测不了
+/// （no_history 从未采样 / not_enough 样本不足 / releasing 持平或释放中），
+/// 绝不把「读不到趋势」伪装成 0 天或隐藏了事。
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub(crate) struct SpaceForecast {
+    /// 卷根路径（C:\ 等）。
+    pub path: String,
+    /// 预计满盘天数（向上取整；0 = 已满）；None = 无法预测，看 reason。
+    pub days: Option<u64>,
+    /// 预测状态：ok / no_history / not_enough / releasing。
+    pub reason: &'static str,
+    /// days ≤ full_warn_days（命中预警阈值；未设阈值时恒 false）。
+    pub warn: bool,
+}
+
+/// 单盘趋势判定（纯函数，可单测）。复用 `forecast_full_days` 的语义：
+/// 先分样本态（空/不足/零跨度），再交给外推函数——None 时必为持平或释放。
+pub(crate) fn space_forecast_for(
+    root: &str,
+    pts: &[crate::space_history::SpacePoint],
+    warn_days: u64,
+) -> SpaceForecast {
+    let (days, reason) = if pts.is_empty() {
+        (None, "no_history")
+    } else if pts.len() < 2 || pts[pts.len() - 1].at <= pts[0].at {
+        (None, "not_enough")
+    } else {
+        match forecast_full_days(pts) {
+            Some(d) => (Some(d.ceil() as u64), "ok"),
+            // 样本够、跨度为正 → None 只可能是增速 ≤0（持平/释放）。
+            None => (None, "releasing"),
+        }
+    };
+    let warn = days.is_some_and(|d| d <= warn_days) && warn_days > 0;
+    SpaceForecast {
+        path: root.to_string(),
+        days,
+        reason,
+        warn,
+    }
+}
+
+/// 立即检查各盘空间趋势（展示路径，R100）：读失败按诚实性族规向上传播
+/// Err（绝不返回空列表伪装成「没有预警」），前端展示「未读到 + 原因」。
+/// 纯只读：只外推已有采样，不触发扫描、不做任何清理。
+#[tauri::command]
+pub(crate) fn check_space_forecast_cmd(app: AppHandle) -> Result<Vec<SpaceForecast>, String> {
+    let cfg = config_at(&app);
+    let hist = crate::space_history::read_history(&app)?;
+    let mut roots: Vec<&String> = hist.keys().collect();
+    roots.sort(); // HashMap 顺序不定：排序保证同输入同输出
+    Ok(roots
+        .iter()
+        .map(|r| space_forecast_for(r, &hist[*r], cfg.full_warn_days))
+        .collect())
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct DriveCleanup {
     pub path: String,
@@ -520,5 +578,69 @@ mod tests {
         // collect_full_warns 依赖 AppHandle（read_history 要路径），这里只验证
         // 配置默认关闭、以及阈值语义在纯函数层成立：full_warn_days 上限 365。
         assert_eq!(cfg.full_warn_days, 0, "默认关空间预警");
+    }
+
+    // ── R100 space_forecast_for：逐盘趋势三态 + warn 判定 ──
+
+    #[test]
+    fn forecast_states_honest() {
+        // 从未采样：no_history
+        let f = space_forecast_for("C:\\", &[], 14);
+        assert_eq!(f.days, None);
+        assert_eq!(f.reason, "no_history");
+        assert!(!f.warn);
+        // 只有 1 点：not_enough
+        let one = vec![sp("C:\\", 400, 1_700_000_000, 1000)];
+        let f = space_forecast_for("C:\\", &one, 14);
+        assert_eq!(f.reason, "not_enough");
+        assert_eq!(f.days, None);
+        // 2 点同时间戳（零跨度）：not_enough
+        let zero = vec![
+            sp("C:\\", 400, 1_700_000_000, 1000),
+            sp("C:\\", 500, 1_700_000_000, 1000),
+        ];
+        let f = space_forecast_for("C:\\", &zero, 14);
+        assert_eq!(f.reason, "not_enough");
+        // 释放中：releasing（绝不唱成满盘）
+        let free = vec![
+            sp("C:\\", 500, 1_700_000_000, 1000),
+            sp("C:\\", 400, 1_700_864_000, 1000),
+        ];
+        let f = space_forecast_for("C:\\", &free, 14);
+        assert_eq!(f.reason, "releasing");
+        assert_eq!(f.days, None);
+        assert!(!f.warn);
+    }
+
+    #[test]
+    fn forecast_ok_rounds_ceil_and_warn() {
+        // 10 天跨度 +500（剩 500），50 天；阈值 14 → 不预警
+        let pts = vec![
+            sp("D:\\", 400, 1_700_000_000, 1000),
+            sp("D:\\", 500, 1_700_864_000, 1000),
+        ];
+        let f = space_forecast_for("D:\\", &pts, 14);
+        assert_eq!(f.days, Some(50));
+        assert_eq!(f.reason, "ok");
+        assert!(!f.warn);
+        // 阈值 60 → 预警
+        let f = space_forecast_for("D:\\", &pts, 60);
+        assert!(f.warn);
+        // 阈值 0 = 关：即使天数短也不预警
+        let f = space_forecast_for("D:\\", &pts, 0);
+        assert!(!f.warn);
+    }
+
+    #[test]
+    fn forecast_full_is_zero_then_warn() {
+        // 已满（增速为正、剩余 ≤0）→ days 0 且命中任意 >0 阈值
+        let full = vec![
+            sp("E:\\", 1000, 1_700_000_000, 1000),
+            sp("E:\\", 1100, 1_700_864_000, 1000),
+        ];
+        let f = space_forecast_for("E:\\", &full, 7);
+        assert_eq!(f.days, Some(0));
+        assert_eq!(f.reason, "ok");
+        assert!(f.warn);
     }
 }

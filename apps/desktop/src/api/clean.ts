@@ -232,6 +232,13 @@ export const cleanApi = {
       ? invoke<ReminderPayload | null>('run_reminder_check_cmd')
       : Promise.resolve(null),
 
+  /** R100 立即检查各盘空间趋势（只读）：逐盘返回预计满盘天数/无法预测的原因。
+    *  浏览器模式无真实历史 → 空列表（诚实：没读=没有）。 */
+  checkSpaceForecast: () =>
+    isTauri
+      ? invoke<SpaceForecast[]>('check_space_forecast_cmd')
+      : Promise.resolve([]),
+
   // ── 磁盘空间历史（R6）──
   /** 读取全部磁盘空间趋势（只读）：`{root -> [快照]}`，按时间顺序。
    *  根目录是扫描根（C:\ 等）；缺历史返回空对象。 */
@@ -328,6 +335,17 @@ export interface ReminderPayload {
 export interface SpaceFullWarn {
   path: string;
   days: number;
+}
+
+/** R100 逐盘趋势检查结果（check_space_forecast_cmd 返回）。
+ *  days = null 时 reason 说明为何预测不了（从实况诚实上报，缺失≠满盘）。 */
+export interface SpaceForecast {
+  path: string;
+  days: number | null;
+  /** ok / no_history / not_enough / releasing */
+  reason: string;
+  /** days ≤ 预警阈值（未设阈值恒 false） */
+  warn: boolean;
 }
 
 // ── 周巡检简报（health-butler P1，后端 weekly_report.rs 返回形状）──

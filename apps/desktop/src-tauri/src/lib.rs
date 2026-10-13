@@ -241,6 +241,7 @@ pub fn run() {
             reminder::get_reminder_config,
             reminder::set_reminder_config,
             reminder::run_reminder_check_cmd,
+            reminder::check_space_forecast_cmd,
             weekly_report::generate_weekly_report_cmd,
             weekly_report::get_weekly_reports,
             space_history::get_space_history,
