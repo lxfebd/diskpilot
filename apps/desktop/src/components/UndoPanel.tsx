@@ -43,9 +43,15 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
   const [busy, setBusy] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    api.listUndo(50).then(setEntries).catch(() => setEntries([]));
+    setLoadErr(null);
+    api.listUndo(50).then(setEntries).catch((e) => {
+      // 读取失败 ≠ 没有记录：如实显示读不到，不能伪装成空列表消失。
+      setEntries([]);
+      setLoadErr(String(e instanceof Error ? e.message : e));
+    });
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -77,6 +83,20 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
           <span><History size={13} /> {t('cleanup.recent')}</span>
           <Loader2 size={12} className="spin" />
         </div>
+      </div>
+    );
+  }
+
+  // 读取失败：如实说「没读到」并给出原因——绝不能跟「真没记录」一样整个消失。
+  if (loadErr !== null) {
+    return (
+      <div className="undo-panel">
+        <div className="studio-head">
+          <span><History size={13} /> {t('cleanup.recent')}</span>
+          <span className="muted small">{t('cleanup.loadFailedShort')}</span>
+        </div>
+        <div className="error undo-msg">{t('cleanup.loadFailedMsg', { msg: loadErr })}</div>
+        <button type="button" className="ghost" onClick={refresh}>{t('cleanup.retry')}</button>
       </div>
     );
   }
