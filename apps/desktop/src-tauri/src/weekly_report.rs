@@ -145,7 +145,9 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         });
 
     // 3) 本周硬件快照（hw_history 归档只读），首尾对比温度/通电。
-    let snaps = crate::hw_history::get_hw_history(app.clone());
+    // 历史目录读失败（R87 起 get_hw_history 报 Err）降级为「无快照」：
+    // 周报是聚合概览，不为单个数据源失败整体作废。
+    let snaps = crate::hw_history::get_hw_history(app.clone()).unwrap_or_default();
     let hw_snapshots = snaps.len();
     let hw_delta = if snaps.len() >= 2 {
         // 取最近两份归档对比（周首 vs 周末）：compare_hw_snapshots 只读。

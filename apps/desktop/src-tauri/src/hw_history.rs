@@ -176,14 +176,18 @@ fn parse_meta(path: &Path) -> Option<HwSnapshotMeta> {
 }
 
 /// 列出全部硬件快照归档（只读 L0，硬件页历史区）。按时间倒序。
+/// 目录读失败必须报错：否则前端把「读失败」当「没有快照归档」展示
+/// （诚实性族规 R81 同族）；归档目录不存在 = 从未快照过 = 空列表诚实。
 #[tauri::command]
-pub(crate) fn get_hw_history(app: tauri::AppHandle) -> Vec<HwSnapshotMeta> {
+pub(crate) fn get_hw_history(app: tauri::AppHandle) -> Result<Vec<HwSnapshotMeta>, String> {
     let Some(dir) = history_dir(&app) else {
-        return Vec::new();
+        return Err("无法定位数据目录".into());
     };
-    let Ok(rd) = std::fs::read_dir(&dir) else {
-        return Vec::new();
-    };
+    if !dir.exists() {
+        // 从未生成过快照（真空态），不是读失败。
+        return Ok(Vec::new());
+    }
+    let rd = std::fs::read_dir(&dir).map_err(|e| format!("读取硬件快照目录失败: {e}"))?;
     let mut out: Vec<HwSnapshotMeta> = rd
         .filter_map(|e| e.ok())
         .map(|e| e.path())
@@ -196,7 +200,7 @@ pub(crate) fn get_hw_history(app: tauri::AppHandle) -> Vec<HwSnapshotMeta> {
         .filter_map(|p| parse_meta(&p))
         .collect();
     out.sort_by_key(|a| std::cmp::Reverse(a.at));
-    out
+    Ok(out)
 }
 
 /// 归档文件名白名单：只允许 `hw-*.json` 且不含 `..`（防路径穿越）。
@@ -309,7 +313,8 @@ pub(crate) fn compare_hw_snapshots(
     archive_a: Option<String>,
     archive_b: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    let all = get_hw_history(app.clone());
+    // 内部逻辑（非展示面）：历史目录读失败降级为「没有快照」而不是让对比命令报错。
+    let all = get_hw_history(app.clone()).unwrap_or_default();
     if all.is_empty() {
         return Ok(
             serde_json::json!({ "ok": false, "reason": "还没有硬件快照：先在「硬件报告」里生成一次报告，之后每次生成都会自动归档。" }),
