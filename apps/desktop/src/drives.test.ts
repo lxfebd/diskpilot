@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { physicalDrives, scanTargets, volumeLetterOf } from './drives';
+import { physicalDrives, physicalUsedBytes, scanTargets, volumeLetterOf } from './drives';
 
 // 数据形状取自本机 list_drives 的真实结果：D: 不在 Get-Partition 里，
 // 它是 `subst D: J:\D`——和 J: 是同一块 KIOXIA、同一份空间。
@@ -68,5 +68,26 @@ describe('physicalDrives / scanTargets（同一块盘不数两遍）', () => {
   it('空列表给空结果', () => {
     expect(scanTargets([])).toEqual([]);
     expect(physicalDrives([])).toEqual([]);
+  });
+});
+
+describe('physicalUsedBytes（全机已用按物理卷求和）', () => {
+  it('映射盘不再把同一块盘的空间数两遍', () => {
+    // 本机口径：D: 是 subst 到 J:\D，J: 自己也在列表里 → D: 不占一份。
+    expect(physicalUsedBytes(DRIVES)).toBe(60 + 50 + 300 + 30 + 60 + 180);
+    // 对照：直接对盘符求和就是那个虚高的数字（页脚此前显示的正是它）。
+    expect(DRIVES.reduce((s, d) => s + d.used_bytes, 0)).toBe(860);
+  });
+
+  it('目标卷不在列表里时，映射盘是碰到那块空间的唯一入口，要算它', () => {
+    const onlyMapped = [
+      { path: 'C:\\', total_bytes: 100, used_bytes: 60, mapped_to: '' },
+      { path: 'D:\\', total_bytes: 200, used_bytes: 180, mapped_to: 'J:\\D' },
+    ];
+    expect(physicalUsedBytes(onlyMapped)).toBe(240);
+  });
+
+  it('缺 used_bytes 按 0 计，不猜', () => {
+    expect(physicalUsedBytes([{ path: 'C:\\' }, { path: 'E:\\', used_bytes: 7 }])).toBe(7);
   });
 });

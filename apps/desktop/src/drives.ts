@@ -70,3 +70,13 @@ export function physicalDrives<T extends DriveEntry>(drives: readonly T[]): T[] 
 export function scanTargets(drives: readonly DriveEntry[]): string[] {
   return physicalDrives(drives).map((d) => d.path);
 }
+
+/**
+ * 全机已用空间：按物理卷求和。
+ *
+ * 直接对盘符列表求和会把 `subst` 映射盘的那份空间数两遍（它和 J: 是同一块盘），
+ * 页脚「已用 X」就会虚高。缺 used_bytes 的条目按 0 计，不猜。
+ */
+export function physicalUsedBytes(drives: readonly (DriveEntry & { used_bytes?: number })[]): number {
+  return physicalDrives(drives).reduce((s, d) => s + (d.used_bytes || 0), 0);
+}

@@ -4,9 +4,9 @@ import { api, type SpacePoint, type StartupItem, type HwDiskHealth } from '../ap
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
 import { ensureHwDiskQuick } from '../hwCache';
-import { riskyDrives, summarizeDiskHealth } from '../diskHealth';
+import { pathDriveLetter, riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
-import { physicalDrives } from '../drives';
+import { physicalDrives, physicalUsedBytes, volumeLetterOf, type DriveEntry } from '../drives';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
 import type { Node, Scaffold } from '../types';
@@ -94,14 +94,34 @@ function spaceNormKey(p: string): string {
   return normKey(p);
 }
 
-/** 把 {root -> 快照} 聚合到盘级序列：按时间排序、每盘保留最新 14 条。 */
+/** 把 {root -> 快照} 聚合到盘级序列：按时间排序、每盘保留最新 14 条。
+ * 传入 drives 时，映射盘（subst）的快照并到它真正所在的卷那一列——
+ * 同一块物理盘不该在趋势里出现两条曲线。 */
 export function buildSpaceSeries(
   hist: Record<string, SpacePoint[]>,
+  drives: readonly DriveEntry[] = [],
 ): { drive: string; points: SpacePoint[] }[] {
   const byDrive = new Map<string, SpacePoint[]>();
+  const listed = new Set<string>();
+  for (const d of drives) {
+    const l = pathDriveLetter(d.path).toUpperCase();
+    if (l) listed.add(l);
+  }
   for (const pts of Object.values(hist)) {
     for (const p of pts) {
-      const drive = spaceNormKey(p.root).slice(0, 2) + '\\';
+      const letter = pathDriveLetter(p.root).toUpperCase();
+      if (!letter) {
+        // 不是盘符根（罕见）：按原样自成一条，不猜它属于哪块盘。
+        const key = spaceNormKey(p.root);
+        const arr = byDrive.get(key) ?? [];
+        arr.push(p);
+        byDrive.set(key, arr);
+        continue;
+      }
+      const info = drives.find((d) => pathDriveLetter(d.path).toUpperCase() === letter);
+      // 映射盘并到真实卷；但目标卷不在盘列表里时，映射盘是碰到那份空间的唯一入口，保留自己。
+      const real = info ? volumeLetterOf(info).toUpperCase() : letter;
+      const drive = (listed.has(real) ? real : letter) + ':\\';
       const arr = byDrive.get(drive) ?? [];
       arr.push(p);
       byDrive.set(drive, arr);
@@ -193,7 +213,7 @@ export function disabledStartupCount(items: readonly { enabled: boolean }[] | nu
 
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
 // 纯只读展示：数据来自每次扫描后追加的 space-history.jsonl，绝不触盘 IO。
-function SpaceTrendCard({ selPath, onGoWorkspace }: { selPath: string | null; onGoWorkspace: () => void }) {
+function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | null; drives: readonly DriveEntry[]; onGoWorkspace: () => void }) {
   const t = useT();
   const [hist, setHist] = useState<Record<string, SpacePoint[]>>({});
   useEffect(() => {
@@ -207,8 +227,8 @@ function SpaceTrendCard({ selPath, onGoWorkspace }: { selPath: string | null; on
   const fillId = useMemo(() => `trend-fill-${trendFillSeq()}`, []);
 
   // 聚合到盘：只取同盘快照（C:\ vs C:\Users 视为同一盘；记录本身是扫描根，
-  // 去重键取盘根）。按时间排序，保留最新 14 条。
-  const series = useMemo(() => buildSpaceSeries(hist), [hist]);
+  // 去重键取盘根）。映射盘的快照并到真实卷。按时间排序，保留最新 14 条。
+  const series = useMemo(() => buildSpaceSeries(hist, drives), [hist, drives]);
 
   if (series.length === 0) {
     return (
@@ -580,7 +600,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     }
   };
 
-  const usedTotal = drives.reduce((s, d) => s + (d.used_bytes || 0), 0);
+  // 页脚「已用」按物理卷求和：映射盘和它的目标卷是同一块盘，数两遍就虚高。
+  const usedTotal = physicalUsedBytes(drives);
   const scannedCount = drives.filter((d) => scanCache[normKey(d.path)]).length;
 
   // 扫描完成自动刷新可清理项：cachedOnly=true 只读内存树，秒回；
@@ -767,7 +788,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           </section>
 
           {/* 磁盘空间趋势（R6）：扫描历史曲线 + 近期增量 */}
-          <SpaceTrendCard selPath={selPath} onGoWorkspace={onGoWorkspace} />
+          <SpaceTrendCard selPath={selPath} drives={drives} onGoWorkspace={onGoWorkspace} />
 
           {/* 快速操作按钮区 */}
           <section className="ao-card">

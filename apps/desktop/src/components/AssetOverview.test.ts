@@ -35,6 +35,26 @@ describe('磁盘空间趋势（R6）', () => {
     expect(series[1].drive).toBe('D:\\');
   });
 
+  it('映射盘的快照并到它真正所在的卷：同一块盘不画两条曲线', () => {
+    // 本机口径：subst D: J:\D。历史里既有 D:\ 也有 J:\ 的快照（同一块 KIOXIA）。
+    const hist = { ...MOCK_HIST, 'J:\\': [pt('J:\\', 900, 1_700_000_000)] };
+    const drives = [
+      { path: 'C:\\', used_bytes: 1, mapped_to: '' },
+      { path: 'D:\\', used_bytes: 1, mapped_to: 'J:\\D' },
+      { path: 'J:\\', used_bytes: 1, mapped_to: '' },
+    ];
+    const series = buildSpaceSeries(hist, drives);
+    expect(series.map((s) => s.drive)).not.toContain('D:\\');
+    const j = series.find((s) => s.drive === 'J:\\')!;
+    expect(j.points.map((p) => p.used_bytes)).toEqual([200, 900]);
+  });
+
+  it('目标卷不在盘列表里时，映射盘是碰到那块空间的唯一入口，保留自己的序列', () => {
+    const drives = [{ path: 'D:\\', used_bytes: 1, mapped_to: 'J:\\D' }];
+    const series = buildSpaceSeries({ 'D:\\': [pt('D:\\', 200, 1_700_000_000)] }, drives);
+    expect(series.map((s) => s.drive)).toEqual(['D:\\']);
+  });
+
   it('spaceWeekDelta 首尾差 = 本周新增（增长为正）', () => {
     const c = buildSpaceSeries(MOCK_HIST).find((s) => s.drive === 'C:\\')!;
     const { delta, days } = spaceWeekDelta(c.points);
