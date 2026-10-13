@@ -6,15 +6,17 @@ use tauri::{AppHandle, State};
 
 use super::mcp_audit::{append_audit, audit_args_snapshot, audit_ts};
 use super::mcp_probe::probe_tools;
-use super::mcp_store::load_servers;
+use super::mcp_store::{load_servers, load_servers_explicit};
 use super::McpToolMeta;
 use super::{CALL_TOOL_TIMEOUT_SECS, PROBE_TIMEOUT_SECS};
 use crate::mcp_bridge::connect_server;
 
 /// 所有 enabled 服务器的工具合并清单（只读 L0，前端 refreshMcpTools 拉取）。
+/// 配置读失败（存在但损坏）报错：空工具清单会让 AI 静默失去全部工具
+/// （读失败伪装成空能力集，R81 同族）。
 #[tauri::command]
 pub(crate) async fn mcp_list_tools(app: AppHandle) -> Result<Vec<McpToolMeta>, String> {
-    let servers = load_servers(&app);
+    let servers = load_servers_explicit(&app)?;
     let mut out = Vec::new();
     for s in servers.iter().filter(|s| s.enabled) {
         // 单服务器 10s 兜底超时；失败跳过不拖垮整体（health 在 list_servers 里可见）。
