@@ -844,6 +844,12 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 }
 
 /* ── 磁盘空间趋势（R6）：扫描历史迷你曲线 ── */
+/* R90 时间窗口切换（7/30/全部）：贴卡头右侧，选中态用强调底色。 */
+.ao-trend-range { display: inline-flex; gap: 4px; margin-left: auto; }
+.ao-trend-range button.sel {
+  background: var(--accent-bg); border-color: var(--accent-strong);
+  color: var(--accent-strong); font-weight: 700;
+}
 .ao-trend-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .ao-trend-row {
   display: flex; align-items: center; gap: 10px; width: 100%;

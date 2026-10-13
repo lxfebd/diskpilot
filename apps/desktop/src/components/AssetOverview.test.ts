@@ -79,6 +79,23 @@ describe('磁盘空间趋势（R6）', () => {
   it('空历史 → 空序列（前端显示引导文案）', () => {
     expect(buildSpaceSeries({})).toEqual([]);
   });
+
+  it('R90 时间窗口过滤：只留窗口内点；全部=不截断', () => {
+    const now = Date.now() / 1000;
+    const hist = {
+      'C:\\': [
+        pt('C:\\', 400, now - 40 * 86400), // 40 天前：30 天窗口外
+        pt('C:\\', 420, now - 20 * 86400), // 20 天前：窗口内
+        pt('C:\\', 470, now - 2 * 86400),  // 2 天前：窗口内
+      ],
+    };
+    const all = buildSpaceSeries(hist, [], 0);
+    expect(all[0].points.length).toBe(3); // 全部 = 不截断（R89 后曲线持续积累）
+    const r30 = buildSpaceSeries(hist, [], 30);
+    expect(r30[0].points.map((p) => p.used_bytes)).toEqual([420, 470]);
+    const r7 = buildSpaceSeries(hist, [], 7);
+    expect(r7[0].points.map((p) => p.used_bytes)).toEqual([470]);
+  });
 });
 
 describe('红盘救援阈值（低配救援横幅）', () => {

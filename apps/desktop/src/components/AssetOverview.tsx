@@ -100,21 +100,28 @@ function spaceNormKey(p: string): string {
   return normKey(p);
 }
 
-/** 把 {root -> 快照} 聚合到盘级序列：按时间排序、每盘保留最新 14 条。
+/** 把 {root -> 快照} 聚合到盘级序列：按时间排序。
  * 传入 drives 时，映射盘（subst）的快照并到它真正所在的卷那一列——
- * 同一块物理盘不该在趋势里出现两条曲线。 */
+ * 同一块物理盘不该在趋势里出现两条曲线。
+ * `rangeDays` 为时间窗口（7 / 30 / 0=全部，R90）：只保留窗口内
+ * `at >= now - rangeDays*86400` 的点；默认不传 = 全部保留（后端每盘
+ * 上限 180 条已够画，不再硬截断 14 条——R89 每日采样后曲线持续积累）。 */
 export function buildSpaceSeries(
   hist: Record<string, SpacePoint[]>,
   drives: readonly DriveEntry[] = [],
+  rangeDays = 0,
 ): { drive: string; points: SpacePoint[] }[] {
   const byDrive = new Map<string, SpacePoint[]>();
   const listed = new Set<string>();
+  const nowSecs = Date.now() / 1000;
+  const cutoff = rangeDays > 0 ? nowSecs - rangeDays * 86400 : 0;
   for (const d of drives) {
     const l = pathDriveLetter(d.path).toUpperCase();
     if (l) listed.add(l);
   }
   for (const pts of Object.values(hist)) {
     for (const p of pts) {
+      if (cutoff > 0 && p.at < cutoff) continue;
       const letter = pathDriveLetter(p.root).toUpperCase();
       if (!letter) {
         // 不是盘符根（罕见）：按原样自成一条，不猜它属于哪块盘。
@@ -136,8 +143,7 @@ export function buildSpaceSeries(
   const out: { drive: string; points: SpacePoint[] }[] = [];
   for (const [drive, pts] of byDrive) {
     pts.sort((a, b) => a.at - b.at);
-    const points = pts.slice(-14);
-    out.push({ drive, points });
+    out.push({ drive, points: pts });
   }
   return out.sort((a, b) => b.points[b.points.length - 1]?.used_bytes - a.points[a.points.length - 1]?.used_bytes);
 }
@@ -151,6 +157,13 @@ export function spaceWeekDelta(pts: SpacePoint[]): { delta: number; days: string
   const spanDays = (last.at - first.at) / 86400;
   return { delta, days: spanDays < 1 ? t('overview.trend.today') : t('overview.trend.daysSpan', { n: Math.round(spanDays) }) };
 }
+
+// R90 时间窗口选项：0 = 全部（后端每盘上限 180 条 ≈ 半年日采样）。
+const trendRanges: { days: number; label: string }[] = [
+  { days: 7, label: 'overview.trend.range7' },
+  { days: 30, label: 'overview.trend.range30' },
+  { days: 0, label: 'overview.trend.rangeAll' },
+];
 
 /** SVG 迷你曲线 path：归一化到相对自身 min/max（值平=水平线）。 */
 export function spaceSparkPath(pts: SpacePoint[]): string {
@@ -244,13 +257,20 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
 
   const selfKey = selPath ? spaceNormKey(selPath) : null;
 
+  // 时间窗口（R90）：7 / 30 天 / 全部。默认 30 天——R89 每日采样后曲线持续
+  // 积累（后端每盘上限 180 条），全量会把两个月的点压进一条小曲线里看不清。
+  const [range, setRange] = useState<number>(30);
+
   // 渐变 id 需要每实例唯一：用模块级自增计数而非 Math.random——随机既不可复现，
   // 多实例并发渲染时也可能撞 id（曲线引用错位）。
   const fillId = useMemo(() => `trend-fill-${trendFillSeq()}`, []);
 
   // 聚合到盘：只取同盘快照（C:\ vs C:\Users 视为同一盘；记录本身是扫描根，
-  // 去重键取盘根）。映射盘的快照并到真实卷。按时间排序，保留最新 14 条。
-  const series = useMemo(() => buildSpaceSeries(hist, drives), [hist, drives]);
+  // 去重键取盘根）。映射盘的快照并到真实卷。按时间排序，窗口内全保留。
+  const series = useMemo(() => buildSpaceSeries(hist, drives, range), [hist, drives, range]);
+  // 窗口过滤后的空 ≠ 没有历史：历史里有点但都落在窗口外时给切换提示，
+  // 别用「还没扫过」的引导文案骗人。
+  const histEmpty = Object.keys(hist).length === 0;
 
   if (histErr !== null) {
     return (
@@ -264,7 +284,20 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
     return (
       <section className="ao-card">
         <h2 className="ao-card-title"><BarChart3 size={16} /> {t('overview.trend.title')}</h2>
-        <div className="ao-empty"><Info size={16} />{t('overview.trend.empty')}</div>
+        <div className="ao-empty">
+          <Info size={16} />
+          {histEmpty ? t('overview.trend.empty') : t('overview.trend.rangeEmpty')}
+        </div>
+        {/* 历史里有数据但窗口过滤后为空：给个切回全量的出口，别让用户卡死。 */}
+        {!histEmpty && (
+          <div className="ao-trend-range">
+            {trendRanges.map((r) => (
+              <button key={r.days} type="button" className="ghost small" onClick={() => setRange(r.days)}>
+                {t(r.label)}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
     );
   }
@@ -288,6 +321,19 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
       <h2 className="ao-card-title">
         <BarChart3 size={16} /> {t('overview.trend.title')}
         <span className="ao-card-note">{t('overview.trend.note')}</span>
+        {/* R90 时间窗口切换：7 天 / 30 天 / 全部。 */}
+        <span className="ao-trend-range">
+          {trendRanges.map((r) => (
+            <button
+              key={r.days}
+              type="button"
+              className={'ghost small' + (range === r.days ? ' sel' : '')}
+              onClick={() => setRange(r.days)}
+            >
+              {t(r.label)}
+            </button>
+          ))}
+        </span>
       </h2>
       <div className="ao-trend-list">
         {series.map(({ drive, points }) => {

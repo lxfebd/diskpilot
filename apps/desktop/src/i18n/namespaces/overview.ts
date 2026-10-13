@@ -39,6 +39,11 @@ export const overview = {
     'overview.trend.noRecords': '记录不足',
     'overview.trend.today': '今日',
     'overview.trend.daysSpan': '{n} 天',
+    // R90 时间窗口：7 天 / 30 天 / 全部（历史里有数据但窗口过滤后为空时也复用 rangeAll）
+    'overview.trend.range7': '7 天',
+    'overview.trend.range30': '30 天',
+    'overview.trend.rangeAll': '全部',
+    'overview.trend.rangeEmpty': '这段时间还没有扫描记录——换个时间范围看看',
     'overview.locateInWorkspace': '在工作台定位查看',
 
     // 快速操作
@@ -198,6 +203,11 @@ export const overview = {
     'overview.trend.noRecords': 'Not enough history',
     'overview.trend.today': 'Today',
     'overview.trend.daysSpan': '{n} days',
+    // R90 time range: 7 days / 30 days / all (rangeAll is also the exit when a window filters everything out)
+    'overview.trend.range7': '7 days',
+    'overview.trend.range30': '30 days',
+    'overview.trend.rangeAll': 'All',
+    'overview.trend.rangeEmpty': 'No scans in this period — try another range',
     'overview.locateInWorkspace': 'Show this in the workbench',
 
     // Quick actions
