@@ -426,6 +426,11 @@ export const toolbelt = {
     'toolbelt.stressChart.peak': '峰值 {peak}°C · 共 {n} 个采样点',
     'toolbelt.stressChart.historyTitle': '历次压测温度对比（最近 → 最旧）',
     'toolbelt.stressChart.historyNote': '各次曲线按各自秒数对齐起点，Y 轴统一 0–100℃ 可比',
+    'toolbelt.scoreChart.title': '历次跑分对比（旧 → 新）',
+    'toolbelt.scoreChart.maxLabel': '最高 {max}',
+    'toolbelt.scoreChart.minLabel': '最低 {min}',
+    'toolbelt.scoreChart.bestLabel': '最佳（强调色）',
+    'toolbelt.scoreChart.countLabel': '共 {n} 次 · 单位 {unit}',
 
     // 插件市场（内置工具插件化 + 社区注册表 / 远端索引分发）
     'toolbelt.mkt.loadFailed': '社区注册表加载失败：{msg}',
@@ -973,6 +978,11 @@ export const toolbelt = {
     'toolbelt.stressChart.peak': 'Peak {peak}°C · {n} sample points',
     'toolbelt.stressChart.historyTitle': 'Past stress-test temperatures (recent → oldest)',
     'toolbelt.stressChart.historyNote': 'Each run is aligned to its own start; Y axis fixed at 0–100℃ for comparison',
+    'toolbelt.scoreChart.title': 'Score history (oldest → newest)',
+    'toolbelt.scoreChart.maxLabel': 'peak {max}',
+    'toolbelt.scoreChart.minLabel': 'low {min}',
+    'toolbelt.scoreChart.bestLabel': 'best (highlighted)',
+    'toolbelt.scoreChart.countLabel': '{n} runs · unit {unit}',
 
     // Plugin market (plugin-ising built-in tools + community registry / remote index)
     'toolbelt.mkt.loadFailed': 'Community registry failed to load: {msg}',

@@ -105,3 +105,65 @@ describe('parseTrendJson（sensor_trend JSON 解析）', () => {
     expect(parseTrendJson(text)).toBeNull();
   });
 });
+
+// R115：跑分历史对比——锁定后端 bench_cpu / bench_memory / bench_disk 的
+// 输出行格式契约（行前缀中文格式，非文案），解析失败条目如实跳过。
+import { parseScoreLine, buildScoreSeries } from './charts';
+
+describe('parseScoreLine（跑分行解析）', () => {
+  it('bench_cpu：整数 ops/s 主分数行', () => {
+    const text = 'CPU 基准结果：\n线程：8 · 实测时长：3.0s\n整数（质数筛）：12345678 ops/s\n浮点（π 级数）：9.9e7 iters/s\n';
+    expect(parseScoreLine(text, '整数（质数筛）')).toEqual({ value: 12345678, unit: 'ops/s' });
+    expect(parseScoreLine(text, '浮点（π 级数）')).toEqual({ value: 99000000, unit: 'iters/s' });
+  });
+
+  it('bench_memory：读带宽 MB/s（千分位与小数）', () => {
+    const text = '内存基准结果：\n读带宽：12,345.6 MB/s\n写带宽：8,888 MB/s\n复制带宽：10,000 MB/s\n延迟（指针追逐）：72.3 ns\n';
+    expect(parseScoreLine(text, '读带宽')).toEqual({ value: 12345.6, unit: 'MB/s' });
+    expect(parseScoreLine(text, '写带宽')).toEqual({ value: 8888, unit: 'MB/s' });
+  });
+
+  it('bench_disk：顺序读（128KB 块）MB/s', () => {
+    const text = '磁盘基准结果：\n目录：C:\\TEMP（临时文件已删除）\n顺序读（128KB 块）：3500 MB/s\n随机读（4KB 块）：120 MB/s\n';
+    expect(parseScoreLine(text, '顺序读（128KB 块）')).toEqual({ value: 3500, unit: 'MB/s' });
+  });
+
+  it('无匹配行 / 数值为 0 / 非法单位 → null', () => {
+    expect(parseScoreLine('CPU 基准结果：\n线程：8', '整数（质数筛）')).toBeNull();
+    expect(parseScoreLine('整数（质数筛）：0 ops/s', '整数（质数筛）')).toBeNull();
+    expect(parseScoreLine('镀金：10 分', '整数（质数筛）')).toBeNull();
+    expect(parseScoreLine('', '读带宽')).toBeNull();
+    // dry-run 计划文本没有分数行 → null（不误出图）
+    expect(parseScoreLine('磁盘基准计划（dry-run）：\n目录：C:\\TEMP', '顺序读（128KB 块）')).toBeNull();
+  });
+});
+
+describe('buildScoreSeries（历次跑分 → 对比序列）', () => {
+  const cpu1 = 'CPU 基准结果：\n整数（质数筛）：10000000 ops/s';
+  const cpu2 = 'CPU 基准结果：\n整数（质数筛）：12000000 ops/s';
+  const cpuFail = 'CPU 基准结果：\n线程：8 · 实测时长：0.1s\n整数（质数筛）：0 ops/s';
+  const dryRun = '磁盘基准计划（dry-run）\n目录：C:\\TEMP';
+
+  it('旧→新序，跳过无有效分数条目', () => {
+    const series = buildScoreSeries(
+      [
+        { at: 1000, label: '首次', result: cpu1 },
+        { at: 2000, label: '失败', result: cpuFail },
+        { at: 3000, label: '最佳', result: cpu2 },
+        { at: 4000, label: '计划', result: dryRun },
+      ],
+      '整数（质数筛）',
+    );
+    expect(series).toHaveLength(2);
+    // 旧→新
+    expect(series[0].value).toBe(10000000);
+    expect(series[1].value).toBe(12000000);
+    expect(series[1].at).toBe(3000);
+    expect(series[1].unit).toBe('ops/s');
+  });
+
+  it('全无有效分数 → 空数组（不渲染图）', () => {
+    expect(buildScoreSeries([{ at: 1, label: 'a', result: dryRun }], '顺序读（128KB 块）')).toEqual([]);
+    expect(buildScoreSeries([], '整数（质数筛）')).toEqual([]);
+  });
+});

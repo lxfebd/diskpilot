@@ -133,16 +133,116 @@ export function StressTempChart({ points }: { points: StressCurvePoint[] }) {
   );
 }
 
-interface StressHistorySeries {
+// ── R115 基准跑分历史对比 ──
+// 把同一基准历次跑分的分数画成时间序条形图：睿频/散热/后台负载对分数的影响、
+// 分数随时间的漂移一眼可见（跑分文本已存 localStorage，无需后端改动）。
+// 每类基准定义自己解析一条「主分数行」的正则（label + 数值 + 单位），
+// 数值缺失的跑分记录如实跳过（如 bench_disk 失败/被拒），不猜 0。
+
+export interface ScoreHistorySeries {
   label: string;
-  points: StressCurvePoint[];
-  color: string;
+  value: number;
+  unit: string;
+  at: number;
+}
+
+/// 通用解析：在历史结果文本里匹配「行首 label：数值 单位」，
+/// 数值容忍千分位逗号与科学计数法（12,345.6 / 9.9e7 等文本仍能解析）。
+/// 返回 {label, value, unit}。导出于单测：锁住 bench_cpu / bench_memory /
+/// bench_disk 的输出格式契约。
+export function parseScoreLine(text: string, label: string): { value: number; unit: string } | null {
+  for (const line of text.split('\n')) {
+    const t = line.trim();
+    if (!t.startsWith(label)) continue;
+    // 行首 label（全角冒号「：」是后端输出格式，数据非文案）——@i18n-keep
+    const m = t.match(/^([^:：]+)[:：]\s*([\d.,]+(?:[eE][+-]?\d+)?)\s*([^\s]*)\s*$/); // @i18n-keep
+    if (!m) continue;
+    const value = parseFloat(m[2].replace(/,/g, ''));
+    if (!Number.isFinite(value) || value <= 0) continue;
+    return { value, unit: m[3] };
+  }
+  return null;
+}
+
+/// 从历次跑分结果里抽一组主分数（bench_cpu=整数 ops/s，bench_memory=读带宽 MB/s，
+/// bench_disk=顺序读 MB/s）。旧→新排序（最近在右）；无有效分数的返回空数组。
+export function buildScoreSeries(
+  history: { at: number; label: string; result: string }[],
+  label: string,
+): ScoreHistorySeries[] {
+  const out: ScoreHistorySeries[] = [];
+  for (const h of history) {
+    const parsed = parseScoreLine(h.result, label);
+    if (parsed) out.push({ label: h.label, value: parsed.value, unit: parsed.unit, at: h.at });
+  }
+  return out;
+}
+
+/// 分数历史条形图：每根条 = 一次跑分（旧→新 → 左→右），Y 值即分数；
+/// 最高分那根用强调色，其余用主题色——峰值一眼可见。
+export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) {
+  const t = useT();
+  const W = 720;
+  const H = 160;
+  const PAD = 30;
+
+  if (series.length === 0) return null;
+  const vals = series.map((s) => s.value);
+  const max = Math.max(...vals);
+  const min = Math.min(...vals);
+  const span = max - min || 1;
+  const barW = Math.min(46, (W - PAD * 2) / series.length - 4);
+  const yAt = (v: number) => H - PAD - ((v - min) / span) * (H - PAD * 2 - 24);
+
+  return (
+    <div className="bench-trend" style={{ marginTop: 10 }}>
+      {series.length >= 2 && (
+        <div className="bench-stress-hist-title muted small">{t('toolbelt.scoreChart.title')}</div>
+      )}
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('toolbelt.scoreChart.title')} className="bench-trend-svg">
+        <text x={PAD} y={12} fill="#888" fontSize={10}>{t('toolbelt.scoreChart.maxLabel', { max: max.toLocaleString() })}</text>
+        <text x={PAD} y={H - PAD + 14} fill="#888" fontSize={10}>{t('toolbelt.scoreChart.minLabel', { min: min.toLocaleString() })}</text>
+        {series.map((s, i) => {
+          const x = PAD + i * ((W - PAD * 2) / series.length) + ((W - PAD * 2) / series.length - barW) / 2;
+          const h = Math.max(2, yAt(min) - yAt(s.value));
+          const isBest = s.value === max;
+          return (
+            <g key={i}>
+              <rect x={x} y={yAt(s.value)} width={barW} height={h} rx={2} fill={isBest ? 'var(--accent-strong)' : 'var(--line)'} />
+              <text x={x + barW / 2} y={yAt(s.value) - 4} textAnchor="middle" fontSize={9} fill="#888">
+                {s.value >= 1000 ? `${(s.value / 1000).toFixed(s.value >= 100000 ? 0 : 1)}k` : s.value.toFixed(0)}
+              </text>
+              <text x={x + barW / 2} y={H - 4} textAnchor="middle" fontSize={8} fill="#888">
+                {new Date(s.at).toLocaleDateString([], { month: '2-digit', day: '2-digit' })}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="bench-trend-legend">
+        {series.length > 0 && (
+          <span>
+            <i style={{ background: 'var(--accent-strong)' }} /> {t('toolbelt.scoreChart.bestLabel')}
+          </span>
+        )}
+        <span className="muted small">
+          {t('toolbelt.scoreChart.countLabel', { n: series.length, unit: series[series.length - 1].unit })}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 // ── R113 压测历史温度叠画对比 ──
 // 把历次压测的温度曲线叠画在一张图上：散热状态/峰值随时间的演变一眼可见
 // （最近一次最亮、较旧的渐暗）。X 轴是压测秒数（各次时长可能不同，按各自
 // 实际秒数对齐起点），Y 轴统一 0–100℃（与 StressTempChart 同口径，跨次可比）。
+export interface StressHistorySeries {
+  label: string;
+  points: StressCurvePoint[];
+  color: string;
+}
+
 export function StressHistoryChart({ series }: { series: StressHistorySeries[] }) {
   const t = useT();
   const W = 720;

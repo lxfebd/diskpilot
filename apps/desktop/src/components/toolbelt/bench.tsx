@@ -12,7 +12,7 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart, StressHistoryChart, parseTrendJson } from './charts';
+import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, parseTrendJson, buildScoreSeries } from './charts';
 import type { TrendPoint } from './charts';
 
 interface BenchHistoryEntry {
@@ -20,6 +20,15 @@ interface BenchHistoryEntry {
   label: string;
   result: string;
 }
+
+/// 各基准的「主分数」行前缀（与后端输出一致，数据不是文案——@i18n-keep）。
+/// bench_cpu→整数 ops/s（主指标）；bench_memory→读带宽 MB/s；bench_disk→顺序
+/// 读 MB/s（后端 dry-run 计划文本不含这些行，自然不出图）。
+const BENCH_SCORE_LINES: Record<string, string> = {
+  bench_cpu: '整数（质数筛）', // @i18n-keep
+  bench_memory: '读带宽', // @i18n-keep
+  bench_disk: '顺序读（128KB 块）', // @i18n-keep
+};
 
 /// 从压测结果文本解析「温度曲线：0.0s=52.1°C; …」行 → 实时温度点序列。
 /// 后端输出行前缀是中文格式、不是文案，保持原样；解析失败/不足 2 点返回
@@ -304,6 +313,10 @@ export function BenchPanel() {
             </details>
           ))}
         </div>
+      )}
+      {/* R115：跑分历史对比——历次主分数（旧→新）条形图，峰值用强调色标出 */}
+      {BENCH_SCORE_LINES[key] && (
+        <ScoreHistoryChart series={buildScoreSeries(historyOf(key), BENCH_SCORE_LINES[key])} />
       )}
     </div>
   );
