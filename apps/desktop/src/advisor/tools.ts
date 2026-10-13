@@ -681,7 +681,7 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'run_hardware_test',
-    description: '运行硬件压力/基准测试。🔴 这是高负载操作，会导致 CPU/GPU 满载、温度升高。必须在用户明确确认后才会执行，AI 不得自行执行。测试期间持续监控温度，超过上限自动停止；用户也可随时在监控条上点击停止。支持：cpu_stress（Prime95 CPU 烤机）、gpu_stress（FurMark GPU 烤机）、gpu_benchmark（FurMark 基准）、cpu_benchmark（AIDA64 基准）。内存专项与磁盘专项暂未开放（本机实测 CrystalDiskMark 9.0.1 没有可用的无头命令行，只能开它自己的界面）。',
+    description: '运行硬件压力/基准测试。🔴 这是高负载操作，会导致 CPU/GPU 满载、温度升高。必须在用户明确确认后才会执行，AI 不得自行执行。测试期间持续监控温度，超过上限自动停止；用户也可随时在监控条上点击停止。支持：cpu_stress（Prime95 CPU 烤机）、gpu_stress（FurMark GPU 烤机）、gpu_benchmark（FurMark 基准）、cpu_benchmark（AIDA64 基准）。内存/磁盘的【基准测量】可用（基准测试面板的 bench_memory / bench_disk，无头 L0——用户问内存/磁盘速度时优先用它们）；这里不做内存/磁盘烤机压测：CrystalDiskMark 9.0.1 / MemTest64 无可用无头命令行，实测 /b 只会自我重启并打开窗口，跑不出可捕获的结果。',
     properties: {
       testType: {
         type: 'string',

@@ -101,7 +101,7 @@ fn hw_run_test_blocking(
         "cpu_benchmark" => ("AIDA64", vec![], 300u64),
         _ => {
             return Err(format!(
-                "暂不支持的测试类型「{test_type}」。可用：cpu_stress / gpu_stress / gpu_benchmark / cpu_benchmark（内存专项与磁盘专项暂未开放：本机实测 CrystalDiskMark 9.0.1 没有可用的无头命令行——`/b` 会让它自我重启并打开自己的窗口，跑不出可捕获的结果。可改用 run_cli_tool 手动跑 TM5 / CrystalDiskMark 的界面）。"
+                "暂不支持的测试类型「{test_type}」。本命令只支持烤机/基准类压力测试：cpu_stress / gpu_stress / gpu_benchmark / cpu_benchmark。注意：内存与磁盘的【基准测量】是可用的——走基准测试面板的 bench_memory / bench_disk（本机无头实现，L0），用户问内存/磁盘速度时直接用它们；这里未开放的是内存/磁盘【烤机压测】：本机实测 CrystalDiskMark 9.0.1 没有可用的无头命令行（`/b` 只会自我重启并打开自己的窗口），MemTest64 等纯 GUI 工具也没有可驱动的命令行，跑不出可捕获的结果。需要时可改用 run_cli_tool 手动开 TM5 / CrystalDiskMark 的界面。"
             ));
         }
     };
