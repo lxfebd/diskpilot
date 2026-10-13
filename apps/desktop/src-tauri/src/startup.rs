@@ -319,6 +319,19 @@ fn reg_backup_text(location: &str, name: &str, command: &str) -> String {
     )
 }
 
+/// 备份文件的字节内容：UTF-16LE + BOM（reg.exe 认的「Unicode .reg」）。
+///
+/// 写成 UTF-8 无 BOM 会被 reg.exe 按系统 ANSI 代码页解，中文值名导入后就乱了——
+/// 备份恢复不了等于没备份。
+fn reg_backup_bytes(text: &str) -> Vec<u8> {
+    let mut out = Vec::with_capacity(2 + text.len() * 2);
+    out.extend_from_slice(&[0xFF, 0xFE]);
+    for u in text.encode_utf16() {
+        out.extend_from_slice(&u.to_le_bytes());
+    }
+    out
+}
+
 /// 删除一个启动项。
 /// 文件夹项进系统回收站（可在回收站还原）；注册表值没有回收站，
 /// 先把值备份成 .reg（写失败就不删），返回备份文件路径（文件夹项返回空）。
@@ -395,7 +408,7 @@ fn remove_startup_item_blocking(id: &str, backup_dir: &std::path::Path) -> Resul
             let file = backup_dir.join(format!("{}-{stamp}.reg", sanitize_file_name(&item.name)));
             std::fs::write(
                 &file,
-                reg_backup_text(&item.location, &item.name, &item.command),
+                reg_backup_bytes(&reg_backup_text(&item.location, &item.name, &item.command)),
             )
             .map_err(|e| format!("备份启动项失败，未删除：{e}"))?;
             // 值名是外部数据——转义后拼入（防单引号逃逸注入）。
@@ -434,6 +447,22 @@ mod tests {
             machine.contains(r"[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run]")
         );
         assert!(!machine.contains("HKEY_CURRENT_USER"));
+    }
+
+    #[test]
+    fn backup_bytes_are_unicode_reg_not_utf8() {
+        // reg.exe 认 UTF-16LE+BOM 的 .reg；UTF-8 无 BOM 会被按 ANSI 代码页解，中文值名会乱。
+        let bytes =
+            super::reg_backup_bytes(&reg_backup_text("registry_hkcu", "中文启动项", r"C:\a.exe"));
+        assert_eq!(&bytes[..2], &[0xFF, 0xFE], "必须有 UTF-16LE BOM");
+        let units: Vec<u16> = bytes[2..]
+            .chunks(2)
+            .filter(|b| b.len() == 2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]))
+            .collect();
+        let decoded = String::from_utf16(&units).expect("应是合法 UTF-16LE");
+        assert!(decoded.contains("中文启动项"), "中文值名要能原样读回");
+        assert!(decoded.starts_with("Windows Registry Editor Version 5.00"));
     }
 
     #[test]
