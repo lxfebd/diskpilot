@@ -272,3 +272,32 @@ describe('rateHealth（健康度评级）', () => {
     expect(rateHealth(NaN)).toBe('watch');
   });
 });
+
+// R121：跑分结论——巅峰与最近差距纯函数。
+import { scoreBest, scoreRecentDelta, type ScoreHistorySeries } from './charts';
+
+const s = (value: number, at: number, label = 'r', unit = 'MB/s'): ScoreHistorySeries => ({ label, value, unit, at });
+
+describe('scoreBest（巅峰成绩）', () => {
+  it('取最大值；空历史 null', () => {
+    expect(scoreBest([s(10, 100), s(20, 200), s(15, 300)])?.value).toBe(20);
+    expect(scoreBest([])).toBeNull();
+  });
+
+  it('并列取较近记录（最近同分胜出）', () => {
+    expect(scoreBest([s(10, 100), s(10, 300)])?.at).toBe(300);
+  });
+});
+
+describe('scoreRecentDelta（最近 vs 巅峰差距）', () => {
+  it('最近低于巅峰 → 正差距 %', () => {
+    // 巅峰 20（at=200），最近 15（at=300）→ 低 (20-15)/20 = 25%
+    expect(scoreRecentDelta([s(10, 100), s(20, 200), s(15, 300)])).toBeCloseTo(25, 6);
+  });
+
+  it('最近已达/超巅峰 → 0；不足 2 次 → null', () => {
+    expect(scoreRecentDelta([s(10, 100), s(20, 200)])).toBeCloseTo(0, 6);
+    expect(scoreRecentDelta([s(10, 100), s(30, 300)])).toBeCloseTo(0, 6);
+    expect(scoreRecentDelta([s(10, 100)])).toBeNull();
+  });
+});

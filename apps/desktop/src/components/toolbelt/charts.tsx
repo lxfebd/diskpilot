@@ -179,6 +179,27 @@ export function buildScoreSeries(
   return out;
 }
 
+/// 巅峰成绩（纯函数，可单测）：最高分那条；并列时取较近的一次（>= 让
+/// 最新同分纪录胜出）。空历史返回 null（不渲染结论）。
+export function scoreBest(series: ScoreHistorySeries[]): ScoreHistorySeries | null {
+  if (series.length === 0) return null;
+  let best = series[0];
+  for (const s of series) if (s.value >= best.value) best = s;
+  return best;
+}
+
+/// 最近一次相对巅峰低了多少%（纯函数，可单测）：返回 ≥0 的正值——0 =
+/// 最近已达或超过巅峰（不唱衰，超巅峰如实算作 0 差距）；大于 0 = 低的比例。
+/// 不足 2 次没有「对比」可言 → null。
+export function scoreRecentDelta(series: ScoreHistorySeries[]): number | null {
+  if (series.length < 2) return null;
+  const best = scoreBest(series);
+  if (!best) return null;
+  const last = series[series.length - 1];
+  const delta = ((best.value - last.value) / best.value) * 100;
+  return Number.isFinite(delta) ? Math.max(0, delta) : null;
+}
+
 /// 分数历史条形图：每根条 = 一次跑分（旧→新 → 左→右），Y 值即分数；
 /// 最高分那根用强调色，其余用主题色——峰值一眼可见。
 export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) {
@@ -230,6 +251,30 @@ export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) 
           {t('toolbelt.scoreChart.countLabel', { n: series.length, unit: series[series.length - 1].unit })}
         </span>
       </div>
+      {/* R121：巅峰 + 最近差距结论行（不足 2 次不显示差距） */}
+      {series.length > 0 && (() => {
+        const best = scoreBest(series);
+        const delta = scoreRecentDelta(series);
+        if (!best) return null;
+        return (
+          <p className="muted small bench-score-cells">
+            <span>
+              {t('toolbelt.scoreChart.bestRun', {
+                value: best.value.toLocaleString(),
+                unit: best.unit,
+                date: new Date(best.at).toLocaleDateString([], { year: 'numeric', month: '2-digit', day: '2-digit' }),
+              })}
+            </span>
+            {delta !== null && (
+              <span className={delta > 0 ? 'bench-score-down' : 'bench-score-at'}>
+                {delta > 0
+                  ? t('toolbelt.scoreChart.recentGap', { pct: delta.toFixed(1) })
+                  : t('toolbelt.scoreChart.recentAtBest')}
+              </span>
+            )}
+          </p>
+        );
+      })()}
     </div>
   );
 }

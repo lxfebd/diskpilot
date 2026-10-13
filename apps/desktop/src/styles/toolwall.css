@@ -482,6 +482,17 @@ html[data-theme="pro"] .tb-tab.active { border-color: var(--accent-strong); back
 }
 .bench-trend-err { margin-top: 8px; }
 
+/* R121 跑分结论行：巅峰 + 最近差距 */
+.bench-score-cells {
+  margin-top: 6px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  line-height: 1.5;
+}
+.bench-score-down { color: var(--risk-caution); }
+.bench-score-at { color: var(--risk-safe); }
+
 /* ── R111 压测实时温度监护：时长选择 + 压测中实时曲线 ── */
 .bench-stress-secs {
   display: inline-flex;
