@@ -58,6 +58,7 @@ export const chat = {
     'chat.sys.imageTooBig': '图片 {name} 太大（>20MB），跳过',
     'chat.sys.imageReadFailed': '读取图片失败：{msg}',
     'chat.sys.recycled': '已回收 {path} · 释放 {size}',
+    'chat.sys.recycledNoBytes': '已回收 {path}（未能统计释放大小，不编造数字）',
     'chat.sys.recycleFailed': '回收失败：{msg}',
 
     // 会话列表与头部
@@ -160,6 +161,7 @@ export const chat = {
     'chat.sys.imageTooBig': 'Skipped {name}: image is larger than 20MB',
     'chat.sys.imageReadFailed': 'Could not read the image: {msg}',
     'chat.sys.recycled': 'Recycled {path} · {size} freed',
+    'chat.sys.recycledNoBytes': 'Recycled {path} (could not measure freed space; not inventing a number)',
     'chat.sys.recycleFailed': 'Recycle failed: {msg}',
 
     // Session list and header

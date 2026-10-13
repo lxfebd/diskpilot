@@ -563,7 +563,15 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
       const entries = (await api.recyclePaths([target.path], target.reason, true)) ?? [];
       const freed = entries.reduce((s, e) => s + (e.bytes_freed ?? 0), 0);
       addReclaimed(freed);
-      pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycled', { path: target.path, size: formatBytes(freed) }) });
+      // bytes 为 0 可能是「回收成功但没统计到实测大小」（mock 演示 / 后端未返回），
+      // 也可能是真 0 字节文件——都不该显示「释放 0 B」误导，用兜底文案。
+      pushTurn({
+        id: uid(),
+        role: 'system',
+        text: freed > 0
+          ? t('chat.sys.recycled', { path: target.path, size: formatBytes(freed) })
+          : t('chat.sys.recycledNoBytes', { path: target.path }),
+      });
     } catch (e) {
       pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycleFailed', { msg: String(e) }) });
     }
