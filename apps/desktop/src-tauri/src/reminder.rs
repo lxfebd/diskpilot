@@ -157,11 +157,17 @@ fn compute_reminder(
     cfg: &ReminderConfig,
 ) -> Result<Option<ReminderPayload>, String> {
     // 枚举所有盘（复用 lib.rs list_drives 语义：C..=Z 中可读的盘）。
+    let substs = crate::drives::collect_substs();
     let mut drives: Vec<DriveCleanup> = Vec::new();
     let mut total: u64 = 0;
     for letter in b'C'..=b'Z' {
         let root = format!("{}:\\", letter as char);
         if crate::drives::volume_info(root.clone()).is_err() {
+            continue;
+        }
+        // 映射盘（subst D: J:\D）不是独立物理盘：目标卷自己也在这一轮里被算过，
+        // 再算一遍就把同一块盘的可清量数两遍。
+        if crate::drives::mapped_into_local_volume(letter as char, &substs) {
             continue;
         }
         // cleanup_suggestions 需要 scaffolds；直接读 state。block_on 在后台线程

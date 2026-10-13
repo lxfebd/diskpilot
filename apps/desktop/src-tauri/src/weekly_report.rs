@@ -105,11 +105,17 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
     let state = app.state::<AppState>();
     // 1) 各盘建议可清合计（复用 cleanup_suggestions，cached_only=true：
     //    只读缓存/扫描树，未命中返回空，绝不全盘 walk）。
+    let substs = crate::drives::collect_substs();
     let mut drives: Vec<DriveCleanupBrief> = Vec::new();
     let mut total: u64 = 0;
     for letter in b'C'..=b'Z' {
         let root = format!("{}:\\", letter as char);
         if crate::drives::volume_info(root.clone()).is_err() {
+            continue;
+        }
+        // 映射盘（subst D: J:\D）不是独立物理盘：目标卷自己也在这一轮里被算过，
+        // 再算一遍就把同一块盘的空间与可清量数两遍。
+        if crate::drives::mapped_into_local_volume(letter as char, &substs) {
             continue;
         }
         let suggs = tauri::async_runtime::block_on(crate::cleanup::cleanup_suggestions(

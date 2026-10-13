@@ -57,6 +57,40 @@ pub(crate) fn collect_substs() -> Vec<(char, String)> {
     Vec::new()
 }
 
+/// 映射目标所在的卷根：`J:\D` → `J:\`；不是盘符路径（UNC 等）返回 None，不猜。
+pub(crate) fn target_volume_root(target: &str) -> Option<String> {
+    let b = target.as_bytes();
+    if b.len() < 2 || !b[0].is_ascii_alphabetic() || b[1] != b':' {
+        return None;
+    }
+    Some(format!("{}:\\", (b[0] as char).to_ascii_uppercase()))
+}
+
+/// 这个盘符映射到的**另一块本机卷的卷根**；不是映射盘、或目标不是盘符路径、
+/// 或映射回自己，都返回 None。纯函数，可测。
+pub(crate) fn mapped_target_local_root(letter: char, substs: &[(char, String)]) -> Option<String> {
+    let (_, target) = substs
+        .iter()
+        .find(|(l, _)| l.eq_ignore_ascii_case(&letter))?;
+    let troot = target_volume_root(target)?;
+    if troot == format!("{}:\\", letter.to_ascii_uppercase()) {
+        return None;
+    }
+    Some(troot)
+}
+
+/// 这个盘符是不是「映射到本机另一块可读卷」的映射盘。
+///
+/// 按 C..Z 逐盘求和的地方（周报、清理提醒）会把目标卷自己也算一遍：
+/// 映射盘再算一次就把同一块盘的空间与可清量数两遍。目标卷不在本机（UNC 等）时，
+/// 映射盘是碰到那份空间的唯一入口，要算它。
+pub(crate) fn mapped_into_local_volume(letter: char, substs: &[(char, String)]) -> bool {
+    match mapped_target_local_root(letter, substs) {
+        Some(troot) => volume_info(troot).is_ok(),
+        None => false,
+    }
+}
+
 /// 枚举本机所有可用磁盘，返回盘符与空间信息。供"全盘扫描"首页直出，
 /// 长辈不必再手动选文件夹。映射盘（subst）也列出来——用户确实在用那个盘符，
 /// 但带上 `mapped_to` 说明它落在哪块真盘上。
@@ -174,5 +208,40 @@ mod tests {
         assert_eq!(parse_subst_line("No Subst drive entries."), None);
         assert_eq!(parse_subst_line("D:\\: => "), None);
         assert_eq!(parse_subst_line("DD:\\: => J:\\D"), None);
+    }
+
+    #[test]
+    fn target_volume_root_only_accepts_drive_paths() {
+        assert_eq!(target_volume_root("J:\\D"), Some("J:\\".to_string()));
+        assert_eq!(target_volume_root("j:\\d"), Some("J:\\".to_string()));
+        assert_eq!(target_volume_root("J:"), Some("J:\\".to_string()));
+        assert_eq!(target_volume_root("J:\\"), Some("J:\\".to_string()));
+        // UNC / 相对路径：认不出就 None，不猜它在哪块盘上。
+        assert_eq!(target_volume_root("\\\\nas\\share"), None);
+        assert_eq!(target_volume_root(""), None);
+    }
+
+    #[test]
+    fn mapped_target_local_root_skips_self_and_non_drive() {
+        let substs = vec![
+            ('D', "J:\\D".to_string()),
+            ('X', "\\\\nas\\share".to_string()),
+        ];
+        assert_eq!(
+            mapped_target_local_root('D', &substs),
+            Some("J:\\".to_string())
+        );
+        // 大小写不敏感（subst 输出是大写，调用方可能传小写）。
+        assert_eq!(
+            mapped_target_local_root('d', &substs),
+            Some("J:\\".to_string())
+        );
+        // 映射到 UNC：没有本机目标卷，映射盘是唯一的入口，不能跳过它。
+        assert_eq!(mapped_target_local_root('X', &substs), None);
+        // 不是映射盘。
+        assert_eq!(mapped_target_local_root('C', &substs), None);
+        // 映射回自己的根：跳过就会把这块盘算成零，不跳。
+        let self_map = vec![('D', "D:\\x".to_string())];
+        assert_eq!(mapped_target_local_root('D', &self_map), None);
     }
 }
