@@ -632,7 +632,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   };
 
   // 页脚「已用」按物理卷求和：映射盘和它的目标卷是同一块盘，数两遍就虚高。
+  // M4：缺 used_bytes 的卷按 0 计（不猜），但要在页脚注明有几块盘没计入，
+  // 否则「本机已用 X」会把缺失说成「真的只用了这么多」。
   const usedTotal = physicalUsedBytes(drives);
+  const usedUnknownCount = physicalDrives(drives).filter((d) => !(d.used_bytes > 0)).length;
   const scannedCount = drives.filter((d) => scanCache[normKey(d.path)]).length;
 
   // 扫描完成自动刷新可清理项：cachedOnly=true 只读内存树，秒回；
@@ -978,6 +981,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       <div className="ao-foot">
         <span>
           <HardDrive size={14} /> {t('overview.foot.used', { size: formatBytes(usedTotal) })}
+          {usedUnknownCount > 0 && <span className="muted small"> · {t('overview.foot.usedUnread', { n: usedUnknownCount })}</span>}
         </span>
         <span>
           <Check size={14} /> {t('overview.foot.scanned', { n: scannedCount, total: drives.length })}
