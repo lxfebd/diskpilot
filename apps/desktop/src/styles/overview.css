@@ -299,7 +299,14 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 /* 文件分类占用：水平柱状图 */
 .ao-bars { display: flex; flex-direction: column; gap: 10px; }
 /* wrap 兜底：窄容器下 track 优先保留，reclaim/name 换行不挤掉柱条 */
-.ao-bar-row { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
+.ao-bar-row {
+  display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap;
+  /* R92 行可点击：button reset，保持原 div 观感，hover 轻提示。 */
+  width: 100%; text-align: left; border: 0; background: none; padding: 3px 4px;
+  border-radius: 8px; font: inherit; color: inherit;
+}
+.ao-bar-row.clickable { cursor: pointer; }
+.ao-bar-row.clickable:hover { background: var(--accent-bg); }
 .ao-bar-dot { width: 10px; height: 10px; border-radius: calc(var(--radius-xs) * 0.75); border: 1px solid var(--border); flex-shrink: 0; }
 .ao-bar-name {
   font-size: 13px;

@@ -215,6 +215,28 @@ export function reclaimByScaffoldIds(
   return m;
 }
 
+/** R92：每个 scaffold 的「主目录」路径（同 aggregateByScaffold 口径——父节点已
+ *  打标则子节点不算，只收最外层命中；同 scaffold 多命中取体量最大的那个）。
+ *  分类占用行点击时用它定位到工作台；没有命中目录的分类返回不了键（点击不动作）。
+ *  纯函数可测。 */
+export function scaffoldMainPaths(root: Node | null): Map<string, string> {
+  const m = new Map<string, { path: string; size: number }>();
+  if (!root) return new Map();
+  const walk = (n: Node, parentSid: string | null) => {
+    const sid = n.scaffold_id ?? null;
+    if (sid && sid !== parentSid) {
+      const size = n.size || 0;
+      const prev = m.get(sid);
+      if (prev === undefined || size > prev.size) m.set(sid, { path: n.path, size });
+    }
+    for (const c of n.children ?? []) walk(c, sid ?? parentSid);
+  };
+  walk(root, null);
+  const out = new Map<string, string>();
+  for (const [sid, v] of m) out.set(sid, v.path);
+  return out;
+}
+
 // ── 今日体检（health-butler P0）：把散点的健康信号汇总成一页横幅 ──
 // 全只读：红盘/可回收来自 drives 与建议清单缓存，温度/启动项来自后端一次查询，
 // 不为展示新造任何磁盘扫描。纯函数便于单测，组件只负责装配与跳转。
@@ -564,6 +586,9 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [scOpen, setScOpen] = useState(false);
   const SC_LIMIT = 6;
   const shownScaffolds = scOpen ? scaffoldStats : scaffoldStats.slice(0, SC_LIMIT);
+
+  // R92: 分类 → 主目录路径（同盘树一次 DFS，行点击定位用；盘未扫则空）。
+  const scMainPaths = useMemo(() => scaffoldMainPaths(catBase), [catBase]);
 
   // 建议清理项目：选中盘的 scope 级可回收项
   const [cleanItems, setCleanItems] = useState<CleanItem[]>([]);
@@ -931,8 +956,16 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                     const max = scaffoldStats[0]?.bytes || 1;
                     const pct = Math.max(3, Math.min(100, (bytes / max) * 100));
                     const reclaim = reclaimByScaffold.get(scaffold.id) ?? 0;
+                    // R92: 行点击 → 工作台定位到该分类体量最大的目录（同盘已扫）。
+                    const mainPath = scMainPaths.get(scaffold.id);
                     return (
-                      <div key={scaffold.id} className="ao-bar-row">
+                      <button
+                        key={scaffold.id}
+                        type="button"
+                        className={'ao-bar-row' + (mainPath ? ' clickable' : '')}
+                        onClick={mainPath ? () => onGoWorkspace(mainPath) : undefined}
+                        title={mainPath ? `${t('overview.locateInWorkspace')} · ${mainPath}` : undefined}
+                      >
                         <span className="ao-bar-dot" style={{ background: color }} />
                         <span className="ao-bar-name">{scaffold.name}</span>
                         <span className="ao-bar-track"><i style={{ width: `${pct}%`, background: color }} /></span>
@@ -940,7 +973,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                         <span className="ao-bar-reclaim" title={reclaim > 0 ? t('overview.cat.reclaimTip') : undefined}>
                           {reclaim > 0 ? `↳ ${t('overview.cat.reclaim', { size: formatBytes(reclaim) })}` : ''}
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                   {scaffoldStats.length > SC_LIMIT && (

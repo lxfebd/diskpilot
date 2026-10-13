@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -95,6 +95,34 @@ describe('磁盘空间趋势（R6）', () => {
     expect(r30[0].points.map((p) => p.used_bytes)).toEqual([420, 470]);
     const r7 = buildSpaceSeries(hist, [], 7);
     expect(r7[0].points.map((p) => p.used_bytes)).toEqual([470]);
+  });
+});
+
+describe('R92 分类主目录定位', () => {
+  it('scaffoldMainPaths 取最外层命中里体量最大的目录', () => {
+    // 树：C 盘根 → 微信(外层 500) → 子(微信缓存 200，嵌套不打标/不重复)，
+    //     另一处 微信(400) → 应取 500 那条。
+    const root: Node = {
+      name: 'C:', path: 'C:\\', is_dir: true, size: 0, file_count: 0, top_extensions: [],
+      children: [
+        {
+          name: 'WeChat Files', path: 'C:\\WeChat Files', is_dir: true, size: 500, file_count: 10,
+          scaffold_id: 'wechat-pc', children: [], top_extensions: [],
+        },
+        {
+          name: 'wechat', path: 'C:\\Users\\me\\wechat', is_dir: true, size: 400, file_count: 8,
+          scaffold_id: 'wechat-pc', children: [], top_extensions: [],
+        },
+      ],
+    };
+    const m = scaffoldMainPaths(root);
+    expect(m.get('wechat-pc')).toBe('C:\\WeChat Files');
+  });
+
+  it('scaffoldMainPaths 空树 → 空 map；未打标节点不产生键', () => {
+    expect(scaffoldMainPaths(null)).toEqual(new Map());
+    const plain: Node = { name: 'x', path: 'C:\\x', is_dir: true, size: 1, file_count: 0, children: [], top_extensions: [] };
+    expect(scaffoldMainPaths(plain).size).toBe(0);
   });
 });
 
