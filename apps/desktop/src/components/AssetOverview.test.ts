@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, truncatePaths, previewSummary, previewTotalBytes } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, truncatePaths, previewSummary, previewTotalBytes, previewState } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -347,5 +347,22 @@ describe('R105 预览合计 previewTotalBytes', () => {
   });
   it('全部缺失 → null（后端未统计时不显示假合计）', () => {
     expect(previewTotalBytes([{ bytes: null }, { bytes: null }])).toBeNull();
+  });
+});
+
+describe('R106 预览状态判定 previewState', () => {
+  it('in-flight 优先 loading（即便留有旧 err 也不显示旧错误）', () => {
+    expect(previewState(true, '上次失败', [])).toBe('loading');
+    expect(previewState(true, null, undefined)).toBe('loading');
+  });
+  it('读失败 → error（失败 ≠ 空清单，诚实性铁律）', () => {
+    expect(previewState(false, 'boom', [])).toBe('error');
+  });
+  it('无 err 且空清单 → empty（读到了但没匹配，可能刚清理过）', () => {
+    expect(previewState(false, null, [])).toBe('empty');
+    expect(previewState(false, null, undefined)).toBe('empty');
+  });
+  it('有清单 → has', () => {
+    expect(previewState(false, null, [{ path: 'C:\\a\\1' }])).toBe('has');
   });
 });

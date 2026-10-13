@@ -471,8 +471,20 @@ export function previewSummary(
   return `${tFiles({ n: filesCount })}${size}`;
 }
 
-/** 判定一条预览结果该显示什么：加载中 / 读失败（诚实：失败≠空）/ 空清单 / 有清单。 */
+/** 判定一条预览结果该显示什么：加载中 / 读失败（诚实：失败≠空）/ 空清单 / 有清单。
+ *  顺序语义（R106 抽成纯函数，渲染与单测共用）：in-flight 优先 loading——
+ *  即便上一次已留 err 也先转 loading（重试中不显示旧错误）；失败 ≠ 空清单。 */
 export type PreviewState = 'loading' | 'error' | 'empty' | 'has';
+
+export function previewState(
+  loading: boolean,
+  err: string | null | undefined,
+  items: readonly unknown[] | undefined,
+): PreviewState {
+  if (loading) return 'loading';
+  if (err) return 'error';
+  return (items?.length ?? 0) === 0 ? 'empty' : 'has';
+}
 
 /** R102 scope 展开明细：将删文件路径清单（dry-run 预览，与执行同 olderThanDays
  *  口径）。最多展示 12 条，其余折成「另有 N 条」；路径按 basename 截短防长串撑爆。 */
@@ -1184,22 +1196,29 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                         {previewOpen[it.key] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                       </button>
                     </label>
-                    {previewOpen[it.key] && (
-                      <div className="ao-clean-preview">
-                        {previewing[it.key] ? (
-                          <div className="ao-clean-preview-note"><RefreshCw size={12} className="ao-spin" />{t('overview.clean.peekLoading')}</div>
-                        ) : previews[it.key]?.err ? (
-                          // 读失败 ≠ 空清单：明确说明预览失败（不代表没有文件）。
-                          <div className="ao-clean-preview-note err">{t('overview.clean.peekFailed', { msg: previews[it.key]!.err ?? '' })}</div>
-                        ) : ((previews[it.key]?.items.length ?? 0) === 0) ? (
-                          <div className="ao-clean-preview-note">{t('overview.clean.peekEmpty')}</div>
-                        ) : (
-                          <ScopePreview
-                            items={previews[it.key]!.items}
-                          />
-                        )}
-                      </div>
-                    )}
+                    {previewOpen[it.key] && (() => {
+                      const st = previewState(
+                        !!previewing[it.key],
+                        previews[it.key]?.err,
+                        previews[it.key]?.items,
+                      );
+                      return (
+                        <div className="ao-clean-preview">
+                          {st === 'loading' ? (
+                            <div className="ao-clean-preview-note"><RefreshCw size={12} className="ao-spin" />{t('overview.clean.peekLoading')}</div>
+                          ) : st === 'error' ? (
+                            // 读失败 ≠ 空清单：明确说明预览失败（不代表没有文件）。
+                            <div className="ao-clean-preview-note err">{t('overview.clean.peekFailed', { msg: previews[it.key]!.err ?? '' })}</div>
+                          ) : st === 'empty' ? (
+                            <div className="ao-clean-preview-note">{t('overview.clean.peekEmpty')}</div>
+                          ) : (
+                            <ScopePreview
+                              items={previews[it.key]!.items}
+                            />
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))
               )}
