@@ -37,8 +37,8 @@ type Props = {
   onRefresh: (path: string) => void;
   onGoWorkspace: () => void;
   onOpenCleanup: () => void;
-  /** 跳到「系统优化」页看硬盘健康（体检条的硬盘格用）。 */
-  onGoOptimizer?: () => void;
+  /** 跳到工具页的硬件面板看硬盘健康明细（体检条的硬盘格用）。 */
+  onGoHardware?: () => void;
 };
 
 function catColor(seed: string): string {
@@ -311,14 +311,14 @@ function HealthCheckupCard({
   scanning,
   onScanAll,
   onGoCleanup,
-  onGoOptimizer,
+  onGoHardware,
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
   scanning: boolean;
   onScanAll: () => void;
   onGoCleanup: () => void;
-  onGoOptimizer?: () => void;
+  onGoHardware?: () => void;
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
@@ -384,8 +384,8 @@ function HealthCheckupCard({
         {/* 硬盘健康：读不到就说读不到；Unknown 只标「未上报」，不给红牌（第 26 轮的教训） */}
         <button
           className={'ao-checkup-item' + (hwSummary.state === 'risky' ? (hwSummary.bad > 0 ? ' danger' : ' caution') : '')}
-          onClick={onGoOptimizer}
-          disabled={!onGoOptimizer}
+          onClick={onGoHardware}
+          disabled={!onGoHardware}
           title={
             riskyDisks.length > 0
               ? `${t('overview.checkup.goHardware')} · ${riskyDisks.map((d) => (d.letters ? `${d.letters}: ${d.friendly}` : d.friendly)).join(' · ')}`
@@ -410,7 +410,7 @@ function HealthCheckupCard({
   );
 }
 
-export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup, onGoOptimizer }: Props) {
+export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup, onGoHardware }: Props) {
   const t = useT();
   const scanCache = useStore((s) => s.scanCache);
   const toast = useStore((s) => s.toast);
@@ -703,7 +703,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         scanning={scanning}
         onScanAll={onScanAll}
         onGoCleanup={onOpenCleanup}
-        onGoOptimizer={onGoOptimizer}
+        onGoHardware={onGoHardware}
       />
 
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}
