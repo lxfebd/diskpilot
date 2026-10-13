@@ -460,6 +460,13 @@ export function hasCheckedWechat(items: readonly CleanItem[], checked: Record<st
   return items.some((i) => i.scaffoldId === 'wechat-pc' && !!checked[i.key]);
 }
 
+/** R126：建议清理按可回收字节降序排序——最有价值的清理项排最前（微信缓存/
+ *  大块头优先），用户一眼看到收益最大项。后端顺序不稳定（map 迭代序），
+ *  前端统一口径。导出供单测锁定排序规则。 */
+export function sortCleanItemsByBytes(items: readonly CleanItem[]): CleanItem[] {
+  return [...items].sort((a, b) => b.bytes - a.bytes);
+}
+
 // ── R102 scope 逐文件预览的纯展示逻辑（可单测）─────────────────────
 
 /** 预览路径列表的截断策略：最多显示前 limit 条，其余折成一行
@@ -780,21 +787,26 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       // 展示建议不值得把整块磁盘遍历一遍（那就是"一开就卡"的元凶）。
       const raw = await api.cleanupSuggestions(path, undefined, true);
       const scaffoldsFor = scaffolds; // 闭包取当前目录清单
-      const items: CleanItem[] = raw.map((r) => {
-        const sc = scaffoldsFor.find((s) => s.id === r.scaffold_id);
-        const scope = sc?.scopes.find((s) => s.id === r.scope_id);
-        const days = scope?.prompt && scope.prompt.kind === 'days' ? Number(scope.prompt.default) : undefined;
-        return {
-          key: `${r.scaffold_id}:${r.scope_id}`,
-          scaffoldId: r.scaffold_id,
-          scopeId: r.scope_id,
-          label: r.label,
-          desc: r.desc,
-          bytes: r.bytes,
-          files: r.files,
-          days,
-        };
-      });
+      // R126：按可回收字节降序排序——最有价值的清理项排最前（微信缓存/大
+      // 块头优先），用户一眼看到收益最大项；后端顺序不稳定（map 迭代序），
+      // 前端统一口径。
+      const items: CleanItem[] = sortCleanItemsByBytes(
+        raw.map((r) => {
+          const sc = scaffoldsFor.find((s) => s.id === r.scaffold_id);
+          const scope = sc?.scopes.find((s) => s.id === r.scope_id);
+          const days = scope?.prompt && scope.prompt.kind === 'days' ? Number(scope.prompt.default) : undefined;
+          return {
+            key: `${r.scaffold_id}:${r.scope_id}`,
+            scaffoldId: r.scaffold_id,
+            scopeId: r.scope_id,
+            label: r.label,
+            desc: r.desc,
+            bytes: r.bytes,
+            files: r.files,
+            days,
+          };
+        }),
+      );
       setCleanItems(items);
       setChecked(Object.fromEntries(items.map((i) => [i.key, true])));
     } catch (e) {

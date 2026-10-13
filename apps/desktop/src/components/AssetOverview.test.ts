@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, truncatePaths, previewSummary, previewTotalBytes, previewState } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -389,5 +389,21 @@ describe('R106 预览状态判定 previewState', () => {
   });
   it('有清单 → has', () => {
     expect(previewState(false, null, [{ path: 'C:\\a\\1' }])).toBe('has');
+  });
+});
+
+describe('R126 建议清理排序 sortCleanItemsByBytes', () => {
+  const item = (key: string, bytes: number) => ({ key, scaffoldId: 's', scopeId: key, label: key, desc: '', bytes, files: 1 });
+  it('按可回收字节降序——最大收益排最前', () => {
+    const sorted = sortCleanItemsByBytes([item('small', 100), item('big', 10_000), item('mid', 500)]);
+    expect(sorted.map((s) => s.key)).toEqual(['big', 'mid', 'small']);
+  });
+  it('不修改入参数组（纯函数）', () => {
+    const input = [item('a', 2), item('b', 1)];
+    sortCleanItemsByBytes(input);
+    expect(input.map((i) => i.key)).toEqual(['a', 'b']);
+  });
+  it('空数组幂等', () => {
+    expect(sortCleanItemsByBytes([])).toEqual([]);
   });
 });
