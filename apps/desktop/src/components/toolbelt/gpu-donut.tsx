@@ -555,7 +555,11 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
         const r = await api.callTool('hw_temperature', {});
         // 局部变量不叫 t：t 归 useT() 的取文案函数（守卫测试按 t('key') 字面量查表）。
         const gpuTempC = parseGpuTemp(r.text);
-        if (gpuTempC != null) tempHistRef.current = [...tempHistRef.current, gpuTempC].slice(-60);
+        // R133：tempHistRef 存全长历史（无窗口）——退出摘要的「温度曲线」行要
+        // 画完整升温段（室温→爬升→稳态），手动长压测（≫60s）不再丢前段；
+        // 峰值也从全长取（开头瞬时高温不会丢）。HUD 趋势线由 stats.tempHist
+        // 的 slice(-60) 滚动窗口负责（画布小，只需近段）。
+        if (gpuTempC != null) tempHistRef.current = [...tempHistRef.current, gpuTempC];
         setStats((s) => ({
           ...s,
           temp: gpuTempC != null ? `${gpuTempC}℃` : 'N/A',

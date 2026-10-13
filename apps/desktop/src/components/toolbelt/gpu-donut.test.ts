@@ -70,4 +70,15 @@ describe('tempHistCurveLine（甜甜圈温度曲线序列化，R124）', () => {
     const line = tempHistCurveLine(hist);
     expect(parseStressCurve(line)).toHaveLength(60);
   });
+  // R133：tempHistRef 不再截窗（退出摘要画全长升温段）；>60 样本的序列化
+  // 必须完整往返——长压测的曲线不再丢前段。
+  it('超过 60 个采样仍完整序列化（R133 全长历史）', () => {
+    const hist = Array.from({ length: 90 }, (_, i) => 45 + i * 0.5);
+    const line = tempHistCurveLine(hist);
+    const pts = parseStressCurve(line);
+    expect(pts).not.toBeNull();
+    expect(pts).toHaveLength(90);
+    expect(pts![0]).toEqual({ sec: 0, temp: 45 });
+    expect(pts![pts!.length - 1]).toEqual({ sec: 89, temp: 45 + 89 * 0.5 });
+  });
 });
