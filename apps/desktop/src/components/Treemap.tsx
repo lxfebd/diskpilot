@@ -3,6 +3,7 @@ import { hierarchy, treemap, treemapSquarify } from 'd3-hierarchy';
 import type { Node } from '../types';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
+import { FAMILY_COLORS, FILE_FALLBACK, DIR_COLORS, JUNK_DIR_RE, JUNK_COLOR } from '../colors';
 
 type Props = {
   node: Node;
@@ -14,30 +15,20 @@ type Props = {
 
 // 文件类型 → 色相。颜色语义对齐 WizTree/WinDirStat：视频/图片/文档/压缩包一眼可辨，
 // 而不是按文件夹名随机哈希 —— 这样用户能瞬间看出「空间杀手」是什么类型的文件。
-const COLOR_BY_FAMILY: Array<[RegExp, string]> = [
-  [/^(mp4|mov|mkv|avi|webm|flv|wmv|ts|m4v|rmvb)$/i, '#ff6d8f'],   // 视频 粉红
-  [/^(png|jpg|jpeg|gif|bmp|webp|svg|ico|heic|raw|cr2|nef|tif|tiff)$/i, '#ff9d5c'], // 图片 橙
-  [/^(mp3|wav|flac|m4a|ogg|aac|wma|ape|opus)$/i, '#7ee2a8'],       // 音频 绿
-  [/^(zip|rar|7z|tar|gz|xz|bz2|iso|dmg|cab|pkg)$/i, '#c9a0ff'],    // 压缩/镜像 紫
-  [/^(doc|docx|pdf|ppt|pptx|xls|xlsx|txt|md|odt|rtf)$/i, '#6db5ff'],// 文档 蓝
-  [/^(exe|msi|dll|sys|bat|cmd|com|apk|deb|rpm)$/i, '#8fd3ff'],     // 程序 浅蓝
-  [/^(json|toml|yaml|yml|xml|ini|conf|log|sql|db|sqlite|py|js|ts|rs|go|java|c|cpp|h|hpp)$/i, '#ffd166'], // 代码/配置 黄
-  [/^(node_modules|__pycache__|\.git|\.cache|\.tmp|\.temp)$/i, '#a8998c'], // 工程垃圾 灰
-];
+// R108：本文件曾与 colors.ts 整套同值重复（FAMILY_COLORS / DIR_COLORS /
+// JUNK_DIR_RE / 两个 fallback），正是 W4 色板收敛要消灭的漂移源——改回单源 import。
+const COLOR_BY_FAMILY = FAMILY_COLORS;
 
 function colorForFile(name: string): string {
   for (const [re, color] of COLOR_BY_FAMILY) {
     if (re.test(name)) return color;
   }
-  return '#c9c5c0'; // 其他文件 中性灰
+  return FILE_FALLBACK; // 其他文件 中性灰
 }
 
 // 文件夹色：按名称哈希从暖色系选，保持目录块之间可区分
-const DIR_COLORS = ['#ffb3a7', '#ffd1a1', '#ffe8a3', '#b3e5c8', '#a8d8ff', '#d3bfff', '#f8c8e0', '#d9d4c8'];
-// 工程垃圾目录（node_modules/.git/.cache 等）一律用灰，即便按目录渲染也不走暖色哈希
-const JUNK_DIR_RE = /^(node_modules|__pycache__|\.git|\.cache|\.tmp|\.temp)$/i;
 function colorForDir(name: string): string {
-  if (JUNK_DIR_RE.test(name)) return '#a8998c';
+  if (JUNK_DIR_RE.test(name)) return JUNK_COLOR;
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
   return DIR_COLORS[Math.abs(h) % DIR_COLORS.length];

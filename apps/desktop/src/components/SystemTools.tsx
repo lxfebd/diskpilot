@@ -7,17 +7,12 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { listen } from '@tauri-apps/api/event';
 import { useT } from '../i18n';
 import { StartupPanel } from './StartupPanel';
+import { FAN_LEVEL_COLORS } from '../colors';
 
-const LEVEL_COLOR: Record<string, string> = {
-  urgent: '#d93025',
-  high: '#ea8600',
-  balanced_plus: '#d97706',
-  balanced: '#16a34a',
-  quiet_ok: '#16a34a',
-  temp_only: '#0d9488',
-  unknown_temp: '#64748b',
-  unknown: '#94a3b8',
-};
+// 风扇调速档位 → 语义色（urgent 红 → balanced 绿，未知灰）。
+// R108：此前在本文件硬编码 9 个 hex，是 colors.ts（W4 单源）之外的散板——
+// 移入 colors.ts 的 FAN_LEVEL_COLORS，全仓只此一处取色。
+const LEVEL_COLOR = FAN_LEVEL_COLORS;
 
 /** 风扇可调通道三态（R71）：
  *  - 'ok'：可写通道在位（writable=true）；

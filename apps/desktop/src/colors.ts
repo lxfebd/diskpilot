@@ -22,6 +22,19 @@ export const LEVEL_COLORS: Record<string, string> = {
   L2: '#ff9f5e',
   L3: '#ff5d7a',
 };
+// 风扇调速档位 → 色（R108 收敛：SystemTools 原硬编码 9 个 hex 在此单源）。
+// 键对齐 hw_report/fan.rs 的建议档位：urgent/high/balanced_plus/balanced/
+// quiet_ok/temp_only/unknown_temp/unknown。
+export const FAN_LEVEL_COLORS: Record<string, string> = {
+  urgent: '#d93025',
+  high: '#ea8600',
+  balanced_plus: '#d97706',
+  balanced: '#16a34a',
+  quiet_ok: '#16a34a',
+  temp_only: '#0d9488',
+  unknown_temp: '#64748b',
+  unknown: '#94a3b8',
+};
 
 // 工具分类 → 主题色（工具墙图标/卡片的「一眼可辨」色）
 // 键是后端 toolbelt manifest / 目录扫描给出的中文分类名（数据，用于匹配，不随 UI
