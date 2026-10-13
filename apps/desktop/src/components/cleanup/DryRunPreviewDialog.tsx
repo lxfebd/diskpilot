@@ -155,8 +155,13 @@ export function DryRunPreviewDialog({
         )}
 
         <div className="cleanup-preview-list">
-          {preview.samplePaths.map((p) => (
-            <div key={p} className="cleanup-preview-path" title={p}>{p}</div>
+          {preview.sampleEntries.map((e) => (
+            <div key={e.source} className="cleanup-preview-path" title={e.source}>
+              <span className="cleanup-preview-path-name">{e.source}</span>
+              {e.bytes_freed != null && (
+                <span className="cleanup-preview-path-size">{formatBytes(e.bytes_freed)}</span>
+              )}
+            </div>
           ))}
           {preview.truncated && (
             <div className="cleanup-preview-more muted small">

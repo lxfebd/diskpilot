@@ -35,6 +35,9 @@ export interface DryRunPreview {
   totalFiles: number;
   /** First N paths that would be deleted. Capped to keep the dialog usable. */
   samplePaths: string[];
+  /** R131：与 samplePaths 同序的「路径 + 实际释放字节」条目（供预览窗
+   *  行尾展示单文件大小；bytes_freed 缺失为 null，展示省略）。 */
+  sampleEntries: { source: string; bytes_freed?: number | null }[];
   /** True when more paths exist than samplePaths shows. */
   truncated: boolean;
   /** 这批路径分布在哪些盘上（按文件数降序）。整批口径，不受 samplePaths 截断影响——
@@ -62,6 +65,15 @@ export function samplePathsByBytes(
   entries: readonly { source: string; bytes_freed?: number | null }[],
   cap: number = DRY_RUN_SAMPLE_CAP,
 ): string[] {
+  return sampleEntriesByBytes(entries, cap).map((e) => e.source);
+}
+
+/** R131：与 samplePathsByBytes 同排序规则的「条目」版本——预览窗行尾要
+ *  显示单文件大小，路径数组不够。字节降序、缺失沉底保相对序、不改入参。 */
+export function sampleEntriesByBytes(
+  entries: readonly { source: string; bytes_freed?: number | null }[],
+  cap: number = DRY_RUN_SAMPLE_CAP,
+): { source: string; bytes_freed?: number | null }[] {
   return [...entries]
     .sort((a, b) => {
       const ab = a.bytes_freed ?? null;
@@ -71,8 +83,7 @@ export function samplePathsByBytes(
       if (bb == null) return -1;
       return bb - ab;
     })
-    .slice(0, cap)
-    .map((e) => e.source);
+    .slice(0, cap);
 }
 
 /** 一次清理会动到哪几块物理盘：盘符 + 该盘上的文件数。 */

@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 清理预览窗显示单文件大小（R131）
+
+- 清理页 dry-run 预览窗的路径清单每条在行尾显示「实际释放字节」——
+  大文件一眼可见；bytes_freed 缺失（后端未统计）的行省略大小。
+- `DryRunPreview` 新增 `sampleEntries`（与 samplePaths 同序的路径+字节
+  条目）；抽纯函数 `sampleEntriesByBytes`（与 samplePathsByBytes 同排序
+  规则的条目版本）+4 tests（404 总 / 33 files）。预览行 flex 布局：
+  路径省略 + 大小右对齐。
+
 ### 2026-10-13 清理预览路径按字节降序（R130）
 
 - 清理页 dry-run 预览窗的路径清单（前 80 条）从「后端返回顺序」改为

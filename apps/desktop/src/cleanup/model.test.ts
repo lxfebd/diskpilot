@@ -9,6 +9,7 @@ import {
   defaultDaysFor,
   detectVariants,
   driveBreakdown,
+  sampleEntriesByBytes,
   samplePathsByBytes,
   scopeDayOverrides,
   tallyDrive,
@@ -316,5 +317,51 @@ describe('samplePathsByBytes（预览路径按字节降序）', () => {
     const out = samplePathsByBytes(many);
     expect(out).toHaveLength(80);
     expect(out[0]).toBe('f99');
+  });
+});
+
+// R131：条目版本 sampleEntriesByBytes——预览窗行尾要显示单文件大小，
+// 与 samplePathsByBytes 同排序规则但保留字节。
+describe('sampleEntriesByBytes（预览条目按字节降序，保字节）', () => {
+  it('降序取前 cap 条且保留字节', () => {
+    const out = sampleEntriesByBytes(
+      [
+        { source: 'C:\\a\\1', bytes_freed: 100 },
+        { source: 'C:\\b\\2', bytes_freed: 50_000 },
+        { source: 'C:\\c\\3', bytes_freed: 2_000 },
+      ],
+      2,
+    );
+    expect(out).toEqual([
+      { source: 'C:\\b\\2', bytes_freed: 50_000 },
+      { source: 'C:\\c\\3', bytes_freed: 2_000 },
+    ]);
+  });
+  it('bytes_freed 缺失的沉底且保持相对顺序', () => {
+    const out = sampleEntriesByBytes(
+      [
+        { source: 'u1', bytes_freed: null },
+        { source: 'big', bytes_freed: 9000 },
+        { source: 'u2' },
+        { source: 'small', bytes_freed: 5 },
+      ],
+      10,
+    );
+    expect(out.map((e) => e.source)).toEqual(['big', 'small', 'u1', 'u2']);
+  });
+  it('与 samplePathsByBytes 同序（路径数组 = 条目映射）', () => {
+    const entries = [
+      { source: 'a', bytes_freed: 2 },
+      { source: 'b', bytes_freed: 9 },
+      { source: 'c', bytes_freed: null },
+    ];
+    expect(sampleEntriesByBytes(entries, 10).map((e) => e.source)).toEqual(
+      samplePathsByBytes(entries, 10),
+    );
+  });
+  it('不修改入参数组（纯函数）', () => {
+    const input = [{ source: 'a', bytes_freed: 2 }, { source: 'b', bytes_freed: 1 }];
+    sampleEntriesByBytes(input, 10);
+    expect(input.map((i) => i.source)).toEqual(['a', 'b']);
   });
 });

@@ -21,7 +21,7 @@ import {
   driveBreakdown,
   mergeScopeDays,
   persistScopeDays,
-  samplePathsByBytes,
+  sampleEntriesByBytes,
   tallyDrive,
   type CoverageBreakdown,
   type DryRunPreview,
@@ -400,6 +400,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       if (!s) return;
       // R130：预览采样路径（全量命中按字节降序取前 cap 条后填充；两分支共用）。
       let samplePaths: string[] = [];
+      // R131：与 samplePaths 同序的路径+字节条目（预览窗行尾显示单文件大小）。
+      let sampleEntries: { source: string; bytes_freed?: number | null }[] = [];
       // 整批路径按盘计数：预览窗只列前 80 条，但「会动到哪几块盘」必须按全量算。
       const driveTally = new Map<string, number>();
       let totalBytes = 0;
@@ -474,7 +476,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
             tallyDrive(driveTally, e.source);
           }
         }
-        samplePaths = samplePathsByBytes(allHits);
+        sampleEntries = sampleEntriesByBytes(allHits);
+        samplePaths = sampleEntries.map((e) => e.source);
         // conda 字节走 condaDryBytes：只累加「后端 dry-run 实际命中的 env 目录」
         // 的 size_bytes + 勾选的包缓存 scope（tarballs/unused-packages）——不能
         // 把所有勾选 env 全算进去（envs-stale 只清未使用的，勾了 10 删 3 按 10
@@ -525,7 +528,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
             tallyDrive(driveTally, e.source);
           }
         }
-        samplePaths = samplePathsByBytes(allHits);
+        sampleEntries = sampleEntriesByBytes(allHits);
+        samplePaths = sampleEntries.map((e) => e.source);
       }
 
       if (totalFiles === 0) {
@@ -548,6 +552,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           totalBytes,
           totalFiles,
           samplePaths,
+          sampleEntries,
           truncated: totalFiles > samplePaths.length,
           driveCounts: driveBreakdown(driveTally),
           daysSnapshot,
