@@ -101,6 +101,9 @@ interface GpuDonutProps {
 export function GpuDonut({ onDone }: GpuDonutProps) {
   const t = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // R123：tempHist 的最新镜像（ref），供 finish 闭包读退出峰值——
+  // finish 是 useCallback，闭包里的 stats 是旧值，读不到轮询刚写入的窗口。
+  const tempHistRef = useRef<number[]>([]);
   const [stats, setStats] = useState<{ fps: number; secs: number; temp: string; fpsHist: number[]; tempHist: number[] }>({
     fps: 0,
     secs: 0,
@@ -122,14 +125,25 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
     (canceled: boolean, summary?: string) => {
       if (doneRef.current) return;
       doneRef.current = true;
-      // 退出摘要带真实统计：时长 + 平均 FPS（帧差口径，FurMark 同款）
+      // 退出摘要带真实统计：时长 + 平均 FPS（帧差口径，FurMark 同款）。
+      // R123：温度采样窗口（tempHist）有值时如实带 GPU 峰值进摘要——没采到
+      // 温度（无 N 卡 / hw_temperature 失败）则不虚构，只报 FPS。
       const secs = Math.max(1, Math.round((Date.now() - startRef.current) / 1000));
       const avgFps = Math.round(frames.current / secs);
-      const base = t('toolbelt.bench.donut.summary', {
-        secs,
-        avgFps,
-        manual: canceled ? t('toolbelt.bench.donut.manualTag') : '',
-      });
+      const hist = tempHistRef.current;
+      const peakTemp = hist.length > 0 ? Math.max(...hist) : null;
+      const base = peakTemp !== null
+        ? t('toolbelt.bench.donut.summaryPeak', {
+            secs,
+            avgFps,
+            temp: peakTemp.toFixed(0),
+            manual: canceled ? t('toolbelt.bench.donut.manualTag') : '',
+          })
+        : t('toolbelt.bench.donut.summary', {
+            secs,
+            avgFps,
+            manual: canceled ? t('toolbelt.bench.donut.manualTag') : '',
+          });
       onDone(summary ?? base, canceled);
     },
     [onDone, t],
@@ -528,6 +542,7 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
         const r = await api.callTool('hw_temperature', {});
         // 局部变量不叫 t：t 归 useT() 的取文案函数（守卫测试按 t('key') 字面量查表）。
         const gpuTempC = parseGpuTemp(r.text);
+        if (gpuTempC != null) tempHistRef.current = [...tempHistRef.current, gpuTempC].slice(-60);
         setStats((s) => ({
           ...s,
           temp: gpuTempC != null ? `${gpuTempC}℃` : 'N/A',

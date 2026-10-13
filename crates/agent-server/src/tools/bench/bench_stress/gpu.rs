@@ -72,6 +72,10 @@ pub fn stress_test_gpu(
         let mut trip_temp = 0.0f64;
         let mut last = Instant::now();
         let mut cancelled = false;
+        // GPU 温度曲线样本（同 stress_test 的「温度曲线」行契约：秒数=温度℃，
+        // 前端 parseStressCurve 解析渲染）。压测前温度作为 0s 起点，让曲线
+        // 从「压测前基线」画起。
+        let mut samples: Vec<(f64, f64)> = vec![(0.0, peak)];
         while start.elapsed() < Duration::from_secs(secs) {
             // 用户点「停止」→ set_cancel(true)/停止文件，立即退出监控
             // （stress_cancel 工具 / 前端停止按钮；文件信号跨进程生效）
@@ -86,6 +90,7 @@ pub fn stress_test_gpu(
             }
             if last.elapsed() >= Duration::from_secs(1) {
                 if let Ok(t) = hw::gpu_temp_c() {
+                    samples.push((start.elapsed().as_secs_f64(), t));
                     if t > peak {
                         peak = t;
                     }
@@ -100,6 +105,15 @@ pub fn stress_test_gpu(
             std::thread::sleep(Duration::from_millis(200));
         }
         out.push_str(&format!("峰值 GPU 温度：{peak:.0}℃\n"));
+        // 温度曲线行：秒数=温度℃（逗号分隔），供前端渲染实时折线 / AI 判断升温趋势
+        // （与 stress_test 同契约，前端 parseStressCurve 直接复用）。
+        if samples.len() >= 2 {
+            let line: Vec<String> = samples
+                .iter()
+                .map(|(t, v)| format!("{t:.1}s={v:.0}°C"))
+                .collect();
+            out.push_str(&format!("温度曲线：{}\n", line.join("; ")));
+        }
         if cancelled {
             out.push_str("🛑 已按停止信号结束（用户取消）——建议确认压测程序已退出。\n");
         } else if tripped {

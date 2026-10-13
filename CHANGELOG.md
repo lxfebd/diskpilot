@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 甜甜圈压测摘要带 GPU 温度峰值 + GPU 压测温度曲线（R123）
+
+- **甜甜圈（WebGL）**：退出摘要新增「峰值 GPU 温度 {temp}℃」——压测期间
+  每秒轮询采样（R112 的温度趋势窗口）有值才如实带出，没采到温度（无 N
+  卡 / hw_temperature 失败）不虚构，只报 FPS；温度窗口改由 ref 镜像，
+  退出闭包能读到最新采样。
+- **stress_test_gpu（后端）**：守门采样循环收集「温度曲线：0.0s=xx°C;
+  1.0s=xx°C; …」行（同 stress_test 契约，前端 parseStressCurve 可直接
+  复用），压测前温度作为 0s 起点基线。
+
 ### 2026-10-13 传感器通道纳入 GPU 温度（R122）
 
 - **后端**：`sensor_trend` / `sensor_history` 快照新增 `gpu_temp_c` 字段
