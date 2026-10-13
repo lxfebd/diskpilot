@@ -167,14 +167,44 @@ pub(crate) fn prune_history(app: &tauri::AppHandle) {
     }
 }
 
+/// 映射盘（`subst D: J:\D`）的扫描根换成它真正的目标根。
+///
+/// 扫 `D:\` 和扫 `J:\D` 是同一块盘上的同一份空间：历史里各记一条，
+/// 总览趋势就会出现两条重复曲线，免费空间也被数两遍。纯函数，可测。
+fn canonical_scan_root(key: &str, substs: &[(char, String)]) -> String {
+    let b = key.as_bytes();
+    if b.len() < 2 || !b[0].is_ascii_alphabetic() || b[1] != b':' {
+        return key.to_string();
+    }
+    let letter = b[0].to_ascii_uppercase() as char;
+    let Some((_, target)) = substs.iter().find(|(l, _)| *l == letter) else {
+        return key.to_string();
+    };
+    // 目标卷根要保留尾斜杠（`J:\`），子目录不保留（`J:\D`），与扫描根本身口径一致。
+    let mut target = target.trim_end_matches('\\').to_string();
+    if target.len() <= 2 {
+        target.push('\\');
+    }
+    let rest = key[2..].trim_start_matches('\\');
+    if rest.is_empty() {
+        target
+    } else if target.ends_with('\\') {
+        format!("{target}{}", rest.trim_end_matches('\\'))
+    } else {
+        format!("{target}\\{}", rest.trim_end_matches('\\'))
+    }
+}
+
 /// 扫描完成后记录卷容量快照。`key` 是规范化扫描根（如 `C:\` / `D:\dir`）。
+/// 映射盘先换成真实目标根，避免同一块盘在历史里出现两条曲线。
 /// 通过 `crate::volume_info` 读卷容量（复用 list_drives 同款 Win32 查询）；
 /// 读取失败静默（历史是增强功能，不能因它失败）。
 pub(crate) fn record_after_scan(app: &tauri::AppHandle, key: &str) {
-    let Ok(info) = crate::drives::volume_info(key.to_string()) else {
+    let key = canonical_scan_root(key, &crate::drives::collect_substs());
+    let Ok(info) = crate::drives::volume_info(key.clone()) else {
         return;
     };
-    record_space_point(app, key, info.total_bytes, info.used_bytes);
+    record_space_point(app, &key, info.total_bytes, info.used_bytes);
 }
 
 /// 读取全部磁盘空间历史（只读 L0，总览页画趋势曲线）。
@@ -189,6 +219,27 @@ pub(crate) fn get_space_history(app: tauri::AppHandle) -> HashMap<String, Vec<Sp
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mapped_drive_scans_land_on_the_real_volume_root() {
+        let substs = vec![('D', r"J:\D".to_string())];
+        // 本机实测：subst D: J:\D。扫 D:\ 必须记成 J:\D，和直接扫 J:\D 同一列。
+        assert_eq!(canonical_scan_root(r"D:\", &substs), r"J:\D");
+        assert_eq!(canonical_scan_root(r"D:\dir", &substs), r"J:\D\dir");
+        assert_eq!(canonical_scan_root(r"D:\dir\sub", &substs), r"J:\D\dir\sub");
+        // 大小写不敏感（盘符可能小写传来）。
+        assert_eq!(canonical_scan_root(r"d:\", &substs), r"J:\D");
+        // 普通盘原样过去，不该被动。
+        assert_eq!(canonical_scan_root(r"C:\", &substs), r"C:\");
+        assert_eq!(canonical_scan_root(r"J:\D", &substs), r"J:\D");
+        assert_eq!(canonical_scan_root(r"C:\Users\x", &substs), r"C:\Users\x");
+        // 映射到卷根：目标要保住尾斜杠，别写成 `J:`。
+        let to_root = vec![('E', r"J:\".to_string())];
+        assert_eq!(canonical_scan_root(r"E:\", &to_root), r"J:\");
+        assert_eq!(canonical_scan_root(r"E:\tmp", &to_root), r"J:\tmp");
+        // 没有映射盘时一切原样。
+        assert_eq!(canonical_scan_root(r"D:\", &[]), r"D:\");
+    }
 
     #[test]
     fn missing_file_returns_empty() {
