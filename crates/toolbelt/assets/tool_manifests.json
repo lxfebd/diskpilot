@@ -1218,33 +1218,34 @@
       "when_to_use": "测 SSD/HDD 读写速度、对比前后性能、验证新盘速度",
       "when_not_to_use": "仅需健康信息时（CrystalDiskInfo）",
       "invocation": {
-        "mode": "cli",
+        "mode": "gui",
         "launchable": true,
-        "args_template": "/b",
+        "args_template": "{launch}",
         "params": [
           {
-            "name": "bench",
-            "flag": "/b",
+            "name": "launch",
+            "flag": "",
             "type": "boolean",
             "required": false,
-            "desc": "启动自动运行默认基准测试"
+            "default": "true",
+            "desc": "启动 GUI（本机实测 9.0.1：/b 不会无头跑基准，只会自我重启并打开自己的窗口；AI 只能启动不能操作）"
           }
         ],
-        "timeout_secs": 300
+        "timeout_secs": 60
       },
       "output": {
         "format": "stdout",
-        "parser": "kv_lines",
-        "schema": "GUI 显示 Seq/4K 读写 Mbps；有 /b 参数可无交互跑默认项"
+        "parser": "stdout",
+        "schema": "GUI 显示，无 CLI 输出：Seq/4K 结果只在那个窗口里，跑完也不会写到标准输出"
       },
       "risk": "medium",
       "permission_level": "L1",
       "side_effects": "高负载读写基准（可能加速 SSD 写入磨损，大容量基准消耗磁盘寿命）",
       "examples": [
         {
-          "args": "/b",
-          "desc": "跑默认基准",
-          "expect": "显示 Seq 读写/4K 结果"
+          "args": "",
+          "desc": "启动 CrystalDiskMark GUI",
+          "expect": "打开工具界面；基准要用户自己在窗口里点 All/Seq，结果不会回到命令行"
         }
       ],
       "publisher": "Crystal Dew World",

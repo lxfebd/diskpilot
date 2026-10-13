@@ -99,11 +99,9 @@ fn hw_run_test_blocking(
             240u64,
         ),
         "cpu_benchmark" => ("AIDA64", vec![], 300u64),
-        // CrystalDiskMark 工具箱清单里是 cli 模式，`/b` = 无交互跑默认基准（结果走 stdout）。
-        "disk_benchmark" => ("CrystalDiskMark", vec!["/b".to_string()], 300u64),
         _ => {
             return Err(format!(
-                "暂不支持的测试类型「{test_type}」。可用：cpu_stress / gpu_stress / gpu_benchmark / cpu_benchmark / disk_benchmark（内存专项暂未开放，可改用 run_cli_tool 跑 TM5）。"
+                "暂不支持的测试类型「{test_type}」。可用：cpu_stress / gpu_stress / gpu_benchmark / cpu_benchmark（内存专项与磁盘专项暂未开放：本机实测 CrystalDiskMark 9.0.1 没有可用的无头命令行——`/b` 会让它自我重启并打开自己的窗口，跑不出可捕获的结果。可改用 run_cli_tool 手动跑 TM5 / CrystalDiskMark 的界面）。"
             ));
         }
     };
@@ -175,28 +173,16 @@ fn hw_run_test_blocking(
 
     // stdout drain 线程：压测工具（Prime95/FurMark/AIDA64）输出量大且不捕获。
     // 若不读走，管道 buffer 写满后子进程会阻塞在 write 上 → try_wait 永远 None，
-    // 直到 limit_total 触发误报 stop_reason="deadline"。AIDA64 / FurMark 的结果走文件
-    // （diskpilot_bench_*.txt / _scores.csv），stdout 内容直接丢弃；
-    // CrystalDiskMark 的 `/b` 结果只在 stdout 里，这条路径留一份有界副本。
-    let capture_stdout = test_type == "disk_benchmark";
-    let stdout_copy: Arc<std::sync::Mutex<String>> = Arc::new(std::sync::Mutex::new(String::new()));
+    // 直到 limit_total 触发误报 stop_reason="deadline"。基准结果走文件
+    // （_scores.csv / diskpilot_bench_*.txt），stdout 内容直接丢弃。
     if let Some(mut so) = child.stdout.take() {
-        let copy = stdout_copy.clone();
         std::thread::spawn(move || {
             use std::io::Read;
             let mut buf = [0u8; 8192];
             loop {
                 match so.read(&mut buf) {
                     Ok(0) | Err(_) => break,
-                    Ok(n) => {
-                        if capture_stdout {
-                            let mut held = copy.lock().unwrap();
-                            // 有界：只留前 8 KB，够放 Seq/4K 那几行结果，不被刷屏撑爆。
-                            if held.len() < 8_000 {
-                                held.push_str(&String::from_utf8_lossy(&buf[..n]));
-                            }
-                        }
-                    }
+                    Ok(_) => {}
                 }
             }
         });
@@ -342,18 +328,6 @@ fn hw_run_test_blocking(
                 ));
             }
         }
-    } else if test_type == "disk_benchmark" {
-        let held = stdout_copy.lock().unwrap().trim().to_string();
-        bench_excerpt = Some(if held.is_empty() {
-            // 没读到结果就如实说，不猜分数。
-            "CrystalDiskMark 没有把结果写到标准输出（/b 模式的结果可能只落在它自己的窗口里）。"
-                .to_string()
-        } else {
-            format!(
-                "[CrystalDiskMark 基准] {}",
-                held.chars().take(2000).collect::<String>()
-            )
-        });
     }
 
     let note = match stop_reason.as_str() {

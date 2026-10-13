@@ -271,7 +271,6 @@ const TEST_NOTE_KEYS: Record<string, string> = {
   gpu_stress: 'hw.stressNoteGpu',
   gpu_benchmark: 'hw.stressNoteGpuBench',
   cpu_benchmark: 'hw.stressNoteCpuBench',
-  disk_benchmark: 'hw.stressNoteDiskBench',
 };
 
 // 确认词是确认门的比较常量（输入必须逐字命中），不译；en 的提示文案里原样给出该词。
