@@ -6,6 +6,7 @@ export const history = {
   zh: {
     'history.title': '操作历史',
     'history.total': '共 {n} 条',
+    'history.unread': '未读到',
     'history.bytesFreed': '累计释放 {size}',
     'history.refresh': '刷新',
     'history.searchPlaceholder': '搜索路径或原因…',
@@ -46,6 +47,7 @@ export const history = {
   en: {
     'history.title': 'History',
     'history.total': '{n} entries',
+    'history.unread': 'Not read',
     'history.bytesFreed': '{size} freed in total',
     'history.refresh': 'Refresh',
     'history.searchPlaceholder': 'Search path or reason…',

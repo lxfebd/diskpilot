@@ -89,7 +89,11 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         <WeeklyHealthCard onOpenCleanup={onOpenCleanup} />
         <div className="hp-head">
         <span className="hp-title"><History size={15} /> {t('history.title')}</span>
-        <span className="muted small">{t('history.total', { n: summary.total })}</span>
+        {loadErr ? (
+          <span className="muted small">{t('history.unread')}</span>
+        ) : (
+          <span className="muted small">{t('history.total', { n: summary.total })}</span>
+        )}
         {summary.bytesFreed != null && (
           <span className="hp-freed">{t('history.bytesFreed', { size: formatBytes(summary.bytesFreed) })}</span>
         )}
