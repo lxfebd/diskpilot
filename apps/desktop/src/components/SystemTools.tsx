@@ -19,6 +19,18 @@ const LEVEL_COLOR: Record<string, string> = {
   unknown: '#94a3b8',
 };
 
+/** 风扇可调通道三态（R71）：
+ *  - 'ok'：可写通道在位（writable=true）；
+ *  - 'unread'：状态探测失败——≠「无通道」，绝不可渲染成 channelNone；
+ *  - 'none'：真空（探测成功但无可用通道）。
+ *  让 JSX 分支与文案一一对应，读失败永不伪装成「无可用调速通道」。 */
+export type FanChannelState = 'ok' | 'unread' | 'none';
+export function fanChannelState(status: FanStatus | null, statusErr: string | null): FanChannelState {
+  if (status?.writable) return 'ok';
+  if (statusErr) return 'unread';
+  return 'none';
+}
+
 /** 设置页「系统工具」标签：启动项管理 / 风扇曲线建议 / 驱动更新检查。
  *  三个能力都是 L2（权限中心开关 + 每次执行确认），组件内做两步确认，
  *  删除/禁用的破坏性操作绝不直接执行。 */
@@ -236,10 +248,10 @@ function SystemToolsInner() {
         <div className="sys-fan-control" style={{ marginTop: 12 }}>
           <div className="sys-fan-control-head">
             <span className="muted small"><Fan size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('system.fan.controlTitle')}</span>
-            {fanStatus?.writable ? (
-              <span className="sys-tag sys-tag-green">{t('system.fan.channelOk', { name: fanStatus.probe?.cli?.name ?? 'CLI' })}</span>
-            ) : fanStatusErr ? (
-              <span className="sys-tag sys-tag-grey" title={fanStatusErr}>{t('system.fan.channelUnread')}</span>
+            {fanChannelState(fanStatus, fanStatusErr) === 'ok' ? (
+              <span className="sys-tag sys-tag-green">{t('system.fan.channelOk', { name: fanStatus!.probe?.cli?.name ?? 'CLI' })}</span>
+            ) : fanChannelState(fanStatus, fanStatusErr) === 'unread' ? (
+              <span className="sys-tag sys-tag-grey" title={fanStatusErr ?? undefined}>{t('system.fan.channelUnread')}</span>
             ) : (
               <span className="sys-tag sys-tag-grey">{t('system.fan.channelNone')}</span>
             )}
