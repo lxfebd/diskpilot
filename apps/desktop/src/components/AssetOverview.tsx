@@ -216,8 +216,13 @@ export function disabledStartupCount(items: readonly { enabled: boolean }[] | nu
 function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | null; drives: readonly DriveEntry[]; onGoWorkspace: () => void }) {
   const t = useT();
   const [hist, setHist] = useState<Record<string, SpacePoint[]>>({});
+  const [histErr, setHistErr] = useState<string | null>(null);
   useEffect(() => {
-    api.getSpaceHistory().then(setHist).catch(() => setHist({}));
+    api.getSpaceHistory().then(setHist).catch((e) => {
+      // 读失败 ≠ 没扫过：记录原因，别让「还没扫」的空态文案盖住真实错误。
+      setHist({});
+      setHistErr(String(e instanceof Error ? e.message : e));
+    });
   }, []);
 
   const selfKey = selPath ? spaceNormKey(selPath) : null;
@@ -230,6 +235,14 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
   // 去重键取盘根）。映射盘的快照并到真实卷。按时间排序，保留最新 14 条。
   const series = useMemo(() => buildSpaceSeries(hist, drives), [hist, drives]);
 
+  if (histErr !== null) {
+    return (
+      <section className="ao-card">
+        <h2 className="ao-card-title"><BarChart3 size={16} /> {t('overview.trend.title')}</h2>
+        <div className="ao-empty"><Info size={16} />{t('overview.trend.loadFailed', { msg: histErr })}</div>
+      </section>
+    );
+  }
   if (series.length === 0) {
     return (
       <section className="ao-card">
@@ -349,7 +362,7 @@ function HealthCheckupCard({
   useEffect(() => {
     let alive = true;
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
-    api.listStartupItems().then((r) => { if (alive) setStartup(r); }).catch(() => { setStartup([]); });
+    api.listStartupItems().then((r) => { if (alive) setStartup(r); }).catch(() => { setStartup(null); });
     ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
     return () => { alive = false; };
   }, []);

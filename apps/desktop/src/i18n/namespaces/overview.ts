@@ -32,6 +32,7 @@ export const overview = {
     // 磁盘空间趋势（R6）
     'overview.trend.title': '磁盘空间趋势',
     'overview.trend.empty': '扫描后自动记录空间变化，这里会显示多日曲线',
+    'overview.trend.loadFailed': '没能读取空间趋势历史（不代表还没扫过）：{msg}',
     'overview.trend.note': '每次扫描自动记录 · 点曲线看工作台',
     'overview.trend.driveUnit': '盘',
     'overview.trend.noRecords': '记录不足',
@@ -183,6 +184,7 @@ export const overview = {
     // Space trend (R6)
     'overview.trend.title': 'Space over time',
     'overview.trend.empty': 'Every scan records a space snapshot — multi-day curves show up here',
+    'overview.trend.loadFailed': 'Could not read the space-trend history (this does not mean no scan happened yet): {msg}',
     'overview.trend.note': 'Recorded on each scan · click a row to open the workbench',
     'overview.trend.driveUnit': 'drive',
     'overview.trend.noRecords': 'Not enough history',
