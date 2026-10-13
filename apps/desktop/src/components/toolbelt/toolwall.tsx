@@ -33,6 +33,8 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
   const { onOpenSettings } = ctx;
   const [status, setStatus] = useState<ToolbeltStatus | null>(null);
   const [catalog, setCatalog] = useState<ToolbeltCatalog | null>(null);
+  // 目录探测/清单读失败单独记：失败 ≠ 空工具列表（R80），绝不静默空白。
+  const [cliErr, setCliErr] = useState<string | null>(null);
   const [view, setView] = useState<'cli' | 'all'>('cli');
   const [usages, setUsages] = useState<Record<string, ToolbeltUsage>>({});
   const [usageOpen, setUsageOpen] = useState<Record<string, boolean>>({});
@@ -47,11 +49,16 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
     // 重新探测/改 tools_root 后，AI 侧的 toolbelt 索引缓存必须作废，
     // 否则下一次对话仍用旧工具清单（模块级懒加载不会自失效）。
     invalidateToolbeltCache();
+    setCliErr(null);
     api.toolbeltStatus().then((s) => {
       setStatus(s);
       setRootDraft(s.tools_root ?? '');
+    }).catch((e) => {
+      setCliErr(String(e instanceof Error ? e.message : e));
     });
-    api.toolbeltCatalog().then(setCatalog);
+    api.toolbeltCatalog().then(setCatalog).catch((e) => {
+      setCliErr(String(e instanceof Error ? e.message : e));
+    });
   }, []);
   useEffect(refresh, [refresh]);
 
@@ -106,6 +113,21 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
 
   // 全目录工具墙分组（catalog 为空时退化为 CLI 视图的统计）
   const cliInstalled = status ? status.tools.filter((tool) => tool.installed).length : 0;
+
+  if (cliErr) {
+    return (
+      <div className="toolbelt-pane">
+        <h2 className="toolbelt-h">
+          <Wrench size={16} /> {t('toolbelt.cli.title')}
+          <button className="ghost icon" title={t('toolbelt.cli.redetect')} aria-label={t('toolbelt.cli.redetect')} onClick={refresh}><RefreshCw size={13} /></button>
+        </h2>
+        <div className="tb-empty warn">
+          {t('toolbelt.wall.loadFailed', { msg: cliErr })}
+          <div><button className="ghost small" onClick={refresh}>{t('toolbelt.common.refresh')}</button></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="toolbelt-pane">
