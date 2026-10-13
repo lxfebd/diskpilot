@@ -128,6 +128,10 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
 
       {entries === null ? (
         <div className="hp-empty"><Loader2 size={14} className="spin" /></div>
+      ) : loadErr ? (
+        // 读失败 ≠ 空记录：不渲染「还没有清理记录」空态（标题已是「未读到」，
+        // 错误横幅带原因），避免失败与空态并存。
+        <div className="hp-empty muted small">{t('history.unreadBody')}</div>
       ) : entries.length === 0 ? (
         <div className="hp-empty">{t('history.empty')}</div>
       ) : filtered.length === 0 ? (
