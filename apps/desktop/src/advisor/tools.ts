@@ -186,6 +186,24 @@ export interface ToolDef {
   execute: (args: Record<string, unknown>, o: AgentOpts) => Promise<string>;
 }
 
+/**
+ * 截断必须自己说清楚。
+ *
+ * 模型看到半截 JSON / 半截输出会把它当成全部：前 3000 字符里数出「12 个文件」，
+ * 其实后面还有 400 行没显示。所以截断处一律补一句「还有多少没显示」。
+ */
+export function clip(text: string, max: number, hint?: string): string {
+  if (text.length <= max) return text;
+  const rest = text.length - max;
+  return `${text.slice(0, max)}\n…（这里截断了：还有 ${rest} 个字符没显示，以上是前 ${max} 个。${hint ?? '别把以上当成全部。'}）`;
+}
+
+/** 列表截断同理：显示 N 条要说清共 M 条。 */
+export function listNote(shown: number, total: number): string {
+  if (total <= shown) return '';
+  return `\n（共 ${total} 条，只列出前 ${shown} 条，剩下 ${total - shown} 条未列出）`;
+}
+
 export const toolRegistry: ToolDef[] = [
   {
     name: 'web_search',
@@ -198,7 +216,8 @@ export const toolRegistry: ToolDef[] = [
       if (!q) return '搜索词为空';
       const hits = await api.webSearch(q);
       if (hits.length === 0) return '搜索没有返回结果';
-      return hits.slice(0, 6).map((h, i) => `[${i + 1}] ${h.title}\nURL: ${h.url}\n摘要: ${h.snippet || '（无摘要）'}`).join('\n\n');
+      const shown = hits.slice(0, 6);
+      return shown.map((h, i) => `[${i + 1}] ${h.title}\nURL: ${h.url}\n摘要: ${h.snippet || '（无摘要）'}`).join('\n\n') + listNote(shown.length, hits.length);
     },
   },
   {
@@ -302,11 +321,14 @@ export const toolRegistry: ToolDef[] = [
         workshop > 0 ? `创意工坊订阅合计：${workshop} 项。` : '',
       ].filter(Boolean);
       if (sleepers.length > 0) {
-        const recBytes = games.filter((g) => g.default_recommended).reduce((s, g) => s + g.size_bytes, 0);
-        lines.push('', `沉睡游戏（体积大且久未启动，共可释放 ≈ ${formatBytes(recBytes)}）：`);
+        const rec = games.filter((g) => g.default_recommended);
+        const recBytes = rec.reduce((s, g) => s + g.size_bytes, 0);
+        lines.push('', `沉睡游戏（体积大且久未启动，共 ${rec.length} 款，共可释放 ≈ ${formatBytes(recBytes)}）：`);
         for (const g of sleepers) {
           lines.push(`- ${g.name_en}：${formatBytes(g.size_bytes)} · ${g.recommendation_reason ?? ''}`);
         }
+        const note = listNote(sleepers.length, rec.length).trim();
+        if (note) lines.push(note);
         lines.push('', '如需处理，请引导用户打开「工作台 → Steam 盘点」查看完整清单，卸载由 Steam 客户端完成（本应用不代删）。');
       } else {
         lines.push('', '没有达到推荐卸载标准（≥30GB 且 ≥6 月未启动，或 ≥50GB 且 ≥3 月未启动）的游戏。');
@@ -500,7 +522,7 @@ export const toolRegistry: ToolDef[] = [
       if (!tool) return '工具名为空：请提供 toolName。';
       const m = await getManifestFor(tool);
       if (!m) return `工具箱中没有「${tool}」的能力说明书（未收录或非 Tauri 环境）。`;
-      return JSON.stringify(m, null, 2).slice(0, 4000);
+      return clip(JSON.stringify(m, null, 2), 4000, '需要完整说明书可再调 get_cli_tool_usage。');
     },
   },
   {
@@ -606,7 +628,12 @@ export const toolRegistry: ToolDef[] = [
       const json = JSON.stringify(filtered, null, 2);
       // UI 渲染硬件报告卡片：不把原始 JSON 塞进正文，让模型自己总结。
       o.onHwCard?.({ info: filtered as HwInfo, health: cache.health });
-      return json;
+      // JSON 里的 null / 缺失键很容易被读成「本机没有」：明确说是没读到。
+      const missing = categories.filter((c) => !(c in info) || info[c as keyof HwInfo] == null);
+      const tail = missing.length > 0
+        ? `\n（这些类别没读到：${missing.join('、')}。是没读到，不是本机没有；别凭常识补配置。）`
+        : '\n（字段为 null 表示没读到，不是没有：照抄或说「未读到」，别凭常识补。）';
+      return json + tail;
     },
   },
   {
@@ -647,8 +674,8 @@ export const toolRegistry: ToolDef[] = [
         `报告格式：${out.format}`,
         out.saved_path ? `已保存到：${out.saved_path}` : '',
         out.note,
-        '—— 正文预览（前 3000 字符） ——',
-        out.markdown.slice(0, 3000),
+        '—— 正文预览 ——',
+        clip(out.markdown, 3000, savePath ? '完整正文已写入上面的保存路径。' : '要完整正文可带 savePath 导出报告文件。'),
       ].filter(Boolean).join('\n');
     },
   },
@@ -1427,18 +1454,19 @@ async function doCliRun(tool: string, argv: string[], timeoutSecs: number | unde
     `退出码：${o.exit_code ?? '（超时被终止）'}${o.timed_out ? '（超时）' : ''}`,
   ];
   const parser = manifest?.output?.parser ?? 'stdout';
+  const outHint = '工具的真实输出比这更长，别把以上当成全部；要完整结果请让工具把输出写到文件后再读。';
   if (o.stdout.trim() && parser !== 'stdout') {
     try {
       const parsed = JSON.parse(o.stdout.trim());
       head.push(`结构化输出（${parser}）：`);
-      head.push(JSON.stringify(parsed, null, 2).slice(0, 3000));
+      head.push(clip(JSON.stringify(parsed, null, 2), 3000, outHint));
     } catch {
-      head.push(o.stdout.trim().slice(0, 3000));
+      head.push(clip(o.stdout.trim(), 3000, outHint));
     }
   } else {
-    head.push(o.stdout.trim() ? o.stdout.trim().slice(0, 3000) : '');
+    head.push(o.stdout.trim() ? clip(o.stdout.trim(), 3000, outHint) : '');
   }
-  head.push(o.stderr.trim() ? `[stderr] ${o.stderr.trim().slice(0, 1000)}` : '');
+  head.push(o.stderr.trim() ? `[stderr] ${clip(o.stderr.trim(), 1000, 'stderr 同样被截断。')}` : '');
   return head.filter(Boolean).join('\n');
 }
 
@@ -1475,17 +1503,18 @@ async function execCliTool(
     ];
     if (o.stdout.trim() && m?.output.parser && m.output.parser !== 'stdout') {
       // 结构化解析：smart_csv / kv_lines → JSON，比原始文本更利于 AI 解读
+      const outHint = '工具的真实输出比这更长，别把以上当成全部；要完整结果请让工具把输出写到文件后再读。';
       try {
         const parsed = JSON.parse(o.stdout.trim());
         head.push(`结构化输出（${m.output.parser}）：`);
-        head.push(JSON.stringify(parsed, null, 2).slice(0, 3000));
+        head.push(clip(JSON.stringify(parsed, null, 2), 3000, outHint));
       } catch {
-        head.push(o.stdout.trim().slice(0, 3000));
+        head.push(clip(o.stdout.trim(), 3000, outHint));
       }
     } else {
-      head.push(o.stdout.trim() ? o.stdout.trim().slice(0, 3000) : '');
+      head.push(o.stdout.trim() ? clip(o.stdout.trim(), 3000, '工具的真实输出比这更长，别把以上当成全部。') : '');
     }
-    head.push(o.stderr.trim() ? `[stderr] ${o.stderr.trim().slice(0, 1000)}` : '');
+    head.push(o.stderr.trim() ? `[stderr] ${clip(o.stderr.trim(), 1000, 'stderr 同样被截断。')}` : '');
     return head.filter(Boolean).join('\n');
   } catch (e) {
     // 后端 toolbelt_run 以稳定前缀 `toolbelt:confirm:` 标记中/高风险确认门；
@@ -1574,7 +1603,7 @@ async function executeHardwareTest(testType: string, durationSecs?: number, temp
     report.note,
   ];
   if (report.bench_excerpt) {
-    lines.push('—— 基准结果 ——', report.bench_excerpt.slice(0, 1500));
+    lines.push('—— 基准结果 ——', clip(report.bench_excerpt, 1500, '基准工具的完整输出在它自己的报告/保存文件里。'));
   }
   return lines.join('\n');
 }

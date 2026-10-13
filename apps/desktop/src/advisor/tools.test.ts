@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools } from './tools';
+import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote } from './tools';
 import type { ToolManifestInvocation } from '../api';
 
 const inv = (over: Partial<ToolManifestInvocation> = {}): ToolManifestInvocation =>
@@ -263,5 +263,33 @@ describe('dynamicMcpTools（用户 MCP 服务器）', () => {
     await refreshMcpTools();
     expect(mcpToolRegistry.length).toBe(before);
     expect(mcpToolRegistry).toHaveLength(75);
+  });
+});
+
+describe('clip / listNote（截断必须自己说清楚）', () => {
+  it('没超长度原样返回，不加任何废话', () => {
+    expect(clip('abc', 10)).toBe('abc');
+    expect(clip('abc', 3)).toBe('abc');
+  });
+
+  it('截断时说明还剩多少、显示了多少', () => {
+    const text = 'x'.repeat(5000);
+    const out = clip(text, 3000);
+    expect(out.startsWith('x'.repeat(3000))).toBe(true);
+    expect(out).toContain('还有 2000 个字符没显示');
+    expect(out).toContain('以上是前 3000 个');
+    expect(out).toContain('别把以上当成全部');
+  });
+
+  it('带 hint 时给出取回完整内容的路', () => {
+    const out = clip('y'.repeat(100), 10, '完整正文已写入保存路径。');
+    expect(out).toContain('完整正文已写入保存路径');
+    expect(out).toContain('还有 90 个字符没显示');
+  });
+
+  it('列表只列前 N 条要说共 M 条；全列出不加注释', () => {
+    expect(listNote(8, 8)).toBe('');
+    expect(listNote(6, 20)).toContain('共 20 条');
+    expect(listNote(6, 20)).toContain('剩下 14 条未列出');
   });
 });
