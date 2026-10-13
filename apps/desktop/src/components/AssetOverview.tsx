@@ -366,11 +366,13 @@ function HealthCheckupCard({
   // 硬盘健康走快路径：只跑 WMI，家页不启动 CrystalDiskInfo（那是「工具」页该做的事，详情见工具页的硬盘健康面板）。
   const [tempC, setTempC] = useState<number | null>(null);
   const [startup, setStartup] = useState<StartupItem[] | null>(null);
+  // startup 读失败单独记：失败 ≠「未检测」（真空语义），≠「无启动项」。
+  const [startupErr, setStartupErr] = useState<string | null>(null);
   const [diskHealth, setDiskHealth] = useState<HwDiskHealth | null>(null);
   useEffect(() => {
     let alive = true;
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
-    api.listStartupItems().then((r) => { if (alive) setStartup(r); }).catch(() => { setStartup(null); });
+    api.listStartupItems().then((r) => { if (alive) { setStartup(r); setStartupErr(null); } }).catch((e) => { if (alive) { setStartup(null); setStartupErr(String(e instanceof Error ? e.message : e)); } });
     ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -430,7 +432,9 @@ function HealthCheckupCard({
           <span>
             {startup
               ? t('overview.checkup.startup', { n: startup.length }) + (disabledCount > 0 ? ` · ${t('overview.checkup.startupDisabled', { n: disabledCount })}` : '')
-              : t('overview.checkup.startupNone')}
+              : startupErr
+                ? t('overview.checkup.startupUnread')
+                : t('overview.checkup.startupNone')}
           </span>
         </div>
         {/* 硬盘健康：读不到就说读不到；Unknown 只标「未上报」，不给红牌（第 26 轮的教训） */}
