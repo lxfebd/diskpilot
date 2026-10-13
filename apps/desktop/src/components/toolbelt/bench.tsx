@@ -12,7 +12,7 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, parseTrendJson, buildScoreSeries } from './charts';
+import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, HealthRatingCard, parseTrendJson, buildScoreSeries } from './charts';
 import type { TrendPoint } from './charts';
 import { MEM_RAMP } from '../../colors';
 
@@ -470,6 +470,17 @@ export function BenchPanel() {
               <div className="bench-trend-err muted small">{t('toolbelt.bench.trend.longNote')}</div>
             )}
             <TrendChart points={trendData.points} />
+            {/* R118：长期健康度评级卡——温度/内存高值占比汇总成人话结论 */}
+            {trendData.range === 'long' && (
+              <HealthRatingCard
+                cpuTemps={trendData.points
+                  .map((p) => p.cpu_temp_c)
+                  .filter((v): v is number => typeof v === 'number')}
+                memPercents={trendData.points
+                  .map((p) => p.mem_percent)
+                  .filter((v): v is number => typeof v === 'number')}
+              />
+            )}
             {/* R116：长期历史的温度分布色阶条——只统计有温度的样本 */}
             {trendData.range === 'long' && (
               <HeatDistributionBar

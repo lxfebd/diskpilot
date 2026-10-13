@@ -253,3 +253,22 @@ describe('distSummary（泛化摘要，阈值按维度）', () => {
     expect(distSummary([NaN], 70)).toBeNull();
   });
 });
+
+// R118：健康度评级——锁定 rateHealth 档位（<5% 优秀 / <20% 良好 / 否则关注）。
+import { rateHealth } from './charts';
+
+describe('rateHealth（健康度评级）', () => {
+  it('档位边界：0% / 4.9% → good；5% / 19.9% → fair；20%+ → watch', () => {
+    expect(rateHealth(0)).toBe('good');
+    expect(rateHealth(0.049)).toBe('good');
+    expect(rateHealth(0.05)).toBe('fair');
+    expect(rateHealth(0.199)).toBe('fair');
+    expect(rateHealth(0.2)).toBe('watch');
+    expect(rateHealth(0.5)).toBe('watch');
+  });
+
+  it('负占比按档位下限处理（不崩）；NaN 不参与比较落入 watch（distSummary 已过滤非有限值，正常到不了这里）', () => {
+    expect(rateHealth(-1)).toBe('good');
+    expect(rateHealth(NaN)).toBe('watch');
+  });
+});

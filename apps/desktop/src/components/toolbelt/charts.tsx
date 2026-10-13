@@ -301,6 +301,16 @@ export interface TempBucket {
 
 export type Ramp = ReadonlyArray<{ label: string; to: number; color: string }>;
 
+export type HealthRating = 'good' | 'fair' | 'watch';
+
+/// 高值占比 → 健康度评级（纯函数，可单测）：<5% 优秀 / <20% 良好 /
+/// 否则关注。温度与内存共用同一档位（阈值语义已由调用方注入 highThreshold）。
+export function rateHealth(highRatio: number): HealthRating {
+  if (highRatio < 0.05) return 'good';
+  if (highRatio < 0.2) return 'fair';
+  return 'watch';
+}
+
 /// 数值样本 → 分布桶（纯函数，可单测）。分层口径与传入 ramp 一致；
 /// 只统计数字值，非数字 / 非有限值跳过（不猜 0）。
 export function buildBuckets(values: number[], ramp: Ramp): TempBucket[] {
@@ -401,6 +411,56 @@ export function tempSummary(temps: number[]): ReturnType<typeof distSummary> {
 }
 export function HeatDistributionBar({ temps }: { temps: number[] }) {
   return <DistributionBar values={temps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.heatDist" />;
+}
+
+// ── R118 长期健康度评级卡 ──
+// 把温度/内存两条分布的高值占比汇总成一句人话结论：<5% 优秀、<20% 良好、
+// 否则关注。复用 distSummary（已是纯函数）；任一维度无有效样本则该维度不
+// 评级（如实缺省）。放长期历史视图顶部——先出结论，再看下方分布明细。
+
+export function HealthRatingCard({
+  cpuTemps,
+  memPercents,
+}: {
+  cpuTemps: number[];
+  memPercents: number[];
+}) {
+  const t = useT();
+  const tS = distSummary(cpuTemps, 70);
+  const mS = distSummary(memPercents, 85);
+  if (!tS && !mS) return null;
+  const tRating = tS ? rateHealth(tS.highRatio) : null;
+  const mRating = mS ? rateHealth(mS.highRatio) : null;
+
+  return (
+    <div className="health-rating-card" role="status">
+      <div className="health-rating-row">
+        <span className="muted small">{t('toolbelt.healthRating.cpu')}</span>
+        {tRating ? (
+          <span className={`health-rating-badge health-rating-${tRating}`}>
+            {t(`toolbelt.healthRating.${tRating}`)}
+            <small>{t('toolbelt.healthRating.ratio', { pct: (tS!.highRatio * 100).toFixed(0) })}</small>
+          </span>
+        ) : (
+          <span className="muted small">{t('toolbelt.healthRating.na')}</span>
+        )}
+      </div>
+      <div className="health-rating-row">
+        <span className="muted small">{t('toolbelt.healthRating.mem')}</span>
+        {mRating ? (
+          <span className={`health-rating-badge health-rating-${mRating}`}>
+            {t(`toolbelt.healthRating.${mRating}`)}
+            <small>{t('toolbelt.healthRating.ratio', { pct: (mS!.highRatio * 100).toFixed(0) })}</small>
+          </span>
+        ) : (
+          <span className="muted small">{t('toolbelt.healthRating.na')}</span>
+        )}
+      </div>
+      <div className="bench-trend-legend">
+        <span className="muted small">{t('toolbelt.healthRating.note')}</span>
+      </div>
+    </div>
+  );
 }
 
 

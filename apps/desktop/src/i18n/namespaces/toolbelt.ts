@@ -443,6 +443,14 @@ export const toolbelt = {
     'toolbelt.memDist.hot': '其中 ≥85% 占 {pct}%（内存吃紧占比）',
     'toolbelt.memDist.hotNone': '没有 ≥85% 的高占用样本',
     'toolbelt.memDist.note': '只统计有占用读数的样本；区间口径与 sensor_alert 内存告警一致',
+    'toolbelt.healthRating.cpu': '长期散热',
+    'toolbelt.healthRating.mem': '长期内存',
+    'toolbelt.healthRating.good': '优秀',
+    'toolbelt.healthRating.fair': '良好',
+    'toolbelt.healthRating.watch': '关注',
+    'toolbelt.healthRating.na': '无数据',
+    'toolbelt.healthRating.ratio': '高值占比 {pct}%',
+    'toolbelt.healthRating.note': '评级口径：高值占比（温度 ≥70℃ / 内存 ≥85%）<5% 优秀 · <20% 良好 · 否则关注',
 
     // 插件市场（内置工具插件化 + 社区注册表 / 远端索引分发）
     'toolbelt.mkt.loadFailed': '社区注册表加载失败：{msg}',
@@ -1007,6 +1015,14 @@ export const toolbelt = {
     'toolbelt.memDist.hot': '{pct}% above 85% (memory pressure share)',
     'toolbelt.memDist.hotNone': 'No samples above 85%',
     'toolbelt.memDist.note': 'Only samples with a usage reading count; ranges match sensor_alert memory thresholds',
+    'toolbelt.healthRating.cpu': 'Long-term cooling',
+    'toolbelt.healthRating.mem': 'Long-term memory',
+    'toolbelt.healthRating.good': 'Great',
+    'toolbelt.healthRating.fair': 'Okay',
+    'toolbelt.healthRating.watch': 'Watch',
+    'toolbelt.healthRating.na': 'No data',
+    'toolbelt.healthRating.ratio': 'high-share {pct}%',
+    'toolbelt.healthRating.note': 'Rating: high-share (temp ≥70°C / mem ≥85%) <5% great · <20% okay · otherwise watch',
 
     // Plugin market (plugin-ising built-in tools + community registry / remote index)
     'toolbelt.mkt.loadFailed': 'Community registry failed to load: {msg}',
