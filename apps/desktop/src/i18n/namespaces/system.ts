@@ -22,7 +22,7 @@ export const system = {
     'system.startup.locHklm': '注册表 HKLM',
     'system.startup.locFolderUser': '用户启动文件夹',
     'system.startup.locFolderMachine': '机器启动文件夹',
-    'system.startup.delRegistryTitle': '删除该注册表启动值（进不了回收站，谨慎）',
+    'system.startup.delRegistryTitle': '删除该注册表启动值（删除前先备份成 .reg，可双击导入恢复）',
     'system.startup.delFolderTitle': '删除（进回收站，可恢复）',
     'system.startup.confirmDisable': '确认禁用？',
     'system.startup.confirmRestore': '确认恢复？',
@@ -33,6 +33,7 @@ export const system = {
     'system.startup.disabled': '已禁用',
     'system.startup.toastToggled': '{action}「{name}」（可随时恢复）',
     'system.startup.toastDeleted': '已删除「{name}」（文件夹项进回收站，可恢复）',
+    'system.startup.toastDeletedReg': '已删除「{name}」，原值已备份到 {path}（双击该文件可恢复）',
     'system.startup.refresh': '刷新启动项',
 
     // ── 风扇曲线建议 + 风扇控制 ──
@@ -144,7 +145,7 @@ export const system = {
     'system.startup.locHklm': 'Registry HKLM',
     'system.startup.locFolderUser': 'User Startup folder',
     'system.startup.locFolderMachine': 'Machine Startup folder',
-    'system.startup.delRegistryTitle': 'Delete this registry Run value (it cannot reach the Recycle Bin — be careful)',
+    'system.startup.delRegistryTitle': 'Delete this registry Run value (backed up as .reg first — double-click to restore)',
     'system.startup.delFolderTitle': 'Delete (to the Recycle Bin, restorable)',
     'system.startup.confirmDisable': 'Disable?',
     'system.startup.confirmRestore': 'Restore?',
@@ -155,6 +156,7 @@ export const system = {
     'system.startup.disabled': 'Disabled',
     'system.startup.toastToggled': '{action} “{name}” (you can undo this anytime)',
     'system.startup.toastDeleted': 'Deleted “{name}” (folder items go to the Recycle Bin, restorable)',
+    'system.startup.toastDeletedReg': 'Deleted “{name}”; the original value was backed up to {path} (double-click to restore)',
     'system.startup.refresh': 'Refresh startup items',
 
     // ── Fan curve advice + fan control ──

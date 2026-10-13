@@ -67,8 +67,11 @@ export function StartupPanel() {
 
   const removeStartup = async (item: StartupItem) => {
     try {
-      await api.removeStartupItem(item.id, true);
-      flashMsg(t('system.startup.toastDeleted', { name: item.name }));
+      const backup = await api.removeStartupItem(item.id, true);
+      // 注册表值没有回收站：后端删前写了 .reg，路径要报给用户（那是唯一的退路）。
+      flashMsg(backup
+        ? t('system.startup.toastDeletedReg', { name: item.name, path: backup })
+        : t('system.startup.toastDeleted', { name: item.name }));
       await loadStartup();
     } catch (e) {
       setStartupErr(String(e instanceof Error ? e.message : e));

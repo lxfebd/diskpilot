@@ -1,5 +1,6 @@
 //! 启动项管理：枚举注册表 Run 键 + 启动文件夹里的自启动项，
-//! 支持启用/禁用（值/文件名加 .disabled 备份，可恢复）/删除（进回收站）。
+//! 支持启用/禁用（值/文件名加 .disabled 备份，可恢复）/删除
+//! （文件夹项进回收站；注册表值没有回收站，删除前先备份成 .reg，可双击导入恢复）。
 //! 写操作都是 L2 权限（权限中心开关 + 每次确认），后端纵深校验。
 
 use std::time::Duration;
@@ -278,14 +279,57 @@ fn set_startup_item_blocking(id: &str, enable: bool) -> Result<(), String> {
     }
 }
 
-/// 删除一个启动项（文件夹项进回收站；注册表项直接删值）。
+/// 备份文件名里的非法字符换成 `_`：值名来自注册表数据，可以是任意文本。
+fn sanitize_file_name(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        out.push(match c {
+            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' => '_',
+            c if c.is_control() => '_',
+            c => c,
+        });
+    }
+    let trimmed = out.trim();
+    if trimmed.is_empty() {
+        "_".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// 把注册表 Run 值写成可双击导入的 .reg 文本（纯函数，可测）。
+///
+/// 注册表值没有回收站：删掉就没了。所以删除前先落一份 .reg，
+/// 用户双击即可恢复原启动项，不必依赖本应用。
+fn reg_backup_text(location: &str, name: &str, command: &str) -> String {
+    let hive = if location == "registry_hklm" {
+        r"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run"
+    } else {
+        r"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
+    };
+    let esc = |s: &str| s.replace('\\', "\\\\").replace('"', "\\\"");
+    format!(
+        "Windows Registry Editor Version 5.00\r\n\r\n\
+         ; DiskPilot 删除启动项前的备份：双击导入即可恢复这个启动项。\r\n\
+         ; 按 REG_SZ 写回；原值若是 REG_EXPAND_SZ（含 %变量%），导入后不会展开。\r\n\
+         [{hive}]\r\n\
+         \"{}\"=\"{}\"\r\n",
+        esc(name),
+        esc(command)
+    )
+}
+
+/// 删除一个启动项。
+/// 文件夹项进系统回收站（可在回收站还原）；注册表值没有回收站，
+/// 先把值备份成 .reg（写失败就不删），返回备份文件路径（文件夹项返回空）。
 /// 需要 L2 权限 + 用户确认。
 #[tauri::command]
 pub(crate) async fn remove_startup_item(
+    app: tauri::AppHandle,
     state: tauri::State<'_, crate::AppState>,
     id: String,
     confirmed: Option<bool>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     if confirmed != Some(true) {
         return Err("删除启动项需要用户明确确认（confirmed=true）。请先在确认面板中确认。".into());
     }
@@ -294,13 +338,21 @@ pub(crate) async fn remove_startup_item(
             "拒绝执行：未开启「管理启动项」权限（startup.manage）。请先在权限中心开启。".into(),
         );
     }
+    use tauri::Manager;
+    // 备份目录拿不到就不删：注册表值删了没有第二条退路。
+    let backup_dir = app
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|d| d.join("startup-backups"))
+        .ok_or_else(|| "拿不到应用数据目录，无法备份：未删除任何启动项。".to_string())?;
     let id2 = id.clone();
-    tokio::task::spawn_blocking(move || remove_startup_item_blocking(&id2))
+    tokio::task::spawn_blocking(move || remove_startup_item_blocking(&id2, &backup_dir))
         .await
         .map_err(|e| e.to_string())?
 }
 
-fn remove_startup_item_blocking(id: &str) -> Result<(), String> {
+fn remove_startup_item_blocking(id: &str, backup_dir: &std::path::Path) -> Result<String, String> {
     let items = list_startup_items_blocking()?;
     let item = items
         .iter()
@@ -316,14 +368,14 @@ fn remove_startup_item_blocking(id: &str) -> Result<(), String> {
             // 进回收站（可恢复）。trash 误报/失败时退化为直接删除（用户已确认）。
             let recycled = diskpilot_executor::recycle_path(&path);
             match recycled {
-                Ok(()) => Ok(()),
+                Ok(()) => Ok(String::new()),
                 Err(_) => {
                     if path.exists() {
                         std::fs::remove_file(&path)
                             .or_else(|_| std::fs::remove_dir(&path))
                             .map_err(|e| format!("删除启动项失败：{e}"))?;
                     }
-                    Ok(())
+                    Ok(String::new())
                 }
             }
         }
@@ -333,6 +385,19 @@ fn remove_startup_item_blocking(id: &str) -> Result<(), String> {
             } else {
                 HKLM_RUN
             };
+            // 先备份再删：备份写不下去就停，绝不留下「删了又恢复不了」的状态。
+            std::fs::create_dir_all(backup_dir)
+                .map_err(|e| format!("创建备份目录失败，未删除：{e}"))?;
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let file = backup_dir.join(format!("{}-{stamp}.reg", sanitize_file_name(&item.name)));
+            std::fs::write(
+                &file,
+                reg_backup_text(&item.location, &item.name, &item.command),
+            )
+            .map_err(|e| format!("备份启动项失败，未删除：{e}"))?;
             // 值名是外部数据——转义后拼入（防单引号逃逸注入）。
             let script = format!(
                 "$k='{key}'; \
@@ -340,9 +405,43 @@ fn remove_startup_item_blocking(id: &str) -> Result<(), String> {
                  'ok'",
                 escape_ps_single_quoted(&item.name)
             );
-            ps_capture(&script, Duration::from_secs(15))?;
-            Ok(())
+            match ps_capture(&script, Duration::from_secs(15)) {
+                Ok(_) => Ok(file.display().to_string()),
+                Err(e) => Err(format!(
+                    "删除失败（已备份到 {}，注册表未改动）：{e}",
+                    file.display()
+                )),
+            }
         }
         other => Err(format!("未知的启动项来源：{other}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{reg_backup_text, sanitize_file_name};
+
+    #[test]
+    fn reg_backup_is_importable_and_escapes_paths() {
+        let text = reg_backup_text("registry_hkcu", "MyApp", r"C:\Program Files\X\a.exe");
+        assert!(text.starts_with("Windows Registry Editor Version 5.00"));
+        assert!(text.contains(r"[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run]"));
+        // 注册表 .reg 里反斜杠要翻倍，引号要转义。
+        assert!(text.contains(r#""MyApp"="C:\\Program Files\\X\\a.exe""#));
+        // HKLM 项写的是 HKLM 视图，不会错写到当前用户。
+        let machine = reg_backup_text("registry_hklm", "svc", r"C:\a.exe");
+        assert!(
+            machine.contains(r"[HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Run]")
+        );
+        assert!(!machine.contains("HKEY_CURRENT_USER"));
+    }
+
+    #[test]
+    fn backup_file_name_never_carries_path_separators() {
+        // 值名可被恶意软件写成任意文本：不能借它逃出备份目录。
+        assert_eq!(sanitize_file_name(r"..\..\x"), ".._.._x");
+        assert_eq!(sanitize_file_name("a:b|c?d*e"), "a_b_c_d_e");
+        assert_eq!(sanitize_file_name("   "), "_");
+        assert_eq!(sanitize_file_name("正常名字"), "正常名字");
     }
 }
