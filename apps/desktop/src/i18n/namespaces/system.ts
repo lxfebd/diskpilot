@@ -97,6 +97,7 @@ export const system = {
     // ── 清理提醒设置 ──
     'system.reminder.title': '清理提醒',
     'system.reminder.loading': '加载中…',
+    'system.reminder.loadFailed': '提醒配置未读到：{err}',
     'system.reminder.enabledLabel': '定时检查可清理空间',
     'system.reminder.enabledDescA': '按设定间隔在后台跑一次扫描建议（只读统计），有值得清理的项时弹通知。',
     'system.reminder.enabledDescB': '只出清单，绝不自动删除',
@@ -222,6 +223,7 @@ export const system = {
     // ── Cleanup reminders ──
     'system.reminder.title': 'Cleanup reminders',
     'system.reminder.loading': 'Loading…',
+    'system.reminder.loadFailed': 'Reminder config not read: {err}',
     'system.reminder.enabledLabel': 'Check for reclaimable space on a schedule',
     'system.reminder.enabledDescA': 'Runs a scan-suggestion pass in the background at the set interval (read-only stats) and notifies you when something is worth cleaning. ',
     'system.reminder.enabledDescB': 'It only lists items — it never deletes on its own',

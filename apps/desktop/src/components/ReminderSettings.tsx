@@ -14,6 +14,8 @@ import { useT } from '../i18n';
 export function ReminderSettings() {
   const t = useT();
   const [cfg, setCfg] = useState<ReminderConfig | null>(null);
+  // 配置读失败单独记：失败 ≠ 加载中（R79），绝不永久转圈。
+  const [cfgErr, setCfgErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [lastPayload, setLastPayload] = useState<ReminderPayload | null>(null);
@@ -22,7 +24,10 @@ export function ReminderSettings() {
   useEffect(() => {
     let cancelled = false;
     api.getReminderConfig().then((c) => {
-      if (!cancelled) setCfg(c);
+      if (!cancelled) { setCfg(c); setCfgErr(null); }
+    }).catch((e) => {
+      // 读失败 ≠ 加载中：记录原因，别让「加载中…」永远转圈（R79）。
+      if (!cancelled) setCfgErr(String(e instanceof Error ? e.message : e));
     });
     return () => {
       cancelled = true;
@@ -55,6 +60,14 @@ export function ReminderSettings() {
       setBusy(false);
     }
   };
+
+  if (cfgErr) {
+    return (
+      <div className="settings-pane">
+        <div className="error small">{t('system.reminder.loadFailed', { err: cfgErr })}</div>
+      </div>
+    );
+  }
 
   if (!cfg) {
     return <div className="settings-pane"><div className="muted">{t('system.reminder.loading')}</div></div>;
