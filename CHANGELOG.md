@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 AI 工具详情「同类推荐」（R134）
+
+- AI 可操作工具的详情弹窗（agentDetail）底部新增「同类 AI 工具」——
+  agent-server 的 MCP 工具没有 tags/category 元数据，同类判断靠描述词袋
+  重叠打分（新纯函数 `similarAgentTools` + `descTokens`/`descOverlap`）。
+  点击推荐项直接切换详情。
+- 分词策略：拉丁/数字连续串一个 token；CJK 走双字滑窗组词（「温度」
+  「获取」），比单字切分更贴近概念——「温度」vs「湿度」共享单字不再
+  误判同类。中英停用词表（虚词/高频词），无标签描述不硬凑。
+- 新文件 similar.ts + similar.test.ts（+9 tests，414 总 / 34 files）；
+  i18n `toolbelt.wall.aiSimilar`（zh/en 成对）。
+
 ### 2026-10-13 甜甜圈压测温度曲线全长历史（R133）
 
 - 退出摘要的「温度曲线」行从「最近 60 个采样窗口」改为全长历史——

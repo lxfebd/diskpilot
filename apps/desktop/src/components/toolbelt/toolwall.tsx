@@ -21,6 +21,7 @@ import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
 import type { SettingsTab } from '../Settings';
 import { HwReportCard, HwHistorySection } from '../HwPanels';
 import { splitArgs } from './services';
+import { similarAgentTools } from './similar';
 import {
   CATEGORY_COLOR, CATEGORY_ICON, RISK_ICON, SafeToolIcon, adNoticeFor, catDisplayName,
   plainDescriptionFor, riskLabelDisplay, toolColorFor, toolIconFor,
@@ -1075,6 +1076,34 @@ export function CatalogWall({
                       ))}
                     </ul>
                   </>
+                );
+              })()}
+              {/* R134：同类 AI 工具——描述词袋重叠打分（无 tags/category 元数据，
+                  靠 description 语义判断），点击切换详情。 */}
+              {(agentTools ?? []).length > 1 && (() => {
+                const similar = similarAgentTools(
+                  { name: agentDetail.name, description: agentDetail.description },
+                  (agentTools ?? []).map((m) => ({ name: m.name, description: m.description })),
+                );
+                if (similar.length === 0) return null;
+                return (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="muted small">{t('toolbelt.wall.aiSimilar')}</p>
+                    <div className="tdm-similar-list">
+                      {similar.map((s) => (
+                        <button
+                          key={s.name}
+                          className="tdm-similar-item"
+                          onClick={() => {
+                            const next = agentTools?.find((m) => m.name === s.name);
+                            if (next) setAgentDetail(next);
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 );
               })()}
             </div>
