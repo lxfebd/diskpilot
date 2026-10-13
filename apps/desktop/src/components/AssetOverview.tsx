@@ -347,6 +347,7 @@ const TEMP_WARN_C = 80;
 function HealthCheckupCard({
   drives,
   reclaimTotal,
+  reclaimErr,
   scanning,
   onScanAll,
   onGoCleanup,
@@ -354,6 +355,7 @@ function HealthCheckupCard({
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
+  reclaimErr?: string | null;
   scanning: boolean;
   onScanAll: () => void;
   onGoCleanup: () => void;
@@ -410,7 +412,11 @@ function HealthCheckupCard({
         <button className={'ao-checkup-item' + (reclaimTotal > 0 ? ' accent' : '')} onClick={onGoCleanup} title={t('overview.checkup.goClean')}>
           <Zap size={14} />
           <span>
-            {reclaimTotal > 0 ? t('overview.checkup.reclaimable', { size: formatBytes(reclaimTotal) }) : t('overview.checkup.reclaimableNone')}
+            {reclaimTotal > 0
+              ? t('overview.checkup.reclaimable', { size: formatBytes(reclaimTotal) })
+              : reclaimErr
+                ? t('overview.checkup.reclaimUnread')
+                : t('overview.checkup.reclaimableNone')}
           </span>
         </button>
         {/* 温度 */}
@@ -756,6 +762,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       <HealthCheckupCard
         drives={drives}
         reclaimTotal={reclaimTotal}
+        reclaimErr={cleanErr}
         scanning={scanning}
         onScanAll={onScanAll}
         onGoCleanup={onOpenCleanup}
