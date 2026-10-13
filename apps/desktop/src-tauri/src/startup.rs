@@ -1,6 +1,7 @@
 //! 启动项管理：枚举注册表 Run 键 + 启动文件夹里的自启动项，
 //! 支持启用/禁用（值/文件名加 .disabled 备份，可恢复）/删除
-//! （文件夹项进回收站；注册表值没有回收站，删除前先备份成 .reg，可双击导入恢复）。
+//! （文件夹项进回收站，回收站没接住时先复制备份再删；注册表值没有回收站，
+//! 删除前先备份成 .reg，可双击导入恢复）。
 //! 写操作都是 L2 权限（权限中心开关 + 每次确认），后端纵深校验。
 
 use std::time::Duration;
@@ -332,6 +333,14 @@ fn reg_backup_bytes(text: &str) -> Vec<u8> {
     out
 }
 
+/// 备份文件名用的时间戳（秒）：同一项删多次不会互相覆盖。
+fn backup_stamp() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
 /// 删除一个启动项。
 /// 文件夹项进系统回收站（可在回收站还原）；注册表值没有回收站，
 /// 先把值备份成 .reg（写失败就不删），返回备份文件路径（文件夹项返回空）。
@@ -378,17 +387,34 @@ fn remove_startup_item_blocking(id: &str, backup_dir: &std::path::Path) -> Resul
             if !path.exists() {
                 return Err(format!("启动项文件不存在：{}", path.display()));
             }
-            // 进回收站（可恢复）。trash 误报/失败时退化为直接删除（用户已确认）。
+            // 进回收站（可恢复）。回收站没接住时不再「直接删了事」：
+            // 先把文件复制到备份目录，复制成功才删——不留没有退路的删除。
             let recycled = diskpilot_executor::recycle_path(&path);
             match recycled {
                 Ok(()) => Ok(String::new()),
-                Err(_) => {
-                    if path.exists() {
-                        std::fs::remove_file(&path)
-                            .or_else(|_| std::fs::remove_dir(&path))
-                            .map_err(|e| format!("删除启动项失败：{e}"))?;
+                Err(e) => {
+                    if path.is_dir() {
+                        return Err(format!(
+                            "回收站没接住这个目录项（{e}），未删除：请手动把它移出启动文件夹。"
+                        ));
                     }
-                    Ok(String::new())
+                    std::fs::create_dir_all(backup_dir)
+                        .map_err(|e2| format!("创建备份目录失败，未删除：{e2}"))?;
+                    let name = path
+                        .file_name()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "startup-item".to_string());
+                    let file = backup_dir.join(format!(
+                        "{}-{}-{name}",
+                        sanitize_file_name(&item.name),
+                        backup_stamp()
+                    ));
+                    std::fs::copy(&path, &file)
+                        .map_err(|e2| format!("备份启动项文件失败，未删除：{e2}"))?;
+                    std::fs::remove_file(&path).map_err(|e2| {
+                        format!("删除启动项失败（原件已备份到 {}）：{e2}", file.display())
+                    })?;
+                    Ok(file.display().to_string())
                 }
             }
         }
@@ -401,10 +427,7 @@ fn remove_startup_item_blocking(id: &str, backup_dir: &std::path::Path) -> Resul
             // 先备份再删：备份写不下去就停，绝不留下「删了又恢复不了」的状态。
             std::fs::create_dir_all(backup_dir)
                 .map_err(|e| format!("创建备份目录失败，未删除：{e}"))?;
-            let stamp = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+            let stamp = backup_stamp();
             let file = backup_dir.join(format!("{}-{stamp}.reg", sanitize_file_name(&item.name)));
             std::fs::write(
                 &file,

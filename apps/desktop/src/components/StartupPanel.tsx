@@ -68,9 +68,12 @@ export function StartupPanel() {
   const removeStartup = async (item: StartupItem) => {
     try {
       const backup = await api.removeStartupItem(item.id, true);
-      // 注册表值没有回收站：后端删前写了 .reg，路径要报给用户（那是唯一的退路）。
+      // 回收站接住的（路径为空）走系统回收站还原；没接住 / 注册表值走应用自己的备份，
+      // 路径必须报给用户——那是唯一的退路。
       flashMsg(backup
-        ? t('system.startup.toastDeletedReg', { name: item.name, path: backup })
+        ? (item.location.startsWith('registry')
+            ? t('system.startup.toastDeletedReg', { name: item.name, path: backup })
+            : t('system.startup.toastDeletedFile', { name: item.name, path: backup }))
         : t('system.startup.toastDeleted', { name: item.name }));
       await loadStartup();
     } catch (e) {

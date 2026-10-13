@@ -34,6 +34,7 @@ export const system = {
     'system.startup.toastToggled': '{action}「{name}」（可随时恢复）',
     'system.startup.toastDeleted': '已删除「{name}」（文件夹项进回收站，可恢复）',
     'system.startup.toastDeletedReg': '已删除「{name}」，原值已备份到 {path}（双击该文件可恢复）',
+    'system.startup.toastDeletedFile': '已删除「{name}」，原件已备份到 {path}（放回启动文件夹即可恢复）',
     'system.startup.refresh': '刷新启动项',
 
     // ── 风扇曲线建议 + 风扇控制 ──
@@ -157,6 +158,7 @@ export const system = {
     'system.startup.toastToggled': '{action} “{name}” (you can undo this anytime)',
     'system.startup.toastDeleted': 'Deleted “{name}” (folder items go to the Recycle Bin, restorable)',
     'system.startup.toastDeletedReg': 'Deleted “{name}”; the original value was backed up to {path} (double-click to restore)',
+    'system.startup.toastDeletedFile': 'Deleted “{name}”; the original file was backed up to {path} (put it back in the Startup folder to restore)',
     'system.startup.refresh': 'Refresh startup items',
 
     // ── Fan curve advice + fan control ──
