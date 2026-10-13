@@ -87,6 +87,14 @@ export const hw = {
     'hw.histCompare': '对比 {from} → {to}',
     'hw.histNoComparable': '所选归档缺少可对比的磁盘健康字段。',
 
+    // R96 硬件趋势：多快照折线（温度 / 通电时长），字段缺失跳过不画。
+    'hw.trendTitle': '趋势',
+    'hw.trendTemp': '最高温（°C）',
+    'hw.trendPower': '通电时长（小时）',
+    'hw.trendTempNone': '还没有带温度的快照，生成几次硬件报告后这里会画温度曲线。',
+    'hw.trendPowerNone': '还没有带通电时长数据的快照，趋势图暂空。',
+    'hw.trendSamples': '{n} 份快照 · {first} → {last}',
+
     // 本机性能档位（hwProfile：设置页展示的那一句话）
     'hw.tierWeak': '低配',
     'hw.tierMedium': '中配',
@@ -172,6 +180,14 @@ export const hw = {
     'hw.histNewer': 'Newer archive',
     'hw.histCompare': 'Compare {from} → {to}',
     'hw.histNoComparable': 'The selected archives have no comparable drive-health fields.',
+
+    // R96 hardware trend: multi-snapshot lines (temp / power-on hours), missing values skipped.
+    'hw.trendTitle': 'Trend',
+    'hw.trendTemp': 'Max temp (°C)',
+    'hw.trendPower': 'Power-on hours',
+    'hw.trendTempNone': 'No snapshots with a temperature reading yet — generate a few hardware reports and the temp line will appear here.',
+    'hw.trendPowerNone': 'No snapshots with power-on-hour data yet, the trend stays empty.',
+    'hw.trendSamples': '{n} snapshots · {first} → {last}',
 
     // Local performance tier (hwProfile: the one-line summary on the settings page)
     'hw.tierWeak': 'low-end',

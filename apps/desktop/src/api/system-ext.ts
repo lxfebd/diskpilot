@@ -336,6 +336,10 @@ export const systemExtApi = {
           archiveB: archiveB ?? null,
         })
       : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'compare_hw_snapshots' }))),
+  hwSnapshotSeries: () =>
+    isTauri
+      ? invoke<HwSeriesPoint[]>('hw_snapshot_series')
+      : Promise.resolve([]),
   powerPlan: (setScheme?: string, confirmed?: boolean) =>
     isTauri
       ? invoke<PowerPlanOut>('power_plan', { setScheme: setScheme ?? null, confirmed: confirmed ?? null })
@@ -803,6 +807,14 @@ export interface HwSnapshotMeta {
   at: number;
   machine: string;
   disk_count: number;
+}
+
+/** Rust 端 hw_snapshot_series 返回：一份快照的趋势点（R96）。字段缺失为 null。 */
+export interface HwSeriesPoint {
+  at: number;
+  temp_max: number | null;
+  power_on_hours: number | null;
+  memory_total: number | null;
 }
 
 /** Rust 端 compare_hw_snapshots 返回：两次归档的逐磁盘字段对比 */

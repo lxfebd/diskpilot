@@ -418,6 +418,71 @@ pub(crate) fn compare_hw_snapshots(
     }))
 }
 
+/// 硬件快照趋势序列（R96）：读全部归档，按时间**升序**返回每份的
+/// `at`（秒）+ `temp_max`（该份最高温，℃）+ `power_on_hours`（首块盘
+/// 通电小时）+ `memory_total`（内存总量，字节）。字段单份缺失 → null
+/// （趋势图只画有值的点，不编造）。历史目录读失败必须报错（R81 诚实族规）。
+/// 归档目录不存在 = 从未快照过 = 空数组诚实。
+#[tauri::command]
+pub(crate) fn hw_snapshot_series(app: tauri::AppHandle) -> Result<Vec<serde_json::Value>, String> {
+    let all = get_hw_history(app.clone())?;
+    let mut out: Vec<serde_json::Value> = Vec::new();
+    for m in all.iter().rev() {
+        let Some(v) = read_snapshot(&app, &m.file) else {
+            continue;
+        };
+        out.push(series_point(&v, m.at));
+    }
+    Ok(out)
+}
+
+/// 从单份归档提取一个趋势点（纯函数，便于单测）：最高温 / 首块盘通电 / 内存总量。
+fn series_point(v: &serde_json::Value, at: u64) -> serde_json::Value {
+    // 本份最高温：info.thermal[] 里取 temperature 最大值（同 HwReportCard 口径）。
+    let temp_max = v
+        .get("info")
+        .and_then(|i| i.get("thermal"))
+        .and_then(|t| t.as_array())
+        .and_then(|arr| {
+            arr.iter()
+                .filter_map(|x| v_num(x, "temperature"))
+                .fold(None, |acc: Option<f64>, t| {
+                    Some(acc.map_or(t, |a: f64| a.max(t)))
+                })
+        });
+    // 首块盘通电小时（health.disk[] 优先，info.disk[] 兜底；同 compare 口径）。
+    let disks: Vec<serde_json::Value> = v
+        .get("health")
+        .and_then(|h| h.get("disk"))
+        .and_then(|d| d.as_array())
+        .cloned()
+        .unwrap_or_else(|| {
+            v.get("info")
+                .and_then(|i| i.get("disk"))
+                .and_then(|d| d.as_array())
+                .cloned()
+                .unwrap_or_default()
+        });
+    let power_on_hours = disks
+        .first()
+        .and_then(|d| v_num(d, "power_on_hours").or_else(|| v_num(d, "通电时间")));
+    let memory_total = v
+        .get("info")
+        .and_then(|i| i.get("memory"))
+        .and_then(|mm| mm.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| v_num(x, "Capacity"))
+                .fold(0.0, |s, c| s + c)
+        });
+    serde_json::json!({
+        "at": at,
+        "temp_max": temp_max,
+        "power_on_hours": power_on_hours,
+        "memory_total": memory_total,
+    })
+}
+
 #[cfg(test)]
 #[path = "hw_history_tests.rs"]
 mod tests;

@@ -172,6 +172,19 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 .hw-hist-field-delta.up { color: var(--risk-danger); background: var(--err-soft, rgba(220,60,60,.12)); }
 .hw-hist-field-delta:not(.up) { color: var(--success, #22a06b); background: rgba(34,160,107,.12); }
 
+/* R96 硬件趋势折线（多快照温度/通电） */
+.hw-trend { margin-top: 10px; padding: 8px 10px; background: var(--paper-3); border-radius: var(--radius-sm); }
+.hw-trend-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.hw-trend-title .muted { font-weight: 400; }
+.hw-trend-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.hw-trend-label { font-size: 11px; color: var(--muted); min-width: 74px; }
+.hw-trend-svg { width: 100%; max-width: 240px; height: 40px; overflow: visible; }
+.hw-trend-line { stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hw-trend-line.temp { stroke: var(--risk-danger, #d64545); }
+.hw-trend-line.power { stroke: var(--accent, #4a8af4); }
+.hw-trend-max { font-size: 11px; white-space: nowrap; }
+.hw-trend-empty { font-size: 11px; padding: 4px 0; }
+
 /* 压测确认面板 */
 .stress-modal { width: 460px; }
 .stress-line { font-size: 13px; padding: 4px 0; }

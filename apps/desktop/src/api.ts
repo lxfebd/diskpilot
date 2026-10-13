@@ -55,6 +55,7 @@ export type {
   HwCompareOut,
   HwDiskCompare,
   HwFieldDelta,
+  HwSeriesPoint,
   PowerPlanOut,
   StartupItem,
   FanCurveAdvice,

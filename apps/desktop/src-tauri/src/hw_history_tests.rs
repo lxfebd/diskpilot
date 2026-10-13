@@ -225,3 +225,46 @@ fn path_traversal_rejected() {
     // 组合场景：白名单本身也拒绝带 .. 的合法前缀
     assert!(!safe_snapshot_file("hw-..\\x.json"));
 }
+
+// R96 series_point：单份归档 → 趋势点。字段缺失 → null，绝不编造。
+#[test]
+fn series_point_extracts_temp_power_memory() {
+    let v = serde_json::json!({
+        "info": {
+            "thermal": [
+                { "name": "CPU", "temperature": 55.0 },
+                { "name": "GPU", "temperature": 72.5 }
+            ],
+            "memory": [
+                { "Capacity": 8589934592.0 },
+                { "Capacity": 8589934592.0 }
+            ],
+            "disk": [ { "device": "Disk A", "Model": "A" } ]
+        },
+        "health": { "disk": [ { "device": "Disk A", "power_on_hours": 1234.0 } ] }
+    });
+    let p = series_point(&v, 1_700_000_000);
+    assert_eq!(p["at"], 1_700_000_000);
+    // 温度取 thermal 最大值（GPU 72.5 > CPU 55）
+    assert_eq!(p["temp_max"], 72.5);
+    // 通电小时来自 health 侧
+    assert_eq!(p["power_on_hours"], 1234.0);
+    // 内存总量 = 两槽求和
+    assert_eq!(p["memory_total"], 17_179_869_184.0);
+}
+
+#[test]
+fn series_point_missing_fields_are_null() {
+    // 无 thermal / 无 memory / 无 health.disk → 三项全 null（趋势图跳过，不画 0）。
+    let v = serde_json::json!({ "info": { "os": [ { "Caption": "X" } ] } });
+    let p = series_point(&v, 5);
+    assert_eq!(p["temp_max"], serde_json::Value::Null);
+    assert_eq!(p["power_on_hours"], serde_json::Value::Null);
+    assert_eq!(p["memory_total"], serde_json::Value::Null);
+    // 通电时间中文键兜底
+    let v2 = serde_json::json!({
+        "info": {},
+        "health": { "disk": [ { "device": "A", "通电时间": "800 小时" } ] }
+    });
+    assert_eq!(series_point(&v2, 5)["power_on_hours"], 800.0);
+}

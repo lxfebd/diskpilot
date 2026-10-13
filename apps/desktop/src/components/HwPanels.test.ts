@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { fmtHwTime, gpuLiveSource, vramStr } from './HwPanels';
+import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath } from './HwPanels';
 import { setLang } from '../i18n';
 
 // fmtHwTime：把归档 Unix 秒转成本地可读时间；非法/空输入返回空串（展示层兜底）。
@@ -69,5 +69,35 @@ describe('vramStr（AdapterRAM 溢出区判定）', () => {
     expect(vramStr(0)).toBe('未知');
     expect(vramStr(-1)).toBe('未知');
     expect(vramStr('n/a')).toBe('未知');
+  });
+});
+
+// R96 硬件趋势折线 path：≥2 个有值点才画；归一化到自身 min/max（值平=水平线）。
+describe('hwSeriesPath', () => {
+  it('少于 2 点返回空串', () => {
+    expect(hwSeriesPath([])).toBe('');
+    expect(hwSeriesPath([50])).toBe('');
+  });
+
+  it('值递增 → path 从左上到右下（y 随值增大而变小）', () => {
+    const p = hwSeriesPath([50, 60]);
+    expect(p).toMatch(/^M/);
+    // 首点 y 大（低值在下），末点 y 小（高值在上）
+    const firstY = Number(p.split(' ')[0].slice(1).split(',')[1]);
+    const lastY = Number(p.split(' ')[1].slice(1).split(',')[1]);
+    expect(firstY).toBeGreaterThan(lastY);
+  });
+
+  it('值平 → y 相同（水平线）', () => {
+    const p = hwSeriesPath([55, 55, 55]);
+    const ys = p.match(/-?\d+\.\d+$/g)!.map(Number);
+    expect(new Set(ys).size).toBe(1);
+  });
+
+  it('点按顺序映射 x（等距）', () => {
+    const p = hwSeriesPath([0, 100], 240, 40);
+    const xs = p.match(/-?\d+\.\d+,/g)!.map((s) => Number(s.replace(',', '')));
+    expect(xs[0]).toBe(0);
+    expect(xs[1]).toBe(240);
   });
 });

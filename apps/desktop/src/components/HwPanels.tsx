@@ -6,7 +6,7 @@ import { api } from '../api';
 import { LEVEL_COLORS } from '../colors';
 import { driveLettersOf, gradeDiskHealth } from '../diskHealth';
 import { t, useT } from '../i18n';
-import type { HwInfo, HwDiskHealth, HwSnapshotMeta, HwCompareOut } from '../api';
+import type { HwInfo, HwDiskHealth, HwSnapshotMeta, HwCompareOut, HwSeriesPoint } from '../api';
 
 /// 硬件报告 GPU 实时行来源标签：按 `gpu_live.name` 判定厂商（desktop 端 AMD ADL
 /// 兜底时 name 以「AMD 显卡（…」开头，NVIDIA 则 nvidia-smi）。无 live → 空串。
@@ -437,6 +437,7 @@ export function useHwTestMonitor(onStop: () => void) {
 export function HwHistorySection() {
   const t = useT();
   const [metas, setMetas] = useState<HwSnapshotMeta[] | null>(null);
+  const [series, setSeries] = useState<HwSeriesPoint[]>([]);
   const [compare, setCompare] = useState<HwCompareOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -460,11 +461,14 @@ export function HwHistorySection() {
   const loadHistory = useCallback(async () => {
     if (!isTauri) {
       setMetas([]);
+      setSeries([]);
       return;
     }
     try {
       const list = await api.hwHistory();
       setMetas(list);
+      // R96: 并行读趋势序列（只读）；失败不拦主流程，趋势区自己显示空。
+      void api.hwSnapshotSeries().then(setSeries).catch(() => setSeries([]));
       // 默认勾选最近两份做对比（后端也会自动取），≥2 份时直接出对比结果
       if (list.length >= 2) {
         const a = list[1].file;
@@ -527,6 +531,9 @@ export function HwHistorySection() {
         </button>
       </div>
 
+      {/* R96 硬件趋势：多快照温度/通电折线（只读）。 */}
+      <HwTrendChart series={series} />
+
       <div className="hw-hist-pick">
         <label className="hw-hist-pick-col">
           <span className="muted small">{t('hw.histOlder')}</span>
@@ -579,4 +586,61 @@ export function fmtHwTime(at: number | string): string {
   const n = typeof at === 'number' ? at : Number(at);
   if (!Number.isFinite(n) || n <= 0) return '';
   return new Date(n * 1000).toLocaleString();
+}
+
+/// R96 硬件趋势折线：把有序数值点归一化画 SVG path（值平=水平线）。
+/// 只有 ≥2 个有值点才返回；W×H 尺寸与 overview 的 sparkline 一致。
+export function hwSeriesPath(vals: number[], w = 240, h = 40): string {
+  if (vals.length < 2) return '';
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = Math.max(1, max - min);
+  return vals
+    .map((v, i) => {
+      const x = (i / (vals.length - 1)) * w;
+      const y = h - 3 - ((v - min) / span) * (h - 6);
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
+/// R96 硬件趋势图：温度 / 通电时长两条折线（各有值的点才画，缺失跳过）。
+export function HwTrendChart({ series }: { series: HwSeriesPoint[] }) {
+  const t = useT();
+  const temps = series.filter((p) => p.temp_max != null).map((p) => p.temp_max!);
+  const powers = series.filter((p) => p.power_on_hours != null).map((p) => p.power_on_hours!);
+  const n = series.length;
+  const first = n > 0 ? fmtHwTime(series[0].at) : '';
+  const last = n > 0 ? fmtHwTime(series[n - 1].at) : '';
+
+  return (
+    <div className="hw-trend">
+      <div className="hw-trend-title"><Gauge size={13} /> {t('hw.trendTitle')}
+        {n > 0 && <span className="muted small"> · {t('hw.trendSamples', { n, first, last })}</span>}
+      </div>
+      {temps.length >= 2 && (
+        <div className="hw-trend-row">
+          <span className="hw-trend-label">{t('hw.trendTemp')}</span>
+          <svg viewBox={`0 0 240 40`} className="hw-trend-svg" aria-label={t('hw.trendTemp')}>
+            <path d={hwSeriesPath(temps)} className="hw-trend-line temp" fill="none" />
+          </svg>
+          <span className="hw-trend-max muted small">{Math.round(Math.max(...temps))}°C</span>
+        </div>
+      )}
+      {powers.length >= 2 && (
+        <div className="hw-trend-row">
+          <span className="hw-trend-label">{t('hw.trendPower')}</span>
+          <svg viewBox={`0 0 240 40`} className="hw-trend-svg" aria-label={t('hw.trendPower')}>
+            <path d={hwSeriesPath(powers)} className="hw-trend-line power" fill="none" />
+          </svg>
+          <span className="hw-trend-max muted small">{Math.round(Math.max(...powers))}h</span>
+        </div>
+      )}
+      {temps.length < 2 && powers.length < 2 && (
+        <div className="hw-trend-empty muted small">
+          {temps.length === 0 ? t('hw.trendTempNone') : t('hw.trendPowerNone')}
+        </div>
+      )}
+    </div>
+  );
 }

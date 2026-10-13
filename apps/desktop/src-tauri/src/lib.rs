@@ -246,6 +246,7 @@ pub fn run() {
             space_history::get_space_history,
             hw_history::get_hw_history,
             hw_history::compare_hw_snapshots,
+            hw_history::hw_snapshot_series,
             drives::list_drives,
             steam::list_steam_games,
             steam::list_steam_workshop_items,
