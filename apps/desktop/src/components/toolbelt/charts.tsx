@@ -133,4 +133,58 @@ export function StressTempChart({ points }: { points: StressCurvePoint[] }) {
   );
 }
 
+interface StressHistorySeries {
+  label: string;
+  points: StressCurvePoint[];
+  color: string;
+}
+
+// ── R113 压测历史温度叠画对比 ──
+// 把历次压测的温度曲线叠画在一张图上：散热状态/峰值随时间的演变一眼可见
+// （最近一次最亮、较旧的渐暗）。X 轴是压测秒数（各次时长可能不同，按各自
+// 实际秒数对齐起点），Y 轴统一 0–100℃（与 StressTempChart 同口径，跨次可比）。
+export function StressHistoryChart({ series }: { series: StressHistorySeries[] }) {
+  const t = useT();
+  const W = 720;
+  const H = 160;
+  const PAD = 30;
+
+  const usable = series
+    .map((s) => ({ ...s, vals: s.points.map((p) => p.temp) }))
+    .filter((s) => s.vals.length >= 2);
+  if (usable.length === 0) return null;
+
+  const yAt = (v: number) => H - PAD - (v / 100) * (H - PAD * 2);
+
+  return (
+    <div className="bench-trend" style={{ marginTop: 10 }}>
+      <div className="bench-stress-hist-title muted small">{t('toolbelt.stressChart.historyTitle')}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('toolbelt.stressChart.historyTitle')} className="bench-trend-svg">
+        {[0.25, 0.5, 0.75].map((f) => (
+          <line key={f} x1={PAD} x2={W - PAD} y1={PAD + (H - PAD * 2) * f} y2={PAD + (H - PAD * 2) * f} stroke="var(--line)" strokeDasharray="4 4" strokeWidth={1} />
+        ))}
+        <text x={PAD} y={12} fill="#888" fontSize={10}>100°C</text>
+        <text x={PAD} y={H - 8} fill="#888" fontSize={10}>0°C</text>
+        <text x={PAD} y={H - PAD + 12} fill="#888" fontSize={10}>0s</text>
+        {usable.map((s) => {
+          const xAt = (i: number) => PAD + (i / Math.max(s.points.length - 1, 1)) * (W - PAD * 2);
+          const pts = s.points.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.temp).toFixed(1)}`).join(' ');
+          return (
+            <polyline key={s.label} points={pts} fill="none" stroke={s.color} strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" opacity={0.85} />
+          );
+        })}
+      </svg>
+      <div className="bench-trend-legend">
+        {usable.map((s) => (
+          <span key={s.label} className="bench-stress-hist-item">
+            <i style={{ background: s.color }} /> {s.label}
+            <b className="bench-stress-hist-peak">{Math.max(...s.vals).toFixed(0)}°C</b>
+          </span>
+        ))}
+        <span className="muted small">{t('toolbelt.stressChart.historyNote')}</span>
+      </div>
+    </div>
+  );
+}
+
 

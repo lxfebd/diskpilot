@@ -515,6 +515,25 @@ html[data-theme="pro"] .tb-tab.active { border-color: var(--accent-strong); back
   font-size: 12px;
   color: var(--accent-strong);
 }
+/* ── R113 压测历史温度叠画对比 ── */
+.bench-stress-hist-title {
+  margin-bottom: 4px;
+}
+.bench-stress-hist-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bench-stress-hist-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.bench-stress-hist-peak {
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--ink-2);
+}
 
 /* ── GPU 甜甜圈压测（FurMark 简化版全屏渲染层）── */
 .gpu-donut-overlay {
