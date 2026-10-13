@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -175,6 +175,27 @@ describe('启动项禁用量 disabledStartupCount', () => {
   });
   it('禁用项计数（只认 enabled=false）', () => {
     expect(disabledStartupCount([{ enabled: true }, { enabled: false }, { enabled: true }, { enabled: false }])).toBe(2);
+  });
+});
+
+// R74 诚实性回归：启动项检查三态——「读失败」绝不能被折叠成「未检测」。
+// 未读到 ≠ 不存在（延续 R55 起的同一族规）。
+describe('startupCheckState（启动项检查三态）', () => {
+  it('读到数据 → ok（刷新成功后旧错误翻回 ok）', () => {
+    expect(startupCheckState([{ enabled: true }], null)).toBe('ok');
+    expect(startupCheckState([{ enabled: false }], '旧错误')).toBe('ok');
+  });
+
+  it('读失败（startup=null + err 在）→ unread，绝不落到「未检测」', () => {
+    expect(startupCheckState(null, 'backend down')).toBe('unread');
+  });
+
+  it('成功读到 0 项（[] 是真空结果，不是失败）→ ok', () => {
+    expect(startupCheckState([], null)).toBe('ok');
+  });
+
+  it('真空未检测（无 err、无数据）→ none', () => {
+    expect(startupCheckState(null, null)).toBe('none');
   });
 });
 

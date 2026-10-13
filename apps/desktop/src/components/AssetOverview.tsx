@@ -217,6 +217,17 @@ export function disabledStartupCount(items: readonly { enabled: boolean }[] | nu
   return items.filter((it) => !it.enabled).length;
 }
 
+/** 启动项检查三态（R74）：'ok'=读到数据；'unread'=读失败（≠「未检测」）；'none'=真空未检测。 */
+export type StartupCheckState = 'ok' | 'unread' | 'none';
+export function startupCheckState(
+  startup: readonly { enabled: boolean }[] | null,
+  startupErr: string | null,
+): StartupCheckState {
+  if (startup) return 'ok';
+  if (startupErr) return 'unread';
+  return 'none';
+}
+
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
 // 纯只读展示：数据来自每次扫描后追加的 space-history.jsonl，绝不触盘 IO。
 function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | null; drives: readonly DriveEntry[]; onGoWorkspace: () => void }) {
@@ -430,9 +441,9 @@ function HealthCheckupCard({
         <div className="ao-checkup-item">
           <Rocket size={14} />
           <span>
-            {startup
-              ? t('overview.checkup.startup', { n: startup.length }) + (disabledCount > 0 ? ` · ${t('overview.checkup.startupDisabled', { n: disabledCount })}` : '')
-              : startupErr
+            {startupCheckState(startup, startupErr) === 'ok'
+              ? t('overview.checkup.startup', { n: startup!.length }) + (disabledCount > 0 ? ` · ${t('overview.checkup.startupDisabled', { n: disabledCount })}` : '')
+              : startupCheckState(startup, startupErr) === 'unread'
                 ? t('overview.checkup.startupUnread')
                 : t('overview.checkup.startupNone')}
           </span>
