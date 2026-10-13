@@ -298,6 +298,19 @@ export interface StressHistorySeries {
   color: string;
 }
 
+/** R129：叠画 y 轴动态上界 = max(100, 全部系列峰值)。固定 0–100 时单条曲线
+ *  罕见超 100°C 会被顶部截断；上探到峰值为整条曲线留白。真空数组 → 100
+ *  （调用方已保证至少一条 ≥2 点曲线，此分支仅为类型完备）。导出供单测。 */
+export function stressHistYMax(seriesVals: readonly (readonly number[])[]): number {
+  let peak = 0;
+  for (const vals of seriesVals) {
+    for (const v of vals) {
+      if (v > peak) peak = v;
+    }
+  }
+  return Math.max(peak, 100);
+}
+
 export function StressHistoryChart({ series, kind = 'cpu' }: { series: StressHistorySeries[]; kind?: 'cpu' | 'gpu' }) {
   const t = useT();
   const W = 720;
@@ -309,7 +322,11 @@ export function StressHistoryChart({ series, kind = 'cpu' }: { series: StressHis
     .filter((s) => s.vals.length >= 2);
   if (usable.length === 0) return null;
 
-  const yAt = (v: number) => H - PAD - (v / 100) * (H - PAD * 2);
+  // R129：叠画 y 轴动态上界 = max(100, 全部系列峰值)。固定 0–100 时单次
+  // 长时间压测曲线罕见超 100°C 会被顶部截断；上界提升到峰值为整条曲线
+  // 留白，正常 ≤100 的显示与固定 0–100 完全一致（视觉口径不变）。
+  const yMax = stressHistYMax(usable.map((s) => s.vals));
+  const yAt = (v: number) => H - PAD - (v / yMax) * (H - PAD * 2);
   // R127：GPU 压测叠画标题/aria 用 GPU 变体（甜甜圈区块与 CPU 压测区块
   // 同页并存，标题不区分会混淆）。
   const title = kind === 'gpu' ? t('toolbelt.stressChart.historyTitleGpu') : t('toolbelt.stressChart.historyTitle');
@@ -321,7 +338,7 @@ export function StressHistoryChart({ series, kind = 'cpu' }: { series: StressHis
         {[0.25, 0.5, 0.75].map((f) => (
           <line key={f} x1={PAD} x2={W - PAD} y1={PAD + (H - PAD * 2) * f} y2={PAD + (H - PAD * 2) * f} stroke="var(--line)" strokeDasharray="4 4" strokeWidth={1} />
         ))}
-        <text x={PAD} y={12} fill="#888" fontSize={10}>100°C</text>
+        <text x={PAD} y={12} fill="#888" fontSize={10}>{yMax.toFixed(0)}°C</text>
         <text x={PAD} y={H - 8} fill="#888" fontSize={10}>0°C</text>
         <text x={PAD} y={H - PAD + 12} fill="#888" fontSize={10}>0s</text>
         {usable.map((s) => {
