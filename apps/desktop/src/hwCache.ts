@@ -80,6 +80,34 @@ export async function ensureHwLoaded(force = false): Promise<HwCacheData> {
   return state;
 }
 
+/**
+ * 快路径硬盘健康：只跑 WMI，不启动 CrystalDiskInfo。
+ *
+ * 首页体检条只想「顺手看一眼」盘的健康，不该在家页拉起一个外部 GUI 程序
+ * （全量读取会 `CrystalDiskInfo /CopyExit`，超时上限 90 秒）。
+ * 已有全量缓存时直接复用（它是超集）；一次会话内只读一次，失败返回 null（UI 说「未读到」）。
+ */
+let quickHealth: HwDiskHealth | null = null;
+let quickInflight: Promise<HwDiskHealth | null> | null = null;
+
+export async function ensureHwDiskQuick(): Promise<HwDiskHealth | null> {
+  if (state.health) return state.health;
+  if (quickHealth) return quickHealth;
+  if (quickInflight) return quickInflight;
+  quickInflight = (async () => {
+    try {
+      const h = await api.hwDiskHealth(false, true);
+      quickHealth = h;
+      return h;
+    } catch {
+      return null;
+    } finally {
+      quickInflight = null;
+    }
+  })();
+  return quickInflight;
+}
+
 /** 只读系统信息探针（CPU 占用/内存/开机时长）的共享缓存：5 秒内复用。 */
 interface SysProbeCache {
   at: number;

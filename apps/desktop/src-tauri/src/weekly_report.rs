@@ -170,8 +170,9 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
     };
 
     // 4) 每块物理盘的健康摘要（hw_disk_cached 带 5 分钟 TTL，周报是后台作业，跑一次
-    //    PowerShell 可以接受）。读不到就留空数组：不编造，也不让周报假装盘都好。
-    let disks: Vec<DiskHealthBrief> = crate::hw::hw_disk::hw_disk_cached(app, false)
+    //    PowerShell 可以接受）。quick=true：周报只要 WMI 的健康分级，不该在后台
+    //    定时启动 CrystalDiskInfo。读不到就留空数组：不编造，也不让周报假装盘都好。
+    let disks: Vec<DiskHealthBrief> = crate::hw::hw_disk::hw_disk_cached(app, false, true)
         .ok()
         .and_then(|v| v.get("disks").cloned())
         .and_then(|d| d.as_array().cloned())

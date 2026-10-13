@@ -298,9 +298,10 @@ export const systemExtApi = {
     isTauri
       ? invoke<HwInfo>('hw_info', { refresh: refresh || null })
       : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'hw_info' }))),
-  hwDiskHealth: (refresh = false) =>
+  // quick=true 走快路径：只跑 WMI，不启动 CrystalDiskInfo（首页体检条用）。
+  hwDiskHealth: (refresh = false, quick = false) =>
     isTauri
-      ? invoke<HwDiskHealth>('hw_disk_health', { refresh: refresh || null })
+      ? invoke<HwDiskHealth>('hw_disk_health', { refresh: refresh || null, quick: quick || null })
       : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'hw_disk_health' }))),
   hwRunTest: (
     testType: string,

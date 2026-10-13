@@ -3,7 +3,7 @@ import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, Refre
 import { api, type SpacePoint, type StartupItem, type HwDiskHealth } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
-import { ensureHwLoaded } from '../hwCache';
+import { ensureHwDiskQuick } from '../hwCache';
 import { riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
 import { physicalDrives } from '../drives';
@@ -322,7 +322,7 @@ function HealthCheckupCard({
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
-  // 硬盘健康走 hwCache 共享缓存：与系统优化页同一条链路，切页不重跑 PowerShell。
+  // 硬盘健康走快路径：只跑 WMI，家页不启动 CrystalDiskInfo（那是系统优化页该做的事）。
   const [tempC, setTempC] = useState<number | null>(null);
   const [startup, setStartup] = useState<StartupItem[] | null>(null);
   const [diskHealth, setDiskHealth] = useState<HwDiskHealth | null>(null);
@@ -330,7 +330,7 @@ function HealthCheckupCard({
     let alive = true;
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
     api.listStartupItems().then((r) => { if (alive) setStartup(r); }).catch(() => { setStartup([]); });
-    ensureHwLoaded().then((c) => { if (alive) setDiskHealth(c.health); }).catch(() => {});
+    ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
     return () => { alive = false; };
   }, []);
 

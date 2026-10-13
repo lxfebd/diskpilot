@@ -23,7 +23,7 @@ pub(crate) async fn hw_report(
         // 启动 CrystalDiskInfo；冷启动时才各自采集一次并落缓存。
         let info = hw_info_cached(false)?;
         // 磁盘健康读取失败时如实带进报告正文（错误原因），而不是静默当 None。
-        let (health, health_note) = match hw_disk_cached(&app, false) {
+        let (health, health_note) = match hw_disk_cached(&app, false, false) {
             Ok(v) => (Some(v), String::new()),
             Err(e) => (None, format!("（硬盘健康读取失败：{e}）")),
         };
