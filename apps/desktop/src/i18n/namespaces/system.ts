@@ -128,6 +128,14 @@ export const system = {
     'system.reminder.weeklyIntervalTitle': '简报间隔',
     'system.reminder.weeklyDays': '{n} 天',
     'system.reminder.weeklyIntervalHint': '生成简报会跑一次各盘扫描统计，可能持续数十秒，且尽量落在空闲时段。可以在「操作历史」页随时手动生成。',
+
+    // ── 空间耗尽预警（R99）──
+    'system.reminder.fullWarnLabel': '空间耗尽预警',
+    'system.reminder.fullWarnDescA': '按空间趋势外推「多少天后用满」，≤阈值天数的盘会在后台提醒。',
+    'system.reminder.fullWarnDescB': '只读统计，绝不自动清理',
+    'system.reminder.fullWarnOff': '关闭',
+    'system.reminder.fullWarnDays': '{n} 天',
+    'system.reminder.fullWarnHint': '需要至少两次扫描记录才有趋势；清理或卸载后释放空间，预警会自动解除。',
   },
   en: {
     // ── Shared short words ──
@@ -254,5 +262,13 @@ export const system = {
     'system.reminder.weeklyIntervalTitle': 'Report interval',
     'system.reminder.weeklyDays': '{n} days',
     'system.reminder.weeklyIntervalHint': 'Generating a report runs a scan pass over every drive and may take tens of seconds; it is scheduled for idle times when possible. You can also generate one manually on the History page.',
+
+    // ── Days-to-full warning (R99) ──
+    'system.reminder.fullWarnLabel': 'Days-to-full warning',
+    'system.reminder.fullWarnDescA': 'Extrapolates from the space trend how many days until a drive is full; drives within the threshold get a background reminder.',
+    'system.reminder.fullWarnDescB': 'Read-only statistics — never auto-cleans',
+    'system.reminder.fullWarnOff': 'Off',
+    'system.reminder.fullWarnDays': '{n} days',
+    'system.reminder.fullWarnHint': 'Needs at least two scan samples to have a trend; freeing space by cleaning or uninstalling clears the warning automatically.',
   },
 };

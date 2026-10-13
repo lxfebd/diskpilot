@@ -159,6 +159,27 @@ export function ReminderSettings() {
         {t('system.reminder.weeklyIntervalHint')}
       </div>
 
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.fullWarnLabel')}</div>
+      <div className="switch-desc">
+        {t('system.reminder.fullWarnDescA')}
+        <b>{t('system.reminder.fullWarnDescB')}</b>
+      </div>
+      <div className="seg seg-5 auto" style={{ marginTop: 8 }}>
+        {[0, 3, 7, 14, 30].map((d) => (
+          <button
+            key={d}
+            type="button"
+            className={`seg-opt${cfg.full_warn_days === d ? ' active' : ''}`}
+            onClick={() => save({ full_warn_days: d })}
+          >
+            {d === 0 ? t('system.reminder.fullWarnOff') : t('system.reminder.fullWarnDays', { n: d })}
+          </button>
+        ))}
+      </div>
+      <div className="muted small" style={{ marginTop: 6 }}>
+        {t('system.reminder.fullWarnHint')}
+      </div>
+
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.runNowTitle')}</div>
       <button className="ghost" onClick={runNow} disabled={busy || !cfg.enabled}>
         <Play size={13} /> {busy ? t('system.reminder.checking') : t('system.reminder.checkNow')}

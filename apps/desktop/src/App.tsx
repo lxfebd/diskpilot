@@ -315,6 +315,26 @@ export default function App() {
     return () => { unlisten.then((u) => u()); };
   }, [t]);
 
+  // 空间耗尽预警（R99）：后端按空间趋势外推，发现 ≤N 天会满的盘 emit。
+  // 只通知「哪块盘快满了 + 预计天数」，清理仍走确认窗，绝不自动删。
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = listen<import('./api').SpaceFullWarn[]>('space-full-reminder', (e) => {
+      const warns = e.payload;
+      if (!Array.isArray(warns) || warns.length === 0) return;
+      const first = warns[0];
+      useStore.getState().toast(
+        t('shell.toast.spaceFull', {
+          path: first.path,
+          days: first.days === 0 ? t('shell.toast.spaceFullNow') : String(first.days),
+          extra: warns.length > 1 ? t('shell.toast.spaceFullMore', { n: warns.length - 1 }) : '',
+        }),
+        'warn',
+      );
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [t]);
+
   const pickDirectory = async () => {
     if (!isTauri) {
       // 提示语走文案表；默认值 'C:\\' 是数据，保持原样。

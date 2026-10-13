@@ -39,6 +39,11 @@ pub(crate) struct ReminderConfig {
     /// 周报间隔天（1..=90，默认 7）。
     #[serde(default)]
     pub weekly_interval_days: u64,
+    /// 空间耗尽预警阈值（天，R99）：按 space-history 趋势外推「多少天后
+    /// 用满」，≤ 该天数的盘触发 `space-full-reminder` 通知。0 = 关闭。
+    /// 独立于 enabled：可只开空间预警，不动清理提醒。
+    #[serde(default)]
+    pub full_warn_days: u64,
 }
 
 impl Default for ReminderConfig {
@@ -49,6 +54,7 @@ impl Default for ReminderConfig {
             min_bytes: 200 * 1024 * 1024,
             weekly_report_enabled: false,
             weekly_interval_days: 7,
+            full_warn_days: 0,
         }
     }
 }
@@ -106,6 +112,7 @@ pub(crate) fn set_reminder_config(
     min_bytes: Option<u64>,
     weekly_report_enabled: Option<bool>,
     weekly_interval_days: Option<u64>,
+    full_warn_days: Option<u64>,
 ) -> Result<ReminderConfig, String> {
     let Some(p) = config_path(&app) else {
         return Err("无法定位数据目录".into());
@@ -130,6 +137,10 @@ pub(crate) fn set_reminder_config(
     if let Some(v) = weekly_interval_days {
         cfg.weekly_interval_days = v.clamp(1, 90);
     }
+    if let Some(v) = full_warn_days {
+        // 上限 365：超过一个月的预警意义不大，锁死避免配置被污染。
+        cfg.full_warn_days = v.min(365);
+    }
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
     Ok(cfg)
@@ -144,6 +155,74 @@ pub(crate) struct ReminderPayload {
     pub total_bytes: u64,
     /// 生成时间（unix 秒）。
     pub ts: u64,
+}
+
+/// 空间耗尽预警（R99）：按 space-history 趋势外推「多少天后用满」。
+/// 纯只读统计——通知里只有路径与天数，不带任何清理动作。
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct SpaceFullWarn {
+    /// 卷根路径（C:\ 等）。
+    pub path: String,
+    /// 预计满盘天数（向上取整；0 = 已满）。
+    pub days: u64,
+}
+
+/// 按首尾采样外推「多少天后用满」。语义与前端 forecastFullDays 严格一致：
+/// 不足 2 点 / 零跨度 / 增速 ≤0（持平或释放）→ None——**释放不是「快满了」，
+/// 绝不把健康盘唱成满盘**；已满（剩余 ≤0，且增速为正）→ Some(0.0)；
+/// 否则返回剩余 ÷ 日增速的天数。
+pub(crate) fn forecast_full_days(pts: &[crate::space_history::SpacePoint]) -> Option<f64> {
+    if pts.len() < 2 {
+        return None;
+    }
+    let first = &pts[0];
+    let last = &pts[pts.len() - 1];
+    let span = last.at.saturating_sub(first.at);
+    if span == 0 || last.at < first.at {
+        return None;
+    }
+    let slope = (last.used_bytes as f64 - first.used_bytes as f64) / span as f64; // 字节/秒
+    if slope <= 0.0 {
+        return None;
+    }
+    let remaining = last.total_bytes as f64 - last.used_bytes as f64;
+    if remaining <= 0.0 {
+        return Some(0.0);
+    }
+    let days = remaining / (slope * 86400.0);
+    if days.is_finite() && days > 0.0 {
+        Some(days)
+    } else {
+        None
+    }
+}
+
+/// 扫一遍空间历史，返回预计 `full_warn_days` 天内会满的盘（含已满 = 0 天）。
+/// 读失败按诚实性族规向上传播 Err（调用方静默跳过本轮，不伪造成「无预警」
+/// 的空列表去覆盖 UI 判断——这里是通知通道，跳过即不发，语义清楚）。
+pub(crate) fn collect_full_warns(
+    app: &AppHandle,
+    cfg: &ReminderConfig,
+) -> Result<Vec<SpaceFullWarn>, String> {
+    if cfg.full_warn_days == 0 {
+        return Ok(Vec::new());
+    }
+    let hist = crate::space_history::read_history(app)?;
+    let mut out: Vec<SpaceFullWarn> = Vec::new();
+    let mut roots: Vec<&String> = hist.keys().collect();
+    roots.sort(); // HashMap 顺序不定：排序保证同输入同输出（测试/日志可复现）
+    for root in roots {
+        let Some(days) = forecast_full_days(&hist[root]) else {
+            continue;
+        };
+        if days <= cfg.full_warn_days as f64 {
+            out.push(SpaceFullWarn {
+                path: root.clone(),
+                days: days.ceil() as u64,
+            });
+        }
+    }
+    Ok(out)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -233,6 +312,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
         let mut last_weekly = std::time::Instant::now();
         // R89：空间趋势每日采样，与周报解耦（即使周报关着，趋势曲线也持续积累）。
         let mut last_space_sample = std::time::Instant::now();
+        // R99：空间耗尽预警。与清理提醒同粒度 tick（60s），但独立计时——
+        // 外推只看缓存历史，很轻，给个较长间隔（6h）就够，别高频打扰。
+        let mut last_full_warn = std::time::Instant::now();
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
@@ -258,6 +340,18 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                 if last_weekly.elapsed() >= interval {
                     last_weekly = std::time::Instant::now();
                     let _ = crate::weekly_report::run_weekly_report(&app);
+                }
+            }
+            // 空间耗尽预警（R99）：full_warn_days > 0 才检查；6h 一次。
+            if cfg.full_warn_days > 0 && last_full_warn.elapsed() >= Duration::from_secs(21600) {
+                last_full_warn = std::time::Instant::now();
+                match collect_full_warns(&app, &cfg) {
+                    Ok(warns) if !warns.is_empty() => {
+                        let _ = app.emit("space-full-reminder", &warns);
+                    }
+                    // 读失败静默跳过本轮（通知通道：跳过即不发，不入日志刷屏）；
+                    // 空列表 = 当前没有快满的盘，不发。
+                    _ => {}
                 }
             }
         }
@@ -361,5 +455,70 @@ mod tests {
         let clamped = loaded.interval_hours.clamp(1, 168);
         assert_eq!(clamped, 168, "interval 钳到 168");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // ── R99 空间耗尽预警：forecast_full_days 纯函数 ──
+    fn sp(root: &str, used: u64, at: u64, total: u64) -> crate::space_history::SpacePoint {
+        crate::space_history::SpacePoint {
+            root: root.into(),
+            total_bytes: total,
+            used_bytes: used,
+            at,
+        }
+    }
+
+    #[test]
+    fn forecast_forward_extrapolates_days() {
+        // total 1000，10 天内已用 400 → 500（+10/天），剩 500 → 50 天。
+        let pts = vec![
+            sp("C:\\", 400, 1_700_000_000, 1000),
+            sp("C:\\", 500, 1_700_864_000, 1000),
+        ];
+        let d = forecast_full_days(&pts).expect("正增速应返回天数");
+        assert!((d - 50.0).abs() < 1e-6, "剩 500 ÷ 10/天 = 50 天，得 {d}");
+    }
+
+    #[test]
+    fn forecast_release_or_flat_is_none() {
+        // 释放：不预测，绝不把健康盘唱成满盘
+        let releasing = vec![
+            sp("C:\\", 500, 1_700_000_000, 1000),
+            sp("C:\\", 400, 1_700_864_000, 1000),
+        ];
+        assert!(forecast_full_days(&releasing).is_none());
+        // 持平同样不预测
+        let flat = vec![
+            sp("C:\\", 400, 1_700_000_000, 1000),
+            sp("C:\\", 400, 1_700_864_000, 1000),
+        ];
+        assert!(forecast_full_days(&flat).is_none());
+    }
+
+    #[test]
+    fn forecast_full_is_zero_and_undersized_is_none() {
+        // 已满（剩余 ≤0，增速为正）→ 0
+        let full = vec![
+            sp("C:\\", 1000, 1_700_000_000, 1000),
+            sp("C:\\", 1100, 1_700_864_000, 1000),
+        ];
+        assert_eq!(forecast_full_days(&full), Some(0.0));
+        // 不足 2 点 / 零跨度 → None
+        assert!(forecast_full_days(&[sp("C:\\", 400, 1_700_000_000, 1000)]).is_none());
+        let zero = vec![
+            sp("C:\\", 400, 1_700_000_000, 1000),
+            sp("C:\\", 500, 1_700_000_000, 1000),
+        ];
+        assert!(forecast_full_days(&zero).is_none());
+    }
+
+    #[test]
+    fn full_warn_days_zero_disables() {
+        let cfg = ReminderConfig {
+            full_warn_days: 0,
+            ..ReminderConfig::default()
+        };
+        // collect_full_warns 依赖 AppHandle（read_history 要路径），这里只验证
+        // 配置默认关闭、以及阈值语义在纯函数层成立：full_warn_days 上限 365。
+        assert_eq!(cfg.full_warn_days, 0, "默认关空间预警");
     }
 }

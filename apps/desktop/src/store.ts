@@ -314,7 +314,7 @@ export interface CleanupProposal {
 export interface ToastItem {
   id: string;
   text: string;
-  kind: 'ok' | 'err';
+  kind: 'ok' | 'err' | 'warn';
 }
 
 interface AppState {
@@ -360,7 +360,7 @@ interface AppState {
   /** 把当前活动会话（非空）归档进历史列表并落盘；不换新会话。关窗前调用防对话丢失。 */
   archiveActiveChat: () => void;
 
-  toast: (text: string, kind?: 'ok' | 'err') => void;
+  toast: (text: string, kind?: 'ok' | 'err' | 'warn') => void;
   dismissToast: (id: string) => void;
   setProposal: (p: CleanupProposal | null) => void;
   recyclePaths: (

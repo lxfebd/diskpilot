@@ -68,6 +68,10 @@ export const shell = {
     'shell.toast.openedFromCache': '已从上次扫描结果打开（点盘符上的刷新可重新扫描）',
     'shell.toast.cleanupReminder': '发现约 {size} 可清理空间（{n} 个盘），可在总览页查看并确认清理',
     'shell.toast.healthWeekly': '本周巡检简报已生成：全盘可清理约 {size}。可在「操作历史」页查看详情',
+    // R99 空间耗尽预警（只通知，清理仍走确认窗）
+    'shell.toast.spaceFull': '{path} 预计 {days} 后空间用满——可以清理了',
+    'shell.toast.spaceFullNow': '今天',
+    'shell.toast.spaceFullMore': '，另有 {n} 块盘也在预警中',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': '目录树',
@@ -225,6 +229,10 @@ export const shell = {
     'shell.toast.openedFromCache': 'Opened from the last scan result — click the refresh badge on a drive to rescan it.',
     'shell.toast.cleanupReminder': 'About {size} can be cleaned up on {n} drive(s) — review and confirm on the Overview page',
     'shell.toast.healthWeekly': 'Weekly health report ready: about {size} can be cleaned across all drives. See details on the History page',
+    // R99 days-to-full warning (notification only; cleanup still goes through the confirm dialog)
+    'shell.toast.spaceFull': '{path} may be full in {days} — time to clean up',
+    'shell.toast.spaceFullNow': '0 days',
+    'shell.toast.spaceFullMore': ', {n} more drive(s) also approaching full',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': 'Tree',

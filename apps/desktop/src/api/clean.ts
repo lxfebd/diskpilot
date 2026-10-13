@@ -197,6 +197,7 @@ export const cleanApi = {
           min_bytes: 200 * 1024 * 1024,
           weekly_report_enabled: false,
           weekly_interval_days: 7,
+          full_warn_days: 0,
         }),
 
   setReminderConfig: (patch: {
@@ -205,6 +206,7 @@ export const cleanApi = {
     min_bytes?: number;
     weekly_report_enabled?: boolean;
     weekly_interval_days?: number;
+    full_warn_days?: number;
   }) =>
     isTauri
       ? invoke<ReminderConfig>('set_reminder_config', {
@@ -213,6 +215,7 @@ export const cleanApi = {
           minBytes: patch.min_bytes ?? null,
           weeklyReportEnabled: patch.weekly_report_enabled ?? null,
           weeklyIntervalDays: patch.weekly_interval_days ?? null,
+          fullWarnDays: patch.full_warn_days ?? null,
         })
       : Promise.resolve({
           enabled: false,
@@ -220,6 +223,7 @@ export const cleanApi = {
           min_bytes: 200 * 1024 * 1024,
           weekly_report_enabled: false,
           weekly_interval_days: 7,
+          full_warn_days: 0,
         }),
 
   /** 手动触发一次提醒检查（只读，只出清单 + 通知，绝不执行）。 */
@@ -303,6 +307,8 @@ export interface ReminderConfig {
   weekly_report_enabled: boolean;
   /** 周报间隔天（1..=90，默认 7） */
   weekly_interval_days: number;
+  /** 空间耗尽预警阈值天数（R99，默认 0=关）：按趋势外推 ≤N 天满的盘会提醒 */
+  full_warn_days: number;
 }
 
 /** 单盘可清字节（只读统计） */
@@ -316,6 +322,12 @@ export interface ReminderPayload {
   drives: DriveCleanup[];
   total_bytes: number;
   ts: number;
+}
+
+/** R99 空间耗尽预警（space-full-reminder 负载，逐盘）：days=0 表示已满。 */
+export interface SpaceFullWarn {
+  path: string;
+  days: number;
 }
 
 // ── 周巡检简报（health-butler P1，后端 weekly_report.rs 返回形状）──

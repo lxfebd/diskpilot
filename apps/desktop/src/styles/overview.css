@@ -567,6 +567,10 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   background: var(--risk-fill-d);
   color: #fff;
 }
+.toast.warn {
+  background: var(--risk-caution, #c78a1a);
+  color: #fff;
+}
 @keyframes toast-pop {
   from { transform: translateY(8px); opacity: 0; }
   to   { transform: translateY(0);   opacity: 1; }
