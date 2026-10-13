@@ -9,6 +9,8 @@ export const common = {
   zh: {
     // 批量回收结果提示（store.recyclePaths / store.aiRecyclePaths 的成功 toast）
     'common.recycle.done': '已回收 {n} 项 · 释放约 {size}',
+    // bytes_freed 没统计到（mock 演示 / 后端未返回实测值）时的兜底：不编造 0 B
+    'common.recycle.doneNoBytes': '已回收 {n} 项（未能统计释放大小，不编造数字）',
     'common.recycle.aiDone': '已按你的确认回收 {n} 项（回收站可找回） · 约 {size}',
 
     // 通用词
@@ -46,6 +48,7 @@ export const common = {
   },
   en: {
     'common.recycle.done': 'Recycled {n} items · about {size} freed',
+    'common.recycle.doneNoBytes': 'Recycled {n} items (could not measure freed space; not inventing a number)',
     'common.recycle.aiDone': 'Recycled {n} items as you confirmed (recoverable from the Recycle Bin) · about {size}',
 
     'common.chat.untitled': 'Untitled',

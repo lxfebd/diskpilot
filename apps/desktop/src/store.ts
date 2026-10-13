@@ -498,7 +498,14 @@ export const useStore = create<AppState>((set, get) => {
     if (succeeded.length > 0) applyRecycledPrune(succeeded);
     if (done > 0) {
       get().addReclaimed(bytes);
-      get().toast(t('common.recycle.done', { n: done, size: formatBytes(bytes) }), 'ok');
+      // bytes 为 0 可能是「回收成功但没统计到实测大小」（mock 演示 / 后端未返回），
+      // 也可能真是 0 字节文件——两种都不该显示成「释放约 0 B」误导，用兜底文案。
+      get().toast(
+        bytes > 0
+          ? t('common.recycle.done', { n: done, size: formatBytes(bytes) })
+          : t('common.recycle.doneNoBytes', { n: done }),
+        'ok',
+      );
     }
     if (failed > 0) {
       get().toast(t('errors.recycleFailed', { n: failed }), 'err');
@@ -584,7 +591,13 @@ export const useStore = create<AppState>((set, get) => {
     if (succeeded.length > 0) applyRecycledPrune(succeeded);
     if (done > 0) {
       get().addReclaimed(bytes);
-      get().toast(t('common.recycle.aiDone', { n: done, size: formatBytes(bytes) }), 'ok');
+      // 同 recyclePaths：bytes 为 0 不显示「约 0 B」（mock 演示 / 后端未返回实测值），如实用兜底文案。
+      get().toast(
+        bytes > 0
+          ? t('common.recycle.aiDone', { n: done, size: formatBytes(bytes) })
+          : t('common.recycle.doneNoBytes', { n: done }),
+        'ok',
+      );
     }
     if (failed > 0) {
       get().toast(t('errors.recycleFailed', { n: failed }), 'err');
