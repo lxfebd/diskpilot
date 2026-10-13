@@ -54,6 +54,27 @@ export interface DryRunPreview {
 
 export const DRY_RUN_SAMPLE_CAP = 80;
 
+/** R130：dry-run 预览路径采样——全量命中按「实际释放字节」降序后取前 cap 条。
+ *  大文件优先展示（用户一眼看到占最多空间的项）；bytes_freed 缺失（后端
+ *  未统计）的沉底且保持相对顺序。纯函数：不改入参。返回路径数组（保持
+ *  与 DryRunPreview.samplePaths 同构）。 */
+export function samplePathsByBytes(
+  entries: readonly { source: string; bytes_freed?: number | null }[],
+  cap: number = DRY_RUN_SAMPLE_CAP,
+): string[] {
+  return [...entries]
+    .sort((a, b) => {
+      const ab = a.bytes_freed ?? null;
+      const bb = b.bytes_freed ?? null;
+      if (ab == null && bb == null) return 0;
+      if (ab == null) return 1;
+      if (bb == null) return -1;
+      return bb - ab;
+    })
+    .slice(0, cap)
+    .map((e) => e.source);
+}
+
 /** 一次清理会动到哪几块物理盘：盘符 + 该盘上的文件数。 */
 export interface DriveCount {
   letter: string;

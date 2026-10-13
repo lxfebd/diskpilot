@@ -11,7 +11,6 @@ import type { ExecuteScopeOpts } from './api';
 import { formatBytes } from './format';
 import { t } from './i18n';
 import {
-  DRY_RUN_SAMPLE_CAP,
   aggregateScopeSizes,
   collectWxids,
   computeCoverage,
@@ -22,6 +21,7 @@ import {
   driveBreakdown,
   mergeScopeDays,
   persistScopeDays,
+  samplePathsByBytes,
   tallyDrive,
   type CoverageBreakdown,
   type DryRunPreview,
@@ -398,7 +398,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
     try {
       const s = getCur();
       if (!s) return;
-      const samplePaths: string[] = [];
+      // R130：预览采样路径（全量命中按字节降序取前 cap 条后填充；两分支共用）。
+      let samplePaths: string[] = [];
       // 整批路径按盘计数：预览窗只列前 80 条，但「会动到哪几块盘」必须按全量算。
       const driveTally = new Map<string, number>();
       let totalBytes = 0;
@@ -423,8 +424,11 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           patchInSession(() => ({ err: t('cleanup.errNoCondaItems') }));
           return;
         }
-        const tasks: Promise<{ ok: boolean; entries: { source: string }[] }>[] = [];
+        const tasks: Promise<{ ok: boolean; entries: { source: string; bytes_freed?: number | null }[] }>[] = [];
         const hitPaths: string[] = [];
+        // R130：全量命中的路径+字节（不在此截断）；预览采样在收尾统一按
+        // 字节降序取前 cap 条（samplePathsByBytes），大文件优先展示。
+        const allHits: { source: string; bytes_freed?: number | null }[] = [];
         for (const scopeId of scopeIds) {
           if (scopeId === 'envs-stale') {
             tasks.push(
@@ -466,10 +470,11 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           for (const e of list.entries) {
             totalFiles += 1;
             hitPaths.push(e.source);
+            allHits.push({ source: e.source, bytes_freed: e.bytes_freed });
             tallyDrive(driveTally, e.source);
-            if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
           }
         }
+        samplePaths = samplePathsByBytes(allHits);
         // conda 字节走 condaDryBytes：只累加「后端 dry-run 实际命中的 env 目录」
         // 的 size_bytes + 勾选的包缓存 scope（tarballs/unused-packages）——不能
         // 把所有勾选 env 全算进去（envs-stale 只清未使用的，勾了 10 删 3 按 10
@@ -486,7 +491,9 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           s.wxids.length > 0 && s.selectedWxids.size < s.wxids.length
             ? [...s.selectedWxids]
             : undefined;
-        const tasks: Promise<{ ok: boolean; entries: { source: string }[] }>[] = [];
+        const tasks: Promise<{ ok: boolean; entries: { source: string; bytes_freed?: number | null }[] }>[] = [];
+        // R130：全量命中的路径+字节；预览采样收尾统一按字节降序取前 cap 条。
+        const allHits: { source: string; bytes_freed?: number | null }[] = [];
         for (const scopeId of scopeIds) {
           const days = s.daysByScope[scopeId];
           for (const m of s.matches) {
@@ -514,10 +521,11 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
           if (!list.ok) probeFailures += 1;
           for (const e of list.entries) {
             totalFiles += 1;
+            allHits.push({ source: e.source, bytes_freed: e.bytes_freed });
             tallyDrive(driveTally, e.source);
-            if (samplePaths.length < DRY_RUN_SAMPLE_CAP) samplePaths.push(e.source);
           }
         }
+        samplePaths = samplePathsByBytes(allHits);
       }
 
       if (totalFiles === 0) {

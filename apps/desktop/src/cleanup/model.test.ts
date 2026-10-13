@@ -9,6 +9,7 @@ import {
   defaultDaysFor,
   detectVariants,
   driveBreakdown,
+  samplePathsByBytes,
   scopeDayOverrides,
   tallyDrive,
   type ScopeSize,
@@ -283,5 +284,37 @@ describe('tallyDrive / driveBreakdown（清理会动到哪几块盘）', () => {
       ['F', 5],
     ]);
     expect(driveBreakdown(m).map((d) => d.letter)).toEqual(['C', 'F', 'J']);
+  });
+});
+
+// R130：dry-run 预览采样——全量命中按实际释放字节降序取前 cap 条（大文件优先）。
+describe('samplePathsByBytes（预览路径按字节降序）', () => {
+  const mk = (source: string, bytes_freed?: number | null) => ({ source, bytes_freed });
+  it('按字节降序取前 cap 条——大文件优先展示', () => {
+    expect(
+      samplePathsByBytes(
+        [mk('C:\\a\\1', 100), mk('C:\\b\\2', 50_000), mk('C:\\c\\3', 2_000)],
+        2,
+      ),
+    ).toEqual(['C:\\b\\2', 'C:\\c\\3']);
+  });
+  it('bytes_freed 缺失的沉底且保持相对顺序', () => {
+    expect(
+      samplePathsByBytes(
+        [mk('u1', null), mk('big', 9000), mk('u2', null), mk('small', 5)],
+        10,
+      ),
+    ).toEqual(['big', 'small', 'u1', 'u2']);
+  });
+  it('不修改入参数组（纯函数）', () => {
+    const input = [mk('a', 2), mk('b', 1)];
+    samplePathsByBytes(input, 10);
+    expect(input.map((i) => i.source)).toEqual(['a', 'b']);
+  });
+  it('默认 cap = DRY_RUN_SAMPLE_CAP（80）', () => {
+    const many = Array.from({ length: 100 }, (_, i) => mk(`f${i}`, i));
+    const out = samplePathsByBytes(many);
+    expect(out).toHaveLength(80);
+    expect(out[0]).toBe('f99');
   });
 });

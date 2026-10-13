@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 清理预览路径按字节降序（R130）
+
+- 清理页 dry-run 预览窗的路径清单（前 80 条）从「后端返回顺序」改为
+  「实际释放字节降序」——大文件优先展示，用户一眼看到本次清理占最多
+  空间的匹配项；bytes_freed 缺失（后端未统计）的沉底且保持相对顺序。
+- 探活时保留 UndoEntry.bytes_freed（此前类型注解丢弃）；抽纯函数
+  `samplePathsByBytes(entries, cap)`（cleanup/model.ts，默认 cap=80）+
+  （+4 tests，400 总 / 33 files）。
+
 ### 2026-10-13 压测叠画 y 轴动态上界（R129）
 
 - 历次压测叠画（CPU/GPU）y 轴从固定 0–100 改为动态上界 = max(100, 全部
