@@ -406,6 +406,7 @@ export const toolbelt = {
     'toolbelt.donut.hudTime': '时长',
     'toolbelt.donut.hudTemp': 'GPU 温度',
     'toolbelt.donut.hudTrend': 'FPS 趋势',
+    'toolbelt.donut.hudTempTrend': 'GPU 温度趋势',
     'toolbelt.donut.exit': '退出（Esc）',
 
     // 传感器趋势折线图
@@ -946,6 +947,7 @@ export const toolbelt = {
     'toolbelt.donut.hudTime': 'Duration',
     'toolbelt.donut.hudTemp': 'GPU temperature',
     'toolbelt.donut.hudTrend': 'FPS trend',
+    'toolbelt.donut.hudTempTrend': 'GPU temp trend',
     'toolbelt.donut.exit': 'Exit (Esc)',
 
     // Sensor trend line chart

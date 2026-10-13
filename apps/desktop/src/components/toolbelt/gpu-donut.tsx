@@ -101,11 +101,12 @@ interface GpuDonutProps {
 export function GpuDonut({ onDone }: GpuDonutProps) {
   const t = useT();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [stats, setStats] = useState<{ fps: number; secs: number; temp: string; fpsHist: number[] }>({
+  const [stats, setStats] = useState<{ fps: number; secs: number; temp: string; fpsHist: number[]; tempHist: number[] }>({
     fps: 0,
     secs: 0,
     temp: 'N/A',
     fpsHist: [],
+    tempHist: [],
   });
   const doneRef = useRef(false);
   // 真实帧计数：frame() 每渲染一帧 +1，每秒的 statTimer 读取差值为 FPS
@@ -527,7 +528,13 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
         const r = await api.callTool('hw_temperature', {});
         // 局部变量不叫 t：t 归 useT() 的取文案函数（守卫测试按 t('key') 字面量查表）。
         const gpuTempC = parseGpuTemp(r.text);
-        setStats((s) => ({ ...s, temp: gpuTempC != null ? `${gpuTempC}℃` : 'N/A' }));
+        setStats((s) => ({
+          ...s,
+          temp: gpuTempC != null ? `${gpuTempC}℃` : 'N/A',
+          // R112：GPU 温度滚动窗口（最近 60 个每秒采样）→ HUD 温度趋势线；
+          // 读不到温度时如实 N/A，不追加假点（FPS 窗口同哲学）。
+          tempHist: gpuTempC != null ? [...s.tempHist, gpuTempC].slice(-60) : s.tempHist,
+        }));
         if (gpuTempC != null && gpuTempC >= MAX_GPU_TEMP && !tripped) {
           tripped = true;
           finish(true, t('toolbelt.donut.tripped', { temp: gpuTempC, max: MAX_GPU_TEMP }));
@@ -683,6 +690,22 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
               return r ? (
                 <span className="gpu-donut-minmax">
                   {r.min}–{r.max} FPS
+                </span>
+              ) : null;
+            })()}
+          </div>
+        )}
+        {stats.tempHist.length >= 2 && (
+          <div className="gpu-donut-row gpu-donut-trend">
+            <span className="gpu-donut-label">{t('toolbelt.donut.hudTempTrend')}</span>
+            <svg viewBox={`0 0 120 34`} className="gpu-donut-spark" role="img" aria-label={t('toolbelt.donut.hudTempTrend')}>
+              <path d={fpsSparkPath(stats.tempHist)} fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            {(() => {
+              const r = fpsRange(stats.tempHist);
+              return r ? (
+                <span className="gpu-donut-minmax">
+                  {r.min}–{r.max}°C
                 </span>
               ) : null;
             })()}
