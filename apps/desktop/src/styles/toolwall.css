@@ -63,6 +63,19 @@
 }
 .toolbelt-market-tabs button.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
 .toolbelt-market-warn { padding: 8px 12px; border-radius: 8px; background: var(--warn-bg, #fef3c7); color: var(--warn-strong, #92400e); font-size: 13px; margin-bottom: 10px; }
+/* R109：manifest 徽标读失败提示条（诚实：失败 ≠ 无徽标）。用语义 token，
+   回退兜底 hex 保持既有 .toolbelt-market-warn 同款风格。 */
+.toolwall-manifest-note {
+  margin-bottom: 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--risk-caution);
+  border-radius: var(--radius-btn);
+  background: var(--warn-soft);
+  color: var(--risk-caution);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}
 .toolbelt-market-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 /* 窄容器防线：头部/URL 行按钮禁竖排折行、禁被压缩（此前「刷新索引」被挤成
    竖排单字 + 整行横向溢出出滚动条），空间不够时按钮整体换行而不是压扁。 */

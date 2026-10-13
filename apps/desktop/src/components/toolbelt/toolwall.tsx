@@ -610,6 +610,9 @@ export function CatalogWall({
   const [activeCat, setActiveCat] = useState<string>('__all__');
   const [detail, setDetail] = useState<ToolbeltCatalogItem | null>(null);
   const [manifests, setManifests] = useState<ToolManifest[]>([]);
+  // R109：manifest 清单（权限/CLI 徽标数据源）拉取失败单独记——失败 ≠ 空清单：
+  // 空清单会让所有卡片静默丢徽标，用户分不清「这些工具没标」还是「没读到」。
+  const [manifestErr, setManifestErr] = useState<string | null>(null);
   const [confirmLaunch, setConfirmLaunch] = useState<ToolbeltCatalogItem | null>(null);
   const [launching, setLaunching] = useState(false);
   const [query, setQuery] = useState('');
@@ -627,7 +630,9 @@ export function CatalogWall({
 
   useEffect(() => {
     if (!isTauri) return;
-    api.toolbeltManifests().then(setManifests).catch(() => setManifests([]));
+    api.toolbeltManifests()
+      .then((list) => { setManifests(list); setManifestErr(null); })
+      .catch((e) => { setManifests([]); setManifestErr(String(e instanceof Error ? e.message : e)); });
   }, []);
 
   // 「AI 可操作」分区数据：agent-server 全部 MCP 工具清单（数字随真实清单）。
@@ -805,6 +810,13 @@ export function CatalogWall({
           </button>
         </span>
       </div>
+
+      {/* R109：manifest 徽标数据源读失败 → 诚实提示（失败 ≠ 无徽标） */}
+      {manifestErr && (
+        <div className="toolwall-manifest-note" role="note">
+          {t('toolbelt.wall.manifestFailed', { msg: manifestErr })}
+        </div>
+      )}
 
       {/* 左：12 分类导航（全部 = 聚合视图，硬件信息 = 聚合页） */}
       <div className="toolwall-nav">
