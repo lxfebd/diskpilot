@@ -82,7 +82,12 @@ export function MarketPanel() {
       setCommunity(r.items);
       setSkippedBuiltin(r.skipped_builtin ?? 0);
       setCommunityWarn(r.warning ?? null);
-    }).catch((e) => { setCommunity([]); setSkippedBuiltin(0); setCommunityWarn(t('toolbelt.mkt.loadFailed', { msg: String(e) })); });
+    }).catch((e) => {
+      // 读失败 ≠ 空：置 null 走「失败」分支，而不是折叠成 [] 伪装「社区为空」。
+      setCommunity(null);
+      setSkippedBuiltin(0);
+      setCommunityWarn(t('toolbelt.mkt.loadFailed', { msg: String(e) }));
+    });
   }, [t]);
   useEffect(() => {
     if (tab === 'community') loadCommunity(cQuery);
@@ -604,7 +609,10 @@ export function MarketPanel() {
           )}
 
           {community === null ? (
-            <p className="muted">{t('toolbelt.mkt.loading')}</p>
+            // null = 加载中或失败（详细原因在顶部 warn 横幅里），列表体只给短状态。
+            <p className={communityWarn ? 'toolbelt-market-warn' : 'muted'}>
+              {communityWarn ? t('toolbelt.mkt.communityUnread') : t('toolbelt.mkt.loading')}
+            </p>
           ) : community.length === 0 ? (
             // 索引接入成功但列表空：区分「全被内置去重」与「真没条目」。
             // 前者给引导，后者才用冷冰冰的空态文案。
