@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseGpuTemp, fpsSparkPath, fpsRange } from './gpu-donut';
+import { parseGpuTemp, fpsSparkPath, fpsRange, tempHistCurveLine } from './gpu-donut';
+import { parseStressCurve } from './bench';
 
 describe('parseGpuTemp（甜甜圈 90℃ 熔断守门的数据源契约）', () => {
   it('命中英伟达行', () => {
@@ -44,5 +45,29 @@ describe('fpsRange（HUD min/max 标注）', () => {
   });
   it('单点 min=max', () => {
     expect(fpsRange([75])).toEqual({ min: 75, max: 75 });
+  });
+});
+
+describe('tempHistCurveLine（甜甜圈温度曲线序列化，R124）', () => {
+  it('不足 2 点返回空串（无曲线不虚构）', () => {
+    expect(tempHistCurveLine([])).toBe('');
+    expect(tempHistCurveLine([61])).toBe('');
+  });
+  it('序列化为 stress_test 同契约的「温度曲线」行，parseStressCurve 可解析回', () => {
+    const hist = [61, 63.5, 68, 72.2];
+    const line = tempHistCurveLine(hist);
+    expect(line.startsWith('\n温度曲线：0.0s=61.0°C; 1.0s=63.5°C; 2.0s=68.0°C; 3.0s=72.2°C')).toBe(true);
+    const pts = parseStressCurve(line);
+    expect(pts).toEqual([
+      { sec: 0, temp: 61 },
+      { sec: 1, temp: 63.5 },
+      { sec: 2, temp: 68 },
+      { sec: 3, temp: 72.2 },
+    ]);
+  });
+  it('窗口上限 60 个采样（slice(-60) 后仍可序列化）', () => {
+    const hist = Array.from({ length: 60 }, (_, i) => 50 + i * 0.1);
+    const line = tempHistCurveLine(hist);
+    expect(parseStressCurve(line)).toHaveLength(60);
   });
 });

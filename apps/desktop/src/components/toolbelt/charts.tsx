@@ -104,7 +104,7 @@ interface StressCurvePoint {
   temp: number;
 }
 
-export function StressTempChart({ points }: { points: StressCurvePoint[] }) {
+export function StressTempChart({ points, kind = 'cpu' }: { points: StressCurvePoint[]; kind?: 'cpu' | 'gpu' }) {
   const t = useT();
   const W = 720;
   const H = 160;
@@ -118,6 +118,8 @@ export function StressTempChart({ points }: { points: StressCurvePoint[] }) {
   const xAt = (i: number) => PAD + (i / Math.max(points.length - 1, 1)) * (W - PAD * 2);
   const yAt = (v: number) => H - PAD - ((v - lo) / span) * (H - PAD * 2);
   const pts = points.map((p, i) => `${xAt(i).toFixed(1)},${yAt(p.temp).toFixed(1)}`).join(' ');
+  // R124：GPU 压测曲线用 GPU 蓝（与传感器趋势图一致），图例区分 CPU/GPU。
+  const lineColor = kind === 'gpu' ? 'var(--gpu-line, #4a9af4)' : 'var(--accent-strong)';
 
   return (
     <div className="bench-trend" style={{ marginTop: 10 }}>
@@ -131,10 +133,10 @@ export function StressTempChart({ points }: { points: StressCurvePoint[] }) {
         <text x={W - PAD} y={H - 8} textAnchor="end" fill="#888" fontSize={10}>
           {(points[points.length - 1].sec).toFixed(0)}s
         </text>
-        <polyline points={pts} fill="none" stroke="var(--accent-strong)" strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
+        <polyline points={pts} fill="none" stroke={lineColor} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
       <div className="bench-trend-legend">
-        <span><i style={{ background: 'var(--accent-strong)' }} /> {t('toolbelt.stressChart.legendCpu')}</span>
+        <span><i style={{ background: lineColor }} /> {kind === 'gpu' ? t('toolbelt.stressChart.legendGpu') : t('toolbelt.stressChart.legendCpu')}</span>
         <span className="muted small">{t('toolbelt.stressChart.peak', { peak: hi.toFixed(1), n: points.length })}</span>
       </div>
     </div>

@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 甜甜圈压测温度曲线可视化 + 历次 GPU 压测叠画（R124）
+
+- **曲线不丢**：甜甜圈退出把每秒温度采样序列化成「温度曲线」行（同
+  stress_test 契约，`温度曲线：0.0s=…; 1.0s=…`），结果区渲染 GPU 温度
+  折线（GPU 蓝，与传感器趋势图同色系）——之前曲线只在 HUD 短暂显示，
+  退出即丢。
+- **历次 GPU 压测叠画**：甜甜圈历史（localStorage）同图对比最近 8 次
+  温度曲线（复用 R113 叠画组件，Y 轴 0–100℃ 可比），GPU 散热随时间的
+  演变一眼可见。
+- 纯函数 `tempHistCurveLine`（采样 → 曲线行）+ 双向契约单测：序列化
+  后可被 `parseStressCurve` 原样解析回（+3 tests，387 总）。
+- `StressTempChart` 加 `kind` 参数（cpu/gpu），图例/配色区分。
+
 ### 2026-10-13 甜甜圈压测摘要带 GPU 温度峰值 + GPU 压测温度曲线（R123）
 
 - **甜甜圈（WebGL）**：退出摘要新增「峰值 GPU 温度 {temp}℃」——压测期间

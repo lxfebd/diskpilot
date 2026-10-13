@@ -434,6 +434,25 @@ export function BenchPanel() {
           )}
         </div>
         {donutResult && <pre className="bench-out">{donutResult}</pre>}
+        {/* R124：甜甜圈 GPU 温度曲线（同 stress_test 契约）+ 历次 GPU 压测叠画 */}
+        {donutResult && (() => {
+          const curve = parseStressCurve(donutResult);
+          return curve ? <StressTempChart points={curve} kind="gpu" /> : null;
+        })()}
+        {(() => {
+          const HISTORY_COLORS = ['#4af0a0', '#4a9af4', '#f2a33c', '#e05252', '#c9a0ff', '#7ee2a8', '#ff6d8f', '#facc15'];
+          const hist = historyOf('gpu_donut').slice().reverse();
+          const series = hist
+            .map((h, i) => {
+              const pts = parseStressCurve(h.result);
+              if (!pts) return null;
+              const time = new Date(h.at).toLocaleString();
+              return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length] };
+            })
+            .filter((s): s is NonNullable<typeof s> => s !== null)
+            .slice(0, 8);
+          return series.length >= 2 ? <StressHistoryChart series={series} /> : null;
+        })()}
       </div>
 
       <div className="toolbelt-pane">

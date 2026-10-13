@@ -426,6 +426,7 @@ export const toolbelt = {
     // 压测实时温度折线图
     'toolbelt.stressChart.aria': '压测实时温度折线图',
     'toolbelt.stressChart.legendCpu': 'CPU 温度 °C（每秒采样）',
+    'toolbelt.stressChart.legendGpu': 'GPU 温度 °C（每秒采样）',
     'toolbelt.stressChart.peak': '峰值 {peak}°C · 共 {n} 个采样点',
     'toolbelt.stressChart.historyTitle': '历次压测温度对比（最近 → 最旧）',
     'toolbelt.stressChart.historyNote': '各次曲线按各自秒数对齐起点，Y 轴统一 0–100℃ 可比',
@@ -1011,6 +1012,7 @@ export const toolbelt = {
     // Live stress-test temperature chart
     'toolbelt.stressChart.aria': 'Live stress-test temperature line chart',
     'toolbelt.stressChart.legendCpu': 'CPU temperature °C (one sample per second)',
+    'toolbelt.stressChart.legendGpu': 'GPU temperature °C (one sample per second)',
     'toolbelt.stressChart.peak': 'Peak {peak}°C · {n} sample points',
     'toolbelt.stressChart.historyTitle': 'Past stress-test temperatures (recent → oldest)',
     'toolbelt.stressChart.historyNote': 'Each run is aligned to its own start; Y axis fixed at 0–100℃ for comparison',

@@ -22,6 +22,15 @@ function deadPixelColors(t: TFunc): { name: string; value: string }[] {
   ];
 }
 
+/// R124：温度采样序列 → 「温度曲线」行（同 stress_test 契约，
+/// `温度曲线：0.0s=xx.x°C; 1.0s=…`），前端 parseStressCurve 直接复用。
+/// 不足 2 点返回空串（无曲线不虚构）。行前缀是后端输出格式、不是文案，
+/// 保持原样。模块级导出以便单测双向锁定契约。
+export function tempHistCurveLine(hist: number[]): string {
+  if (hist.length < 2) return '';
+  return `\n温度曲线：${hist.map((v, i) => `${i.toFixed(1)}s=${v.toFixed(1)}°C`).join('; ')}`; // @i18n-keep
+}
+
 export function DeadPixelOverlay({ onExit }: { onExit: () => void }) {
   const t = useT();
   const [idx, setIdx] = useState(0);
@@ -128,23 +137,27 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
       // 退出摘要带真实统计：时长 + 平均 FPS（帧差口径，FurMark 同款）。
       // R123：温度采样窗口（tempHist）有值时如实带 GPU 峰值进摘要——没采到
       // 温度（无 N 卡 / hw_temperature 失败）则不虚构，只报 FPS。
+      // R124：曲线样本序列化成「温度曲线」行（同 stress_test 契约，前端
+      // parseStressCurve 直接复用）——甜甜圈压测的温度曲线不再退出即丢。
       const secs = Math.max(1, Math.round((Date.now() - startRef.current) / 1000));
       const avgFps = Math.round(frames.current / secs);
       const hist = tempHistRef.current;
       const peakTemp = hist.length > 0 ? Math.max(...hist) : null;
+      const curveLine = tempHistCurveLine(hist);
+      const body = summary ?? '';
       const base = peakTemp !== null
         ? t('toolbelt.bench.donut.summaryPeak', {
             secs,
             avgFps,
             temp: peakTemp.toFixed(0),
             manual: canceled ? t('toolbelt.bench.donut.manualTag') : '',
-          })
+          }) + curveLine
         : t('toolbelt.bench.donut.summary', {
             secs,
             avgFps,
             manual: canceled ? t('toolbelt.bench.donut.manualTag') : '',
-          });
-      onDone(summary ?? base, canceled);
+          }) + curveLine;
+      onDone(body ? `${body}${curveLine}` : base, canceled);
     },
     [onDone, t],
   );
