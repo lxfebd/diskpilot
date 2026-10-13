@@ -70,10 +70,31 @@ fn config_at(app: &AppHandle) -> ReminderConfig {
         .unwrap_or_default()
 }
 
-/// 读取当前提醒配置（只读 L0，设置页回显）。
+/// 展示用配置读取（get_reminder_config）：**区分「首次（文件不存在）」
+/// 与「读失败」**。文件不存在 = 从未设置，返回默认配置是诚实的（真空态）；
+/// 文件存在但读失败/损坏 = 必须报错，否则前端把默认值当真实配置展示
+/// （读失败被伪装成默认值，同诚实性族规）。
+fn config_at_explicit(app: &AppHandle) -> Result<ReminderConfig, String> {
+    let Some(p) = config_path(app) else {
+        return Err("无法定位数据目录".into());
+    };
+    read_config_at_path(&p)
+}
+
+/// config_at_explicit 的核心逻辑（路径参数化，便于测试）。
+fn read_config_at_path(p: &std::path::Path) -> Result<ReminderConfig, String> {
+    if !p.exists() {
+        return Ok(ReminderConfig::default());
+    }
+    let text = std::fs::read_to_string(p).map_err(|e| format!("读取提醒配置失败: {e}"))?;
+    serde_json::from_str(&text).map_err(|e| format!("提醒配置损坏: {e}"))
+}
+
+/// 读取当前提醒配置（只读 L0，设置页回显）。文件不存在回默认（首次），
+/// 存在但读失败则报错，让前端显示「未读到」而非伪默认值。
 #[tauri::command]
-pub(crate) fn get_reminder_config(app: AppHandle) -> ReminderConfig {
-    config_at(&app)
+pub(crate) fn get_reminder_config(app: AppHandle) -> Result<ReminderConfig, String> {
+    config_at_explicit(&app)
 }
 
 /// 保存提醒配置（L1 受控：改的是用户自己的配置，非删除类）。
@@ -247,6 +268,36 @@ mod tests {
         assert_eq!(c.min_bytes, 200 * 1024 * 1024);
         assert!(!c.weekly_report_enabled, "周报默认关");
         assert_eq!(c.weekly_interval_days, 7);
+    }
+
+    #[test]
+    fn explicit_read_missing_file_is_default_not_error() {
+        // 展示路径诚实性（R81）：文件不存在 = 从未设置（真空态）→ 默认配置，
+        // 不报错；只有文件存在但读失败/损坏才报错，前端才显示「未读到」。
+        let dir = std::env::temp_dir().join(format!("dp-reminder-explicit-{}", std::process::id()));
+        let p = dir.join("reminder.json");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!p.exists(), "前置：文件不存在");
+        let r = read_config_at_path(&p);
+        assert!(r.is_ok(), "文件不存在必须回默认而不是报错");
+        assert!(!r.unwrap().enabled, "默认配置");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn explicit_read_corrupt_file_is_error_not_default() {
+        // 文件存在但内容损坏 → 必须 Err（绝不能静默返回默认配置）：
+        // 否则前端把默认值当真实配置展示（读失败伪装成默认值）。
+        let dir = std::env::temp_dir().join(format!("dp-reminder-corrupt-{}", std::process::id()));
+        let p = dir.join("reminder.json");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&p, "{ not-json !!!").unwrap();
+        let r = read_config_at_path(&p);
+        assert!(r.is_err(), "损坏配置必须报错，不得静默回退默认");
+        assert!(r.unwrap_err().contains("提醒配置损坏"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
