@@ -5,6 +5,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 GPU 压测历史叠画标题区分（R127）
+
+- 甜甜圈历史叠画标题改为「历次 GPU 压测温度对比」——CPU（stress_test）
+  与 GPU（gpu_donut）两个叠画区块同页并存，标题不再混淆；aria 同步。
+- `StressHistoryChart` 加 `kind` prop（默认 cpu，向后兼容）。
+
 ### 2026-10-13 建议清理按可回收字节降序排序（R126）
 
 - 总览「建议清理项目」按可回收字节降序排列——最大收益项（微信缓存/

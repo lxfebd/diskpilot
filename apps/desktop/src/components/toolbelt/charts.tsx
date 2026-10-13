@@ -298,7 +298,7 @@ export interface StressHistorySeries {
   color: string;
 }
 
-export function StressHistoryChart({ series }: { series: StressHistorySeries[] }) {
+export function StressHistoryChart({ series, kind = 'cpu' }: { series: StressHistorySeries[]; kind?: 'cpu' | 'gpu' }) {
   const t = useT();
   const W = 720;
   const H = 160;
@@ -310,11 +310,14 @@ export function StressHistoryChart({ series }: { series: StressHistorySeries[] }
   if (usable.length === 0) return null;
 
   const yAt = (v: number) => H - PAD - (v / 100) * (H - PAD * 2);
+  // R127：GPU 压测叠画标题/aria 用 GPU 变体（甜甜圈区块与 CPU 压测区块
+  // 同页并存，标题不区分会混淆）。
+  const title = kind === 'gpu' ? t('toolbelt.stressChart.historyTitleGpu') : t('toolbelt.stressChart.historyTitle');
 
   return (
     <div className="bench-trend" style={{ marginTop: 10 }}>
-      <div className="bench-stress-hist-title muted small">{t('toolbelt.stressChart.historyTitle')}</div>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('toolbelt.stressChart.historyTitle')} className="bench-trend-svg">
+      <div className="bench-stress-hist-title muted small">{title}</div>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} className="bench-trend-svg">
         {[0.25, 0.5, 0.75].map((f) => (
           <line key={f} x1={PAD} x2={W - PAD} y1={PAD + (H - PAD * 2) * f} y2={PAD + (H - PAD * 2) * f} stroke="var(--line)" strokeDasharray="4 4" strokeWidth={1} />
         ))}

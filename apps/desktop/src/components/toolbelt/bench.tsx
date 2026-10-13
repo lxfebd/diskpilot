@@ -451,7 +451,7 @@ export function BenchPanel() {
             })
             .filter((s): s is NonNullable<typeof s> => s !== null)
             .slice(0, 8);
-          return series.length >= 2 ? <StressHistoryChart series={series} /> : null;
+          return series.length >= 2 ? <StressHistoryChart series={series} kind="gpu" /> : null;
         })()}
       </div>
 
