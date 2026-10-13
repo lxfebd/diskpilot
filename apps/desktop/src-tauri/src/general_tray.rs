@@ -7,7 +7,7 @@ use tauri::AppHandle;
 use tauri::Manager;
 
 // ── 通用配置（硬件加速等，持久化到 app_data_dir/general.json）────────────
-#[derive(serde::Serialize, serde::Deserialize, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub(crate) struct GeneralConfig {
     /// true = 用 GPU 渲染（默认）；false = 加 --disable-gpu。
     #[serde(default = "default_true")]
@@ -20,14 +20,26 @@ pub(crate) struct GeneralConfig {
     pub(crate) close_to_tray: bool,
 }
 
+impl Default for GeneralConfig {
+    fn default() -> Self {
+        Self {
+            hardware_accel: default_true(),
+            tools_root: None,
+            close_to_tray: default_true(),
+        }
+    }
+}
+
 fn default_true() -> bool {
     true
 }
 
 /// 前端启动时读当前配置（主要给硬件加速开关回显用）。
+/// 展示路径诚实性（R81 同族）：文件不存在 = 从未设置（真空态）→ 默认；
+/// 存在但读失败/损坏 → 报错，前端显示「未读到」而非伪默认值。
 #[tauri::command]
-pub(crate) fn general_config(app: AppHandle) -> GeneralConfig {
-    general_config_at(&app)
+pub(crate) fn general_config(app: AppHandle) -> Result<GeneralConfig, String> {
+    read_general_explicit(&app)
 }
 
 pub(crate) fn general_config_at(app: &AppHandle) -> GeneralConfig {
@@ -38,6 +50,22 @@ pub(crate) fn general_config_at(app: &AppHandle) -> GeneralConfig {
         .ok()
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default()
+}
+
+/// general_config 命令的核心逻辑（路径参数化，便于测试）。
+pub(crate) fn read_general_explicit(app: &AppHandle) -> Result<GeneralConfig, String> {
+    let Some(p) = app.path().app_data_dir().ok() else {
+        return Err("无法定位数据目录".into());
+    };
+    read_general_at_path(&p.join("general.json"))
+}
+
+pub(crate) fn read_general_at_path(p: &std::path::Path) -> Result<GeneralConfig, String> {
+    if !p.exists() {
+        return Ok(GeneralConfig::default());
+    }
+    let text = std::fs::read_to_string(p).map_err(|e| format!("读取通用配置失败: {e}"))?;
+    serde_json::from_str(&text).map_err(|e| format!("通用配置损坏: {e}"))
 }
 
 #[tauri::command]
@@ -184,5 +212,40 @@ fn show_main_window(app: &tauri::AppHandle) {
         win.show().ok();
         win.unminimize().ok();
         win.set_focus().ok();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn explicit_read_missing_file_is_default_not_error() {
+        // 展示路径诚实性（R81 同族）：文件不存在 = 从未设置（真空态）→ 默认，
+        // 不报错；只有文件存在但读失败/损坏才报错。
+        let dir = std::env::temp_dir().join(format!("dp-gen-explicit-{}", std::process::id()));
+        let p = dir.join("general.json");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!p.exists(), "前置：文件不存在");
+        let r = read_general_at_path(&p);
+        assert!(r.is_ok(), "文件不存在必须回默认而不是报错");
+        assert!(r.unwrap().hardware_accel, "默认配置");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn explicit_read_corrupt_file_is_error_not_default() {
+        // 文件存在但内容损坏 → 必须 Err（绝不能静默返回默认配置）：
+        // 否则前端把默认值当真实配置展示（读失败伪装成默认值）。
+        let dir = std::env::temp_dir().join(format!("dp-gen-corrupt-{}", std::process::id()));
+        let p = dir.join("general.json");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(&p, "{ not-json !!!").unwrap();
+        let r = read_general_at_path(&p);
+        assert!(r.is_err(), "损坏配置必须报错，不得静默回退默认");
+        assert!(r.unwrap_err().contains("通用配置损坏"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
