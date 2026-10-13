@@ -288,3 +288,23 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+/* R95 周报环比：与 .wh-delta 同族，另加趋势色（more=红/更多，less=绿/更少）。 */
+.wh-vs { margin-top: 10px; }
+.wh-vs-title {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.wh-vs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.wh-vs-list li.more { color: var(--risk-caution); font-weight: 600; }
+.wh-vs-list li.less { color: var(--risk-safe); font-weight: 600; }

@@ -3,7 +3,7 @@
 // hw_delta（本周硬件快照数与首尾差）。「生成」只调 generate_weekly_report_cmd——
 // 后端同样是只读聚合（扫描建议 + 温度 + 硬件对比），绝不执行清理；真实清理
 // 仍只走总览页确认窗（user_confirmed 硬校验）。
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Eraser, Flame, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles, Thermometer } from 'lucide-react';
 import { api } from '../../api';
 import type { WeeklyReport } from '../../api';
@@ -22,6 +22,24 @@ export function reportAgeLabel(ts: number, nowSec: number, t: ReturnType<typeof 
   return formatDateKey(new Date(ts * 1000));
 }
 
+/** R95 周报环比：cur 与 prev 两份都存在才对比，字段有一方缺失就返回 null（不编造）。 */
+export interface WeeklyDelta {
+  /** 可清理量差值：>0 更多可清，<0 更少，=0 持平。prev 无数据 → null。 */
+  cleanBytes: number | null;
+  /** 最高温差值：>0 更热，<0 更凉，=0 持平。任一缺失 → null。 */
+  tempDelta: number | null;
+}
+export function weeklyDelta(cur: WeeklyReport | null, prev: WeeklyReport | null): WeeklyDelta | null {
+  if (!cur || !prev) return null; // 没有上一份，无从对比
+  const cleanBytes =
+    prev.total_bytes > 0 ? cur.total_bytes - prev.total_bytes : null;
+  const tempDelta =
+    cur.temp_max_c != null && prev.temp_max_c != null
+      ? cur.temp_max_c - prev.temp_max_c
+      : null;
+  return { cleanBytes, tempDelta };
+}
+
 export function WeeklyHealthCard({
   onGenerated,
   onOpenCleanup,
@@ -31,15 +49,23 @@ export function WeeklyHealthCard({
 }) {
   const t = useT();
   const [report, setReport] = useState<WeeklyReport | null>(null);
+  const [prevReport, setPrevReport] = useState<WeeklyReport | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // R95: 两份都存在才算 delta；任一缺失 → null（不显示对比区）。
+  const delta = useMemo(() => weeklyDelta(report, prevReport), [report, prevReport]);
+
   const refresh = useCallback(() => {
     setLoadErr(null);
-    api.getWeeklyReports(1)
-      .then((list) => { setReport(list[0] ?? null); })
-      .catch((e) => { setReport(null); setLoadErr(String(e instanceof Error ? e.message : e)); })
+    // R95: 拉最近两份做环比；列表「最新在前」，list[0]=本周、list[1]=上周。
+    api.getWeeklyReports(2)
+      .then((list) => {
+        setReport(list[0] ?? null);
+        setPrevReport(list[1] ?? null);
+      })
+      .catch((e) => { setReport(null); setPrevReport(null); setLoadErr(String(e instanceof Error ? e.message : e)); })
       .finally(() => setLoaded(true));
   }, []);
 
@@ -49,6 +75,8 @@ export function WeeklyHealthCard({
     setBusy(true);
     try {
       const r = await api.generateWeeklyReport();
+      // 新报告生成：旧报告顺位成上周（环比立刻可比，不用等下次 refresh）。
+      setPrevReport(report);
       setReport(r);
       useStore.getState().toast(t('history.weekly.generated', { size: formatBytes(r.total_bytes) }), 'ok');
       onGenerated?.();
@@ -110,6 +138,42 @@ export function WeeklyHealthCard({
               </span>
             </div>
           </div>
+
+          {/* R95 环比对比：两份都有才显示；只有一份 → 提示再生成一份；缺字段不编造。 */}
+          {delta ? (
+            <div className="wh-vs">
+              <div className="wh-vs-title">{t('history.weekly.vsHead')}</div>
+              <ul className="wh-vs-list">
+                {delta.cleanBytes === null ? (
+                  <li className="muted small">{t('history.weekly.vsCleanNone')}</li>
+                ) : (
+                  <li className={delta.cleanBytes > 0 ? 'more' : delta.cleanBytes < 0 ? 'less' : ''}>
+                    {delta.cleanBytes > 0
+                      ? t('history.weekly.vsCleanMore', { size: formatBytes(delta.cleanBytes) })
+                      : delta.cleanBytes < 0
+                        ? t('history.weekly.vsCleanLess', { size: formatBytes(-delta.cleanBytes) })
+                        : t('history.weekly.vsCleanSame')}
+                  </li>
+                )}
+                {delta.tempDelta === null ? (
+                  <li className="muted small">{t('history.weekly.vsTempNone')}</li>
+                ) : (
+                  <li className={delta.tempDelta > 0 ? 'more' : delta.tempDelta < 0 ? 'less' : ''}>
+                    {delta.tempDelta > 0
+                      ? t('history.weekly.vsTempUp', { delta: Math.round(delta.tempDelta) })
+                      : delta.tempDelta < 0
+                        ? t('history.weekly.vsTempDown', { delta: Math.round(-delta.tempDelta) })
+                        : t('history.weekly.vsTempSame')}
+                  </li>
+                )}
+              </ul>
+            </div>
+          ) : (
+            <div className="wh-vs">
+              <div className="wh-vs-title">{t('history.weekly.vsHead')}</div>
+              <p className="muted small" style={{ margin: 0 }}>{t('history.weekly.vsNone')}</p>
+            </div>
+          )}
 
           {/* 周报说「可清 X GB」却给不出出口，等于只读了一半：这里直接跳到清理页，
               真实清理仍走清理页的确认窗（周报本身依旧只读）。 */}
