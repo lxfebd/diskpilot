@@ -393,6 +393,15 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 .tdm-example-expect { font-size: 11px; color: var(--ink-3); }
 .tdm-links { display: flex; gap: 8px; margin-top: 10px; }
 .tdm-links a { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+.tdm-similar-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tdm-similar-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 10px; border-radius: var(--radius-xs);
+  background: var(--paper-2); border: 1px solid var(--line);
+  color: var(--ink); cursor: pointer;
+}
+.tdm-similar-item:hover { border-color: var(--accent-strong); }
+.tdm-similar-cat { font-size: 11px; }
 
 /* 确认启动 modal（复用 modal 骨架） */
 .confirm-modal { width: 400px; }

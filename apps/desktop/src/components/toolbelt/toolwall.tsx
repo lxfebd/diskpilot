@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BookOpen, Bot, ChevronDown, ChevronRight, ExternalLink, Gauge,
   Info, LayoutGrid, Lock, Package, Play, RefreshCw, Search,
-  ShieldAlert, ShieldCheck, Trash2, Wrench, X,
+  ShieldAlert, ShieldCheck, Sparkles, Trash2, Wrench, X,
 } from 'lucide-react';
 import { api } from '../../api';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -302,15 +302,20 @@ function HwAggregatePanel() {
 function ToolDetailModal({
   tool,
   manifest,
+  similar,
   onClose,
   onLaunch,
   onOpenPerms,
+  onOpenSimilar,
 }: {
   tool: ToolbeltCatalogItem;
   manifest: ToolManifest | undefined;
+  /** 同类工具（tags 重叠 ≥1，排除自身）：详情卡底部「同类建议」点击切换。 */
+  similar: ToolbeltCatalogItem[];
   onClose: () => void;
   onLaunch: () => void;
   onOpenPerms: () => void;
+  onOpenSimilar?: (name: string) => void;
 }) {
   const t = useT();
   const color = CATEGORY_COLOR[tool.category] ?? '#64748b';
@@ -490,6 +495,27 @@ function ToolDetailModal({
             <p className="muted small" style={{ marginTop: 8 }}>
               {t('toolbelt.detail.launchFile', { exe: tool.exe_rel })}
             </p>
+          )}
+
+          {/* R125：同类建议——按 tags 重叠推荐其他工具（点击切换详情） */}
+          {similar.length > 0 && (
+            <div className="tdm-similar">
+              <div className="tdm-section-title"><Sparkles size={13} /> {t('toolbelt.detail.similarTitle')}</div>
+              <div className="tdm-similar-list">
+                {similar.map((s) => (
+                  <button
+                    key={s.name}
+                    className="tdm-similar-item"
+                    onClick={() => onOpenSimilar?.(s.name)}
+                    title={t('toolbelt.detail.similarOpen', { name: s.name })}
+                  >
+                    <SafeToolIcon tool={s} size={13} color={CATEGORY_COLOR[s.category] ?? '#64748b'} />
+                    {s.name}
+                    <span className="muted small tdm-similar-cat">{catDisplayName(s.category)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
@@ -989,13 +1015,28 @@ export function CatalogWall({
         </div>
       )}
 
-      {/* 详情卡（由卡片「信息」按钮打开） */}
+      {/* 详情卡（由卡片「信息」按钮打开）——R125 同类建议：tags 重叠 ≥1
+          的其他工具（排除自身），按共享 tag 数排序、取前 5，点击切换详情 */}
       {detail && (
         <ToolDetailModal
           tool={detail}
           manifest={manifestFor(detail.name)}
+          similar={((): ToolbeltCatalogItem[] => {
+            const mine = new Set(detail.tags);
+            if (mine.size === 0) return [];
+            return allTools
+              .filter((t) => t.name !== detail.name && t.tags.some((tag) => mine.has(tag)))
+              .map((t) => ({ t, hits: t.tags.filter((tag) => mine.has(tag)).length }))
+              .sort((a, b) => b.hits - a.hits)
+              .slice(0, 5)
+              .map((x) => x.t);
+          })()}
           onClose={() => setDetail(null)}
           onLaunch={() => { setDetail(null); launchTool(detail); }}
+          onOpenSimilar={(name) => {
+            const next = allTools.find((t) => t.name === name);
+            if (next) setDetail(next);
+          }}
           onOpenPerms={() => {
             setDetail(null);
             onOpenSettings?.('perms');
