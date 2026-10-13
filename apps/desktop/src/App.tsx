@@ -14,6 +14,7 @@ import { PageHeader } from './components/PageHeader';
 import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CleanupProposalDialog } from './components/CleanupProposalDialog';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import Disclaimer from './components/Disclaimer';
 import { formatBytes, ellipsizePath, normKey } from './format';
 import { loadSettings, isConfigured } from './advisorClient';
@@ -703,6 +704,9 @@ function FileDetailPanel() {
   const recycle = useStore((s) => s.recyclePaths);
   const pushTurn = useStore((s) => s.pushChatTurn);
   const setBusy = useStore((s) => s.setChatBusy);
+  // R94: 回收是破坏性动作，必须两步确认（铁律#6）——TreeView/FileView 都有
+  // ConfirmDialog 兜底，唯独中央详情面板此前单击即执行，误点即移入回收站。
+  const [pendingRecycle, setPendingRecycle] = useState<{ path: string; size: number } | null>(null);
 
   // C3：不再从 root 整树 DFS 找选中节点。选中节点由点击处直接把引用存进
   // store（selectedNode），这里 O(1) 读取。selectedNode 可能为 null——
@@ -767,8 +771,9 @@ function FileDetailPanel() {
           <MessageSquare size={13} /> {t('shell.fdp.askAi')}
         </button>
         {/* '手动回收' 是发给后端 recycle_paths 的 reason 参数值（写进 undo.jsonl），
-            与 TreeView/FileView 同一枚字符串，按 i18n 不译清单保持中文。 */}
-        <button className="ghost" onClick={() => { void recycle([{ path: node.path, size_hint: node.size }], '手动回收'); }} disabled={!node.is_dir}>{/* @i18n-keep */}
+            与 TreeView/FileView 同一枚字符串，按 i18n 不译清单保持中文。
+            R94: 先弹确认面板，确认后才真正执行。 */}
+        <button className="ghost" onClick={() => setPendingRecycle({ path: node.path, size: node.size })} disabled={!node.is_dir}>{/* @i18n-keep */}
           <TrashIcon size={13} /> {t('shell.fdp.recycle')}
         </button>
       </div>
@@ -786,6 +791,23 @@ function FileDetailPanel() {
               </button>
             ))}
         </div>
+      )}
+
+      {pendingRecycle && (
+        <ConfirmDialog
+          title={t('shell.tooltree.recycle')}
+          body={t('shell.tooltree.recycleConfirm', {
+            name: pendingRecycle.path.split(/[\\/]/).filter(Boolean).pop() || pendingRecycle.path,
+            size: formatBytes(pendingRecycle.size),
+          })}
+          confirmLabel={t('shell.fdp.recycle')}
+          onConfirm={() => {
+            // '手动回收' 是写进回收记录/undo 日志的后端参数值，不随界面语言变。
+            void recycle([{ path: pendingRecycle.path, size_hint: pendingRecycle.size }], '手动回收'); // @i18n-keep
+            setPendingRecycle(null);
+          }}
+          onCancel={() => setPendingRecycle(null)}
+        />
       )}
     </div>
   );
