@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 传感器通道纳入 GPU 温度（R122）
+
+- **后端**：`sensor_trend` / `sensor_history` 快照新增 `gpu_temp_c` 字段
+  （N 卡 nvidia-smi / A 卡 ADL 双通道，`hw::gpu_temp_c`）；JSON 契约
+  `ts + cpu_temp_c + gpu_temp_c + mem_percent` 全可空，无 GPU/读失败记
+  null 不虚构；text 输出加「/ GPU x.x℃」。历史旧行缺字段 → null，前端
+  只画有值曲线（诚实性原则）。
+- **前端**：趋势折线图加第三条 GPU 温度线（蓝）；长期视图健康度评级卡
+  新增「长期 GPU 温度」维度（≥70℃ 高值占比，三档评级，无数据如实不
+  评级）；修复护顶峰显示「CPU x℃ / GPU y℃」双值；新增 GPU 温度分布
+  色阶条（同 heatDist 区间口径，无 GPU 读数不渲染）。
+- 后端单测补 `gpu_temp_c` 契约断言；前端解析测试更新（R122 起含 GPU）。
+
 ### 2026-10-13 跑分峰值与最近差距结论（R121）
 
 - **巅峰结论行**：跑分历史条形图（R115）下方新增「巅峰 {value} {unit}

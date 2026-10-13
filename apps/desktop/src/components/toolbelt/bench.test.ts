@@ -38,21 +38,22 @@ describe('parseStressCurve（压测温度曲线解析）', () => {
 });
 
 // R111：sensor_trend format=json 实时通道解析——锁定与后端 rep_report.rs 的
-// JSON 契约（{ total, points: [{ ts, cpu_temp_c?, mem_percent? }] }）。
+// JSON 契约（{ total, points: [{ ts, cpu_temp_c?, gpu_temp_c?, mem_percent? }] }，
+// R122 起含 GPU 温度）。
 describe('parseTrendJson（sensor_trend JSON 解析）', () => {
-  it('解析标准输出 → 温度/内存点序列', () => {
+  it('解析标准输出 → 温度/内存点序列（含 GPU）', () => {
     const text = JSON.stringify({
       total: 3,
       points: [
-        { ts: 1000, cpu_temp_c: 52.1, mem_percent: 41.2 },
-        { ts: 1001, cpu_temp_c: 58.3, mem_percent: 43.0 },
-        { ts: 1002, cpu_temp_c: 65.0, mem_percent: 44.5 },
+        { ts: 1000, cpu_temp_c: 52.1, gpu_temp_c: 44.0, mem_percent: 41.2 },
+        { ts: 1001, cpu_temp_c: 58.3, gpu_temp_c: 46.5, mem_percent: 43.0 },
+        { ts: 1002, cpu_temp_c: 65.0, gpu_temp_c: 49.2, mem_percent: 44.5 },
       ],
     });
     expect(parseTrendJson(text)).toEqual([
-      { ts: 1000, cpu_temp_c: 52.1, mem_percent: 41.2 },
-      { ts: 1001, cpu_temp_c: 58.3, mem_percent: 43.0 },
-      { ts: 1002, cpu_temp_c: 65.0, mem_percent: 44.5 },
+      { ts: 1000, cpu_temp_c: 52.1, gpu_temp_c: 44.0, mem_percent: 41.2 },
+      { ts: 1001, cpu_temp_c: 58.3, gpu_temp_c: 46.5, mem_percent: 43.0 },
+      { ts: 1002, cpu_temp_c: 65.0, gpu_temp_c: 49.2, mem_percent: 44.5 },
     ]);
   });
 
@@ -60,14 +61,14 @@ describe('parseTrendJson（sensor_trend JSON 解析）', () => {
     const text = JSON.stringify({
       total: 2,
       points: [
-        { ts: 1000, cpu_temp_c: null, mem_percent: 40.0 },
-        { ts: 1001, cpu_temp_c: null, mem_percent: 41.0 },
+        { ts: 1000, cpu_temp_c: null, gpu_temp_c: null, mem_percent: 40.0 },
+        { ts: 1001, cpu_temp_c: null, gpu_temp_c: 44.0, mem_percent: 41.0 },
       ],
     });
     const pts = parseTrendJson(text);
     expect(pts).toEqual([
       { ts: 1000, mem_percent: 40.0 },
-      { ts: 1001, mem_percent: 41.0 },
+      { ts: 1001, gpu_temp_c: 44.0, mem_percent: 41.0 },
     ]);
   });
 

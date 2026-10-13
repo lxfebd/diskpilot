@@ -1138,7 +1138,7 @@ export const mcpToolRegistry: ToolDef[] = [
   mcpTool('system_report',
     '一键系统体检报告（只读）：汇总 CPU/GPU/内存/主板/温度/磁盘健康/系统信息/电池为 Markdown 报告，含型号/核心数/频率/序列号/容量/SMART 状态/电源等。用于「帮我看下这台电脑配置怎么样」「生成一份体检报告」等场景，结果可直接发给用户。'),
   mcpTool('sensor_trend',
-    '传感器趋势（只读）：追加记录当前 CPU 最高温/内存占用/磁盘健康到 JSONL 历史，返回最近 n 条趋势。每次调用会写一条快照到 %LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl（最多保留 500 条），用于「温度/占用是不是在变高」的趋势分析。n=返回最近条数（默认 20）。'),
+    '传感器趋势（只读）：追加记录当前 CPU 最高温/GPU 温度/内存占用到 JSONL 历史，返回最近 n 条趋势。每次调用会写一条快照到 %LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl（最多保留 500 条），用于「温度/占用是不是在变高」的趋势分析。n=返回最近条数（默认 20）。'),
   mcpTool('sensor_history',
     '传感器历史（纯只读，不采集不追加）：只读读 %LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl 已积累的历史快照（sensor_trend 写入、最多 500 条），返回最近 n 条（默认全部，上限 500）。与 sensor_trend 的区别是本工具不做任何新采集/写入，纯展示历史，用于「今天散热/温度变化历史/长时间趋势」回放。n=返回最近条数（默认全部）。'),
   mcpTool('sensor_alert',

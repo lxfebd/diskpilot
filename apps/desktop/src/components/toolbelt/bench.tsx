@@ -14,7 +14,7 @@ import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
 import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, HealthRatingCard, parseTrendJson, buildScoreSeries } from './charts';
 import type { TrendPoint } from './charts';
-import { MEM_RAMP } from '../../colors';
+import { MEM_RAMP, TEMP_RAMP } from '../../colors';
 
 interface BenchHistoryEntry {
   at: number;
@@ -372,7 +372,13 @@ export function BenchPanel() {
               <Loader2 size={11} className="spin" /> {t('toolbelt.bench.stress.liveTitle')}
               {liveTemp.points.length > 0 && (
                 <b className="bench-stress-live-peak">
-                  {t('toolbelt.bench.stress.livePeak', { temp: Math.max(...liveTemp.points.map((p) => p.cpu_temp_c ?? 0)).toFixed(1) })}
+                  {/* R122：实时监护含 GPU 峰值（老后端无 gpu_temp_c → 只显示 CPU） */}
+                  {liveTemp.points.some((p) => typeof p.gpu_temp_c === 'number')
+                    ? t('toolbelt.bench.stress.livePeakBoth', {
+                        cpu: Math.max(...liveTemp.points.map((p) => p.cpu_temp_c ?? 0)).toFixed(1),
+                        gpu: Math.max(...liveTemp.points.map((p) => p.gpu_temp_c ?? 0)).toFixed(1),
+                      })
+                    : t('toolbelt.bench.stress.livePeak', { temp: Math.max(...liveTemp.points.map((p) => p.cpu_temp_c ?? 0)).toFixed(1) })}
                 </b>
               )}
             </div>
@@ -470,11 +476,15 @@ export function BenchPanel() {
               <div className="bench-trend-err muted small">{t('toolbelt.bench.trend.longNote')}</div>
             )}
             <TrendChart points={trendData.points} />
-            {/* R118：长期健康度评级卡——温度/内存高值占比汇总成人话结论 */}
+            {/* R118：长期健康度评级卡——温度/内存高值占比汇总成人话结论。
+                R122：GPU 温度并入（可选维度，无数据如实不评级） */}
             {trendData.range === 'long' && (
               <HealthRatingCard
                 cpuTemps={trendData.points
                   .map((p) => p.cpu_temp_c)
+                  .filter((v): v is number => typeof v === 'number')}
+                gpuTemps={trendData.points
+                  .map((p) => p.gpu_temp_c)
                   .filter((v): v is number => typeof v === 'number')}
                 memPercents={trendData.points
                   .map((p) => p.mem_percent)
@@ -489,6 +499,15 @@ export function BenchPanel() {
                   .filter((v): v is number => typeof v === 'number')}
               />
             )}
+            {/* R122：长期历史的 GPU 温度分布色阶条——无 GPU 读数时不渲染（如实缺省） */}
+            {trendData.range === 'long' && (() => {
+              const gpuTemps = trendData.points
+                .map((p) => p.gpu_temp_c)
+                .filter((v): v is number => typeof v === 'number');
+              return gpuTemps.length > 0 ? (
+                <DistributionBar values={gpuTemps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.gpuDist" />
+              ) : null;
+            })()}
             {/* R117：长期历史的内存占用分布色阶条——回答「内存日常够不够挤」 */}
             {trendData.range === 'long' && (
               <DistributionBar

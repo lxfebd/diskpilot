@@ -6,13 +6,15 @@ import { TEMP_RAMP } from '../../colors';
 export interface TrendPoint {
   ts: number;
   cpu_temp_c?: number | null;
+  gpu_temp_c?: number | null;
   mem_percent?: number | null;
 }
 
 /// 解析 sensor_trend format=json 的结构化输出 → 温度点序列。
 /// 与 parseStressCurve（文本行）互补：这个是压测期内高频轮询的实时通道。
 /// 宽松解析：非法/字段缺失的点跳过；不足 2 点返回 null（调用方不画线）。
-/// 导出以便单测锁定与后端 rep_report.rs 的 JSON 契约（ts + cpu_temp_c 可空）。
+/// 导出以便单测锁定与后端 rep_report.rs 的 JSON 契约（ts + cpu_temp_c +
+/// gpu_temp_c + mem_percent 可空，R122 起含 GPU 温度）。
 export function parseTrendJson(text: string): TrendPoint[] | null {
   let parsed: unknown;
   try {
@@ -29,9 +31,11 @@ export function parseTrendJson(text: string): TrendPoint[] | null {
     const ts = (item as { ts?: unknown }).ts;
     if (typeof ts !== 'number') continue;
     const cpu = (item as { cpu_temp_c?: unknown }).cpu_temp_c;
+    const gpu = (item as { gpu_temp_c?: unknown }).gpu_temp_c;
     const mem = (item as { mem_percent?: unknown }).mem_percent;
     const p: TrendPoint = { ts };
     if (typeof cpu === 'number') p.cpu_temp_c = cpu;
+    if (typeof gpu === 'number') p.gpu_temp_c = gpu;
     if (typeof mem === 'number') p.mem_percent = mem;
     points.push(p);
   }
@@ -45,8 +49,9 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
   const PAD = 26;
 
   const cpuVals = points.map((p) => p.cpu_temp_c).filter((v): v is number => typeof v === 'number');
+  const gpuVals = points.map((p) => p.gpu_temp_c).filter((v): v is number => typeof v === 'number');
   const memVals = points.map((p) => p.mem_percent).filter((v): v is number => typeof v === 'number');
-  const all = [...cpuVals, ...memVals];
+  const all = [...cpuVals, ...gpuVals, ...memVals];
   if (all.length === 0) return <p className="muted small">{t('toolbelt.trend.noData')}</p>;
 
   const lo = Math.min(...all);
@@ -79,10 +84,12 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
         <text x={PAD} y={12} fill="#888" fontSize={10}>max {hi.toFixed(0)}</text>
         <text x={PAD} y={H - PAD + 12} fill="#888" fontSize={10}>min {lo.toFixed(0)}</text>
         {line(cpuVals, 'var(--accent-strong)')}
+        {line(gpuVals, 'var(--gpu-line, #4a9af4)')}
         {line(memVals, 'var(--warn)')}
       </svg>
       <div className="bench-trend-legend">
         {cpuVals.length > 0 && <span><i style={{ background: 'var(--accent-strong)' }} /> {t('toolbelt.trend.legendCpu')}</span>}
+        {gpuVals.length > 0 && <span><i style={{ background: 'var(--gpu-line, #4a9af4)' }} /> {t('toolbelt.trend.legendGpu')}</span>}
         {memVals.length > 0 && <span><i style={{ background: 'var(--warn)' }} /> {t('toolbelt.trend.legendMem')}</span>}
         <span className="muted small">{t('toolbelt.trend.samples', { n: points.length })}</span>
       </div>
@@ -400,7 +407,7 @@ export function DistributionBar({
   values: number[];
   ramp: Ramp;
   highThreshold: number;
-  ns: 'toolbelt.heatDist' | 'toolbelt.memDist';
+  ns: 'toolbelt.heatDist' | 'toolbelt.memDist' | 'toolbelt.gpuDist';
 }) {
   const t = useT();
   if (values.length === 0) return null;
@@ -459,22 +466,27 @@ export function HeatDistributionBar({ temps }: { temps: number[] }) {
 }
 
 // ── R118 长期健康度评级卡 ──
-// 把温度/内存两条分布的高值占比汇总成一句人话结论：<5% 优秀、<20% 良好、
-// 否则关注。复用 distSummary（已是纯函数）；任一维度无有效样本则该维度不
-// 评级（如实缺省）。放长期历史视图顶部——先出结论，再看下方分布明细。
+// 把温度（CPU/GPU）/内存三条分布的高值占比汇总成一句人话结论：<5% 优秀、
+// <20% 良好、否则关注。复用 distSummary（已是纯函数）；任一维度无有效样本
+// 则该维度不评级（如实缺省）。放长期历史视图顶部——先出结论，再看下方分布
+// 明细。R122：GPU 温度并入（可选维度，无数据不上行）。
 
 export function HealthRatingCard({
   cpuTemps,
+  gpuTemps,
   memPercents,
 }: {
   cpuTemps: number[];
+  gpuTemps?: number[];
   memPercents: number[];
 }) {
   const t = useT();
   const tS = distSummary(cpuTemps, 70);
+  const gS = gpuTemps ? distSummary(gpuTemps, 70) : null;
   const mS = distSummary(memPercents, 85);
-  if (!tS && !mS) return null;
+  if (!tS && !gS && !mS) return null;
   const tRating = tS ? rateHealth(tS.highRatio) : null;
+  const gRating = gS ? rateHealth(gS.highRatio) : null;
   const mRating = mS ? rateHealth(mS.highRatio) : null;
 
   return (
@@ -485,6 +497,17 @@ export function HealthRatingCard({
           <span className={`health-rating-badge health-rating-${tRating}`}>
             {t(`toolbelt.healthRating.${tRating}`)}
             <small>{t('toolbelt.healthRating.ratio', { pct: (tS!.highRatio * 100).toFixed(0) })}</small>
+          </span>
+        ) : (
+          <span className="muted small">{t('toolbelt.healthRating.na')}</span>
+        )}
+      </div>
+      <div className="health-rating-row">
+        <span className="muted small">{t('toolbelt.healthRating.gpu')}</span>
+        {gRating ? (
+          <span className={`health-rating-badge health-rating-${gRating}`}>
+            {t(`toolbelt.healthRating.${gRating}`)}
+            <small>{t('toolbelt.healthRating.ratio', { pct: (gS!.highRatio * 100).toFixed(0) })}</small>
           </span>
         ) : (
           <span className="muted small">{t('toolbelt.healthRating.na')}</span>
