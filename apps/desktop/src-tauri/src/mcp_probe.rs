@@ -51,9 +51,10 @@ async fn probe_and_cache(cfg: &McpServerConfig, refresh: bool) -> (Option<usize>
 }
 
 /// 服务器列表 + 每个 enabled 服务器的连接健康探测（只读 L0）。
+/// 配置读失败（存在但损坏）报错：前端显示「未读到」而非空列表（诚实性族规）。
 #[tauri::command]
 pub(crate) async fn mcp_list_servers(app: AppHandle) -> Result<Vec<McpServerStatus>, String> {
-    let servers = load_servers(&app);
+    let servers = super::mcp_store::load_servers_explicit(&app)?;
     let mut out = Vec::with_capacity(servers.len());
     for s in &servers {
         let transport_type = match &s.transport {
