@@ -78,6 +78,7 @@ export const hw = {
     // 硬件历史快照区（只读归档 + 两份并排对比）
     'hw.histTitle': '硬件历史快照',
     'hw.histLoading': '读取历史归档…',
+    'hw.histLoadFailed': '读取历史归档失败：{msg}（不代表没有快照）',
     'hw.histEmpty': '还没有快照。在「硬件报告」里生成一次报告后，之后每次生成都会自动归档（最多保留最近 30 份）。',
     'hw.histCount': '{count} 份',
     'hw.histRefreshTitle': '刷新归档列表',
@@ -163,6 +164,7 @@ export const hw = {
     // Hardware history snapshots (read-only archive + side-by-side comparison)
     'hw.histTitle': 'Hardware history snapshots',
     'hw.histLoading': 'Reading archives…',
+    'hw.histLoadFailed': 'Failed to read the archive: {msg} (that does not mean there are no snapshots)',
     'hw.histEmpty': 'No snapshots yet. Generate one report in Hardware Report, and every later run is archived automatically (the last 30 are kept).',
     'hw.histCount': '{count} snapshots',
     'hw.histRefreshTitle': 'Refresh archive list',

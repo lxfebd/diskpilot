@@ -499,7 +499,9 @@ export function HwHistorySection() {
     return (
       <div className="hw-hist">
         <div className="hw-hist-title"><Clock size={13} /> {t('hw.histTitle')}</div>
-        <div className="hw-hist-empty muted small"><Loader2 size={12} className="spin" /> {t('hw.histLoading')}</div>
+        {error
+          ? <div className="hw-hist-err small">{t('hw.histLoadFailed', { msg: error })}</div>
+          : <div className="hw-hist-empty muted small"><Loader2 size={12} className="spin" /> {t('hw.histLoading')}</div>}
       </div>
     );
   }
