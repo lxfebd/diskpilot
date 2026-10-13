@@ -721,6 +721,17 @@ export function CatalogWall({
     return out;
   }, [recent, allTools, activeCat, query]);
 
+  // R120：AI 分区工具按搜索词过滤（name/description），无词时全量。
+  // 与 exe 工具墙同一口径，一次搜遍两个分区。
+  const aiTools = useMemo(() => {
+    if (!agentTools) return [];
+    const q = query.trim().toLowerCase();
+    if (!q) return agentTools;
+    return agentTools.filter(
+      (mt) => mt.name.toLowerCase().includes(q) || mt.description.toLowerCase().includes(q),
+    );
+  }, [agentTools, query]);
+
   const launchTool = useCallback(async (tool: ToolbeltCatalogItem, confirmed = false) => {
     const m = manifestFor(tool.name);
     // L3 永久禁止：直接拦截，不给确认机会
@@ -901,15 +912,18 @@ export function CatalogWall({
               </div>
             )}
 
-            {/* 「AI 可操作」分区：agent-server 全部 MCP 工具（只读/写按 writable 标注） */}
-            {activeCat === '__all__' && !query && agentTools && agentTools.length > 0 && (
+            {/* 「AI 可操作」分区：agent-server 全部 MCP 工具（只读/写按 writable 标注）。
+                R120：搜索词也过滤 AI 工具（按 name/description），让用户一次搜遍
+                两个分区；无搜索词时照常整区展示。0 命中时不显示空分区（搜索词
+                本身窄，不等于分区不存在）。 */}
+            {activeCat === '__all__' && aiTools.length > 0 && (
               <div className="toolwall-ai-section">
                 <div className="toolwall-grid-head">
-                  <span className="toolwall-grid-title">{t('toolbelt.wall.aiSection', { n: agentTools.length })}</span>
+                  <span className="toolwall-grid-title">{t('toolbelt.wall.aiSection', { n: aiTools.length })}</span>
                   <span className="muted small">{t('toolbelt.wall.aiSectionHint')}</span>
                 </div>
                 <div className="toolwall-grid toolwall-ai-grid">
-                  {agentTools.map((mt) => (
+                  {aiTools.map((mt) => (
                     <button
                       key={mt.name}
                       className="toolwall-ai-card"
@@ -928,7 +942,7 @@ export function CatalogWall({
             )}
 
             {/* AI 分区不可用：说清原因，而不是整块凭空消失 */}
-            {activeCat === '__all__' && !query && !agentTools && agentIssue && (
+            {activeCat === '__all__' && !agentTools && agentIssue && (
               <div className="toolwall-ai-unavailable">
                 <span className="toolwall-ai-unavailable-title">
                   <ShieldAlert size={14} /> {t('toolbelt.wall.aiUnavailableTitle')}
