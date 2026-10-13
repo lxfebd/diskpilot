@@ -65,7 +65,10 @@ function sleepScore(g: SteamGame): number {
   return sizeGb * monthsSince;
 }
 
-function sortByPivot(games: SteamGame[], pivot: Pivot): SteamGame[] {
+/// 排序透视（导出供单测）：不改原数组。sleep=休眠分（大小×未玩月数）
+/// 幽灵永远置顶；size=按体积；library=按库路径再按体积；lastplayed=最近
+/// 游玩在前、未玩过沉底。
+export function sortByPivot(games: SteamGame[], pivot: Pivot): SteamGame[] {
   const list = [...games];
   switch (pivot) {
     case 'sleep':
