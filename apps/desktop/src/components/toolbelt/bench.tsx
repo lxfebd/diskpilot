@@ -29,6 +29,9 @@ export function BenchPanel() {
   const [results, setResults] = useState<Record<string, string>>({});
   const [report, setReport] = useState<string | null>(null);
   const [confirmStress, setConfirmStress] = useState(false);
+  // 磁盘基准真跑是写操作（会在目标目录写临时文件再删，后端 bench_disk 要求
+  // confirmed=true 硬校验）——两步确认 modal 与 stress/donut 同模式。
+  const [confirmDiskRun, setConfirmDiskRun] = useState(false);
   // 历史：localStorage 追加式，每类基准独立数组（上限 12 条）
   const [history, setHistory] = useState<Record<string, BenchHistoryEntry[]>>(() => {
     try {
@@ -96,6 +99,13 @@ export function BenchPanel() {
     void api.callTool('stress_cancel', {}).then((r) => {
       toast(r.is_error ? t('toolbelt.bench.stopFailed', { text: r.text }) : t('toolbelt.bench.stopSent'));
     }).catch((e) => toast(t('toolbelt.bench.stopCallFailed', { msg: String(e) }), 'err'));
+  };
+
+  // 磁盘基准真跑（dry_run=false）：在目标目录（默认系统临时目录）写临时文件测速
+  // 后即删。写操作 → confirmed=true（后端硬校验），UI 走两步确认。
+  const runDiskReal = async () => {
+    setConfirmDiskRun(false);
+    await run('bench_disk', t('toolbelt.bench.disk.name'), { dry_run: false, size_mb: 256 }, true);
   };
 
   const runStress = async () => {
@@ -218,7 +228,14 @@ export function BenchPanel() {
     }
   };
 
-  const benchCard = (key: string, title: string, desc: string, args: Record<string, unknown>, btnText: string) => (
+  const benchCard = (
+    key: string,
+    title: string,
+    desc: string,
+    args: Record<string, unknown>,
+    btnText: string,
+    extraActions?: { label: string; onClick: () => void }[],
+  ) => (
     <div className="toolbelt-pane">
       <h3 className="toolbelt-h">{title}</h3>
       <p className="toolbelt-sub">{desc}</p>
@@ -226,6 +243,11 @@ export function BenchPanel() {
         <button className="primary" disabled={busy !== null} onClick={() => run(key, title, args)}>
           {busy === key ? <Loader2 size={14} className="spin" /> : null} {busy === key ? t('toolbelt.bench.running') : btnText}
         </button>
+        {extraActions?.map((a) => (
+          <button key={a.label} className="ghost" disabled={busy !== null} onClick={a.onClick}>
+            {a.label}
+          </button>
+        ))}
         {historyOf(key).length > 0 && (
           <span className="muted small">{t('toolbelt.bench.lastRuns', { n: historyOf(key).length })}</span>
         )}
@@ -257,7 +279,14 @@ export function BenchPanel() {
 
       {benchCard('bench_cpu', t('toolbelt.bench.cpu.title'), t('toolbelt.bench.cpu.desc'), { secs: 2 }, t('toolbelt.bench.cpu.btn'))}
       {benchCard('bench_memory', t('toolbelt.bench.mem.title'), t('toolbelt.bench.mem.desc'), { secs: 2 }, t('toolbelt.bench.mem.btn'))}
-      {benchCard('bench_disk', t('toolbelt.bench.disk.title'), t('toolbelt.bench.disk.desc'), { dry_run: true, size_mb: 32 }, t('toolbelt.bench.disk.btn'))}
+      {benchCard(
+        'bench_disk',
+        t('toolbelt.bench.disk.title'),
+        t('toolbelt.bench.disk.desc'),
+        { dry_run: true, size_mb: 32 },
+        t('toolbelt.bench.disk.btn'),
+        [{ label: t('toolbelt.bench.disk.runBtn'), onClick: () => setConfirmDiskRun(true) }],
+      )}
       {benchCard('bench_gpu', t('toolbelt.bench.gpuInfo.title'), t('toolbelt.bench.gpuInfo.desc'), {}, t('toolbelt.bench.gpuInfo.btn'))}
 
       <div className="toolbelt-pane">
@@ -368,6 +397,31 @@ export function BenchPanel() {
               <button className="ghost" onClick={() => setConfirmStress(false)}>{t('toolbelt.common.cancel')}</button>
               <button className="primary" onClick={runStress} disabled={busy === 'stress_test'}>
                 {busy === 'stress_test' ? t('toolbelt.bench.stress.running') : t('toolbelt.bench.stress.confirmBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 磁盘基准真跑两步确认（写操作：在目标目录写临时文件测后即删）——
+        非 window.confirm，符合破坏性命令 UI 约定 */}
+      {confirmDiskRun && (
+        <div className="modal-bg" onClick={() => setConfirmDiskRun(false)}>
+          <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <span><ShieldAlert size={14} /> {t('toolbelt.bench.disk.confirmTitle')}</span>
+              <button className="ghost icon" onClick={() => setConfirmDiskRun(false)} title={t('toolbelt.common.close')}><X size={15} /></button>
+            </div>
+            <div className="modal-body">
+              <p>
+                {t('toolbelt.bench.disk.confirmA')}{' '}<b>{t('toolbelt.bench.disk.confirmSize')}</b>{t('toolbelt.bench.disk.confirmB')}{' '}<b className="tb-risk tb-risk-medium">{t('toolbelt.bench.disk.confirmRisk')}</b>{t('toolbelt.bench.disk.confirmC')}
+              </p>
+              <p className="muted small">{t('toolbelt.bench.disk.confirmHint')}</p>
+            </div>
+            <div className="modal-actions">
+              <button className="ghost" onClick={() => setConfirmDiskRun(false)}>{t('toolbelt.common.cancel')}</button>
+              <button className="primary" onClick={runDiskReal} disabled={busy === 'bench_disk'}>
+                {busy === 'bench_disk' ? t('toolbelt.bench.running') : t('toolbelt.bench.disk.confirmBtn')}
               </button>
             </div>
           </div>
