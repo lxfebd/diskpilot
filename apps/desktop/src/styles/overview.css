@@ -1031,4 +1031,7 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   font-size: 10px; font-weight: 700; color: var(--risk-caution);
   font-family: var(--font-mono); white-space: nowrap;
 }
-.ao-trend-forecast.now { color: var(--risk-danger); }
+/* R119 耗尽风险分级：ok 绿 / warn 琥珀（≤90 天）/ critical 红（≤30 天或已满） */
+.ao-trend-forecast.ok { color: var(--risk-safe); }
+.ao-trend-forecast.warn { color: var(--risk-caution); }
+.ao-trend-forecast.critical { color: var(--risk-danger); font-weight: 800; }

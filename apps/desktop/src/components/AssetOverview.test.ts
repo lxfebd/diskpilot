@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, truncatePaths, previewSummary, previewTotalBytes, previewState } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, truncatePaths, previewSummary, previewTotalBytes, previewState } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -131,6 +131,31 @@ describe('forecastFullDays（空间耗尽预测）', () => {
       pt('C:\\', 400, 1_700_000_000, 1000),
       pt('C:\\', 500, 1_700_000_000, 1000), // 同一时刻
     ])).toBeNull();
+  });
+});
+
+// R119 耗尽风险分级：把 forecastFullDays 天数映射成视觉档位。
+// null（不预测：释放中/不足）→ ok 不唱衰；0 或 ≤30 天 → critical；
+// ≤90 天 → warn；其余 ok。
+describe('spaceRisk（耗尽风险分级）', () => {
+  it('null（释放中/不足）→ ok，不唱衰', () => {
+    expect(spaceRisk(null)).toBe('ok');
+  });
+
+  it('已满 0 / 30 天内 → critical', () => {
+    expect(spaceRisk(0)).toBe('critical');
+    expect(spaceRisk(1)).toBe('critical');
+    expect(spaceRisk(30)).toBe('critical');
+  });
+
+  it('31–90 天 → warn', () => {
+    expect(spaceRisk(31)).toBe('warn');
+    expect(spaceRisk(90)).toBe('warn');
+  });
+
+  it('>90 天 → ok（余量充足）', () => {
+    expect(spaceRisk(91)).toBe('ok');
+    expect(spaceRisk(500)).toBe('ok');
   });
 });
 

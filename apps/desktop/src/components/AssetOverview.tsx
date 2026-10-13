@@ -177,6 +177,16 @@ export function forecastFullDays(pts: SpacePoint[]): number | null {
   return Number.isFinite(days) && days > 0 ? days : null;
 }
 
+/** R119 耗尽风险分级（纯函数，可单测）：把 forecastFullDays 的天数映射成
+ *  风险等级。null（不预测：不足 2 点/增速 ≤0/释放中）→ ok——释放不是
+ *  「快满」，不唱衰；0 或 ≤30 天 → critical（已满/30 天内占满，红色告警）；
+ *  ≤90 天 → warn（一个季度内，琥珀提醒）；其余 → ok。*/
+export function spaceRisk(fullDays: number | null): 'ok' | 'warn' | 'critical' {
+  if (fullDays === null || fullDays > 90) return 'ok';
+  if (fullDays <= 30) return 'critical';
+  return 'warn';
+}
+
 // R90 时间窗口选项：0 = 全部（后端每盘上限 180 条 ≈ 半年日采样）。
 const trendRanges: { days: number; label: string }[] = [
   { days: 7, label: 'overview.trend.range7' },
@@ -419,7 +429,7 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
                 <small>{days}</small>
               </span>
               {forecastLabel && (
-                <span className={'ao-trend-forecast' + (fullDays === 0 ? ' now' : '')}>
+                <span className={'ao-trend-forecast ' + spaceRisk(fullDays)}>
                   {forecastLabel}
                 </span>
               )}
