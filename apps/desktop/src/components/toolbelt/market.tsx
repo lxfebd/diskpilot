@@ -50,6 +50,7 @@ export function MarketPanel() {
   const [regInfo, setRegInfo] = useState<{ fetched_at: number; signed: boolean; verified: boolean; indexed: boolean; registry_url: string; plugins: number } | null>(null);
   const [verifyOut, setVerifyOut] = useState<RegistryVerifyOut | null>(null);
   const [installed, setInstalled] = useState<InstalledPlugin[] | null>(null);
+  const [installedErr, setInstalledErr] = useState<string | null>(null);
   const [installedId, setInstalledId] = useState<string | null>(null);
   const [showInstalled, setShowInstalled] = useState(false);
   // 进阶折叠：未配置索引时，URL 配置/刷新/校验/台账收进一行，避免小白看到满屏术语。
@@ -173,7 +174,12 @@ export function MarketPanel() {
 
   // 已安装台账加载（installFromCommunity 的依赖也用它——声明须在其之前）。
   const loadInstalled = useCallback(() => {
-    api.pluginListInstalled().then((r) => setInstalled(r.installed)).catch(() => setInstalled([]));
+    setInstalledErr(null);
+    api.pluginListInstalled().then((r) => setInstalled(r.installed)).catch((e) => {
+      // 读失败 ≠ 没有已安装插件：保持 null + 记错误，不伪装成空台账。
+      setInstalled(null);
+      setInstalledErr(String(e instanceof Error ? e.message : e));
+    });
   }, []);
 
   // 从社区注册表一键安装：复用远程下载管线（https + Ed25519 签名强制）。
@@ -531,7 +537,9 @@ export function MarketPanel() {
           {showInstalled && (
             <div className="toolbelt-market-list" style={{ marginTop: 8, maxHeight: 220, overflowY: 'auto' }}>
               {installed === null ? (
-                <p className="muted small">{t('toolbelt.mkt.loading')}</p>
+                installedErr !== null
+                  ? <p className="muted small error">{t('toolbelt.mkt.installedLoadFailed', { msg: installedErr })}</p>
+                  : <p className="muted small">{t('toolbelt.mkt.loading')}</p>
               ) : installed.length === 0 ? (
                 <p className="muted small">{t('toolbelt.mkt.installedEmpty')}</p>
               ) : (
