@@ -438,6 +438,9 @@ export function HwHistorySection() {
   const t = useT();
   const [metas, setMetas] = useState<HwSnapshotMeta[] | null>(null);
   const [series, setSeries] = useState<HwSeriesPoint[]>([]);
+  // R110：趋势序列读失败单独记——失败 ≠ 「没有带温度/通电时长的快照」，
+  // 空场景原本区分的是 temp/power 两条线各自的缺数据，读失败不能伪装成两者皆无。
+  const [seriesErr, setSeriesErr] = useState<string | null>(null);
   const [compare, setCompare] = useState<HwCompareOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -467,8 +470,11 @@ export function HwHistorySection() {
     try {
       const list = await api.hwHistory();
       setMetas(list);
-      // R96: 并行读趋势序列（只读）；失败不拦主流程，趋势区自己显示空。
-      void api.hwSnapshotSeries().then(setSeries).catch(() => setSeries([]));
+      // R96: 并行读趋势序列（只读）；R110: 失败不再伪装成空序列，趋势区显示读失败。
+      void api
+        .hwSnapshotSeries()
+        .then((s) => { setSeries(s); setSeriesErr(null); })
+        .catch((e) => { setSeries([]); setSeriesErr(String(e instanceof Error ? e.message : e)); });
       // 默认勾选最近两份做对比（后端也会自动取），≥2 份时直接出对比结果
       if (list.length >= 2) {
         const a = list[1].file;
@@ -532,7 +538,7 @@ export function HwHistorySection() {
       </div>
 
       {/* R96 硬件趋势：多快照温度/通电折线（只读）。 */}
-      <HwTrendChart series={series} />
+      <HwTrendChart series={series} err={seriesErr} />
 
       <div className="hw-hist-pick">
         <label className="hw-hist-pick-col">
@@ -605,7 +611,8 @@ export function hwSeriesPath(vals: number[], w = 240, h = 40): string {
 }
 
 /// R96 硬件趋势图：温度 / 通电时长两条折线（各有值的点才画，缺失跳过）。
-export function HwTrendChart({ series }: { series: HwSeriesPoint[] }) {
+/// R110：读失败经 err prop 优先展示——失败 ≠ 两种数据都没有。
+export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: string | null }) {
   const t = useT();
   const temps = series.filter((p) => p.temp_max != null).map((p) => p.temp_max!);
   const powers = series.filter((p) => p.power_on_hours != null).map((p) => p.power_on_hours!);
@@ -618,7 +625,10 @@ export function HwTrendChart({ series }: { series: HwSeriesPoint[] }) {
       <div className="hw-trend-title"><Gauge size={13} /> {t('hw.trendTitle')}
         {n > 0 && <span className="muted small"> · {t('hw.trendSamples', { n, first, last })}</span>}
       </div>
-      {temps.length >= 2 && (
+      {err && (
+        <div className="hw-trend-err small">{t('hw.trendFailed', { msg: err })}</div>
+      )}
+      {!err && temps.length >= 2 && (
         <div className="hw-trend-row">
           <span className="hw-trend-label">{t('hw.trendTemp')}</span>
           <svg viewBox={`0 0 240 40`} className="hw-trend-svg" aria-label={t('hw.trendTemp')}>
@@ -627,7 +637,7 @@ export function HwTrendChart({ series }: { series: HwSeriesPoint[] }) {
           <span className="hw-trend-max muted small">{Math.round(Math.max(...temps))}°C</span>
         </div>
       )}
-      {powers.length >= 2 && (
+      {!err && powers.length >= 2 && (
         <div className="hw-trend-row">
           <span className="hw-trend-label">{t('hw.trendPower')}</span>
           <svg viewBox={`0 0 240 40`} className="hw-trend-svg" aria-label={t('hw.trendPower')}>
@@ -636,7 +646,7 @@ export function HwTrendChart({ series }: { series: HwSeriesPoint[] }) {
           <span className="hw-trend-max muted small">{Math.round(Math.max(...powers))}h</span>
         </div>
       )}
-      {temps.length < 2 && powers.length < 2 && (
+      {!err && temps.length < 2 && powers.length < 2 && (
         <div className="hw-trend-empty muted small">
           {temps.length === 0 ? t('hw.trendTempNone') : t('hw.trendPowerNone')}
         </div>

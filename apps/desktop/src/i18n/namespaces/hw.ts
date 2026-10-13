@@ -93,6 +93,7 @@ export const hw = {
     'hw.trendPower': '通电时长（小时）',
     'hw.trendTempNone': '还没有带温度的快照，生成几次硬件报告后这里会画温度曲线。',
     'hw.trendPowerNone': '还没有带通电时长数据的快照，趋势图暂空。',
+    'hw.trendFailed': '趋势数据读取失败（不代表没有快照，稍后刷新或重启应用可能恢复）：{msg}',
     'hw.trendSamples': '{n} 份快照 · {first} → {last}',
 
     // 本机性能档位（hwProfile：设置页展示的那一句话）
@@ -187,6 +188,7 @@ export const hw = {
     'hw.trendPower': 'Power-on hours',
     'hw.trendTempNone': 'No snapshots with a temperature reading yet — generate a few hardware reports and the temp line will appear here.',
     'hw.trendPowerNone': 'No snapshots with power-on-hour data yet, the trend stays empty.',
+    'hw.trendFailed': 'Failed to read trend data (this does not mean there are no snapshots; refreshing or restarting the app usually recovers): {msg}',
     'hw.trendSamples': '{n} snapshots · {first} → {last}',
 
     // Local performance tier (hwProfile: the one-line summary on the settings page)
