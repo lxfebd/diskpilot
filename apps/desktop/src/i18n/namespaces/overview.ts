@@ -45,6 +45,9 @@ export const overview = {
     'overview.trend.rangeAll': '全部',
     'overview.trend.rangeEmpty': '这段时间还没有扫描记录——换个时间范围看看',
     'overview.locateInWorkspace': '在工作台定位查看',
+    // R98 空间耗尽预测：按趋势增速外推「多少天后用满」（0=已满；增速≤0 不显示）
+    'overview.trend.fullIn': '约 {n} 天满',
+    'overview.trend.fullNow': '已满',
 
     // 快速操作
     'overview.quick.title': '快速操作',
@@ -209,6 +212,9 @@ export const overview = {
     'overview.trend.rangeAll': 'All',
     'overview.trend.rangeEmpty': 'No scans in this period — try another range',
     'overview.locateInWorkspace': 'Show this in the workbench',
+    // R98 days-to-full forecast: extrapolated from the trend slope (0 = already full; hidden when not growing)
+    'overview.trend.fullIn': '≈ full in {n} days',
+    'overview.trend.fullNow': 'Full',
 
     // Quick actions
     'overview.quick.title': 'Quick actions',

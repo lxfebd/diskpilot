@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -95,6 +95,42 @@ describe('磁盘空间趋势（R6）', () => {
     expect(r30[0].points.map((p) => p.used_bytes)).toEqual([420, 470]);
     const r7 = buildSpaceSeries(hist, [], 7);
     expect(r7[0].points.map((p) => p.used_bytes)).toEqual([470]);
+  });
+});
+
+// R98 空间耗尽预测：首尾增速线性外推「多少天后用满」。释放/持平/不足
+// 2 点/零跨度 → null（不预测），已满 → 0。
+describe('forecastFullDays（空间耗尽预测）', () => {
+  it('按首尾增速外推剩余空间天数', () => {
+    // total 1000，10 天内已用 400 → 500（+100 = +10/天），剩 500；
+    // 500/10 = 50 天。
+    const pts = [
+      pt('C:\\', 400, 1_700_000_000, 1000),
+      pt('C:\\', 500, 1_700_864_000, 1000),
+    ];
+    expect(forecastFullDays(pts)).toBeCloseTo(50, 6);
+  });
+
+  it('空间在释放（增速≤0）→ 不预测（null）', () => {
+    const pts = [
+      pt('C:\\', 500, 1_700_000_000, 1000),
+      pt('C:\\', 400, 1_700_864_000, 1000),
+    ];
+    expect(forecastFullDays(pts)).toBeNull();
+    // 持平同样不预测：不能把健康盘唱成满盘
+    expect(forecastFullDays([pt('C:\\', 400, 1_700_000_000, 1000), pt('C:\\', 400, 1_700_864_000, 1000)])).toBeNull();
+  });
+
+  it('已满（剩余 ≤0）→ 0；不足 2 点 / 零跨度 → null', () => {
+    expect(forecastFullDays([
+      pt('C:\\', 1000, 1_700_000_000, 1000),
+      pt('C:\\', 1100, 1_700_864_000, 1000),
+    ])).toBe(0);
+    expect(forecastFullDays([pt('C:\\', 400, 1_700_000_000, 1000)])).toBeNull();
+    expect(forecastFullDays([
+      pt('C:\\', 400, 1_700_000_000, 1000),
+      pt('C:\\', 500, 1_700_000_000, 1000), // 同一时刻
+    ])).toBeNull();
   });
 });
 

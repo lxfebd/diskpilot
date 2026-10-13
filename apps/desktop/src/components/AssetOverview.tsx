@@ -159,6 +159,24 @@ export function spaceWeekDelta(pts: SpacePoint[]): { delta: number; days: string
   return { delta, days: spanDays < 1 ? t('overview.trend.today') : t('overview.trend.daysSpan', { n: Math.round(spanDays) }) };
 }
 
+/** R98 空间耗尽预测：按首尾采样的平均增速线性外推「多少天后用满」。
+ *  返回 null = 不该预测：不足 2 点、时间跨度为 0、增速 ≤0（持平或在
+ *  释放空间——释放不是「快满了」，硬算会把健康盘唱成满盘）。
+ *  已满（剩余 ≤0）返回 0，调用方用「已满」文案区分于天数。 */
+export function forecastFullDays(pts: SpacePoint[]): number | null {
+  if (pts.length < 2) return null;
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  const spanSecs = last.at - first.at;
+  if (spanSecs <= 0) return null;
+  const slope = (last.used_bytes - first.used_bytes) / spanSecs; // 字节/秒
+  if (slope <= 0) return null;
+  const remaining = last.total_bytes - last.used_bytes;
+  if (remaining <= 0) return 0;
+  const days = remaining / (slope * 86400);
+  return Number.isFinite(days) && days > 0 ? days : null;
+}
+
 // R90 时间窗口选项：0 = 全部（后端每盘上限 180 条 ≈ 半年日采样）。
 const trendRanges: { days: number; label: string }[] = [
   { days: 7, label: 'overview.trend.range7' },
@@ -365,6 +383,12 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
           const last = points[points.length - 1];
           const usage = last.total_bytes > 0 ? (last.used_bytes / last.total_bytes) * 100 : 0;
           const isShrinking = delta < 0; // 负增量 = 空间释放
+          // R98 空间耗尽预测：按首尾增速外推「多少天后用满」；0 = 已满。
+          const fullDays = forecastFullDays(points);
+          const forecastLabel =
+            fullDays === null ? null
+            : fullDays === 0 ? t('overview.trend.fullNow')
+            : t('overview.trend.fullIn', { n: Math.ceil(fullDays) });
           return (
             <button
               key={drive}
@@ -394,6 +418,11 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
                 <b>{delta > 0 ? '+' : ''}{formatBytes(delta)}</b>
                 <small>{days}</small>
               </span>
+              {forecastLabel && (
+                <span className={'ao-trend-forecast' + (fullDays === 0 ? ' now' : '')}>
+                  {forecastLabel}
+                </span>
+              )}
             </button>
           );
         })}
