@@ -217,6 +217,18 @@ pub(crate) fn record_after_scan(app: &tauri::AppHandle, key: &str) {
     record_space_point(app, &key, info.total_bytes, info.used_bytes);
 }
 
+/// 为**全部**本机磁盘记录一次容量快照（R89：后台每日自动采样）。
+/// 趋势曲线不再只依赖用户手动扫描——应用挂着时按天积累，总览页开卷就有历史。
+/// 复用 list_drives 同款 Win32 查询；静默失败（增强功能不阻塞主流程，
+/// 且 record_space_point 自带 60s 去重，与应用启动时的扫描点天然合并）。
+pub(crate) fn record_all_drives(app: &tauri::AppHandle) {
+    for info in crate::drives::list_drives() {
+        // 与 record_after_scan 同口径：映射盘记到真实卷根，避免两条曲线。
+        let key = canonical_scan_root(&info.path, &crate::drives::collect_substs());
+        record_space_point(app, &key, info.total_bytes, info.used_bytes);
+    }
+}
+
 /// 读取全部磁盘空间历史（只读 L0，总览页画趋势曲线）。
 /// 返回 `{root -> [SpacePoint]}`，按写入顺序排列；缺文件 = 真空态返回空对象；
 /// 存在但读失败 → Err（R88）：前端 AssetOverview 曲线区据此显示「未读到」。
@@ -308,7 +320,9 @@ mod tests {
 
     #[test]
     fn bad_lines_are_skipped_silently() {
-        let dir = std::env::temp_dir().join(format!("space-hist-bad-{}", std::process::id()));
+        // 目录名独立（space-hist-badlines）：与 unreadable_file_is_error_not_empty
+        // 的 space-hist-bad 区分，避免并发测试互相删目录。
+        let dir = std::env::temp_dir().join(format!("space-hist-badlines-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join("space-history.jsonl");

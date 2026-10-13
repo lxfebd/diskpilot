@@ -231,6 +231,8 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
         // 启动后先等一个间隔再首跑，避免应用刚开就全盘算一次（性能铁律）。
         let mut last_run = std::time::Instant::now();
         let mut last_weekly = std::time::Instant::now();
+        // R89：空间趋势每日采样，与周报解耦（即使周报关着，趋势曲线也持续积累）。
+        let mut last_space_sample = std::time::Instant::now();
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
@@ -241,6 +243,12 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                     last_run = std::time::Instant::now();
                     let _ = run_reminder_check(&app);
                 }
+            }
+            // 空间趋势每日采样：走 list_drives 同款 Win32 查询，静默失败，
+            // 与应用启动扫描的 60s 去重天然合并。
+            if last_space_sample.elapsed() >= Duration::from_secs(86400) {
+                last_space_sample = std::time::Instant::now();
+                crate::space_history::record_all_drives(&app);
             }
             // 周巡检简报（health-butler P1）：weekly_report_enabled 开才跑。
             if cfg.weekly_report_enabled {
