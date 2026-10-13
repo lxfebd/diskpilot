@@ -412,6 +412,97 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   text-overflow: ellipsis;
 }
 .ao-clean-size { flex-shrink: 0; font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--risk-danger); }
+/* R102：建议项逐文件预览（展开区）——外层包一层 div 让行与预览同进同出 */
+.ao-clean-item { display: flex; flex-direction: column; gap: 4px; }
+.ao-clean-peek {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.ao-clean-peek:hover { color: var(--ink); border-color: var(--ink-3); background: var(--accent-bg); }
+.ao-clean-preview {
+  margin-left: 26px;
+  border-left: 2px solid var(--border-strong);
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ao-clean-preview-note {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.ao-clean-preview-note.err { color: var(--risk-danger); }
+.ao-clean-preview-box {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-btn);
+  background: var(--card);
+  padding: 6px 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.ao-clean-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--border-strong);
+  margin-bottom: 4px;
+}
+.ao-clean-preview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ao-clean-preview-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  min-width: 0;
+}
+.ao-clean-preview-file svg { flex-shrink: 0; color: var(--ink-3); }
+.ao-clean-preview-name {
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink);
+}
+.ao-clean-preview-dir {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.ao-clean-preview-more {
+  font-size: 11px;
+  color: var(--ink-3);
+  padding-top: 3px;
+}
 
 /* 底部操作栏（固定不随列表滚动） */
 .ao-actionbar {

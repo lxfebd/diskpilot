@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, truncatePaths, previewSummary } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -294,5 +294,43 @@ describe('微信项勾选 hasCheckedWechat', () => {
   it('空列表 / 空勾选 → false', () => {
     expect(hasCheckedWechat([], {})).toBe(false);
     expect(hasCheckedWechat([wechatItem], {})).toBe(false);
+  });
+});
+
+describe('R102 预览截断 truncatePaths', () => {
+  const paths = ['C:\\a\\1', 'C:\\a\\2', 'C:\\a\\3', 'C:\\a\\4'];
+
+  it('未超限 → 全显、more=0', () => {
+    expect(truncatePaths(paths, 6)).toEqual({ shown: paths, more: 0 });
+  });
+  it('超限 → 前 limit 条 + 余数', () => {
+    const r = truncatePaths(paths, 2);
+    expect(r.shown).toEqual(['C:\\a\\1', 'C:\\a\\2']);
+    expect(r.more).toBe(2);
+  });
+  it('limit ≤ 0 = 不截断', () => {
+    expect(truncatePaths(paths, 0).more).toBe(0);
+    expect(truncatePaths(paths, -1).shown).toHaveLength(4);
+  });
+  it('空数组 → 空', () => {
+    expect(truncatePaths([], 5)).toEqual({ shown: [], more: 0 });
+  });
+});
+
+describe('R102 预览标题 previewSummary', () => {
+  const zh = (o: { n: number }) => `${o.n} 个文件`;
+
+  it('0 文件 → null（不渲染标题行）', () => {
+    expect(previewSummary(0, 0, zh)).toBeNull();
+  });
+  it('有文件无字节 → 只有份数', () => {
+    expect(previewSummary(3, null, zh)).toBe('3 个文件');
+  });
+  it('有文件有字节 → 份数 + 实测大小', () => {
+    expect(previewSummary(3, 1024, zh)).toBe('3 个文件 · 1.00 KB');
+  });
+  it('文案函数透传（i18n 键由调用方注入）', () => {
+    const en = (o: { n: number }) => `${o.n} file(s)`;
+    expect(previewSummary(2, null, en)).toBe('2 file(s)');
   });
 });

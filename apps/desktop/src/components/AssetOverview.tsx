@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion } from 'lucide-react';
+import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, ChevronDown, ChevronUp, File } from 'lucide-react';
 import { api, type SpacePoint, type StartupItem, type HwDiskHealth } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
@@ -439,12 +439,77 @@ interface CleanItem {
   desc: string;
   bytes: number;
   files: number;
+  /** scope.prompt.kind==='days' 的默认天数：预览与真实执行共用同一旋钮，
+   *  预览显示的文件 = 执行会删的文件（诚实性口径一致）。 */
+  days?: number;
 }
 
 /** 勾选的建议项里是否含微信缓存（G-高3）：微信多账号必须去清理页按账号清，
  *  总览没有 wxid 选择器，一键清理会覆盖所有账号。纯函数便于回归测试。 */
 export function hasCheckedWechat(items: readonly CleanItem[], checked: Record<string, boolean>): boolean {
   return items.some((i) => i.scaffoldId === 'wechat-pc' && !!checked[i.key]);
+}
+
+// ── R102 scope 逐文件预览的纯展示逻辑（可单测）─────────────────────
+
+/** 预览路径列表的截断策略：最多显示前 limit 条，其余折成一行
+ *  `… 另有 N 条`。limit ≤ 0 视为不截断。 */
+export function truncatePaths(paths: readonly string[], limit: number): { shown: readonly string[]; more: number } {
+  if (limit <= 0 || paths.length <= limit) return { shown: paths, more: 0 };
+  return { shown: paths.slice(0, limit), more: paths.length - limit };
+}
+
+/** 展开区的标题行：`{n} 个文件 · {size}`；空清单（读到了但没匹配）返回 null。
+ *  文案键由调用方注入（i18n），本函数只组织数字参数。 */
+export function previewSummary(
+  filesCount: number,
+  bytes: number | null,
+  tFiles: (opts: { n: number }) => string,
+): string | null {
+  if (filesCount === 0) return null;
+  const size = bytes == null ? '' : ` · ${formatBytes(bytes)}`;
+  return `${tFiles({ n: filesCount })}${size}`;
+}
+
+/** 判定一条预览结果该显示什么：加载中 / 读失败（诚实：失败≠空）/ 空清单 / 有清单。 */
+export type PreviewState = 'loading' | 'error' | 'empty' | 'has';
+
+/** R102 scope 展开明细：将删文件路径清单（dry-run 预览，与执行同 olderThanDays
+ *  口径）。最多展示 12 条，其余折成「另有 N 条」；路径按 basename 截短防长串撑爆。 */
+const PEEK_LIMIT = 12;
+
+function peekBase(p: string): string {
+  // Windows 路径可能含 \ 或 /（dry-run 返回的匹配路径是系统原生分隔）。
+  const i = Math.max(p.lastIndexOf('\\'), p.lastIndexOf('/'));
+  return i >= 0 ? p.slice(i + 1) : p;
+}
+
+function ScopePreview({ files }: { files: readonly string[] }) {
+  const t = useT();
+  const { shown, more } = truncatePaths(files, PEEK_LIMIT);
+  // 逐文件大小预览需要再次 dry-run（executeScope 每项都实测字节）；
+  // 这里只展示路径清单 + 份数，字节以行内大小为准——预览定位「要删什么」，
+  // 精确总量在确认环节由实测兜底。
+  return (
+    <div className="ao-clean-preview-box">
+      <div className="ao-clean-preview-head">
+        <span>{t('overview.clean.peekFiles', { n: files.length })}</span>
+        <span className="muted small">{t('overview.clean.peekHint')}</span>
+      </div>
+      <ul className="ao-clean-preview-list">
+        {shown.map((p) => (
+          <li key={p} className="ao-clean-preview-file" title={p}>
+            <File size={11} />
+            <span className="ao-clean-preview-name">{peekBase(p)}</span>
+            <span className="ao-clean-preview-dir">{p.slice(0, Math.max(0, p.lastIndexOf('\\')))}</span>
+          </li>
+        ))}
+      </ul>
+      {more > 0 && (
+        <div className="ao-clean-preview-more">{t('overview.clean.peekMore', { n: more })}</div>
+      )}
+    </div>
+  );
 }
 
 // ── 今日体检条（health-butler P0）──
@@ -625,6 +690,33 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [cleaning, setCleaning] = useState(false);
   const [cleanLoading, setCleanLoading] = useState(false);
   const [cleanErr, setCleanErr] = useState<string | null>(null);
+  // R102 scope 逐文件预览：展开的 key → { files, err }。files 是 dry-run 预览
+  // （与执行同 olderThanDays 口径），err 单独记录——读失败 ≠ 空清单（诚实）。
+  const [previewOpen, setPreviewOpen] = useState<Record<string, boolean>>({});
+  const [previews, setPreviews] = useState<Record<string, { files: string[]; err: string | null }>>({});
+  const [previewing, setPreviewing] = useState<Record<string, boolean>>({});
+
+  // 展开一项：dry-run 拿将删文件明细。只读（dryRun=true），绝不落盘。
+  const togglePreview = async (it: CleanItem) => {
+    if (!selDrive) return;
+    const open = !previewOpen[it.key];
+    setPreviewOpen((p) => ({ ...p, [it.key]: open }));
+    if (!open) return; // 收起：不重拉
+    if (previews[it.key]) return; // 已加载过：不重复请求
+    setPreviewing((p) => ({ ...p, [it.key]: true }));
+    try {
+      const entries = await api.executeScope(it.scaffoldId, it.scopeId, selDrive.path, true, {
+        olderThanDays: it.days,
+      });
+      // dry-run 每条 UndoEntry.source = 匹配文件路径（bytes_freed 为实测字节）。
+      setPreviews((p) => ({ ...p, [it.key]: { files: entries.map((e) => e.source), err: null } }));
+    } catch (e) {
+      setPreviews((p) => ({ ...p, [it.key]: { files: [], err: String(e instanceof Error ? e.message : e) } }));
+    } finally {
+      setPreviewing((p) => ({ ...p, [it.key]: false }));
+    }
+  };
+
   // 两步确认（铁律#6）：第一次点「立即清理」只进入预备态，按钮变为明确的
   // 确认文案；5 秒内再点一次才真正执行。倒计时结束自动解除，防止页面停留
   // 久了之后误点第二下。
@@ -640,15 +732,22 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       // 应用刚启动还没扫过盘时，这里会拿到空列表并显示「先扫描再算」——
       // 展示建议不值得把整块磁盘遍历一遍（那就是"一开就卡"的元凶）。
       const raw = await api.cleanupSuggestions(path, undefined, true);
-      const items: CleanItem[] = raw.map((r) => ({
-        key: `${r.scaffold_id}:${r.scope_id}`,
-        scaffoldId: r.scaffold_id,
-        scopeId: r.scope_id,
-        label: r.label,
-        desc: r.desc,
-        bytes: r.bytes,
-        files: r.files,
-      }));
+      const scaffoldsFor = scaffolds; // 闭包取当前目录清单
+      const items: CleanItem[] = raw.map((r) => {
+        const sc = scaffoldsFor.find((s) => s.id === r.scaffold_id);
+        const scope = sc?.scopes.find((s) => s.id === r.scope_id);
+        const days = scope?.prompt && scope.prompt.kind === 'days' ? Number(scope.prompt.default) : undefined;
+        return {
+          key: `${r.scaffold_id}:${r.scope_id}`,
+          scaffoldId: r.scaffold_id,
+          scopeId: r.scope_id,
+          label: r.label,
+          desc: r.desc,
+          bytes: r.bytes,
+          files: r.files,
+          days,
+        };
+      });
       setCleanItems(items);
       setChecked(Object.fromEntries(items.map((i) => [i.key, true])));
     } catch (e) {
@@ -659,7 +758,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     } finally {
       setCleanLoading(false);
     }
-  }, []);
+  }, [scaffolds]);
 
   // 触发条件 = 选盘变化 + 扫描完成（scanSeq 递增）：扫描开始前 selDrive 就已
   // 选中，首次 loadClean(cachedOnly) 拿到空列表；扫完不重拉的话红盘会一直
@@ -711,14 +810,13 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       let failed = 0;
       let firstError = '';
       for (const it of sel) {
-        const sc = scaffolds.find((s) => s.id === it.scaffoldId);
-        const scope = sc?.scopes.find((s) => s.id === it.scopeId);
-        const days = scope?.prompt && scope.prompt.kind === 'days' ? Number(scope.prompt.default) : undefined;
         try {
           // 返回实际操作的条目列表：空数组 = 该 scope 没匹配到文件（可能已清过），
           // 不算清理成功，预估字节也不计入，避免「清了 12 项 · 0 B」的误导。
+          // days 与预览同源（it.days，loadClean 时从 scope.prompt 取）——
+          // 预览显示的文件就是执行会删的文件。
           const entries = await api.executeScope(it.scaffoldId, it.scopeId, selDrive.path, false, {
-            olderThanDays: days,
+            olderThanDays: it.days,
             confirmed: true,
           });
           if (entries.length > 0) {
@@ -1039,19 +1137,45 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                 </div>
               ) : (
                 cleanItems.map((it) => (
-                  <label key={it.key} className="ao-clean-row">
-                    <input
-                      type="checkbox"
-                      className="ao-clean-check"
-                      checked={!!checked[it.key]}
-                      onChange={() => setChecked((c) => ({ ...c, [it.key]: !c[it.key] }))}
-                    />
-                    <span className="ao-clean-txt">
-                      <b>{it.label}</b>
-                      <i>{it.desc}</i>
-                    </span>
-                    <span className="ao-clean-size">{formatBytes(it.bytes)}</span>
-                  </label>
+                  <div key={it.key} className="ao-clean-item">
+                    <label className="ao-clean-row">
+                      <input
+                        type="checkbox"
+                        className="ao-clean-check"
+                        checked={!!checked[it.key]}
+                        onChange={() => setChecked((c) => ({ ...c, [it.key]: !c[it.key] }))}
+                      />
+                      <span className="ao-clean-txt">
+                        <b>{it.label}</b>
+                        <i>{it.desc}</i>
+                      </span>
+                      <span className="ao-clean-size">{formatBytes(it.bytes)}</span>
+                      <button
+                        type="button"
+                        className="ao-clean-peek"
+                        onClick={() => void togglePreview(it)}
+                        title={previewOpen[it.key] ? t('overview.clean.peekHide') : t('overview.clean.peekShow')}
+                      >
+                        {previewOpen[it.key] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                      </button>
+                    </label>
+                    {previewOpen[it.key] && (
+                      <div className="ao-clean-preview">
+                        {previewing[it.key] ? (
+                          <div className="ao-clean-preview-note"><RefreshCw size={12} className="ao-spin" />{t('overview.clean.peekLoading')}</div>
+                        ) : previews[it.key]?.err ? (
+                          // 读失败 ≠ 空清单：明确说明预览失败（不代表没有文件）。
+                          <div className="ao-clean-preview-note err">{t('overview.clean.peekFailed', { msg: previews[it.key]!.err ?? '' })}</div>
+                        ) : ((previews[it.key]?.files.length ?? 0) === 0) ? (
+                          <div className="ao-clean-preview-note">{t('overview.clean.peekEmpty')}</div>
+                        ) : (
+                          <ScopePreview
+                            files={previews[it.key]!.files}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))
               )}
             </div>
