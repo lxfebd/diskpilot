@@ -35,7 +35,8 @@ type Props = {
   onScanDrive: (path: string) => void;
   onScanAll: () => void;
   onRefresh: (path: string) => void;
-  onGoWorkspace: () => void;
+  /** 跳工作台；R91 后带可选盘路径（趋势行点击定位到该盘，无参调用=仅切页）。 */
+  onGoWorkspace: (drivePath?: string) => void;
   onOpenCleanup: () => void;
   /** 跳到工具页的硬件面板看硬盘健康明细（体检条的硬盘格用）。 */
   onGoHardware?: () => void;
@@ -243,7 +244,7 @@ export function startupCheckState(
 
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
 // 纯只读展示：数据来自每次扫描后追加的 space-history.jsonl，绝不触盘 IO。
-function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | null; drives: readonly DriveEntry[]; onGoWorkspace: () => void }) {
+function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | null; drives: readonly DriveEntry[]; onGoWorkspace: (drivePath: string) => void }) {
   const t = useT();
   const [hist, setHist] = useState<Record<string, SpacePoint[]>>({});
   const [histErr, setHistErr] = useState<string | null>(null);
@@ -346,7 +347,7 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
             <button
               key={drive}
               className={'ao-trend-row' + (sel ? ' sel' : '')}
-              onClick={onGoWorkspace}
+              onClick={() => onGoWorkspace(drive)}
               title={t('overview.locateInWorkspace')}
             >
               <span className="ao-trend-drive">
@@ -1032,7 +1033,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           </h2>
           <div className="ao-toplist" style={{ marginTop: 4 }}>
             {topDirs.map((n, i) => (
-              <div key={i} className="ao-top-row" onClick={onGoWorkspace} title={t('overview.locateInWorkspace')}>
+              <div key={i} className="ao-top-row" onClick={() => onGoWorkspace()} title={t('overview.locateInWorkspace')}>
                 <span className="ao-rank">{i + 1}</span>
                 <span className="ao-top-name">{n.name}</span>
                 <span className="ao-top-files">{t('overview.top.files', { count: n.files.toLocaleString() })}</span>
