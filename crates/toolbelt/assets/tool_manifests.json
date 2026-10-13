@@ -58,7 +58,7 @@
       "invocation": {
         "mode": "cli",
         "launchable": true,
-        "args_template": "--demo {demo} {preset} --max-time {max_time}",
+        "args_template": "--demo {demo} {preset} --max-time {max_time} {no_score_box}",
         "params": [
           {
             "name": "demo",
@@ -97,6 +97,13 @@
             "type": "number",
             "required": false,
             "desc": "指定 GPU（0 起）"
+          },
+          {
+            "name": "no_score_box",
+            "flag": "--no-score-box",
+            "type": "boolean",
+            "required": false,
+            "desc": "隐藏分数框（配合 --benchmark 跑基准时输出更干净）"
           }
         ],
         "timeout_secs": 1800
