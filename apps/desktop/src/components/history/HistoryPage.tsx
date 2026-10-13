@@ -32,6 +32,19 @@ function filterLabel(a: UndoActionFilter, t: ReturnType<typeof useT>): string {
       : t('cleanup.actionDelete');
 }
 
+// R73 列表体三态分支顺序核心不变量：读失败（loadErr）必须在空态之前判定——
+// entries 折叠成 [] 时若 loadErr 在，显示「未读到」而不是「还没有清理记录」。
+export type HistoryListState = 'loading' | 'unread' | 'empty' | 'nonempty';
+export function historyListState(
+  entries: readonly unknown[] | null,
+  loadErr: string | null,
+): HistoryListState {
+  if (entries === null) return 'loading';
+  if (loadErr) return 'unread';
+  if (entries.length === 0) return 'empty';
+  return 'nonempty';
+}
+
 export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = {}) {
   const t = useT();
   const [entries, setEntries] = useState<UndoEntry[] | null>(null);
@@ -126,13 +139,13 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
 
       {loadErr && <div className="error hp-msg">{loadErr}</div>}
 
-      {entries === null ? (
+      {historyListState(entries, loadErr) === 'loading' ? (
         <div className="hp-empty"><Loader2 size={14} className="spin" /></div>
-      ) : loadErr ? (
+      ) : historyListState(entries, loadErr) === 'unread' ? (
         // 读失败 ≠ 空记录：不渲染「还没有清理记录」空态（标题已是「未读到」，
         // 错误横幅带原因），避免失败与空态并存。
         <div className="hp-empty muted small">{t('history.unreadBody')}</div>
-      ) : entries.length === 0 ? (
+      ) : historyListState(entries, loadErr) === 'empty' ? (
         <div className="hp-empty">{t('history.empty')}</div>
       ) : filtered.length === 0 ? (
         <div className="hp-empty">{t('history.emptyFiltered')}</div>
