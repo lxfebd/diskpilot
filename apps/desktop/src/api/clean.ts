@@ -336,6 +336,8 @@ export interface WeeklyReport {
   hw_delta: string[];
   /** 每块物理盘的健康摘要（带盘符）。旧归档没有这个字段 → 按空处理。 */
   disks?: WeeklyDiskHealth[];
+  /** 盘健康读取失败的原因（R86）：非空 = 读失败（不是「没读到」）。 */
+  disks_note?: string | null;
 }
 
 /** 周报里的单块盘健康：health 是后端原值，grade 是统一分级（good/caution/bad/unknown）。 */

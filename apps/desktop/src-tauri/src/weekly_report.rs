@@ -36,6 +36,10 @@ pub(crate) struct WeeklyReport {
     /// 每块物理盘的健康摘要（带盘符）。旧归档没有这个字段 → 前端按空处理。
     #[serde(default)]
     pub disks: Vec<DiskHealthBrief>,
+    /// 盘健康读取失败的原因（R86）：非空说明「读失败」而不是「没读到」。
+    /// 旧归档没有此字段 → 前端按「旧格式无数据」处理（不显示失败提示）。
+    #[serde(default)]
+    pub disks_note: Option<String>,
 }
 
 /// 周报里的单块盘健康摘要。`health` 是后端原值（Healthy / Warning / …），
@@ -177,37 +181,42 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
 
     // 4) 每块物理盘的健康摘要（hw_disk_cached 带 5 分钟 TTL，周报是后台作业，跑一次
     //    PowerShell 可以接受）。quick=true：周报只要 WMI 的健康分级，不该在后台
-    //    定时启动 CrystalDiskInfo。读不到就留空数组：不编造，也不让周报假装盘都好。
-    let disks: Vec<DiskHealthBrief> = crate::hw::hw_disk::hw_disk_cached(app, false, true)
-        .ok()
-        .and_then(|v| v.get("disks").cloned())
-        .and_then(|d| d.as_array().cloned())
-        .map(|arr| {
-            arr.iter()
-                .map(|d| {
-                    let health = d
-                        .get("health")
-                        .and_then(|x| x.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    DiskHealthBrief {
-                        friendly: d
-                            .get("friendly")
-                            .and_then(|x| x.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        letters: d
-                            .get("drive_letters")
-                            .and_then(|x| x.as_str())
-                            .unwrap_or("")
-                            .to_string(),
-                        grade: crate::hw::hw_disk::grade_health(&health).to_string(),
-                        health,
-                    }
+    //    定时启动 CrystalDiskInfo。读失败要带原因（disks_note），不能让周报
+    //    假装「盘都没有」——前端据此区分「读失败」与「旧格式无此数据」（R86）。
+    let (disks, disks_note) = match crate::hw::hw_disk::hw_disk_cached(app, false, true) {
+        Ok(v) => (
+            v.get("disks")
+                .and_then(|d| d.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .map(|d| {
+                            let health = d
+                                .get("health")
+                                .and_then(|x| x.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            DiskHealthBrief {
+                                friendly: d
+                                    .get("friendly")
+                                    .and_then(|x| x.as_str())
+                                    .unwrap_or("")
+                                    .to_string(),
+                                letters: d
+                                    .get("drive_letters")
+                                    .and_then(|x| x.as_str())
+                                    .unwrap_or("")
+                                    .to_string(),
+                                grade: crate::hw::hw_disk::grade_health(&health).to_string(),
+                                health,
+                            }
+                        })
+                        .collect()
                 })
-                .collect()
-        })
-        .unwrap_or_default();
+                .unwrap_or_default(),
+            None,
+        ),
+        Err(e) => (Vec::new(), Some(format!("硬盘健康读取失败：{e}"))),
+    };
 
     Ok(WeeklyReport {
         ts: SystemTime::now()
@@ -220,6 +229,7 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         hw_snapshots,
         hw_delta,
         disks,
+        disks_note,
     })
 }
 
@@ -329,6 +339,7 @@ mod tests {
                     grade: "caution".into(),
                 },
             ],
+            disks_note: None,
         };
         let text = serde_json::to_string_pretty(&r).unwrap();
         let back: WeeklyReport = serde_json::from_str(&text).unwrap();
@@ -348,5 +359,29 @@ mod tests {
         let json = r#"{"ts":1,"drives":[],"total_bytes":0,"temp_max_c":null,"hw_snapshots":0,"hw_delta":[]}"#;
         let back: WeeklyReport = serde_json::from_str(json).unwrap();
         assert!(back.disks.is_empty());
+        // 旧格式也没有 disks_note（R86 新字段）→ 前端据此不显示失败提示。
+        assert!(back.disks_note.is_none());
+    }
+
+    #[test]
+    fn disks_note_roundtrips_when_set() {
+        // 生成时盘健康读失败 → disks_note 带原因存档；读回必须保留，
+        // 前端据此显示「读失败」而不是「旧格式无数据」。
+        let r = WeeklyReport {
+            ts: 1,
+            drives: Vec::new(),
+            total_bytes: 0,
+            temp_max_c: None,
+            hw_snapshots: 0,
+            hw_delta: Vec::new(),
+            disks: Vec::new(),
+            disks_note: Some("硬盘健康读取失败：timeout".into()),
+        };
+        let text = serde_json::to_string(&r).unwrap();
+        let back: WeeklyReport = serde_json::from_str(&text).unwrap();
+        assert_eq!(
+            back.disks_note.as_deref(),
+            Some("硬盘健康读取失败：timeout")
+        );
     }
 }

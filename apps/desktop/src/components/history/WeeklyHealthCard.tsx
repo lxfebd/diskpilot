@@ -131,8 +131,18 @@ export function WeeklyHealthCard({
           )}
 
           {/* 周报只报「可清多少」却不报盘的健康，等于把最要紧的一件事漏掉了。
-              旧归档没有 disks：整块不显示，不猜。 */}
-          {disks.length > 0 && (
+              旧归档没有 disks：整块不显示，不猜。
+              R86：生成时盘健康读失败 → disks_note 带原因，显示「读失败」而
+              不是把它伪装成「旧格式没数据」（整块消失）。 */}
+          {disks.length === 0 && report.disks_note ? (
+            <div className="wh-disks">
+              <div className="wh-delta-title">{t('history.weekly.diskHead')}</div>
+              <div className="wh-disks-ok">
+                <ShieldQuestion size={12} />
+                <span className="muted small">{report.disks_note}</span>
+              </div>
+            </div>
+          ) : disks.length > 0 && (
             <div className="wh-disks">
               <div className="wh-delta-title">{t('history.weekly.diskHead')}</div>
               {riskyDisks.length > 0 ? (
