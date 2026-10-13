@@ -55,7 +55,8 @@ export function DriveStrip({ drives, scanning, onScanAll, onScanDrive, onRefresh
         <small>{t('shell.drivestrip.scanAllSub')}</small>
       </button>
       {drives.map((d) => {
-        const usedPct = d.total_bytes > 0 ? Math.round((d.used_bytes / d.total_bytes) * 100) : 0;
+        const capacityKnown = d.total_bytes > 0;
+        const usedPct = capacityKnown ? Math.round((d.used_bytes / d.total_bytes) * 100) : -1;
         const scanned = !!scanCache[normKey(d.path)];
         const isSel = sel === d.path;
         return (
@@ -86,14 +87,16 @@ export function DriveStrip({ drives, scanning, onScanAll, onScanDrive, onRefresh
                   {t('shell.drivestrip.mappedBadge')}
                 </span>
               )}
-              {usedPct >= 95 && <span className="ao-strip-danger">{t('shell.drivestrip.lowSpace')}</span>}
+              {capacityKnown && usedPct >= 95 && <span className="ao-strip-danger">{t('shell.drivestrip.lowSpace')}</span>}
               {scanned && <span className="ao-strip-done"><Check size={10} /> {t('shell.drivestrip.scanned')}</span>}
             </span>
-            <span className={'ao-strip-bar ' + (usedPct >= 85 ? 'r' : usedPct >= 60 ? 'o' : 'g')}>
-              <i style={{ width: `${Math.max(3, Math.min(100, usedPct))}%` }} />
+            <span className={'ao-strip-bar ' + (!capacityKnown ? 'u' : usedPct >= 85 ? 'r' : usedPct >= 60 ? 'o' : 'g')}>
+              <i style={{ width: capacityKnown ? `${Math.max(3, Math.min(100, usedPct))}%` : '100%' }} />
             </span>
             <span className="ao-strip-meta">
-              {t('shell.drivestrip.freeUsed', { free: formatBytes(d.free_bytes), used: formatBytes(d.used_bytes) })}
+              {capacityKnown
+                ? t('shell.drivestrip.freeUsed', { free: formatBytes(d.free_bytes), used: formatBytes(d.used_bytes) })
+                : t('shell.drivestrip.unreadCapacity')}
             </span>
           </button>
         );

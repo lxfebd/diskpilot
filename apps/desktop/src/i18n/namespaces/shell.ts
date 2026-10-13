@@ -12,6 +12,7 @@ export const shell = {
     'shell.drivestrip.lowSpace': '空间告急',
     'shell.drivestrip.scanned': '已扫描',
     'shell.drivestrip.freeUsed': '可用 {free} · 已用 {used}',
+    'shell.drivestrip.unreadCapacity': '容量未读到',
     'shell.drivestrip.mappedBadge': '映射盘',
     'shell.drivestrip.mappedTitle': '这个盘符是 {target} 的映射盘：不是独立物理盘，空间与目标盘同一份',
 
@@ -164,6 +165,7 @@ export const shell = {
     'shell.drivestrip.lowSpace': 'Almost full',
     'shell.drivestrip.scanned': 'Scanned',
     'shell.drivestrip.freeUsed': '{free} free · {used} used',
+    'shell.drivestrip.unreadCapacity': 'Capacity not read',
     'shell.drivestrip.mappedBadge': 'Mapped',
     'shell.drivestrip.mappedTitle': 'This drive letter maps to {target}: not a separate physical disk, the space is the same as the target drive',
 

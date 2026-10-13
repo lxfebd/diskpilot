@@ -58,13 +58,19 @@ export function isDriveCritical(usedBytes: number, totalBytes: number): boolean 
   return driveUsagePct(usedBytes, totalBytes) >= 85;
 }
 
-// 单盘使用率环形图：中心显示百分比
+/** 盘容量是否读到了（total 无效 = 没读到，不是「0 字节」）。 */
+export function capacityKnown(totalBytes: number): boolean {
+  return totalBytes > 0;
+}
+
+// 单盘使用率环形图：中心显示百分比；容量没读到时显示「未读到」而不是 0%。
 function DriveGauge({ usedBytes, totalBytes }: { usedBytes: number; totalBytes: number }) {
   const t = useT();
-  const pct = Math.round(driveUsagePct(usedBytes, totalBytes));
+  const known = capacityKnown(totalBytes);
+  const pct = known ? Math.round(driveUsagePct(usedBytes, totalBytes)) : 0;
   const R = 52;
   const CIRC = 2 * Math.PI * R;
-  const color = isDriveCritical(usedBytes, totalBytes) ? 'var(--risk-danger)' : pct >= 60 ? 'var(--risk-caution)' : 'var(--risk-safe)';
+  const color = !known ? 'var(--paper-3)' : isDriveCritical(usedBytes, totalBytes) ? 'var(--risk-danger)' : pct >= 60 ? 'var(--risk-caution)' : 'var(--risk-safe)';
   return (
     <div className="ao-gauge">
       <svg viewBox="0 0 140 140">
@@ -77,11 +83,11 @@ function DriveGauge({ usedBytes, totalBytes }: { usedBytes: number; totalBytes: 
           stroke={color}
           strokeWidth="16"
           strokeLinecap="round"
-          strokeDasharray={`${(pct / 100) * CIRC} ${CIRC}`}
+          strokeDasharray={`${known ? (pct / 100) * CIRC : 0} ${CIRC}`}
           transform="rotate(-90 70 70)"
         />
-        <text x="70" y="74" textAnchor="middle" className="ao-gauge-pct">{pct}%</text>
-        <text x="70" y="92" textAnchor="middle" className="ao-gauge-label">{t('overview.gauge.used')}</text>
+        <text x="70" y="74" textAnchor="middle" className="ao-gauge-pct">{known ? `${pct}%` : '—'}</text>
+        <text x="70" y="92" textAnchor="middle" className="ao-gauge-label">{known ? t('overview.gauge.used') : t('overview.gauge.unknown')}</text>
       </svg>
     </div>
   );
@@ -368,8 +374,11 @@ function HealthCheckupCard({
   }, []);
 
   // 红盘按物理卷数：映射盘（D: 是 J:\D 的 subst）不是第二块盘，
-  // 直接数条目会把一块盘说成「2 块盘空间告急」。
-  const redCount = physicalDrives(drives).filter((d) => isDriveCritical(d.used_bytes, d.total_bytes)).length;
+  // 直接数条目会把一块盘说成「2 块盘空间告急」。容量没读到的盘（total 无效）
+  // 不能算「无红盘」——没读到 ≠ 健康，单独计 unknownCount 提示。
+  const knownDrives = physicalDrives(drives).filter((d) => capacityKnown(d.total_bytes));
+  const redCount = knownDrives.filter((d) => isDriveCritical(d.used_bytes, d.total_bytes)).length;
+  const redUnknownCount = physicalDrives(drives).length - knownDrives.length;
   const disabledCount = disabledStartupCount(startup);
   const tempHigh = isTempHigh(tempC, TEMP_WARN_C);
 
@@ -390,7 +399,11 @@ function HealthCheckupCard({
         <button className={'ao-checkup-item' + (redCount > 0 ? ' danger' : '')} onClick={onScanAll} disabled={scanning} title={t('overview.checkup.goRescue')}>
           <HardDrive size={14} />
           <span>
-            {redCount > 0 ? t('overview.checkup.redDrive', { n: redCount }) : t('overview.checkup.redDriveNone')}
+            {redCount > 0
+              ? t('overview.checkup.redDrive', { n: redCount })
+              : redUnknownCount > 0
+                ? t('overview.checkup.redDriveUnread', { n: redUnknownCount })
+                : t('overview.checkup.redDriveNone')}
           </span>
         </button>
         {/* 可回收 */}

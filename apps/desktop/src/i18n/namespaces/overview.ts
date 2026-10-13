@@ -19,6 +19,7 @@ export const overview = {
   zh: {
     // 磁盘详情卡（含使用率环）
     'overview.gauge.used': '已使用',
+    'overview.gauge.unknown': '未读到',
     'overview.detail.title': '磁盘详情',
     'overview.detail.name': '{drive} 盘',
     'overview.detail.scanned': '{path} · 容量为系统实时 · 明细已扫描',
@@ -101,6 +102,7 @@ export const overview = {
     'overview.checkup.title': '今日体检',
     'overview.checkup.subtitle': '只读汇总 · 点各项进对应处理',
     'overview.checkup.redDrive': '{n} 块盘已用 ≥85%',
+    'overview.checkup.redDriveUnread': '{n} 块盘容量未读到',
     'overview.checkup.redDriveNone': '无红盘',
     'overview.checkup.reclaimable': '可清理 {size}',
     'overview.checkup.reclaimableNone': '暂无可回收项',
@@ -173,6 +175,7 @@ export const overview = {
   en: {
     // Drive detail card (with the usage ring)
     'overview.gauge.used': 'Used',
+    'overview.gauge.unknown': 'Not read',
     'overview.detail.title': 'Drive details',
     'overview.detail.name': '{drive} drive',
     'overview.detail.scanned': '{path} · capacity is live from Windows · contents scanned',
@@ -256,6 +259,7 @@ export const overview = {
     'overview.checkup.title': 'Today checkup',
     'overview.checkup.subtitle': 'Read-only digest — click an item to open its flow',
     'overview.checkup.redDrive': '{n} drives ≥85% full',
+    'overview.checkup.redDriveUnread': '{n} drives with unread capacity',
     'overview.checkup.redDriveNone': 'No red drives',
     'overview.checkup.reclaimable': '{size} reclaimable',
     'overview.checkup.reclaimableNone': 'Nothing to reclaim',

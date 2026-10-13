@@ -197,6 +197,7 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 .ao-strip-bar.g > i { background: var(--accent-strong); }
 .ao-strip-bar.o > i { background: linear-gradient(90deg, var(--risk-caution), color-mix(in srgb, var(--risk-caution) 55%, var(--surface-3))); }
 .ao-strip-bar.r > i { background: linear-gradient(90deg, var(--risk-danger), color-mix(in srgb, var(--risk-danger) 55%, var(--surface-3))); }
+.ao-strip-bar.u > i { background: var(--paper-3); }
 .ao-strip-meta {
   font-size: 11px;
   color: var(--ink-2);
