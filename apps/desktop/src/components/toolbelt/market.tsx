@@ -28,6 +28,19 @@ export function emptiedAllDedupe(community: readonly RegistryPlugin[], skippedBu
   return indexed && community.length === 0 && skippedBuiltin > 0;
 }
 
+/**
+ * 社区列表三态（R70）：null + warn=读失败（显示「未读到」）；null 无 warn=加载中；
+ * 数组=成功（[] 即真空空市场）。读失败绝不能折叠成 [] 伪装「社区为空」。
+ */
+export type CommunityListState = 'loading' | 'unread' | 'ready';
+export function communityListState(
+  community: readonly RegistryPlugin[] | null,
+  warn: string | null,
+): CommunityListState {
+  if (community === null) return warn ? 'unread' : 'loading';
+  return 'ready';
+}
+
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
@@ -609,10 +622,13 @@ export function MarketPanel() {
           )}
 
           {community === null ? (
-            // null = 加载中或失败（详细原因在顶部 warn 横幅里），列表体只给短状态。
-            <p className={communityWarn ? 'toolbelt-market-warn' : 'muted'}>
-              {communityWarn ? t('toolbelt.mkt.communityUnread') : t('toolbelt.mkt.loading')}
-            </p>
+            // null = 加载中或失败：三态由 communityListState 判定，文案两分支——
+            // 读失败显示「未读到」（warn 横幅带原因），加载中才显示 loading。
+            communityListState(community, communityWarn) === 'unread' ? (
+              <p className="toolbelt-market-warn">{t('toolbelt.mkt.communityUnread')}</p>
+            ) : (
+              <p className="muted">{t('toolbelt.mkt.loading')}</p>
+            )
           ) : community.length === 0 ? (
             // 索引接入成功但列表空：区分「全被内置去重」与「真没条目」。
             // 前者给引导，后者才用冷冰冰的空态文案。

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { communityComingSoon, emptiedAllDedupe } from './market';
+import { communityComingSoon, emptiedAllDedupe, communityListState } from './market';
 import type { RegistryPlugin } from '../../api';
 
 function p(partial: Partial<RegistryPlugin>): RegistryPlugin {
@@ -59,5 +59,25 @@ describe('emptiedAllDedupe（空列表源于内置去重判断）', () => {
 
   it('列表非空 → false（有展示条目不算全去重）', () => {
     expect(emptiedAllDedupe([p({ url: '' })], 5, true)).toBe(false);
+  });
+});
+
+// R70 诚实性回归：社区列表三态——读失败（null + warn）必须显示「未读到」，
+// 绝不折叠成 [] 伪装「社区为空」。未读到 ≠ 空。
+describe('communityListState（社区列表三态）', () => {
+  it('null 无 warn → loading', () => {
+    expect(communityListState(null, null)).toBe('loading');
+  });
+
+  it('null + warn → unread（读失败 ≠ 空市场）', () => {
+    expect(communityListState(null, 'backend down')).toBe('unread');
+  });
+
+  it('空数组（成功读到 0 项）→ ready（真空空市场）', () => {
+    expect(communityListState([], null)).toBe('ready');
+  });
+
+  it('有数据 → ready', () => {
+    expect(communityListState([p({ url: 'https://example.com/a.zip' })], null)).toBe('ready');
   });
 });
