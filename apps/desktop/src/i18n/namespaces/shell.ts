@@ -72,6 +72,9 @@ export const shell = {
     'shell.toast.spaceFull': '{path} 预计 {days} 后空间用满——可以清理了',
     'shell.toast.spaceFullNow': '今天',
     'shell.toast.spaceFullMore': '，另有 {n} 块盘也在预警中',
+    // R103 通知 toast 操作按钮（点击直达对应页面）
+    'shell.toast.actionOverview': '去总览',
+    'shell.toast.actionHistory': '查看周报',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': '目录树',
@@ -233,6 +236,9 @@ export const shell = {
     'shell.toast.spaceFull': '{path} may be full in {days} — time to clean up',
     'shell.toast.spaceFullNow': '0 days',
     'shell.toast.spaceFullMore': ', {n} more drive(s) also approaching full',
+    // R103 notification toast action buttons (jump straight to the relevant page)
+    'shell.toast.actionOverview': 'Go to Overview',
+    'shell.toast.actionHistory': 'View report',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': 'Tree',

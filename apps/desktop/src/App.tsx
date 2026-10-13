@@ -295,6 +295,8 @@ export default function App() {
       useStore.getState().toast(
         t('shell.toast.cleanupReminder', { size: formatBytes(p.total_bytes), n: p.drives.length }),
         'ok',
+        // R103：点击直达总览建议清理区（那里仍是唯一执行入口）。
+        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
       );
     });
     return () => { unlisten.then((u) => u()); };
@@ -310,6 +312,8 @@ export default function App() {
       useStore.getState().toast(
         t('shell.toast.healthWeekly', { size: formatBytes(p.total_bytes) }),
         'ok',
+        // R103：点击直达操作历史页看周报全文。
+        { label: t('shell.toast.actionHistory'), run: () => setView('history') },
       );
     });
     return () => { unlisten.then((u) => u()); };
@@ -330,6 +334,8 @@ export default function App() {
           extra: warns.length > 1 ? t('shell.toast.spaceFullMore', { n: warns.length - 1 }) : '',
         }),
         'warn',
+        // R103：点击直达总览看空间趋势。
+        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
       );
     });
     return () => { unlisten.then((u) => u()); };
@@ -693,13 +699,30 @@ export default function App() {
 
       <div className="toast-stack">
         {toasts.map((toast) => (
-          <button
-            key={toast.id}
-            className={'toast ' + toast.kind}
-            onClick={() => dismissToast(toast.id)}
-          >
-            {toast.text}
-          </button>
+          <div key={toast.id} className={'toast ' + toast.kind}>
+            <span className="toast-text">{toast.text}</span>
+            {toast.action && (
+              <button
+                type="button"
+                className="toast-action"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  toast.action!.run();
+                  dismissToast(toast.id);
+                }}
+              >
+                {toast.action.label}
+              </button>
+            )}
+            <button
+              type="button"
+              className="toast-close"
+              aria-label="close"
+              onClick={() => dismissToast(toast.id)}
+            >
+              <X size={12} />
+            </button>
+          </div>
         ))}
       </div>
     </div>

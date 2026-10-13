@@ -315,6 +315,8 @@ export interface ToastItem {
   id: string;
   text: string;
   kind: 'ok' | 'err' | 'warn';
+  /** R103：可选操作按钮（如后台通知「查看周报/去总览」）。点击后 toast 关闭。 */
+  action?: { label: string; run: () => void };
 }
 
 interface AppState {
@@ -360,7 +362,7 @@ interface AppState {
   /** 把当前活动会话（非空）归档进历史列表并落盘；不换新会话。关窗前调用防对话丢失。 */
   archiveActiveChat: () => void;
 
-  toast: (text: string, kind?: 'ok' | 'err' | 'warn') => void;
+  toast: (text: string, kind?: 'ok' | 'err' | 'warn', action?: { label: string; run: () => void }) => void;
   dismissToast: (id: string) => void;
   setProposal: (p: CleanupProposal | null) => void;
   recyclePaths: (
@@ -464,9 +466,9 @@ export const useStore = create<AppState>((set, get) => {
     set({ selectedPath, selectedNode: node ?? null }),
   addReclaimed: (n) => set((s) => ({ reclaimedBytes: s.reclaimedBytes + n })),
 
-  toast: (text, kind = 'ok') => {
+  toast: (text, kind = 'ok', action) => {
     const id = Math.random().toString(36).slice(2);
-    set((s) => ({ toasts: [...s.toasts, { id, text, kind }] }));
+    set((s) => ({ toasts: [...s.toasts, { id, text, kind, action }] }));
     setTimeout(() => get().dismissToast(id), 5000);
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
