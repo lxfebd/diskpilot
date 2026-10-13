@@ -1,5 +1,5 @@
 //! agent.rs 单元/集成测试（从 agent.rs 拆分，2026-10-12）。
-//! 二进制定位 / 工具清单 50 工具 / 写工具确认门 / 只读工具放行 / scaffolds 注入。
+//! 二进制定位 / 工具清单 75 工具 / 写工具确认门 / 只读工具放行 / scaffolds 注入。
 
 use super::*;
 
@@ -37,7 +37,7 @@ fn agent_server_bin_name_matches_platform() {
 }
 
 #[tokio::test]
-async fn agent_list_tools_returns_50_tools() {
+async fn agent_list_tools_returns_75_tools() {
     if !has_binary() {
         eprintln!("skip: agent-server 未构建（cargo build -p agent-server）");
         return;
