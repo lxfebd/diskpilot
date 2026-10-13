@@ -371,6 +371,10 @@ export const toolbelt = {
     'toolbelt.bench.trend.histName': '传感器趋势',
     'toolbelt.bench.trend.failed': '拉取失败：{msg}',
     'toolbelt.bench.trend.empty': '还没有趋势数据——先跑一次「拉取趋势」或等扫描后采样。',
+    'toolbelt.bench.trend.longBtn': '长期历史（只读）',
+    'toolbelt.bench.trend.longTitle': '读 sensor-history.jsonl 已积累的全部历史（最多 500 条，纯只读、不追加采样）',
+    'toolbelt.bench.trend.longNote': '只读历史回放——采样间隔不均匀（每次 sensor_trend 调用时记录），非等时轴',
+    'toolbelt.bench.trend.longEmpty': '历史文件还没有记录——先用「拉取趋势」采样几次，或压测/体检后回来查看。',
 
     // 基准测试：系统体检报告
     'toolbelt.bench.report.title': '系统体检报告',
@@ -914,6 +918,10 @@ export const toolbelt = {
     'toolbelt.bench.trend.histName': 'Sensor trend',
     'toolbelt.bench.trend.failed': 'Pull failed: {msg}',
     'toolbelt.bench.trend.empty': 'No trend data yet — run "Pull the trend" once, or let it sample after a scan.',
+    'toolbelt.bench.trend.longBtn': 'Full history (read-only)',
+    'toolbelt.bench.trend.longTitle': 'Read all accumulated history from sensor-history.jsonl (up to 500 samples, pure read — no new sample appended)',
+    'toolbelt.bench.trend.longNote': 'Read-only history replay — sample spacing is uneven (each point recorded when sensor_trend was called), not an even-time axis',
+    'toolbelt.bench.trend.longEmpty': 'History file is empty — sample a few times with "Pull the trend", or come back after a stress test / health report.',
 
     // Benchmarks: system health report
     'toolbelt.bench.report.title': 'System health report',

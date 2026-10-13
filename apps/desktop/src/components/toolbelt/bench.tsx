@@ -4,7 +4,7 @@
 // stress_test 是写操作（hw.stress 权限），走两步确认；其余只读 L0 直接跑。
 import { useState, useRef } from 'react';
 import {
-  Activity, Copy, Flame, Gauge, Loader2, Monitor, ShieldAlert, Square, TrendingUp, X,
+  Activity, Copy, Flame, Gauge, History, Loader2, Monitor, ShieldAlert, Square, TrendingUp, X,
 } from 'lucide-react';
 import { api } from '../../api';
 import { isTauri } from '../../env';
@@ -218,10 +218,13 @@ export function BenchPanel() {
 
   // ── G15 传感器趋势：拉取 sensor_trend format=json 渲染折线图 ──
   const [trendLoading, setTrendLoading] = useState(false);
-  const [trendData, setTrendData] = useState<{ points: TrendPoint[] } | null>(null);
+  const [trendData, setTrendData] = useState<{ points: TrendPoint[]; range: 'short' | 'long' } | null>(null);
   const [trendError, setTrendError] = useState<string | null>(null);
 
-  const loadTrend = async () => {
+  // range='short' 走 sensor_trend（会追加一条新采样，语义是"记录并查看最近 20"）；
+  // range='long' 走 sensor_history（R114 纯只读，取已积累的最多 500 条历史，
+  // 不追加不裁剪——页面展示不该有写副作用）。
+  const loadTrend = async (range: 'short' | 'long' = 'short') => {
     if (busy || trendLoading) return;
     if (!isTauri) {
       setTrendError(t('toolbelt.bench.trend.desktopOnly'));
@@ -230,7 +233,9 @@ export function BenchPanel() {
     setTrendLoading(true);
     setTrendError(null);
     try {
-      const r = await api.callTool('sensor_trend', { n: 20, format: 'json' });
+      const tool = range === 'long' ? 'sensor_history' : 'sensor_trend';
+      const n = range === 'long' ? 500 : 20;
+      const r = await api.callTool(tool, { n, format: 'json' });
       if (r.is_error) {
         setTrendError(t('toolbelt.bench.rejected', { text: r.text }));
         setTrendData(null);
@@ -248,8 +253,10 @@ export function BenchPanel() {
         setTrendData(null);
         return;
       }
-      setTrendData({ points: parsed.points });
-      persistHistory('sensor_trend', t('toolbelt.bench.trend.histName'), r.text.slice(0, 400));
+      setTrendData({ points: parsed.points, range });
+      if (range === 'short') {
+        persistHistory('sensor_trend', t('toolbelt.bench.trend.histName'), r.text.slice(0, 400));
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setTrendError(t('toolbelt.bench.trend.failed', { msg }));
@@ -425,16 +432,38 @@ export function BenchPanel() {
           {t('toolbelt.bench.trend.descA')}{' '}<code>sensor_trend</code>{t('toolbelt.bench.trend.descB')}
         </p>
         <div className="toolbelt-actions">
-          <button className="primary" disabled={busy !== null || trendLoading} onClick={loadTrend}>
+          <button
+            className="primary"
+            disabled={busy !== null || trendLoading}
+            onClick={() => void loadTrend('short')}
+          >
             {trendLoading ? <Loader2 size={14} className="spin" /> : null} {trendLoading ? t('toolbelt.bench.trend.loading') : t('toolbelt.bench.trend.btn')}
+          </button>
+          {/* R114：长期历史——纯只读 sensor_history，取已积累的最多 500 条 */}
+          <button
+            className="ghost"
+            disabled={busy !== null || trendLoading}
+            onClick={() => void loadTrend('long')}
+            title={t('toolbelt.bench.trend.longTitle')}
+          >
+            <History size={13} /> {t('toolbelt.bench.trend.longBtn')}
           </button>
         </div>
         {trendError && <p className="muted small bench-trend-err">{trendError}</p>}
         {trendData && trendData.points.length > 0 && (
-          <TrendChart points={trendData.points} />
+          <>
+            {trendData.range === 'long' && (
+              <div className="bench-trend-err muted small">{t('toolbelt.bench.trend.longNote')}</div>
+            )}
+            <TrendChart points={trendData.points} />
+          </>
         )}
         {trendData && trendData.points.length === 0 && (
-          <p className="muted small">{t('toolbelt.bench.trend.empty')}</p>
+          <p className="muted small">
+            {trendData.range === 'long'
+              ? t('toolbelt.bench.trend.longEmpty')
+              : t('toolbelt.bench.trend.empty')}
+          </p>
         )}
       </div>
 

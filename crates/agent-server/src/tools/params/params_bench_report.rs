@@ -96,6 +96,15 @@ pub(crate) struct SensorTrendParams {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(crate) struct SensorHistoryParams {
+    #[schemars(description = "返回最近 N 条历史（默认全部，上限 500，与文件裁剪上限一致）")]
+    #[serde(default, deserialize_with = "lenient::opt_usize")]
+    pub(crate) n: Option<usize>,
+    #[schemars(description = "输出格式：text（默认，人类可读）/ json（结构化数组，供前端折线图）")]
+    pub(crate) format: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(crate) struct SensorAlertParams {
     #[schemars(description = "CPU 温度阈值℃（默认 85，50-110）")]
     #[serde(default, deserialize_with = "lenient::opt_f64")]

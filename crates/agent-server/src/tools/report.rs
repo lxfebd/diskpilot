@@ -21,13 +21,13 @@ mod rep_storage;
 mod rep_util;
 
 pub use rep_alert::sensor_alert;
-pub use rep_report::{sensor_trend, system_report};
+pub use rep_report::{sensor_history, sensor_trend, system_report};
 
 // 回归测试引用的内部符号。
 #[cfg(test)]
 pub(crate) use rep_alert::disk_current_temps;
 #[cfg(test)]
-pub(crate) use rep_report::trend_point;
+pub(crate) use rep_report::{points_from_rows, trend_point};
 #[cfg(test)]
 pub(crate) use rep_util::{extract_first_f64, extract_free_gb, fmt_uptime};
 
@@ -155,5 +155,29 @@ mod tests {
         assert!(p["cpu_temp_c"].is_null());
         assert!(p["mem_percent"].is_null());
         assert_eq!(p["ts"], 0i64);
+    }
+
+    #[test]
+    fn points_from_rows_takes_tail_and_keeps_order() {
+        let rows: Vec<serde_json::Value> = (0..5)
+            .map(|i| serde_json::json!({"ts": 1000 + i, "cpu_temp_c": 40.0 + i as f64}))
+            .collect();
+        // 全部：5 条，旧→新顺序保持
+        let all = points_from_rows(&rows, None);
+        assert_eq!(all.len(), 5);
+        assert_eq!(all[0]["ts"], 1000i64);
+        assert_eq!(all[4]["ts"], 1004i64);
+        // 最近 2 条：取尾部，仍按时间序
+        let tail2 = points_from_rows(&rows, Some(2));
+        assert_eq!(tail2.len(), 2);
+        assert_eq!(tail2[0]["ts"], 1003i64);
+        assert_eq!(tail2[1]["ts"], 1004i64);
+        // n 超上限（500）不 panic、n=0 回退全部
+        let capped = points_from_rows(&rows, Some(999));
+        assert_eq!(capped.len(), 5);
+        let zero = points_from_rows(&rows, Some(0));
+        assert_eq!(zero.len(), 5);
+        // 空输入 → 空输出
+        assert!(points_from_rows(&[], Some(3)).is_empty());
     }
 }

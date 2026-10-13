@@ -83,6 +83,20 @@ pub(crate) fn trend_point(r: &serde_json::Value) -> serde_json::Value {
     })
 }
 
+/// 从已读的 JSONL 行里取最近 `n` 条并转折线图点（纯函数，可单测）：
+/// 按行序保持数组有序（旧→新），取尾部 n 条；n 缺失或 0=全部。
+pub(crate) fn points_from_rows(rows: &[serde_json::Value], n: Option<usize>) -> Vec<serde_json::Value> {
+    let take = n
+        .filter(|v| *v > 0)
+        .map(|v| v.clamp(1, 500))
+        .unwrap_or(rows.len())
+        .min(rows.len());
+    rows.iter()
+        .skip(rows.len().saturating_sub(take))
+        .map(trend_point)
+        .collect()
+}
+
 /// 2) 传感器趋势：追加一条当前快照并返回最近 `n` 条（默认 10，上限 50）。
 ///
 /// `format`：`text`（默认，人类可读）/ `json`（供前端折线图，返回结构化数组）。
@@ -145,5 +159,35 @@ pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, 
         out.push_str(&format!("- {} CPU 最高温：{temp}{mem}\n", fmt_ts(ts)));
     }
     out.push_str("\n完整快照见 sensor_trend 数据目录 sensor-history.jsonl（%LOCALAPPDATA%/diskpilot/agent-server/）。");
+    Ok(out)
+}
+
+/// 3) 只读传感器历史（不给 sensor_trend 的默认行为——它每次调用都会追加一条
+/// 新快照，不适合纯展示读取）。本函数只读 `sensor-history.jsonl` 现有内容，
+/// 不追加、不裁剪、不触发采集。`n` 取最近 n 条（默认全部，上限 500，与文件
+/// 裁剪上限一致）；`format=json` 返回结构化数组（同 trend_point 契约）。
+pub fn sensor_history(n: Option<usize>, format: Option<String>) -> Result<String, String> {
+    let rows = read_jsonl("sensor-history.jsonl");
+    let points = points_from_rows(&rows, n);
+    if format.as_deref().map(|s| s == "json").unwrap_or(false) {
+        return Ok(serde_json::json!({ "total": rows.len(), "points": points }).to_string());
+    }
+    let mut out = String::from("传感器历史（只读，不追加采集）：\n");
+    out.push_str(&format!("共 {} 条已记录，本次返回最近 {} 条：\n", rows.len(), points.len()));
+    for r in points {
+        let ts = r.get("ts").and_then(|v| v.as_i64()).unwrap_or(0);
+        let temp = r
+            .get("cpu_temp_c")
+            .and_then(|v| v.as_f64())
+            .map(|t| format!("{t:.1}℃"))
+            .unwrap_or_else(|| "无".into());
+        let mem = r
+            .get("mem_percent")
+            .and_then(|v| v.as_f64())
+            .map(|p| format!(" / 内存 {p:.0}%"))
+            .unwrap_or_default();
+        out.push_str(&format!("- {} CPU 最高温：{temp}{mem}\n", fmt_ts(ts)));
+    }
+    out.push_str("\n数据源：%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl（sensor_trend 追加写入）。");
     Ok(out)
 }

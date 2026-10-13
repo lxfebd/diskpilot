@@ -147,8 +147,8 @@ describe('parseProposalFromText', () => {
 });
 
 describe('mcpToolRegistry（agent-server 工具集）', () => {
-  it('registers exactly 75 tools（64 只读 + 11 写操作，含 AIDA64 复刻 13 个 + 装机验收 3 个 + 信息补全 4 个 + SuperIO 兜底 + 压测停止信号）', () => {
-    expect(mcpToolRegistry).toHaveLength(75);
+  it('registers exactly 76 tools（65 只读 + 11 写操作，含 AIDA64 复刻 14 个 + 装机验收 3 个 + 信息补全 4 个 + SuperIO 兜底 + 压测停止信号）', () => {
+    expect(mcpToolRegistry).toHaveLength(76);
   });
 
   it('写操作工具 process_kill / service_control / fan_selfheal_fix / fan_control 存在', () => {
@@ -167,11 +167,11 @@ describe('mcpToolRegistry（agent-server 工具集）', () => {
     expect(names).toContain('toolbelt_run');
   });
 
-  it('AIDA64 基准复刻 10 个工具存在（bench_cpu/memory/disk + stress_test + 报告/趋势/告警 + 信息补全）', () => {
+  it('AIDA64 基准复刻 11 个工具存在（bench_cpu/memory/disk + stress_test + 报告/趋势/历史/告警 + 信息补全）', () => {
     const names = mcpToolRegistry.map((t) => t.name);
     for (const n of [
       'bench_cpu', 'bench_memory', 'bench_disk', 'stress_test',
-      'system_report', 'sensor_trend', 'sensor_alert',
+      'system_report', 'sensor_trend', 'sensor_history', 'sensor_alert',
       'hw_cpu_features', 'hw_dram_timings', 'hw_displays',
     ]) {
       expect(names).toContain(n);
@@ -262,7 +262,7 @@ describe('dynamicMcpTools（用户 MCP 服务器）', () => {
     const before = mcpToolRegistry.length;
     await refreshMcpTools();
     expect(mcpToolRegistry.length).toBe(before);
-    expect(mcpToolRegistry).toHaveLength(75);
+    expect(mcpToolRegistry).toHaveLength(76);
   });
 });
 
