@@ -489,6 +489,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [cleaning, setCleaning] = useState(false);
   const [cleanLoading, setCleanLoading] = useState(false);
+  const [cleanErr, setCleanErr] = useState<string | null>(null);
   // 两步确认（铁律#6）：第一次点「立即清理」只进入预备态，按钮变为明确的
   // 确认文案；5 秒内再点一次才真正执行。倒计时结束自动解除，防止页面停留
   // 久了之后误点第二下。
@@ -498,6 +499,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
   const loadClean = useCallback(async (path: string) => {
     setCleanLoading(true);
+    setCleanErr(null);
     try {
       // cachedOnly=true：只读后端缓存/内存树，秒回；从不触发全盘 walk。
       // 应用刚启动还没扫过盘时，这里会拿到空列表并显示「先扫描再算」——
@@ -514,8 +516,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       }));
       setCleanItems(items);
       setChecked(Object.fromEntries(items.map((i) => [i.key, true])));
-    } catch {
-      /* 后端统计失败视为无可清理项，不阻塞界面 */
+    } catch (e) {
+      // 后端统计失败不是「真没有」：记错误，让空态显示「没能读取」而不是
+      // 「很干净」——读失败时说盘很干净是最误导的收尾。
+      setCleanItems([]);
+      setCleanErr(String(e instanceof Error ? e.message : e));
     } finally {
       setCleanLoading(false);
     }
@@ -719,14 +724,15 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     onGoWorkspace();
   };
 
-  // 建议清理项目：三种状态互斥，避免"选择磁盘/未发现/可释放"叠在一起
-  type CleanState = 'loading' | 'empty' | 'has';
-  const cleanState: CleanState = cleanLoading ? 'loading' : cleanItems.length > 0 ? 'has' : 'empty';
+  // 建议清理项目：四种状态互斥，避免"读失败/选择磁盘/未发现/可释放"叠在一起
+  type CleanState = 'loading' | 'empty' | 'has' | 'error';
+  const cleanState: CleanState = cleanLoading ? 'loading' : cleanErr !== null ? 'error' : cleanItems.length > 0 ? 'has' : 'empty';
   const cleanSummaryText =
     cleanState === 'loading' ? t('overview.clean.checking')
       : cleanState === 'has' ? t('overview.clean.estimated', { size: formatBytes(selBytes) })
-        : selScanned ? t('overview.clean.noneOnDrive')
-          : t('overview.clean.needScan');
+        : cleanState === 'error' ? t('overview.clean.failed')
+          : selScanned ? t('overview.clean.noneOnDrive')
+            : t('overview.clean.needScan');
 
   return (
     <div className="asset-overview">
@@ -876,6 +882,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             <div className="ao-clean-list">
               {cleanState === 'loading' ? (
                 <div className="ao-empty"><RefreshCw size={16} className="ao-spin" />{t('overview.clean.checkingList')}</div>
+              ) : cleanState === 'error' ? (
+                <div className="ao-empty"><AlertTriangle size={16} />{t('overview.clean.loadFailed', { msg: cleanErr ?? '' })}</div>
               ) : cleanState === 'empty' ? (
                 <div className="ao-empty">
                   {selScanned

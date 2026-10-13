@@ -69,6 +69,8 @@ export const overview = {
     'overview.clean.estimated': '预计可释放 {size}',
     'overview.clean.noneOnDrive': '当前磁盘无可清理项',
     'overview.clean.needScan': '扫描后自动计算可回收空间（不扫描不占磁盘 IO）',
+    'overview.clean.failed': '没能读取可清理项',
+    'overview.clean.loadFailed': '没能读取可清理项（不代表没有；可能是后端未就绪或统计失败）：{msg}',
     'overview.clean.spotless': '{drive} 盘很干净，暂无可清理项目',
     // 拆前缀/后缀是为了保住中间的 <b> 加粗数字，英文靠两个片段间的空格拼成整句。
     'overview.clean.selPrefix': '已选',
@@ -222,6 +224,8 @@ export const overview = {
     'overview.clean.estimated': 'About {size} to free',
     'overview.clean.noneOnDrive': 'Nothing to clean on this drive',
     'overview.clean.needScan': 'Space reclaimable is computed after a scan (no scan, no disk IO)',
+    'overview.clean.failed': 'Could not read cleanup items',
+    'overview.clean.loadFailed': 'Could not read cleanup items (this does not mean there are none; backend may be unavailable or stats failed): {msg}',
     'overview.clean.spotless': 'The {drive} drive looks clean — nothing to remove',
     // Split around the bold numbers; the space between the two fragments joins the sentence.
     'overview.clean.selPrefix': 'Selected',
