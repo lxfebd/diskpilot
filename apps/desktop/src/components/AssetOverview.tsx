@@ -528,9 +528,26 @@ export function previewTotalBytes(items: readonly { bytes: number | null }[]): n
   return anyKnown ? known : null;
 }
 
+/** R128：dry-run 预览项按字节降序——大文件优先展示（用户一眼看到哪些匹配
+ *  项占用最多）。bytes 为 null（后端未统计）的项沉底且保持相对顺序；不修改
+ *  入参数组。导出供单测锁定排序规则。 */
+export function sortPreviewItemsByBytes(
+  items: readonly { path: string; bytes: number | null }[],
+): { path: string; bytes: number | null }[] {
+  return [...items].sort((a, b) => {
+    if (a.bytes == null && b.bytes == null) return 0;
+    if (a.bytes == null) return 1;
+    if (b.bytes == null) return -1;
+    return b.bytes - a.bytes;
+  });
+}
+
 function ScopePreview({ items }: { items: readonly { path: string; bytes: number | null }[] }) {
   const t = useT();
-  const files = items.map((i) => i.path);
+  // R128：按字节降序排序后再截断——大文件优先展示（PEEK_LIMIT 截断时
+  // 留下的是占用最大的项，而不是后端返回顺序里的前几条）。
+  const sorted = sortPreviewItemsByBytes(items);
+  const files = sorted.map((i) => i.path);
   const { shown, more } = truncatePaths(files, PEEK_LIMIT);
   // 头部合计：同一份 dry-run 返回的实测字节求和（部分缺失 → 按已知合计，
   // 缺失的只影响精度不影响「要删哪些」——执行时以实测为准）。
@@ -543,7 +560,7 @@ function ScopePreview({ items }: { items: readonly { path: string; bytes: number
       </div>
       <ul className="ao-clean-preview-list">
         {shown.map((p) => {
-          const it = items.find((i) => i.path === p);
+          const it = sorted.find((i) => i.path === p);
           return (
             <li key={p} className="ao-clean-preview-file" title={p}>
               <File size={11} />

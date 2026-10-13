@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -405,5 +405,27 @@ describe('R126 建议清理排序 sortCleanItemsByBytes', () => {
   });
   it('空数组幂等', () => {
     expect(sortCleanItemsByBytes([])).toEqual([]);
+  });
+});
+
+describe('R128 dry-run 预览排序 sortPreviewItemsByBytes', () => {
+  const mk = (path: string, bytes: number | null) => ({ path, bytes });
+  it('按字节降序——大文件排最前', () => {
+    const sorted = sortPreviewItemsByBytes([mk('a', 10), mk('b', 5000), mk('c', 300)]);
+    expect(sorted.map((s) => s.path)).toEqual(['b', 'c', 'a']);
+  });
+  it('bytes 为 null 的项沉底且保持相对顺序', () => {
+    const sorted = sortPreviewItemsByBytes([
+      mk('unknown1', null),
+      mk('big', 9000),
+      mk('unknown2', null),
+      mk('small', 5),
+    ]);
+    expect(sorted.map((s) => s.path)).toEqual(['big', 'small', 'unknown1', 'unknown2']);
+  });
+  it('不修改入参数组（纯函数）', () => {
+    const input = [mk('a', 2), mk('b', 1)];
+    sortPreviewItemsByBytes(input);
+    expect(input.map((i) => i.path)).toEqual(['a', 'b']);
   });
 });

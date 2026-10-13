@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 dry-run 预览按字节降序（R128）
+
+- 总览「建议清理」展开明细按可回收字节降序——大文件优先展示
+  （PEEK_LIMIT 截断时留下的是占用最大的项，而不是后端返回顺序里的
+  前几条）；bytes 缺失（后端未统计）的项沉底且保持相对顺序。
+- 抽纯函数 `sortPreviewItemsByBytes`（不改入参数组）+ 单测
+  （+3 tests，393 总）。
+
 ### 2026-10-13 GPU 压测历史叠画标题区分（R127）
 
 - 甜甜圈历史叠画标题改为「历次 GPU 压测温度对比」——CPU（stress_test）
