@@ -105,20 +105,27 @@ fn last_same_root_within(p: &Path, root: &str, now: u64, within_secs: u64) -> bo
     false
 }
 
-/// 读取全部历史（按写入顺序）。缺文件返回空 vec；坏行静默跳过。
-/// 跨 root 的记录交错保存，按 root 聚合成 map 后返回。
-pub(crate) fn read_history(app: &tauri::AppHandle) -> HashMap<String, Vec<SpacePoint>> {
+/// 读取全部历史（按写入顺序）。
+/// - 缺文件 = 从未记录过（真空态）→ 空 map 诚实；
+/// - 文件存在但打开/读取失败 → 报错（诚实性族规 R88）：否则曲线区把
+///   「读失败」展示成「没有历史」（读失败伪装成空历史）；
+/// - 跨 root 的记录交错保存，按 root 聚合成 map 后返回。
+pub(crate) fn read_history(
+    app: &tauri::AppHandle,
+) -> Result<HashMap<String, Vec<SpacePoint>>, String> {
     let Some(p) = history_path(app) else {
-        return HashMap::new();
+        return Err("无法定位数据目录".into());
     };
     read_history_at(&p)
 }
 
 /// 供单测使用的纯函数入口（不依赖 AppHandle）。
-fn read_history_at(p: &Path) -> HashMap<String, Vec<SpacePoint>> {
-    let Ok(f) = std::fs::File::open(p) else {
-        return HashMap::new();
-    };
+fn read_history_at(p: &Path) -> Result<HashMap<String, Vec<SpacePoint>>, String> {
+    if !p.exists() {
+        // 从未记录过（真空态），不是读失败。
+        return Ok(HashMap::new());
+    }
+    let f = std::fs::File::open(p).map_err(|e| format!("读取空间历史失败: {e}"))?;
     let mut out: HashMap<String, Vec<SpacePoint>> = HashMap::new();
     for line in BufReader::new(f).lines().map_while(Result::ok) {
         if let Ok(pt) = serde_json::from_str::<SpacePoint>(&line) {
@@ -130,7 +137,7 @@ fn read_history_at(p: &Path) -> HashMap<String, Vec<SpacePoint>> {
             v.drain(..v.len() - MAX_PER_ROOT);
         }
     }
-    out
+    Ok(out)
 }
 
 /// 读回并裁剪超长历史（写文件）。由 `get_space_history` 在返回前调用，
@@ -139,7 +146,10 @@ pub(crate) fn prune_history(app: &tauri::AppHandle) {
     let Some(p) = history_path(app) else {
         return;
     };
-    let map = read_history_at(&p);
+    // 写路径（非展示面）：读不开就没法裁剪，静默返回即可。
+    let Ok(map) = read_history_at(&p) else {
+        return;
+    };
     if map.values().all(|v| v.len() <= MAX_PER_ROOT) {
         return;
     }
@@ -208,12 +218,15 @@ pub(crate) fn record_after_scan(app: &tauri::AppHandle, key: &str) {
 }
 
 /// 读取全部磁盘空间历史（只读 L0，总览页画趋势曲线）。
-/// 返回 `{root -> [SpacePoint]}`，按写入顺序排列；缺文件返回空对象。
+/// 返回 `{root -> [SpacePoint]}`，按写入顺序排列；缺文件 = 真空态返回空对象；
+/// 存在但读失败 → Err（R88）：前端 AssetOverview 曲线区据此显示「未读到」。
 #[tauri::command]
-pub(crate) fn get_space_history(app: tauri::AppHandle) -> HashMap<String, Vec<SpacePoint>> {
-    let map = read_history(&app);
+pub(crate) fn get_space_history(
+    app: tauri::AppHandle,
+) -> Result<HashMap<String, Vec<SpacePoint>>, String> {
+    let map = read_history(&app)?;
     prune_history(&app);
-    map
+    Ok(map)
 }
 
 #[cfg(test)]
@@ -245,8 +258,23 @@ mod tests {
     fn missing_file_returns_empty() {
         let dir = std::env::temp_dir().join(format!("space-hist-none-{}", std::process::id()));
         let p = dir.join("space-history.jsonl");
-        let map = read_history_at(&p);
-        assert!(map.is_empty(), "缺文件必须静默返回空 map");
+        let map = read_history_at(&p).expect("缺文件 = 真空态，不该报错");
+        assert!(map.is_empty(), "缺文件必须返回空 map");
+    }
+
+    #[test]
+    fn unreadable_file_is_error_not_empty() {
+        // 读失败伪装成「没有历史」是 R88 修的谎言：存在但打不开 → Err。
+        // Windows 上 File::open 一个目录会失败——路径同名占位即可构造。
+        let dir = std::env::temp_dir().join(format!("space-hist-bad-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = dir.join("space-history.jsonl");
+        std::fs::create_dir_all(&p).unwrap();
+        assert!(p.exists(), "前置：路径存在");
+        let r = read_history_at(&p);
+        assert!(r.is_err(), "存在但读取失败必须报错，不得回空 map");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -270,7 +298,7 @@ mod tests {
             writeln!(f, "{}", serde_json::to_string(&pt).unwrap()).unwrap();
         }
         drop(f);
-        let map = read_history_at(&p);
+        let map = read_history_at(&p).expect("有效文件必须读出");
         let pts = map.get("C:\\").expect("应有 C:\\ 历史");
         assert_eq!(pts.len(), 3);
         assert_eq!(pts[0].used_bytes, 40);
@@ -298,7 +326,7 @@ mod tests {
         };
         writeln!(f, "{}", serde_json::to_string(&pt).unwrap()).unwrap();
         drop(f);
-        let map = read_history_at(&p);
+        let map = read_history_at(&p).expect("有效文件必须读出");
         assert_eq!(map.len(), 1, "坏行静默跳过，只留合法行");
         assert_eq!(map.get("D:\\").unwrap().len(), 1);
         let _ = std::fs::remove_dir_all(&dir);
@@ -352,7 +380,7 @@ mod tests {
             writeln!(f, "{}", serde_json::to_string(&pt).unwrap()).unwrap();
         }
         drop(f);
-        let map = read_history_at(&p);
+        let map = read_history_at(&p).expect("有效文件必须读出");
         let pts = map.get("C:\\").unwrap();
         assert_eq!(pts.len(), MAX_PER_ROOT, "超长必须裁剪到 180");
         assert_eq!(pts[0].used_bytes, 20, "裁剪后应保留最新 180 条");
@@ -366,7 +394,8 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("space-hist-cmd-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        let map = read_history_at(&dir.join("space-history.jsonl"));
+        let map =
+            read_history_at(&dir.join("space-history.jsonl")).expect("缺文件 = 真空态，不该 Err");
         assert!(map.is_empty());
         let _ = std::fs::remove_dir_all(&dir);
     }
