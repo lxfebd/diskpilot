@@ -31,6 +31,7 @@ export function emptiedAllDedupe(community: readonly RegistryPlugin[], skippedBu
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
+  const [marketErr, setMarketErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -63,7 +64,13 @@ export function MarketPanel() {
   const refresh = useCallback(() => {
     // 安装/卸载/激活插件后工具集变化，AI 侧 toolbelt 索引缓存必须作废重拉。
     invalidateToolbeltCache();
-    api.pluginMarket().then(setMarket).catch(() => setMarket([]));
+    setMarketErr(null);
+    api.pluginMarket().then(setMarket).catch((e) => {
+      // 读失败 ≠ 没有插件：保持 null + 单独记错误，不能伪装成空列表
+      // （空列表会渲染成「没有匹配工具」，把读失败说成查无结果）。
+      setMarket(null);
+      setMarketErr(String(e instanceof Error ? e.message : e));
+    });
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -344,7 +351,7 @@ export function MarketPanel() {
               <h3>{t('toolbelt.mkt.builtinTitle')}</h3>
               <p className="muted small">{t('toolbelt.mkt.builtinDescA')} <code>tool.plugin.json</code>{t('toolbelt.mkt.builtinDescB')}</p>
             </div>
-            <span className="toolbelt-market-count">{t('toolbelt.mkt.installedRatio', { done: installedCount, total: market?.length ?? 0 })}</span>
+            <span className="toolbelt-market-count">{t('toolbelt.mkt.installedRatio', { done: installedCount, total: market ? market.length : '?' })}</span>
           </div>
 
           <div className="toolbelt-market-search">
@@ -372,7 +379,9 @@ export function MarketPanel() {
             </div>
           )}
 
-          {market === null ? (
+          {marketErr !== null ? (
+            <p className="error">{t('toolbelt.mkt.builtinLoadFailed', { msg: marketErr })}</p>
+          ) : market === null ? (
             <p className="muted">{t('toolbelt.mkt.loading')}</p>
           ) : filtered.length === 0 ? (
             <p className="muted">{t('toolbelt.mkt.noMatch')}</p>

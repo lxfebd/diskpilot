@@ -414,6 +414,7 @@ export const toolbelt = {
 
     // 插件市场（内置工具插件化 + 社区注册表 / 远端索引分发）
     'toolbelt.mkt.loadFailed': '社区注册表加载失败：{msg}',
+    'toolbelt.mkt.builtinLoadFailed': '内置工具市场读取失败（不代表没有工具）：{msg}',
     'toolbelt.mkt.urlInstallOk': '远程插件安装成功：{name}',
     'toolbelt.mkt.needUrl': '请输入插件 zip 的 https 下载地址。',
     'toolbelt.mkt.urlInstallFailed': '远程安装失败：{msg}',
@@ -943,6 +944,7 @@ export const toolbelt = {
 
     // Plugin market (plugin-ising built-in tools + community registry / remote index)
     'toolbelt.mkt.loadFailed': 'Community registry failed to load: {msg}',
+    'toolbelt.mkt.builtinLoadFailed': 'Failed to read the built-in tool market (this does not mean there are no tools): {msg}',
     'toolbelt.mkt.urlInstallOk': 'Remote plugin installed: {name}',
     'toolbelt.mkt.needUrl': 'Enter the https download address of the plugin zip first.',
     'toolbelt.mkt.urlInstallFailed': 'Remote install failed: {msg}',
