@@ -122,6 +122,10 @@ export function Settings({ onClose, initialTab }: Props) {
   // 切换后 bump 一次版本触发重渲染，避免组件内再存一份状态导致双源漂移。
   const [, bumpPrefs] = useReducer((v: number) => v + 1, 0);
   const [keepFiles, setKeepFilesState] = useState(getKeepFiles());
+  // 后端 general.json 权威开关（hardwareAccel/closeToTray）读取状态：
+  // null=未查，'ok'=已同步，'err'=读失败（开关按本地默认渲染，但必须告知
+  // 「未读到后端当前状态」，避免把默认值当真相）。
+  const [backendPrefState, setBackendPrefState] = useState<null | 'ok' | 'err'>(null);
   // 本机性能档位：决定本地 Ollama 是否吃得消、该建议云端还是本地。
   const [hw, setHw] = useState<HwProfile | null>(null);
   // 检查更新：null = 未查过；字符串 = 出错信息；对象 = 结果。
@@ -221,9 +225,10 @@ export function Settings({ onClose, initialTab }: Props) {
       .then((c) => {
         setPref('hardwareAccel', c.hardware_accel);
         setPref('closeToTray', c.close_to_tray);
+        setBackendPrefState('ok');
         bumpPrefs();
       })
-      .catch(() => {});
+      .catch(() => { setBackendPrefState('err'); });
   }, []);
 
   const provider = providerOverride ?? detectProvider(baseUrl);
@@ -624,6 +629,12 @@ export function Settings({ onClose, initialTab }: Props) {
               </div>
               <input type="checkbox" className="switch" checked={prefs.closeToTray} onChange={(e) => togglePref('closeToTray', e.target.checked)} />
             </div>
+
+            {backendPrefState === 'err' && (
+              <div className="hint" style={{ marginBottom: 8 }}>
+                <span className="muted small">{t('settings.general.backendUnread')}</span>
+              </div>
+            )}
 
             <label className="field">
               <span>{t('settings.general.keepFiles')}</span>
