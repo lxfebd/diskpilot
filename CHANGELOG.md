@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-13 清理预览窗大小口径说明（R132）
+
+- dry-run 预览窗的路径列表上方加一行说明：行内标注的是本次清理实际
+  释放空间（dry-run 实测），头部合计含扫描估算，两者可能略有出入——
+  诚实呈现口径差异，避免用户对「行内大小之和 ≠ 合计」产生困惑。
+- i18n：`cleanup.previewSizeNote`（zh/en 成对）；样式
+  `.cleanup-preview-size-note`。
+
 ### 2026-10-13 清理预览窗显示单文件大小（R131）
 
 - 清理页 dry-run 预览窗的路径清单每条在行尾显示「实际释放字节」——

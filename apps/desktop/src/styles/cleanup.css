@@ -394,6 +394,10 @@ main.cleanup-page > .cleanup-page {
   font-size: 10px;
   color: var(--ink-3);
 }
+.cleanup-preview-size-note {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
 .cleanup-preview-more {
   margin-top: 4px;
   padding-top: 4px;

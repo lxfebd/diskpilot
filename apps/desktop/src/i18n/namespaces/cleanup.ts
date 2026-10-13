@@ -85,6 +85,7 @@ export const cleanup = {
     'cleanup.previewDriveItem': '{letter}: 盘 {files} 个',
     'cleanup.riskyBlockedHint': '先勾上面的备份确认，再点清理',
     'cleanup.previewMore': '… 还有 {n} 个未列出',
+    'cleanup.previewSizeNote': '每个文件后标注的是这次清理实际释放的空间；头部合计含扫描估算，两者可能略有出入',
     'cleanup.previewDisclaimer':
       '仔细看一眼上面的路径，确认没有你想留的东西。回收站默认 30 天后自动清空。',
     'cleanup.armAgainHint': '5 秒内再点一次真删',
@@ -236,6 +237,7 @@ export const cleanup = {
     'cleanup.previewDriveItem': 'drive {letter}: {files}',
     'cleanup.riskyBlockedHint': 'Tick the backup confirmation above before cleaning',
     'cleanup.previewMore': '… {n} more not listed',
+    'cleanup.previewSizeNote': 'Size after each file is the space this cleanup actually frees; the header total includes scan estimates and may differ slightly',
     'cleanup.previewDisclaimer':
       'Look over the paths above and make sure nothing here is worth keeping. The Recycle Bin empties itself after 30 days by default.',
     'cleanup.armAgainHint': 'Click once more within 5 seconds to delete for real',

@@ -154,6 +154,10 @@ export function DryRunPreviewDialog({
           </div>
         )}
 
+        <div className="cleanup-preview-size-note muted small">
+          {t('cleanup.previewSizeNote')}
+        </div>
+
         <div className="cleanup-preview-list">
           {preview.sampleEntries.map((e) => (
             <div key={e.source} className="cleanup-preview-path" title={e.source}>
