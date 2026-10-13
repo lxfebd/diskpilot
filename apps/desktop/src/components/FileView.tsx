@@ -43,11 +43,18 @@ function fillForExt(ext: string): string {
   return EXT_PALETTE[Math.abs(h) % EXT_PALETTE.length];
 }
 
-function matchesQuery(name: string, q: string): boolean {
+/** 搜索匹配：文件名优先；文件名不中时再试相对路径（`downloads` 能命中
+ *  `downloads/installer.exe`）。通配符（* ?）只对文件名生效，路径片段按
+ *  包含匹配——`*.mp4` 依然只搜文件名，不会因路径里有 `.mp4` 误命中。
+ *  纯函数，可单测。 */
+export function matchesQuery(name: string, q: string, rel?: string): boolean {
   if (!q) return true;
   const lower = q.toLowerCase();
   // 支持 * 与 ? 通配符，如 *.mp4  /  instal?er  /  node*
-  if (!lower.includes('*') && !lower.includes('?')) return name.toLowerCase().includes(lower);
+  if (!lower.includes('*') && !lower.includes('?')) {
+    if (name.toLowerCase().includes(lower)) return true;
+    return !!rel && rel.toLowerCase().includes(lower);
+  }
   const re = new RegExp('^' + lower.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i');
   return re.test(name);
 }
@@ -102,7 +109,7 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
   }, [focusNode]);
 
   const filtered = useMemo(() => {
-    let list = files.list.filter((f) => matchesQuery(f.name, filteredQuery));
+    let list = files.list.filter((f) => matchesQuery(f.name, filteredQuery, f.rel));
     if (extFilter) list = list.filter((f) => extOf(f.name) === extFilter);
     if (sortKey === 'size') list.sort((a, b) => (sortDesc ? b.size - a.size : a.size - b.size));
     else if (sortKey === 'name') list.sort((a, b) => (sortDesc ? b.name.localeCompare(a.name) : a.name.localeCompare(b.name)));
