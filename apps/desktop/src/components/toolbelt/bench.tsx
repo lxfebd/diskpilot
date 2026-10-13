@@ -21,6 +21,20 @@ interface BenchHistoryEntry {
   result: string;
 }
 
+/// 从压测结果文本解析「温度曲线：0.0s=52.1°C; …」行 → 实时温度点序列。
+/// 后端输出行前缀是中文格式、不是文案，保持原样；解析失败/不足 2 点返回
+/// null（调用方不渲染曲线）。导出以便单测锁定格式契约。
+export function parseStressCurve(text: string): { sec: number; temp: number }[] | null {
+  // 后端输出行前缀，用于匹配、不是文案，故保持原样。
+  const line = text.split('\n').find((l) => l.startsWith('温度曲线：')); // @i18n-keep
+  if (!line) return null;
+  const points: { sec: number; temp: number }[] = [];
+  for (const m of line.matchAll(/(\d+(?:\.\d+)?)s=(\d+(?:\.\d+)?)°C/g)) {
+    points.push({ sec: parseFloat(m[1]), temp: parseFloat(m[2]) });
+  }
+  return points.length >= 2 ? points : null;
+}
+
 export function BenchPanel() {
   const t = useT();
   const toast = useStore((s) => s.toast);
@@ -114,15 +128,8 @@ export function BenchPanel() {
     const text = await run('stress_test', t('toolbelt.bench.stress.name'), { secs: 5, max_temp: 95 }, true);
     // 从结果解析「温度曲线：0.0s=52.1°C; …」行，渲染压测实时温度折线
     if (text) {
-      // 后端输出行前缀，用于匹配、不是文案，故保持原样。
-      const line = text.split('\n').find((l) => l.startsWith('温度曲线：')); // @i18n-keep
-      if (line) {
-        const points: { sec: number; temp: number }[] = [];
-        for (const m of line.matchAll(/(\d+(?:\.\d+)?)s=(\d+(?:\.\d+)?)°C/g)) {
-          points.push({ sec: parseFloat(m[1]), temp: parseFloat(m[2]) });
-        }
-        if (points.length >= 2) setStressCurve(points);
-      }
+      const points = parseStressCurve(text);
+      if (points) setStressCurve(points);
     }
   };
 
