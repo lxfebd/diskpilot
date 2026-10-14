@@ -5,6 +5,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 健康度评级卡行渲染收敛（R137）
+
+- HealthRatingCard 内三段几乎逐字重复的 JSX（label + 档位徽标 / 无数据）
+  收敛为 `RatingRow` 单行组件 + 数据驱动 rows 渲染——改文案或结构从
+  改 3 处变改 1 处；GPU 维度 `gpuTemps ?? []` 走同一条 null 判定路径
+  （空样本 → distSummary null → 不评级，行为不变）。
+
 ### 2026-10-14 长期历史三路 series 一次提取（R136）
 
 - 长期历史视图里 cpu/gpu/mem 三路提取（`.map().filter()`）此前在

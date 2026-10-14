@@ -509,6 +509,29 @@ export function extractLongSeries(points: readonly TrendPoint[]): {
 // <20% 良好、否则关注。复用 distSummary（已是纯函数）；任一维度无有效样本
 // 则该维度不评级（如实缺省）。放长期历史视图顶部——先出结论，再看下方分布
 // 明细。R122：GPU 温度并入（可选维度，无数据不上行）。
+// R137：三行同构 JSX（label + badge/na）收敛为 RatingRow 单行组件 + 数据
+// 驱动渲染——此前 3 段几乎逐字重复，改文案/结构要改 3 处。
+
+/** 一行评级：有摘要则出档位徽标 + 高值占比，无摘要如实显示「无数据」。 */
+function RatingRow({ label, summary }: { label: string; summary: { highRatio: number } | null }) {
+  const t = useT();
+  const rating = summary ? rateHealth(summary.highRatio) : null;
+  return (
+    <div className="health-rating-row">
+      <span className="muted small">{label}</span>
+      {rating ? (
+        <span className={`health-rating-badge health-rating-${rating}`}>
+          {t(`toolbelt.healthRating.${rating}`)}
+          <small>
+            {t('toolbelt.healthRating.ratio', { pct: (summary!.highRatio * 100).toFixed(0) })}
+          </small>
+        </span>
+      ) : (
+        <span className="muted small">{t('toolbelt.healthRating.na')}</span>
+      )}
+    </div>
+  );
+}
 
 export function HealthRatingCard({
   cpuTemps,
@@ -521,48 +544,21 @@ export function HealthRatingCard({
 }) {
   const t = useT();
   const tS = distSummary(cpuTemps, 70);
-  const gS = gpuTemps ? distSummary(gpuTemps, 70) : null;
+  const gS = distSummary(gpuTemps ?? [], 70);
   const mS = distSummary(memPercents, 85);
   if (!tS && !gS && !mS) return null;
-  const tRating = tS ? rateHealth(tS.highRatio) : null;
-  const gRating = gS ? rateHealth(gS.highRatio) : null;
-  const mRating = mS ? rateHealth(mS.highRatio) : null;
+
+  const rows: { key: string; label: string; summary: { highRatio: number } | null }[] = [
+    { key: 'cpu', label: t('toolbelt.healthRating.cpu'), summary: tS },
+    { key: 'gpu', label: t('toolbelt.healthRating.gpu'), summary: gS },
+    { key: 'mem', label: t('toolbelt.healthRating.mem'), summary: mS },
+  ];
 
   return (
     <div className="health-rating-card" role="status">
-      <div className="health-rating-row">
-        <span className="muted small">{t('toolbelt.healthRating.cpu')}</span>
-        {tRating ? (
-          <span className={`health-rating-badge health-rating-${tRating}`}>
-            {t(`toolbelt.healthRating.${tRating}`)}
-            <small>{t('toolbelt.healthRating.ratio', { pct: (tS!.highRatio * 100).toFixed(0) })}</small>
-          </span>
-        ) : (
-          <span className="muted small">{t('toolbelt.healthRating.na')}</span>
-        )}
-      </div>
-      <div className="health-rating-row">
-        <span className="muted small">{t('toolbelt.healthRating.gpu')}</span>
-        {gRating ? (
-          <span className={`health-rating-badge health-rating-${gRating}`}>
-            {t(`toolbelt.healthRating.${gRating}`)}
-            <small>{t('toolbelt.healthRating.ratio', { pct: (gS!.highRatio * 100).toFixed(0) })}</small>
-          </span>
-        ) : (
-          <span className="muted small">{t('toolbelt.healthRating.na')}</span>
-        )}
-      </div>
-      <div className="health-rating-row">
-        <span className="muted small">{t('toolbelt.healthRating.mem')}</span>
-        {mRating ? (
-          <span className={`health-rating-badge health-rating-${mRating}`}>
-            {t(`toolbelt.healthRating.${mRating}`)}
-            <small>{t('toolbelt.healthRating.ratio', { pct: (mS!.highRatio * 100).toFixed(0) })}</small>
-          </span>
-        ) : (
-          <span className="muted small">{t('toolbelt.healthRating.na')}</span>
-        )}
-      </div>
+      {rows.map((r) => (
+        <RatingRow key={r.key} label={r.label} summary={r.summary} />
+      ))}
       <div className="bench-trend-legend">
         <span className="muted small">{t('toolbelt.healthRating.note')}</span>
       </div>
