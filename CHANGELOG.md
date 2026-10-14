@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 周报巡检到期提示（R151）
+
+- 周巡检简报卡的日期行新增「巡检到期」提示：距上次生成满 7 天显示
+  「该重新巡检了」（警示色），未到期显示「N 天后到期」（弱化）——周报
+  按「周」节奏，用户此前只能自己算「上次是几天前」。
+- 新纯函数 `nextInspectionDue(ts, nowSec)`（满 7 天 due / 未满 daysLeft /
+  时间戳无效 → null 不编造）；i18n `history.weekly.dueNow` / `dueIn`
+  （zh/en 成对）；CSS `.wh-due` / `.wh-due-ok`。WeeklyHealthCard.test.ts
+  +5（447 总 / 35 files）。
+
 ### 2026-10-14 清理历史统计跟随筛选集（R150）
 
 - 清理历史页头部「累计释放」「最早日期」从永远基于全量改为基于**当前

@@ -22,6 +22,19 @@ export function reportAgeLabel(ts: number, nowSec: number, t: ReturnType<typeof 
   return formatDateKey(new Date(ts * 1000));
 }
 
+/** R151：巡检到期——周报按「周」节奏，距上次生成满 7 天即该重新生成。
+ *  纯函数：返回 { due, daysLeft }；时间戳无效（≤0 或非有限）→ null（不编造
+ *  到期日）。daysLeft 已钳到 ≥最初的差值，due=true 时 daysLeft 可能为 0。 */
+export function nextInspectionDue(
+  ts: number,
+  nowSec: number,
+): { due: boolean; daysLeft: number } | null {
+  if (!Number.isFinite(ts) || ts <= 0) return null;
+  const elapsed = Math.floor((nowSec - ts) / DAY_SECS);
+  const left = 7 - elapsed;
+  return { due: left <= 0, daysLeft: Math.max(0, left) };
+}
+
 /** R95 周报环比：cur 与 prev 两份都存在才对比，字段有一方缺失就返回 null（不编造）。 */
 export interface WeeklyDelta {
   /** 可清理量差值：>0 更多可清，<0 更少，=0 持平。prev 无数据 → null。 */
@@ -135,6 +148,14 @@ export function WeeklyHealthCard({
                 {reportAgeLabel(report.ts, Date.now() / 1000, t)}
                 {' · '}
                 {t('history.weekly.snapshots', { n: report.hw_snapshots })}
+                {' · '}
+                {(() => {
+                  const due = nextInspectionDue(report.ts, Date.now() / 1000);
+                  if (!due) return null;
+                  return due.due
+                    ? <span className="wh-due">{t('history.weekly.dueNow')}</span>
+                    : <span className="wh-due-ok">{t('history.weekly.dueIn', { n: due.daysLeft })}</span>;
+                })()}
               </span>
             </div>
           </div>

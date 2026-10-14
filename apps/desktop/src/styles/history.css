@@ -196,6 +196,16 @@
   color: var(--risk-danger);
 }
 
+/* R151：巡检到期提示——到期用警示色（该动手了），未到期保持弱化 */
+.wh-due {
+  color: var(--risk-caution);
+  font-weight: 700;
+}
+
+.wh-due-ok {
+  opacity: .75;
+}
+
 .wh-drives {
   list-style: none;
   margin: 0;
