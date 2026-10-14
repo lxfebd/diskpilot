@@ -31,7 +31,12 @@ import {
   type PrefName,
 } from '../theme';
 import { useT, setLang, getLangMode, type Lang } from '../i18n';
-import { UPDATE_SKIP_KEY, shouldPromptUpdate } from '../updateSkip';
+import {
+  UPDATE_SKIP_KEY,
+  formatSkipRecord,
+  parseSkipRecord,
+  shouldPromptUpdate,
+} from '../updateSkip';
 
 type Props = { onClose: () => void; initialTab?: SettingsTab };
 
@@ -139,16 +144,20 @@ export function Settings({ onClose, initialTab }: Props) {
   const [updateProgress, setUpdateProgress] = useState(0);
   // R158：已跳过的版本（localStorage 持久化）——用户明确不想装的版本不再
   // 反复提示；出现更新的版本时重新提示（跳过是版本相关的，不是永久静音）。
-  const [skippedVer, setSkippedVer] = useState<string | null>(() => localStorage.getItem(UPDATE_SKIP_KEY));
+  // R161：记录里带跳过时刻，超过 UPDATE_SKIP_DAYS 天同样重新提示（跳过
+  // 不该是永久静音；旧格式纯版本串仍能读）。
+  const [skipRec, setSkipRec] = useState(() => parseSkipRecord(localStorage.getItem(UPDATE_SKIP_KEY)));
+  const skippedVer = skipRec?.version ?? null;
 
   const skipThisVersion = (ver: string) => {
-    localStorage.setItem(UPDATE_SKIP_KEY, ver);
-    setSkippedVer(ver);
+    const rec = { version: ver, atMs: Date.now() };
+    localStorage.setItem(UPDATE_SKIP_KEY, formatSkipRecord(rec.version, rec.atMs));
+    setSkipRec(rec);
   };
 
   const unskipVersion = () => {
     localStorage.removeItem(UPDATE_SKIP_KEY);
-    setSkippedVer(null);
+    setSkipRec(null);
   };
 
   const checkUpdate = async () => {
@@ -680,12 +689,12 @@ export function Settings({ onClose, initialTab }: Props) {
                   {update !== null && typeof update === 'object' && !update.available && (
                     <span><CheckCircle2 size={13} style={{ verticalAlign: '-2px', color: 'var(--accent-strong)', marginRight: 4 }} />{t('settings.general.updateLatest', { ver: update.current })}</span>
                   )}
-                  {update !== null && typeof update === 'object' && update.available && shouldPromptUpdate(skippedVer, update.latest) && (
+                  {update !== null && typeof update === 'object' && update.available && shouldPromptUpdate(skippedVer, update.latest, skipRec?.atMs ?? 0) && (
                     <span><b>{t('settings.general.updateFound', { latest: update.latest, current: update.current })}</b></span>
                   )}
                   {/* R158：用户已跳过这个版本——如实说清「有新版本但你选了跳过」，
                       给恢复入口（不是静默不提示）。 */}
-                  {update !== null && typeof update === 'object' && update.available && !shouldPromptUpdate(skippedVer, update.latest) && (
+                  {update !== null && typeof update === 'object' && update.available && !shouldPromptUpdate(skippedVer, update.latest, skipRec?.atMs ?? 0) && (
                     <span className="muted small">
                       {t('settings.general.updateSkipped', { latest: update.latest })}
                       <button type="button" className="ghost small" style={{ marginLeft: 6 }} onClick={unskipVersion}>
@@ -702,7 +711,7 @@ export function Settings({ onClose, initialTab }: Props) {
                     {t('settings.general.updateGo')} <ExternalLink size={11} style={{ verticalAlign: '-1px' }} />
                   </a>
                 )}
-{update !== null && typeof update === 'object' && update.available && shouldPromptUpdate(skippedVer, update.latest) && (
+{update !== null && typeof update === 'object' && update.available && shouldPromptUpdate(skippedVer, update.latest, skipRec?.atMs ?? 0) && (
                   <button
                     type="button"
                     className="ghost small"

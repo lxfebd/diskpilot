@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 跳过更新带有效期（R161）
+
+- R158 的「跳过此版本」是无限期的——安全补丁可能重要，用户也可能改主意。
+  现记录跳过时刻，**满 90 天同版本也会重新提示**；出现更新版本仍立即提示。
+  提示文案写明这一点（「90 天后或出现更新版本时会再提示」）。
+- `updateSkip.ts`：新增 `parseSkipRecord` / `formatSkipRecord`（存储格式
+  `版本@时刻ms`；**旧格式纯版本串仍能读**，atMs 0 视为不过期）+
+  `UPDATE_SKIP_DAYS = 90`；`shouldPromptUpdate` 增加 skippedAtMs / nowMs
+  参数。i18n updateSkipTitle 文案更新。updateSkip.test.ts +8（484 总 /
+  36 files）。
+
 ### 2026-10-15 已装台账条目标「有新版」（R160）
 
 - 已安装台账此前每行都有「更新」按钮，但没有任何「是否真有新版」的指示

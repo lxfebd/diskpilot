@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions, hasRegistryUpdate, shouldPromptUpdate } from './updateSkip';
+import {
+  UPDATE_SKIP_DAYS,
+  compareVersions,
+  formatSkipRecord,
+  hasRegistryUpdate,
+  parseSkipRecord,
+  shouldPromptUpdate,
+} from './updateSkip';
 
 // R158：版本比较——「跳过此版本」必须版本相关，不能永久静音。
 describe('compareVersions（点分版本比较）', () => {
@@ -40,6 +47,53 @@ describe('shouldPromptUpdate（是否仍提示该版本）', () => {
 
   it('远端版本反而更旧（回滚/误报）→ 不提示', () => {
     expect(shouldPromptUpdate('1.5.0', '1.4.9')).toBe(false);
+  });
+});
+
+// R161：跳过记录带时刻 + 过期重提示——跳过不是永久静音。
+describe('R161 parseSkipRecord / formatSkipRecord', () => {
+  it('往返一致', () => {
+    const raw = formatSkipRecord('1.5.0', 1_700_000_000_000);
+    expect(raw).toBe('1.5.0@1700000000000');
+    expect(parseSkipRecord(raw)).toEqual({ version: '1.5.0', atMs: 1_700_000_000_000 });
+  });
+
+  it('旧格式（纯版本串）→ atMs 0（不过期，兼容 R158 记录）', () => {
+    expect(parseSkipRecord('1.5.0')).toEqual({ version: '1.5.0', atMs: 0 });
+  });
+
+  it('空 / 版本为空 → null', () => {
+    expect(parseSkipRecord(null)).toBeNull();
+    expect(parseSkipRecord('')).toBeNull();
+    expect(parseSkipRecord('@123')).toBeNull();
+  });
+
+  it('时刻非法 → atMs 0（不编造时间）', () => {
+    expect(parseSkipRecord('1.5.0@abc')).toEqual({ version: '1.5.0', atMs: 0 });
+    expect(parseSkipRecord('1.5.0@-5')).toEqual({ version: '1.5.0', atMs: 0 });
+  });
+});
+
+describe('R161 跳过的有效期（UPDATE_SKIP_DAYS）', () => {
+  const DAY = 86_400_000;
+  const now = 1_800_000_000_000;
+  const ago = (days: number) => now - days * DAY;
+
+  it('未到期且无新版 → 不提示', () => {
+    expect(shouldPromptUpdate('1.5.0', '1.5.0', ago(UPDATE_SKIP_DAYS - 1), now)).toBe(false);
+  });
+
+  it('跳过满 UPDATE_SKIP_DAYS 天 → 重新提示（同版本也提示）', () => {
+    expect(shouldPromptUpdate('1.5.0', '1.5.0', ago(UPDATE_SKIP_DAYS), now)).toBe(true);
+    expect(shouldPromptUpdate('1.5.0', '1.5.0', ago(UPDATE_SKIP_DAYS + 10), now)).toBe(true);
+  });
+
+  it('无时刻（旧记录 / 0）→ 视为不过期', () => {
+    expect(shouldPromptUpdate('1.5.0', '1.5.0', 0, now)).toBe(false);
+  });
+
+  it('有新版时优先级更高（未到期也提示）', () => {
+    expect(shouldPromptUpdate('1.5.0', '1.6.0', ago(1), now)).toBe(true);
   });
 });
 
