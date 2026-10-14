@@ -225,6 +225,19 @@ export function SafeToolIcon({ tool, size, color }: { tool: ToolbeltCatalogItem;
   );
 }
 
+/** R171：AI 分区按写入权限筛选——只读工具无需确认、写操作会改系统状态，
+ *  用户常想只看一类（如「只读的安全先试」）。纯函数：'all' 原样返回。 */
+export type AiPermFilter = 'all' | 'read' | 'write';
+
+export function filterAgentTools<T extends { writable: boolean }>(
+  list: readonly T[],
+  filter: AiPermFilter,
+): T[] {
+  if (filter === 'read') return list.filter((m) => !m.writable);
+  if (filter === 'write') return list.filter((m) => m.writable);
+  return [...list];
+}
+
 /** R170：工具墙搜索匹配——此前只搜 name/description/tags，按厂商（Intel /
  *  NVIDIA）、版本号或架构找工具都搜不到。纯函数：全字段小写包含匹配，
  *  query 已由调用方 trim+lower（空串 → true，调用方本就只在有词时调）。 */

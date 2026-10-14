@@ -25,8 +25,9 @@ import { splitArgs } from './services';
 import { agentDescQuality, similarAgentTools } from './similar';
 import {
   CATEGORY_COLOR, CATEGORY_ICON, RISK_ICON, SafeToolIcon, adNoticeFor, catDisplayName,
-  matchesToolQuery,
+  filterAgentTools, matchesToolQuery,
   plainDescriptionFor, riskLabelDisplay, toolColorFor, toolIconFor,
+  type AiPermFilter,
 } from './catalog';
 import type { ToolContext } from './shared';
 
@@ -701,6 +702,8 @@ export function CatalogWall({
   // 「隐藏推广」开关：图吧包内自带流量卡/加速器返利链等纯推广 .bat，
   // 标 is_promotion 后默认**隐藏**（用户明确要求去推广）；可手动切回显示。
   const [hidePromo, setHidePromo] = useState<boolean>(() => localStorage.getItem('toolwall.hidePromo') !== '0');
+  // R171：AI 分区按写入权限筛选（只读无需确认、写操作改系统状态）。
+  const [aiPerm, setAiPerm] = useState<AiPermFilter>('all');
   // R142：三个弹层都支持 Esc 关闭（启动确认 / exe 详情 / AI 工具详情）——
   // 此前只有点遮罩能关。Esc 一律是「取消」，不会启动任何工具。
   useEscapeKey(() => setConfirmLaunch(null), confirmLaunch !== null && !launching);
@@ -804,11 +807,13 @@ export function CatalogWall({
   const aiTools = useMemo(() => {
     if (!agentTools) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return agentTools;
-    return agentTools.filter(
+    // R171：先按写入权限筛，再按搜索词筛（两者可叠加）。
+    const byPerm = filterAgentTools(agentTools, aiPerm);
+    if (!q) return byPerm;
+    return byPerm.filter(
       (mt) => mt.name.toLowerCase().includes(q) || mt.description.toLowerCase().includes(q),
     );
-  }, [agentTools, query]);
+  }, [agentTools, query, aiPerm]);
 
   // R135：AI 分区卡片「相关工具」——列表层即见关联，无需逐个点开详情。
   // 每个工具对其同类取 top-2 名字；无描述/无关联则该卡不显示。
@@ -1015,6 +1020,21 @@ export function CatalogWall({
                 <div className="toolwall-grid-head">
                   <span className="toolwall-grid-title">{t('toolbelt.wall.aiSection', { n: aiTools.length })}</span>
                   <span className="muted small">{t('toolbelt.wall.aiSectionHint')}</span>
+                  {/* R171：按写入权限筛——只读无需确认，写操作改系统状态 */}
+                  <span className="sys-filter-chips toolwall-ai-perm">
+                    {(['all', 'read', 'write'] as AiPermFilter[]).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        className={'chip' + (aiPerm === f ? ' active' : '')}
+                        onClick={() => setAiPerm(f)}
+                      >
+                        {f === 'all' ? t('toolbelt.wall.aiPermAll')
+                          : f === 'read' ? t('toolbelt.wall.aiPermRead')
+                          : t('toolbelt.wall.aiPermWrite')}
+                      </button>
+                    ))}
+                  </span>
                 </div>
                 <div className="toolwall-grid toolwall-ai-grid">
                   {aiTools.map((mt) => (

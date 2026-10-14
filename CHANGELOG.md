@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 AI 分区按写入权限筛选（R171）
+
+- 「AI 可操作」分区此前只能按搜索词过滤，卡片上的只读/写徽标无法用来筛
+  选——想「先用只读的试试」得逐张看徽标。现加「全部 / 只读 / 写操作」chips，
+  与搜索词可叠加（先权限后搜索）。
+- 新纯函数 `filterAgentTools(list, filter)` + `AiPermFilter`
+  （catalog.tsx 导出）；i18n `toolbelt.wall.aiPermAll/aiPermRead/aiPermWrite`
+  （zh/en 成对）；CSS 复用 `.sys-filter-chips`。catalog.test.ts +4
+  （527 总 / 38 files）。
+
 ### 2026-10-15 工具墙搜索覆盖厂商/版本/架构（R170）
 
 - 工具墙搜索此前只匹配名称 / 描述 / 标签——按厂商（Intel、NVIDIA）、版本号

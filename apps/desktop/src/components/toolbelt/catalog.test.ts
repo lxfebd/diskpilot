@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesToolQuery } from './catalog';
+import { filterAgentTools, matchesToolQuery } from './catalog';
 import type { ToolbeltCatalogItem } from '../../api';
 
 // R170：工具墙搜索匹配——此前只搜 name/description/tags，按厂商/版本/架构
@@ -53,5 +53,36 @@ describe('matchesToolQuery（工具墙搜索）', () => {
     const bare = mk({ publisher: null, version: null, description: '', tags: [] });
     expect(matchesToolQuery(bare, 'nvidia')).toBe(false);
     expect(matchesToolQuery(bare, 'cpu')).toBe(true); // name 兜底
+  });
+});
+
+// R171：AI 分区按写入权限筛选——只读无需确认、写操作改系统状态。
+describe('filterAgentTools（AI 工具权限筛选）', () => {
+  const list = [
+    { name: 'hw_temperature', writable: false },
+    { name: 'process_kill', writable: true },
+    { name: 'system_probe', writable: false },
+  ];
+
+  it('all → 原样返回（含顺序）', () => {
+    expect(filterAgentTools(list, 'all').map((m) => m.name)).toEqual([
+      'hw_temperature', 'process_kill', 'system_probe',
+    ]);
+  });
+
+  it('read → 仅只读（writable false）', () => {
+    expect(filterAgentTools(list, 'read').map((m) => m.name)).toEqual(['hw_temperature', 'system_probe']);
+  });
+
+  it('write → 仅写操作', () => {
+    expect(filterAgentTools(list, 'write').map((m) => m.name)).toEqual(['process_kill']);
+  });
+
+  it('空列表 → 空数组；不改入参（all 分支复制数组）', () => {
+    expect(filterAgentTools([], 'write')).toEqual([]);
+    const input = [...list];
+    const out = filterAgentTools(input, 'all');
+    expect(input).toHaveLength(3);
+    expect(out).not.toBe(input);
   });
 });
