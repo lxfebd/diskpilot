@@ -759,6 +759,22 @@ export function CatalogWall({
     );
   }, [agentTools, query]);
 
+  // R135：AI 分区卡片「相关工具」——列表层即见关联，无需逐个点开详情。
+  // 每个工具对其同类取 top-2 名字；无描述/无关联则该卡不显示。
+  const aiRelatedMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    if (!agentTools) return map;
+    for (const mt of agentTools) {
+      const related = similarAgentTools(
+        { name: mt.name, description: mt.description },
+        agentTools.map((m) => ({ name: m.name, description: m.description })),
+        2,
+      );
+      if (related.length > 0) map.set(mt.name, related.map((r) => r.name));
+    }
+    return map;
+  }, [agentTools]);
+
   const launchTool = useCallback(async (tool: ToolbeltCatalogItem, confirmed = false) => {
     const m = manifestFor(tool.name);
     // L3 永久禁止：直接拦截，不给确认机会
@@ -962,6 +978,13 @@ export function CatalogWall({
                       <span className={'toolwall-ai-badge' + (mt.writable ? ' toolwall-ai-badge-write' : '')}>
                         {mt.writable ? t('toolbelt.wall.aiWrite') : t('toolbelt.wall.aiRead')}
                       </span>
+                      {/* R135：列表层直接见关联（top-2），不逼用户逐个点开详情 */}
+                      {(aiRelatedMap.get(mt.name)?.length ?? 0) > 0 && (
+                        <span className="toolwall-ai-related muted small">
+                          {t('toolbelt.wall.aiRelated')}
+                          {aiRelatedMap.get(mt.name)!.join(' · ')}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

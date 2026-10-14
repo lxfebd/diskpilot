@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 AI 分区卡片显示相关工具（R135）
+
+- 「AI 可操作」分区的每张卡片底部显示 top-2 相关工具名（复用 R134 的
+  `similarAgentTools` 描述词袋打分，useMemo 缓存 O(n²) 结果）——列表层
+  即见关联，不必逐个点开详情弹窗。无关联的卡不显示该行。
+- i18n `toolbelt.wall.aiRelated`（zh/en 成对）；CSS `.toolwall-ai-related`
+  单行截断防撑破卡片。
+
 ### 2026-10-13 AI 工具详情「同类推荐」（R134）
 
 - AI 可操作工具的详情弹窗（agentDetail）底部新增「同类 AI 工具」——
