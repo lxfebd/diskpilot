@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 exe 工具详情显示「AI 里也能做」（R147）
+
+- exe 工具详情卡在「同类建议」（tags 重叠）之下新增「AI 里也能做」区块
+  ——用该工具的名称 + 描述 + 标签拼成查询串，与 agent-server 的 MCP 工具
+  描述做词袋匹配（复用 R134 的 `similarAgentTools`），命中则列出可点击的
+  AI 工具名，点击直接切到该 AI 工具的详情卡。
+- 补上了「exe 工具墙 ↔ AI 分区」两个此前互不相通的入口。i18n
+  `toolbelt.detail.aiSimilarTitle`（zh/en 成对）。
+
 ### 2026-10-14 硬件趋势每条线显示有效读数个数（R146）
 
 - 硬件趋势标题的「N 份快照」是全部快照数，不代表每条线有多少真实读数

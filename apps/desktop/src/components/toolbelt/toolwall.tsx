@@ -305,23 +305,39 @@ function ToolDetailModal({
   tool,
   manifest,
   similar,
+  aiTools,
   onClose,
   onLaunch,
   onOpenPerms,
   onOpenSimilar,
+  onOpenAi,
 }: {
   tool: ToolbeltCatalogItem;
   manifest: ToolManifest | undefined;
   /** 同类工具（tags 重叠 ≥1，排除自身）：详情卡底部「同类建议」点击切换。 */
   similar: ToolbeltCatalogItem[];
+  /** R147：AI 可操作工具清单——按描述词袋匹配出「AI 里也能做」的同类项。 */
+  aiTools?: AgentToolMeta[];
   onClose: () => void;
   onLaunch: () => void;
   onOpenPerms: () => void;
   onOpenSimilar?: (name: string) => void;
+  onOpenAi?: (name: string) => void;
 }) {
   const t = useT();
   const color = CATEGORY_COLOR[tool.category] ?? '#64748b';
   const showIcon = <SafeToolIcon tool={tool} size={18} color={color} />;
+  // R147：AI 里也能做——exe 工具的 名称+描述+标签 拼成查询串，与 AI 工具
+  // 描述做词袋匹配（复用 similar.ts）。无匹配则不显示区块。
+  const aiSimilar = useMemo(() => {
+    if (!aiTools || aiTools.length === 0) return [];
+    const q = [tool.name, tool.description, ...(tool.tags ?? [])].join(' ');
+    return similarAgentTools(
+      { name: tool.name, description: q },
+      aiTools.map((m) => ({ name: m.name, description: m.description })),
+      4,
+    );
+  }, [aiTools, tool.name, tool.description, tool.tags]);
 
   const permLabel: Record<string, string> = {
     L0: t('toolbelt.detail.permL0'),
@@ -514,6 +530,27 @@ function ToolDetailModal({
                     <SafeToolIcon tool={s} size={13} color={CATEGORY_COLOR[s.category] ?? '#64748b'} />
                     {s.name}
                     <span className="muted small tdm-similar-cat">{catDisplayName(s.category)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* R147：AI 里也能做——用 exe 工具的名称/描述/标签与 AI 工具描述做
+              词袋匹配（复刻 R134 的 similarAgentTools），点名字切换 AI 详情。 */}
+          {aiSimilar.length > 0 && (
+            <div className="tdm-similar">
+              <div className="tdm-section-title"><Bot size={13} /> {t('toolbelt.detail.aiSimilarTitle')}</div>
+              <div className="tdm-similar-list">
+                {aiSimilar.map((m) => (
+                  <button
+                    key={m.name}
+                    className="tdm-similar-item"
+                    onClick={() => onOpenAi?.(m.name)}
+                    title={m.description}
+                  >
+                    <Bot size={13} />
+                    {m.name}
                   </button>
                 ))}
               </div>
@@ -1061,11 +1098,19 @@ export function CatalogWall({
               .slice(0, 5)
               .map((x) => x.t);
           })()}
+          aiTools={agentTools ?? undefined}
           onClose={() => setDetail(null)}
           onLaunch={() => { setDetail(null); launchTool(detail); }}
           onOpenSimilar={(name) => {
             const next = allTools.find((t) => t.name === name);
             if (next) setDetail(next);
+          }}
+          onOpenAi={(name) => {
+            const next = (agentTools ?? []).find((m) => m.name === name);
+            if (next) {
+              setDetail(null);
+              setAgentDetail(next);
+            }
           }}
           onOpenPerms={() => {
             setDetail(null);
