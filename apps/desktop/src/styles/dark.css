@@ -305,6 +305,11 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
   color: var(--paper);
   border: none;
 }
+/* R163：新版的更新说明行——比描述更弱，但要让用户看到「改了什么」 */
+.toolbelt-mkt-upd-notes {
+  margin-top: 2px;
+  line-height: 1.5;
+}
 /* 迁移内容物管控：含广告/商业推广的工具标记（琥珀色，提醒用户启动前预期） */
 .toolwall-ad-badge {
   font-size: 9px;

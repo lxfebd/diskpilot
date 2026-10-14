@@ -62,6 +62,21 @@ export function sortInstalledPlugins<T extends { id: string; name: string; insta
   });
 }
 
+/**
+ * R163：取某个版本的更新说明（notes）——用户在决定是否更新前该看到「这版
+ * 改了什么」。纯函数：versions 缺省 / 版本对不上 / notes 为空 → null（不编造，
+ * 界面据此不显示说明行）。
+ */
+export function versionNotes(
+  plugin: { version: string; versions?: { version: string; notes?: string }[] },
+  version?: string,
+): string | null {
+  const target = version ?? plugin.version;
+  const hit = (plugin.versions ?? []).find((v) => v.version === target);
+  const notes = hit?.notes?.trim();
+  return notes ? notes : null;
+}
+
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
@@ -689,6 +704,9 @@ export function MarketPanel() {
                 // R159：已装但远端更新 → 允许更新并显式标注；否则保持原来的
                 // 安装/已装语义（不误报更新：见 hasRegistryUpdate）。
                 const upd = hasRegistryUpdate(p, installed ?? []);
+                // R163：有新版时把该版本的更新说明取出来——用户决定更新前
+                // 该知道「这版改了什么」；没有说明则不出行（不编造）。
+                const updNotes = upd ? versionNotes(p) : null;
                 return (
                 <div key={p.id} className="toolbelt-market-item">
                   <div className="toolbelt-market-item-icon">
@@ -715,6 +733,12 @@ export function MarketPanel() {
                       {p.tags?.map((tag) => <span key={tag} className="toolbelt-perm-chip">{tag}</span>)}
                     </div>
                     <p className="toolbelt-market-item-desc">{p.description || t('toolbelt.mkt.noDesc')}</p>
+                    {/* R163：更新说明——决定更新前先看这版改了什么 */}
+                    {updNotes && (
+                      <p className="muted small toolbelt-mkt-upd-notes">
+                        <b>{t('toolbelt.mkt.updNotesHead', { version: p.version })}</b> {updNotes}
+                      </p>
+                    )}
                     <p className="muted small">
                       {p.category} · {t('toolbelt.mkt.authorPrefix')}{p.author || t('toolbelt.common.unknown')}{p.downloads > 0 ? ` · ${t('toolbelt.mkt.downloads', { n: p.downloads })}` : ''}
                       {p.homepage ? <> · <a href={p.homepage} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{t('toolbelt.mkt.homepage')}</a></> : ''}

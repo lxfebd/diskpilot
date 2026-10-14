@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 社区插件显示新版更新说明（R163）
+
+- 社区条目在「有新版」时，于描述下追加该版本的更新说明
+  （`RegistryPlugin.versions[].notes`）——用户在决定是否更新前该知道
+  「这版改了什么」，否则只能盲点。没有说明的版本不出行（不编造）。
+- 新纯函数 `versionNotes(plugin, version?)`（缺省取当前版本；版本对不上 /
+  notes 为空 / 无 versions → null）；i18n `toolbelt.mkt.updNotesHead`
+  （zh/en 成对）；CSS `.toolbelt-mkt-upd-notes`。market.test.ts +4
+  （492 总 / 36 files）。
+
 ### 2026-10-15 已装台账排序（R162）
 
 - 已安装台账此前按后端返回顺序排列——装多了以后「哪个该动」要一行行找。

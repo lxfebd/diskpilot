@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { communityComingSoon, emptiedAllDedupe, communityListState, sortInstalledPlugins } from './market';
+import { communityComingSoon, emptiedAllDedupe, communityListState, sortInstalledPlugins, versionNotes } from './market';
 import type { RegistryPlugin } from '../../api';
 
 function p(partial: Partial<RegistryPlugin>): RegistryPlugin {
@@ -111,5 +111,35 @@ describe('sortInstalledPlugins（已装台账排序）', () => {
     const input = [mk('a', 'A', 100), mk('b', 'B', 200)];
     sortInstalledPlugins(input, () => false);
     expect(input.map((x) => x.id)).toEqual(['a', 'b']);
+  });
+});
+
+// R163：取某版本的更新说明——决定更新前该看到「这版改了什么」。
+describe('versionNotes（更新说明提取）', () => {
+  const plug = {
+    version: '1.3.0',
+    versions: [
+      { version: '1.2.0', notes: '修了导出崩溃' },
+      { version: '1.3.0', notes: '新增批量模式' },
+      { version: '1.4.0' },
+    ],
+  };
+
+  it('缺省取插件当前版本（= 待更新的新版）的说明', () => {
+    expect(versionNotes(plug)).toBe('新增批量模式');
+  });
+
+  it('可指定版本取对应说明', () => {
+    expect(versionNotes(plug, '1.2.0')).toBe('修了导出崩溃');
+  });
+
+  it('版本无 notes / 版本对不上 / 无 versions → null（不编造）', () => {
+    expect(versionNotes(plug, '1.4.0')).toBeNull();
+    expect(versionNotes(plug, '9.9.9')).toBeNull();
+    expect(versionNotes({ version: '1.0.0' })).toBeNull();
+  });
+
+  it('空白 notes 视为无说明', () => {
+    expect(versionNotes({ version: '1.0.0', versions: [{ version: '1.0.0', notes: '   ' }] })).toBeNull();
   });
 });
