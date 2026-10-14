@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 插件 min_app 兼容性校验（R168）
+
+- `RegistryPluginVersion.min_app`（插件声明的最低应用版本）此前**两端都
+  没使用**——后端不校验、前端不提示，用户可能在旧版 DiskPilot 上装到声明
+  要求更高版本的插件（装了不一定能跑）。现前端在社区条目上做兼容性校验：
+  不满足时显示「该插件要求应用 ≥ vX，当前 vY——先升级 DiskPilot 再安装」
+  并禁用安装按钮（title 说明所需版本）。
+- 新纯函数 `meetsMinApp(current, minApp)`（updateSkip.ts，复用
+  `compareVersions`；未声明 / 当前版本为空 → true 不拦，避免锁死可用功能）；
+  market.tsx 从 versions[] 取该版本的 min_app 判定；i18n
+  `toolbelt.mkt.minAppTooOld(Title)`（zh/en 成对）。updateSkip.test.ts +4
+  （519 总 / 37 files）。
+
 ### 2026-10-15 可选更新支持「只看驱动」（R167）
 
 - Windows Update 可选更新列表里驱动与语言包/功能更新混在一起——`is_driver`

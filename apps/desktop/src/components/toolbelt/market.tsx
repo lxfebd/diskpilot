@@ -13,7 +13,8 @@ import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
 import { invalidateToolbeltCache } from '../../advisor/tools';
-import { hasRegistryUpdate } from '../../updateSkip';
+import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
+import { APP_VERSION } from '../../version';
 
 /** 索引是否"全占位"：有条目但无一提供下载地址（发布者填 URL 前展示引导）。 */
 export function communityComingSoon(community: readonly RegistryPlugin[], indexed: boolean): boolean {
@@ -707,6 +708,10 @@ export function MarketPanel() {
                 // R163：有新版时把该版本的更新说明取出来——用户决定更新前
                 // 该知道「这版改了什么」；没有说明则不出行（不编造）。
                 const updNotes = upd ? versionNotes(p) : null;
+                // R168：该版本声明的 min_app——要求高于当前应用版本时警示并
+                // 禁用安装（后端不校验，前端要拦）。
+                const minAppReq = (p.versions ?? []).find((v) => v.version === p.version)?.min_app ?? null;
+                const minAppOk = meetsMinApp(APP_VERSION, minAppReq);
                 return (
                 <div key={p.id} className="toolbelt-market-item">
                   <div className="toolbelt-market-item-icon">
@@ -743,12 +748,18 @@ export function MarketPanel() {
                       {p.category} · {t('toolbelt.mkt.authorPrefix')}{p.author || t('toolbelt.common.unknown')}{p.downloads > 0 ? ` · ${t('toolbelt.mkt.downloads', { n: p.downloads })}` : ''}
                       {p.homepage ? <> · <a href={p.homepage} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{t('toolbelt.mkt.homepage')}</a></> : ''}
                     </p>
+                    {/* R168：应用版本不满足插件声明要求——如实说清并拦下安装 */}
+                    {!minAppOk && (
+                      <p className="toolbelt-market-warn">
+                        {t('toolbelt.mkt.minAppTooOld', { ver: APP_VERSION, need: minAppReq ?? '' })}
+                      </p>
+                    )}
                   </div>
                   <button
                     className="primary small"
-                    disabled={cBusyId === p.id || !p.url || (!!p.installed && !upd)}
+                    disabled={cBusyId === p.id || !p.url || (!!p.installed && !upd) || !minAppOk}
                     onClick={() => installFromCommunity(p)}
-                    title={upd ? t('toolbelt.mkt.updateHint') : p.installed ? t('toolbelt.mkt.installedHint') : p.url ? t('toolbelt.mkt.installTitle') : t('toolbelt.mkt.noUrlYet')}
+                    title={!minAppOk ? t('toolbelt.mkt.minAppTooOldTitle', { need: minAppReq ?? '' }) : upd ? t('toolbelt.mkt.updateHint') : p.installed ? t('toolbelt.mkt.installedHint') : p.url ? t('toolbelt.mkt.installTitle') : t('toolbelt.mkt.noUrlYet')}
                   >
                     {cBusyId === p.id ? t('toolbelt.mkt.downloading')
                       : upd ? t('toolbelt.mkt.update')

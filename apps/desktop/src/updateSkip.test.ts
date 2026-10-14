@@ -4,6 +4,7 @@ import {
   compareVersions,
   formatSkipRecord,
   hasRegistryUpdate,
+  meetsMinApp,
   parseSkipRecord,
   shouldPromptUpdate,
 } from './updateSkip';
@@ -118,5 +119,29 @@ describe('hasRegistryUpdate（插件是否有新版）', () => {
     expect(hasRegistryUpdate({ id: 'not-installed', version: '9.9.9' }, installed)).toBe(false);
     expect(hasRegistryUpdate({ id: 'wiztree-helper', version: null }, installed)).toBe(false);
     expect(hasRegistryUpdate({ id: 'wiztree-helper' }, installed)).toBe(false);
+  });
+});
+
+// R168：插件声明的 min_app 校验——min_app 此前两端都没用。
+describe('meetsMinApp（应用版本是否满足插件要求）', () => {
+  it('当前版本 ≥ 要求 → true', () => {
+    expect(meetsMinApp('0.2.3', '0.2.0')).toBe(true);
+    expect(meetsMinApp('0.2.3', '0.2.3')).toBe(true);
+    expect(meetsMinApp('1.0.0', '0.9.9')).toBe(true);
+  });
+
+  it('当前版本 < 要求 → false（该拦下）', () => {
+    expect(meetsMinApp('0.2.3', '0.3.0')).toBe(false);
+    expect(meetsMinApp('0.2.3', '1.0.0')).toBe(false);
+  });
+
+  it('未声明 min_app → true（不拦）', () => {
+    expect(meetsMinApp('0.2.3', null)).toBe(true);
+    expect(meetsMinApp('0.2.3', undefined)).toBe(true);
+    expect(meetsMinApp('0.2.3', '   ')).toBe(true);
+  });
+
+  it('当前版本为空 → true（无法判断就不拦，别锁死可用功能）', () => {
+    expect(meetsMinApp('', '9.9.9')).toBe(true);
   });
 });

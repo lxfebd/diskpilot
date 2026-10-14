@@ -69,3 +69,14 @@ export function hasRegistryUpdate(
   if (!cur) return false;
   return compareVersions(ver, cur.version) > 0;
 }
+
+/** R168：插件声明的 min_app 是否满足当前应用版本——min_app 此前定义了却
+ *  两端都没用（后端也不校验），用户可能在旧版上装到声明要求更高版本的插件。
+ *  纯函数：未声明（空/非串）→ true（不拦）；current 为空 → true（无法判断
+ *  就不拦，别把可用功能锁死）；要求高于当前 → false。 */
+export function meetsMinApp(current: string, minApp?: string | null): boolean {
+  const req = (minApp ?? '').trim();
+  if (!req) return true;
+  if (!current) return true;
+  return compareVersions(current, req) >= 0;
+}
