@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 社区插件显示「有新版本」（R159）
+
+- 插件市场的社区条目此前「已安装」即禁用按钮——本地版本落后于注册表时
+  用户看不出来，也没有更新入口。现按 id 匹配已装台账，远端版本严格更新时
+  显示「有新版本」实心徽标，按钮文案变「更新」且可点击（复用 R158 的
+  `compareVersions`；仍走签名校验链路）。
+- 新纯函数 `hasRegistryUpdate(plugin, installed)`（未装 / 缺版本号 / id 对
+  不上 / 版本不新 → false，不误报）；i18n `toolbelt.mkt.updateAvailable` /
+  `updateHint`（zh/en 成对，`update` 复用既有键）；CSS
+  `.toolbelt-mkt-update-badge`。updateSkip.test.ts +3（476 总 / 36 files）。
+
 ### 2026-10-15 「跳过此版本」（R158）
 
 - 设置页的更新提示新增「跳过此版本」——不想装某个版本的用户不必每次打开

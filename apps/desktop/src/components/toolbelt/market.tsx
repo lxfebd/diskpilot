@@ -13,6 +13,7 @@ import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
 import { invalidateToolbeltCache } from '../../advisor/tools';
+import { hasRegistryUpdate } from '../../updateSkip';
 
 /** 索引是否"全占位"：有条目但无一提供下载地址（发布者填 URL 前展示引导）。 */
 export function communityComingSoon(community: readonly RegistryPlugin[], indexed: boolean): boolean {
@@ -650,7 +651,11 @@ export function MarketPanel() {
                 </p>
               )}
             <div className="toolbelt-market-list">
-              {community.map((p) => (
+              {community.map((p) => {
+                // R159：已装但远端更新 → 允许更新并显式标注；否则保持原来的
+                // 安装/已装语义（不误报更新：见 hasRegistryUpdate）。
+                const upd = hasRegistryUpdate(p, installed ?? []);
+                return (
                 <div key={p.id} className="toolbelt-market-item">
                   <div className="toolbelt-market-item-icon">
                     <Globe size={16} />
@@ -660,6 +665,11 @@ export function MarketPanel() {
                       <b>{p.name}</b>
                       {p.version && <span className="toolbelt-perm-chip">v{p.version}</span>}
                       {p.installed && <span className="toolwall-plugin-badge">{t('toolbelt.mkt.installedBadge')}</span>}
+                      {upd && (
+                        <span className="toolwall-plugin-badge toolbelt-mkt-update-badge">
+                          {t('toolbelt.mkt.updateAvailable')}
+                        </span>
+                      )}
                       {p.verified && <span className="toolwall-plugin-badge">{t('toolbelt.mkt.verified')}</span>}
                       {p.license && <span className="toolbelt-perm-chip">{t('toolbelt.mkt.license', { license: p.license })}</span>}
                       {p.depends_on && p.depends_on.length > 0 && <span className="toolbelt-risk-chip">{t('toolbelt.mkt.depends', { deps: p.depends_on.join(', ') })}</span>}
@@ -678,16 +688,18 @@ export function MarketPanel() {
                   </div>
                   <button
                     className="primary small"
-                    disabled={cBusyId === p.id || !p.url || !!p.installed}
+                    disabled={cBusyId === p.id || !p.url || (!!p.installed && !upd)}
                     onClick={() => installFromCommunity(p)}
-                    title={p.installed ? t('toolbelt.mkt.installedHint') : p.url ? t('toolbelt.mkt.installTitle') : t('toolbelt.mkt.noUrlYet')}
+                    title={upd ? t('toolbelt.mkt.updateHint') : p.installed ? t('toolbelt.mkt.installedHint') : p.url ? t('toolbelt.mkt.installTitle') : t('toolbelt.mkt.noUrlYet')}
                   >
                     {cBusyId === p.id ? t('toolbelt.mkt.downloading')
+                      : upd ? t('toolbelt.mkt.update')
                       : p.installed ? t('toolbelt.mkt.installedBadge')
                       : p.url ? t('toolbelt.mkt.install') : t('toolbelt.mkt.comingSoon')}
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
             </>
           )}

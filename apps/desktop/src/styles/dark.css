@@ -299,6 +299,12 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 .toolwall-risk { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; flex-shrink: 0; }
 .toolwall-cli-badge { font-size: 9px; font-weight: 700; background: var(--accent-bg); color: var(--accent-strong); padding: 1px 6px; border-radius: 999px; flex-shrink: 0; }
 .toolwall-plugin-badge { font-size: 9px; font-weight: 700; background: var(--paper-3); color: var(--accent-strong); padding: 1px 6px; border-radius: 999px; flex-shrink: 0; border: 1px dashed var(--accent-strong); }
+/* R159：社区插件「有新版本」徽标——实心强调色，与「已安装」虚线徽标区分 */
+.toolbelt-mkt-update-badge {
+  background: var(--accent-strong);
+  color: var(--paper);
+  border: none;
+}
 /* 迁移内容物管控：含广告/商业推广的工具标记（琥珀色，提醒用户启动前预期） */
 .toolwall-ad-badge {
   font-size: 9px;

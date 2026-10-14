@@ -24,3 +24,17 @@ export function shouldPromptUpdate(skipped: string | null, latest: string): bool
   if (!skipped) return true;
   return compareVersions(latest, skipped) > 0;
 }
+
+/** R159：社区条目是否有比已装版本更新的版本——按 id 匹配已装清单，
+ *  远端版本严格更新才算「有新版」（相等/更旧都不提示）。
+ *  纯函数：未装、缺版本号、id 对不上 → false（不误报更新）。 */
+export function hasRegistryUpdate(
+  plugin: { id: string; version?: string | null },
+  installed: readonly { id: string; version: string }[],
+): boolean {
+  const ver = plugin.version;
+  if (!ver) return false;
+  const cur = installed.find((p) => p.id === plugin.id);
+  if (!cur) return false;
+  return compareVersions(ver, cur.version) > 0;
+}
