@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 Esc 关窗收敛为共用 hook（R141）
+
+- ContextMenu / SteamWorkshopModal / DryRunPreviewDialog / gpu-donut 此前
+  各自手写一份 Esc keydown 判断（4 处重复、细节不一致），收敛到新文件
+  `src/escapeKey.ts`：纯函数 `isEscapeClose(key, enabled)` +
+  `useEscapeKey(onClose, enabled)`（onClose 走 ref 存最新值，effect 只依赖
+  enabled，避免反复重挂监听）。DryRunPreviewDialog 的 Esc 分支改用 hook，
+  Enter 逻辑（进预备态 / 真删）保留不变。
+- escapeKey.test.ts（新）：+3 tests（427 总 / 35 files）。
+
 ### 2026-10-14 预览窗键盘快捷键（R140）
 
 - dry-run 预览窗支持键盘流（桌面应用惯性预期，且比鼠标更防误触）：
