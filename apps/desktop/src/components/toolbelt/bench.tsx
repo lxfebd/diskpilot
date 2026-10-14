@@ -7,6 +7,7 @@ import {
   Activity, Copy, Flame, Gauge, History, Loader2, Monitor, ShieldAlert, Square, TrendingUp, X,
 } from 'lucide-react';
 import { api } from '../../api';
+import { useEscapeKey } from '../../escapeKey';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { useStore } from '../../store';
@@ -171,6 +172,11 @@ export function BenchPanel() {
   const [confirmDonut, setConfirmDonut] = useState(false);
   const [donutOn, setDonutOn] = useState(false);
   const [donutResult, setDonutResult] = useState<string | null>(null);
+  // R142：三个确认窗都支持 Esc 取消——点击遮罩本就能关，键盘用户此前
+  // 按 Esc 无反应（可用性缺口）。Esc 只关窗，不会触发任何写操作。
+  useEscapeKey(() => setConfirmStress(false), confirmStress);
+  useEscapeKey(() => setConfirmDiskRun(false), confirmDiskRun);
+  useEscapeKey(() => setConfirmDonut(false), confirmDonut);
 
   const runDonut = () => {
     setConfirmDonut(false);

@@ -15,6 +15,7 @@ import type {
 import { RISK_COLORS, LEVEL_COLORS } from '../../colors';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
+import { useEscapeKey } from '../../escapeKey';
 import { useStore } from '../../store';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
@@ -654,6 +655,11 @@ export function CatalogWall({
   // 「隐藏推广」开关：图吧包内自带流量卡/加速器返利链等纯推广 .bat，
   // 标 is_promotion 后默认**隐藏**（用户明确要求去推广）；可手动切回显示。
   const [hidePromo, setHidePromo] = useState<boolean>(() => localStorage.getItem('toolwall.hidePromo') !== '0');
+  // R142：三个弹层都支持 Esc 关闭（启动确认 / exe 详情 / AI 工具详情）——
+  // 此前只有点遮罩能关。Esc 一律是「取消」，不会启动任何工具。
+  useEscapeKey(() => setConfirmLaunch(null), confirmLaunch !== null && !launching);
+  useEscapeKey(() => setDetail(null), detail !== null);
+  useEscapeKey(() => setAgentDetail(null), agentDetail !== null);
 
   useEffect(() => {
     if (!isTauri) return;

@@ -5,6 +5,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 Esc 关窗推广到工具墙/基准确认窗（R142）
+
+- 承接 R141 的 `useEscapeKey`，推广到 6 个此前只能用鼠标关闭的弹层：
+  基准面板的压测确认 / 磁盘真跑确认 / 甜甜圈确认，工具墙的启动确认 /
+  exe 详情卡 / AI 工具详情。Esc 一律是「取消」——不会启动任何工具，
+  启动确认在 `launching` 期间禁用 Esc（避免中途打断）。
+
 ### 2026-10-14 Esc 关窗收敛为共用 hook（R141）
 
 - ContextMenu / SteamWorkshopModal / DryRunPreviewDialog / gpu-donut 此前
