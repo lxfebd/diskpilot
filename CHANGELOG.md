@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 空间耗尽预测按样本充分度降级（R148）
+
+- 承接 R145 的采样充分度：空间趋势行样本少（2–4 点，sparse）时，原有的
+  「约 N 天满」外推预测从「≈ full in N days」降级为「样本少，粗估 N 天满」
+  ——外推建立在首末两点上，样本少时预测不可靠，照常显示等于默认它可信。
+- 新纯函数 `forecastConfidence(samples)`（rich→high / sparse→low /
+  none→none）；i18n `overview.trend.fullInRough`（zh/en 成对）。
+  AssetOverview.test.ts +3（440 总 / 35 files）。
+
 ### 2026-10-14 exe 工具详情显示「AI 里也能做」（R147）
 
 - exe 工具详情卡在「同类建议」（tags 重叠）之下新增「AI 里也能做」区块

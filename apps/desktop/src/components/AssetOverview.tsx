@@ -158,6 +158,14 @@ export function spaceTrendSamples(pts: readonly { at: number }[]): 'rich' | 'spa
   return n >= 5 ? 'rich' : 'sparse';
 }
 
+/** R148：耗尽预测的可信度——外推建立在首末两点上，样本少时「约 N 天满」
+ *  本身就不可靠。纯函数：样本 none → none（不出预测）；sparse → low（要
+ *  标注「样本少」）；rich → high（照常显示）。 */
+export function forecastConfidence(samples: 'rich' | 'sparse' | 'none'): 'high' | 'low' | 'none' {
+  if (samples === 'none') return 'none';
+  return samples === 'sparse' ? 'low' : 'high';
+}
+
 /** 近期增量：首尾已用差 + 跨度天数文案（不足 2 条返回「记录不足」）。 */
 export function spaceWeekDelta(pts: SpacePoint[]): { delta: number; days: string } {
   if (pts.length < 2) return { delta: 0, days: t('overview.trend.noRecords') };
@@ -404,11 +412,15 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
           const isShrinking = delta < 0; // 负增量 = 空间释放
           // R98 空间耗尽预测：按首尾增速外推「多少天后用满」；0 = 已满。
           const samples = spaceTrendSamples(points);
+          const confidence = forecastConfidence(samples);
           const fullDays = forecastFullDays(points);
           const forecastLabel =
             fullDays === null ? null
             : fullDays === 0 ? t('overview.trend.fullNow')
-            : t('overview.trend.fullIn', { n: Math.ceil(fullDays) });
+            // R148：样本少（2–4 点）时外推不可靠，加「?」提示别当准数
+            : confidence === 'low'
+              ? t('overview.trend.fullInRough', { n: Math.ceil(fullDays) })
+              : t('overview.trend.fullIn', { n: Math.ceil(fullDays) });
           return (
             <button
               key={drive}

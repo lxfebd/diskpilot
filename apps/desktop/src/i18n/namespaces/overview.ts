@@ -49,6 +49,7 @@ export const overview = {
     'overview.locateInWorkspace': '在工作台定位查看',
     // R98 空间耗尽预测：按趋势增速外推「多少天后用满」（0=已满；增速≤0 不显示）
     'overview.trend.fullIn': '约 {n} 天满',
+    'overview.trend.fullInRough': '样本少，粗估 {n} 天满',
     'overview.trend.fullNow': '已满',
 
     // 快速操作
@@ -227,6 +228,7 @@ export const overview = {
     'overview.locateInWorkspace': 'Show this in the workbench',
     // R98 days-to-full forecast: extrapolated from the trend slope (0 = already full; hidden when not growing)
     'overview.trend.fullIn': '≈ full in {n} days',
+    'overview.trend.fullInRough': 'few samples — rough: full in ≈ {n} days',
     'overview.trend.fullNow': 'Full',
 
     // Quick actions

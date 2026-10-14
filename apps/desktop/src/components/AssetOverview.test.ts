@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -181,6 +181,19 @@ describe('spaceTrendSamples（空间趋势采样充分度）', () => {
     expect(
       spaceTrendSamples([{ at: 1 }, { at: 2 }, { at: 3 }, { at: 4 }, { at: Number.NaN }]),
     ).toBe('sparse');
+  });
+});
+
+// R148 耗尽预测可信度：外推建立在首末两点，样本少时结论要降级。
+describe('forecastConfidence（耗尽预测可信度）', () => {
+  it('样本充分 → high（照常显示预测）', () => {
+    expect(forecastConfidence('rich')).toBe('high');
+  });
+  it('样本少 → low（标注「样本少，粗估 N 天满」）', () => {
+    expect(forecastConfidence('sparse')).toBe('low');
+  });
+  it('样本不足 → none（不出预测）', () => {
+    expect(forecastConfidence('none')).toBe('none');
   });
 });
 
