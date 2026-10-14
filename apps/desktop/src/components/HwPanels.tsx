@@ -594,6 +594,15 @@ export function fmtHwTime(at: number | string): string {
   return new Date(n * 1000).toLocaleString();
 }
 
+/// R146：单条硬件趋势线的采样充分度——`n`（总快照数）不等于「这条线有几个
+/// 真实读数」：温度列可能只有 2 个有效值而通电时长有 20 个，两条线的可信度
+/// 不能混为一谈。纯函数：≥5 rich / 2–4 sparse（趋势仅供参考）/ <2 none。
+export function hwSeriesQuality(vals: readonly number[]): 'rich' | 'sparse' | 'none' {
+  const n = vals.filter((v) => Number.isFinite(v)).length;
+  if (n < 2) return 'none';
+  return n >= 5 ? 'rich' : 'sparse';
+}
+
 /// R96 硬件趋势折线：把有序数值点归一化画 SVG path（值平=水平线）。
 /// 只有 ≥2 个有值点才返回；W×H 尺寸与 overview 的 sparkline 一致。
 export function hwSeriesPath(vals: number[], w = 240, h = 40): string {
@@ -635,6 +644,13 @@ export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: s
             <path d={hwSeriesPath(temps)} className="hw-trend-line temp" fill="none" />
           </svg>
           <span className="hw-trend-max muted small">{Math.round(Math.max(...temps))}°C</span>
+          {/* R146：这条线自己的读数个数——总快照数不等于本列有效值数 */}
+          <span
+            className={'hw-trend-points muted small' + (hwSeriesQuality(temps) === 'sparse' ? ' sparse' : '')}
+            title={t('hw.trendPointsTitle', { n: temps.length })}
+          >
+            {temps.length}
+          </span>
         </div>
       )}
       {!err && powers.length >= 2 && (
@@ -644,6 +660,12 @@ export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: s
             <path d={hwSeriesPath(powers)} className="hw-trend-line power" fill="none" />
           </svg>
           <span className="hw-trend-max muted small">{Math.round(Math.max(...powers))}h</span>
+          <span
+            className={'hw-trend-points muted small' + (hwSeriesQuality(powers) === 'sparse' ? ' sparse' : '')}
+            title={t('hw.trendPointsTitle', { n: powers.length })}
+          >
+            {powers.length}
+          </span>
         </div>
       )}
       {!err && temps.length < 2 && powers.length < 2 && (

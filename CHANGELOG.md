@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 硬件趋势每条线显示有效读数个数（R146）
+
+- 硬件趋势标题的「N 份快照」是全部快照数，不代表每条线有多少真实读数
+  ——温度列可能只有 2 个有效值而通电时长有 20 个，两条线可信度不能混为
+  一谈。现每条折线行尾显示自己的有效读数个数，2–4 个（sparse）用警示色
+  并悬停说明「该列缺值的快照不着点」。
+- 新纯函数 `hwSeriesQuality(vals)`（≥5 rich / 2–4 sparse / <2 none，非
+  有限值不计）；i18n `hw.trendPointsTitle`（zh/en 成对）；CSS
+  `.hw-trend-points(.sparse)`。HwPanels.test.ts +4（437 总 / 35 files）。
+
 ### 2026-10-14 空间趋势行显示采样点充分度（R145）
 
 - 空间趋势每行在「+X GB / N 天」旁显示采样点数（悬停说明）——2 个点

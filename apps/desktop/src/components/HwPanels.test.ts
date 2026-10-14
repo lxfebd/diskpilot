@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath } from './HwPanels';
+import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath, hwSeriesQuality } from './HwPanels';
 import { setLang } from '../i18n';
 
 // fmtHwTime：把归档 Unix 秒转成本地可读时间；非法/空输入返回空串（展示层兜底）。
@@ -99,5 +99,28 @@ describe('hwSeriesPath', () => {
     const xs = p.match(/-?\d+\.\d+,/g)!.map((s) => Number(s.replace(',', '')));
     expect(xs[0]).toBe(0);
     expect(xs[1]).toBe(240);
+  });
+});
+
+// R146 单条趋势线的采样充分度：本列有效读数 ≠ 总快照数，可信度按本列算。
+describe('hwSeriesQuality（单条趋势线采样充分度）', () => {
+  it('≥5 个有效值 → rich', () => {
+    expect(hwSeriesQuality([1, 2, 3, 4, 5])).toBe('rich');
+    expect(hwSeriesQuality(Array.from({ length: 20 }, (_, i) => i))).toBe('rich');
+  });
+
+  it('2–4 个 → sparse（趋势仅供参考）', () => {
+    expect(hwSeriesQuality([40, 45])).toBe('sparse');
+    expect(hwSeriesQuality([40, 45, 50, 55])).toBe('sparse');
+  });
+
+  it('不足 2 个 → none', () => {
+    expect(hwSeriesQuality([])).toBe('none');
+    expect(hwSeriesQuality([42])).toBe('none');
+  });
+
+  it('非有限值不计入（列内缺值不等于有读数）', () => {
+    expect(hwSeriesQuality([Number.NaN, 1])).toBe('none');
+    expect(hwSeriesQuality([1, 2, 3, 4, Number.NaN])).toBe('sparse');
   });
 });

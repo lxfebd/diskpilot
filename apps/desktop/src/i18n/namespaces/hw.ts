@@ -95,6 +95,7 @@ export const hw = {
     'hw.trendPowerNone': '还没有带通电时长数据的快照，趋势图暂空。',
     'hw.trendFailed': '趋势数据读取失败（不代表没有快照，稍后刷新或重启应用可能恢复）：{msg}',
     'hw.trendSamples': '{n} 份快照 · {first} → {last}',
+    'hw.trendPointsTitle': '这条线有 {n} 个有效读数（快照总数可能更多——该列缺值的快照不着点）',
 
     // 本机性能档位（hwProfile：设置页展示的那一句话）
     'hw.tierWeak': '低配',
@@ -190,6 +191,7 @@ export const hw = {
     'hw.trendPowerNone': 'No snapshots with power-on-hour data yet, the trend stays empty.',
     'hw.trendFailed': 'Failed to read trend data (this does not mean there are no snapshots; refreshing or restarting the app usually recovers): {msg}',
     'hw.trendSamples': '{n} snapshots · {first} → {last}',
+    'hw.trendPointsTitle': 'this line has {n} valid readings (the snapshot count may be higher — snapshots missing this column draw no point)',
 
     // Local performance tier (hwProfile: the one-line summary on the settings page)
     'hw.tierWeak': 'low-end',
