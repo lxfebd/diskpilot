@@ -1,7 +1,7 @@
 // 启动项管理面板（P4-4 抽取）：自包含状态 + 两步确认。
 // 被「系统工具（设置）」与「系统优化页」两处复用，样式沿用 sys-* 系列。
 import { useEffect, useState } from 'react';
-import { Trash2, RefreshCw } from 'lucide-react';
+import { Trash2, RefreshCw, Search } from 'lucide-react';
 import { api, type StartupItem } from '../api';
 import { isPermEnabled } from '../permissions';
 import { useT } from '../i18n';
@@ -23,6 +23,35 @@ function startupLocationLabel(t: (key: string) => string, location: string): str
   }
 }
 
+/** R164：启动项筛选——几十项时逐行找太累；搜索匹配 name/command/target，
+ *  状态筛 all/enabled/disabled。纯函数：空词 + all 原样返回。 */
+export type StartupFilter = 'all' | 'enabled' | 'disabled';
+
+export function filterStartupItems(
+  items: readonly StartupItem[],
+  query: string,
+  filter: StartupFilter,
+): StartupItem[] {
+  const q = query.trim().toLowerCase();
+  return items.filter((it) => {
+    if (filter === 'enabled' && !it.enabled) return false;
+    if (filter === 'disabled' && it.enabled) return false;
+    if (!q) return true;
+    return (
+      it.name.toLowerCase().includes(q) ||
+      (it.command ?? '').toLowerCase().includes(q) ||
+      (it.target ?? '').toLowerCase().includes(q)
+    );
+  });
+}
+
+/** R164：启用/停用计数——顶部一句「开机自启 N 项 · 已停用 M 项」。 */
+export function startupCounts(items: readonly StartupItem[]): { on: number; off: number } {
+  let on = 0;
+  for (const it of items) if (it.enabled) on += 1;
+  return { on, off: items.length - on };
+}
+
 export function StartupPanel() {
   const t = useT();
   const [startup, setStartup] = useState<StartupItem[] | null>(null);
@@ -32,6 +61,9 @@ export function StartupPanel() {
   const [pendingToggle, setPendingToggle] = useState<string | null>(null);
   const [pendingDel, setPendingDel] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // R164：搜索 + 状态筛选（几十项启动项时逐行找太累）。
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<StartupFilter>('all');
 
   const startupPerm = isPermEnabled('startup.manage');
 
@@ -85,6 +117,10 @@ export function StartupPanel() {
     if (startupPerm) loadStartup();
   }, [startupPerm]);
 
+  // R164：统计与筛选结果（纯函数计算，渲染只读）。
+  const counts = startupCounts(startup ?? []);
+  const visible = filterStartupItems(startup ?? [], query, filter);
+
   return (
     <>
       <div className="settings-group-title">{t('system.startup.title')}</div>
@@ -104,8 +140,43 @@ export function StartupPanel() {
         <div className="muted small">{t('system.startup.empty')}</div>
       )}
       {startup && startup.length > 0 && (
+        <>
+          {/* R164：统计 + 筛选——「开机自启 N 项 · 已停用 M 项」一眼看清现状 */}
+          <div className="sys-filter-bar">
+            <span className="muted small">
+              {t('system.startup.counts', { on: counts.on, off: counts.off })}
+            </span>
+            <span className="sys-filter-chips">
+              {(['all', 'enabled', 'disabled'] as StartupFilter[]).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={'chip' + (filter === f ? ' active' : '')}
+                  onClick={() => setFilter(f)}
+                >
+                  {f === 'all' ? t('system.startup.filterAll')
+                    : f === 'enabled' ? t('system.startup.filterOn')
+                    : t('system.startup.filterOff')}
+                </button>
+              ))}
+            </span>
+            <label className="sys-filter-search">
+              <Search size={13} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('system.startup.searchPlaceholder')}
+              />
+            </label>
+          </div>
+          {visible.length === 0 && (
+            <div className="muted small">{t('system.startup.emptyFiltered')}</div>
+          )}
+        </>
+      )}
+      {startup && startup.length > 0 && visible.length > 0 && (
         <div className="sys-list">
-          {startup.map((item) => (
+          {visible.map((item) => (
             <div key={item.id} className={'sys-row' + (item.enabled ? '' : ' sys-row-off')}>
               <div className="sys-row-main">
                 <span className="sys-name">{item.name}</span>

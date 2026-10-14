@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 启动项加搜索与状态筛选（R164）
+
+- 启动项管理面板此前只能整列扫——几十项启动项时找某一项很累，也看不出
+  「开机自启几项、停了几个」。现加顶部统计（「开机自启 N 项 · 已停用
+  M 项」）+ 状态 chips（全部/自启中/已停用）+ 搜索框（匹配名称/命令/目标）；
+  0 命中给「换个关键词或切回全部」引导，不退化成"没有启动项"。
+- 新纯函数 `filterStartupItems(items, query, filter)` / `startupCounts(items)`
+  （StartupPanel.tsx 导出）；i18n 6 个新键（zh/en 成对）；CSS
+  `.sys-filter-bar` / `.sys-filter-chips` / `.sys-filter-search`。
+  StartupPanel.test.ts（新）+8（500 总 / 37 files）。
+
 ### 2026-10-15 社区插件显示新版更新说明（R163）
 
 - 社区条目在「有新版」时，于描述下追加该版本的更新说明
