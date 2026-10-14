@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, DownloadCloud, Fan, AlertTriangle } from 'lucide-react';
+import { RefreshCw, DownloadCloud, Fan, AlertTriangle, Search } from 'lucide-react';
 import { api, type FanCurveAdvice, type FanStatus, type InstalledDriver, type DriverUpdate } from '../api';
 import { isPermEnabled } from '../permissions';
 import { isTauri } from '../env';
@@ -29,6 +29,37 @@ export function fanChannelState(status: FanStatus | null, statusErr: string | nu
 /** 设置页「系统工具」标签：启动项管理 / 风扇曲线建议 / 驱动更新检查。
  *  三个能力都是 L2（权限中心开关 + 每次执行确认），组件内做两步确认，
  *  删除/禁用的破坏性操作绝不直接执行。 */
+/** R166：已装驱动筛选——200 条上限下列表很长，按名找很难；搜索匹配
+ *  name/provider/version，分类筛按 d.class。纯函数：空词 + null 分类原样返回。 */
+export function filterDrivers(
+  list: readonly InstalledDriver[],
+  query: string,
+  cls: string | null,
+): InstalledDriver[] {
+  const q = query.trim().toLowerCase();
+  return list.filter((d) => {
+    if (cls !== null && (d.class ?? '') !== cls) return false;
+    if (!q) return true;
+    return (
+      (d.name ?? '').toLowerCase().includes(q) ||
+      (d.provider ?? '').toLowerCase().includes(q) ||
+      (d.version ?? '').toLowerCase().includes(q)
+    );
+  });
+}
+
+/** R166：分类清单 + 计数（供筛选 chips；按名称升序稳定，空分类归到 '' 键）。 */
+export function driverClassCounts(list: readonly InstalledDriver[]): { cls: string; n: number }[] {
+  const m = new Map<string, number>();
+  for (const d of list) {
+    const k = d.class ?? '';
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return [...m.entries()]
+    .map(([cls, n]) => ({ cls, n }))
+    .sort((a, b) => b.n - a.n || a.cls.localeCompare(b.cls));
+}
+
 export function SystemTools() {
   return (
     <ErrorBoundary>
@@ -60,6 +91,12 @@ function SystemToolsInner() {
   const [drvErr, setDrvErr] = useState<string | null>(null);
   const [drvLoading, setDrvLoading] = useState(false);
   const [wuLoading, setWuLoading] = useState(false);
+  // R166：已装驱动搜索 + 分类筛选（200 条上限下列表很长）。
+  const [drvQuery, setDrvQuery] = useState('');
+  const [drvClass, setDrvClass] = useState<string | null>(null);
+  // R166：筛选结果与分类计数（渲染只读）。
+  const visibleDrivers = filterDrivers(drivers ?? [], drvQuery, drvClass);
+  const classCounts = driverClassCounts(drivers ?? []);
 
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -333,9 +370,44 @@ function SystemToolsInner() {
           {t('system.driver.installedCount', { n: drivers.length })}
         </div>
       )}
+      {/* R166：搜索 + 分类筛选——200 条上限下列表很长，按名找很难 */}
       {drivers && drivers.length > 0 && (
+        <div className="sys-filter-bar">
+          <span className="sys-filter-chips">
+            <button
+              type="button"
+              className={'chip' + (drvClass === null ? ' active' : '')}
+              onClick={() => setDrvClass(null)}
+            >
+              {t('system.driver.classAll')}
+            </button>
+            {classCounts.map((c) => (
+              <button
+                key={c.cls || '(blank)'}
+                type="button"
+                className={'chip' + (drvClass === c.cls ? ' active' : '')}
+                onClick={() => setDrvClass(c.cls)}
+              >
+                {c.cls || t('system.driver.classUnknown')} <b>{c.n}</b>
+              </button>
+            ))}
+          </span>
+          <label className="sys-filter-search">
+            <Search size={13} />
+            <input
+              value={drvQuery}
+              onChange={(e) => setDrvQuery(e.target.value)}
+              placeholder={t('system.driver.searchPlaceholder')}
+            />
+          </label>
+        </div>
+      )}
+      {drivers && drivers.length > 0 && visibleDrivers.length === 0 && (
+        <div className="muted small">{t('system.driver.noneMatched')}</div>
+      )}
+      {drivers && drivers.length > 0 && visibleDrivers.length > 0 && (
         <div className="sys-list sys-list-scroll">
-          {drivers.slice(0, 200).map((d, i) => (
+          {visibleDrivers.slice(0, 200).map((d, i) => (
             <div key={i} className="sys-row">
               <div className="sys-row-main">
                 <span className="sys-name">{d.name}</span>

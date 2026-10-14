@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 已装驱动加搜索与分类筛选（R166）
+
+- 已装驱动列表此前整列展示（后端上限 200 条）——想确认"某设备的驱动装了
+  哪个版本"只能一行行翻。现加分类 chips（按条数降序，含「未分类」）+ 搜索
+  （匹配名称 / 厂商 / 版本）；0 命中给「换个关键词或切回全部分类」引导，
+  与 R164 启动项同款口径。
+- 新纯函数 `filterDrivers(list, query, cls)` / `driverClassCounts(list)`
+  （SystemTools.tsx 导出）；i18n 4 个新键（zh/en 成对）；CSS 复用
+  `.sys-filter-bar` 系列。SystemTools.test.ts +7（511 总 / 37 files）。
+
 ### 2026-10-15 启动项按来源分组（R165）
 
 - 启动项列表此前混排（HKCU / 用户启动夹 / HKLM / 公共启动夹挤在一起）——
