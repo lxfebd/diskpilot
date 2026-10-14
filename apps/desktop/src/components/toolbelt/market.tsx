@@ -42,6 +42,26 @@ export function communityListState(
   return 'ready';
 }
 
+/**
+ * R162：已装台账排序——条目多了以后「哪个该动」要一眼看到：
+ * ① 有新版的最前（这些是用户唯一需要操作的对象）；
+ * ② 其余按安装时间倒序（最近装的在前，符合「刚装的东西在哪」的直觉）；
+ * ③ 同刻按名字升序稳定。
+ * hasUpdate 由调用方传入（它需要 community 数据，纯函数不重复拉）。
+ */
+export function sortInstalledPlugins<T extends { id: string; name: string; installed_at: number }>(
+  installed: readonly T[],
+  hasUpdate: (p: T) => boolean,
+): T[] {
+  return [...installed].sort((a, b) => {
+    const ua = hasUpdate(a) ? 0 : 1;
+    const ub = hasUpdate(b) ? 0 : 1;
+    if (ua !== ub) return ua - ub;
+    if (a.installed_at !== b.installed_at) return b.installed_at - a.installed_at;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
@@ -562,7 +582,10 @@ export function MarketPanel() {
               ) : installed.length === 0 ? (
                 <p className="muted small">{t('toolbelt.mkt.installedEmpty')}</p>
               ) : (
-                installed.map((p) => {
+                sortInstalledPlugins(installed, (p) => {
+                  const c = (community ?? []).find((x) => x.id === p.id);
+                  return c ? hasRegistryUpdate(c, [p]) : false;
+                }).map((p) => {
                   // R160：台账条目也标「有新版」——社区数据里同 id 的版本更新
                   // 时，「更新」按钮才有意义；否则用户只能点一下试试。
                   const inCommunity = (community ?? []).find((c) => c.id === p.id);

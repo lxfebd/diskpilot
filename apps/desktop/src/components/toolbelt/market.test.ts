@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { communityComingSoon, emptiedAllDedupe, communityListState } from './market';
+import { communityComingSoon, emptiedAllDedupe, communityListState, sortInstalledPlugins } from './market';
 import type { RegistryPlugin } from '../../api';
 
 function p(partial: Partial<RegistryPlugin>): RegistryPlugin {
@@ -79,5 +79,37 @@ describe('communityListState（社区列表三态）', () => {
 
   it('有数据 → ready', () => {
     expect(communityListState([p({ url: 'https://example.com/a.zip' })], null)).toBe('ready');
+  });
+});
+
+// R162：已装台账排序——有新版优先，其余按安装时间倒序。
+describe('sortInstalledPlugins（已装台账排序）', () => {
+  const mk = (id: string, name: string, installed_at: number) => ({ id, name, installed_at });
+  const plist = [
+    mk('old', 'A-old', 100),
+    mk('new', 'B-new', 300),
+    mk('mid', 'C-mid', 200),
+  ];
+
+  it('无新版时按安装时间倒序（最近装的在前）', () => {
+    expect(sortInstalledPlugins(plist, () => false).map((x) => x.id)).toEqual(['new', 'mid', 'old']);
+  });
+
+  it('有新版的一律排最前（哪怕装得最早）', () => {
+    expect(
+      sortInstalledPlugins(plist, (x) => x.id === 'old').map((x) => x.id),
+    ).toEqual(['old', 'new', 'mid']);
+  });
+
+  it('多个有新版时内部仍按安装时间倒序', () => {
+    expect(
+      sortInstalledPlugins(plist, (x) => x.id !== 'mid').map((x) => x.id),
+    ).toEqual(['new', 'old', 'mid']);
+  });
+
+  it('不改入参数组（纯函数）', () => {
+    const input = [mk('a', 'A', 100), mk('b', 'B', 200)];
+    sortInstalledPlugins(input, () => false);
+    expect(input.map((x) => x.id)).toEqual(['a', 'b']);
   });
 });
