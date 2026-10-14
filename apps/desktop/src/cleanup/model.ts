@@ -218,6 +218,35 @@ export function sizeOfScope(sizes: ScopeSize[] | null, id: string): ScopeSize | 
   return sizes.find((r) => r.scope_id === id) ?? null;
 }
 
+/** R156：按目录聚合「上次清理时刻」——台账里每条 undo 的 source 落在哪个
+ *  扫描命中目录下，就更新该目录的最新清理时间（秒）。
+ *  只按目录前缀匹配（scope glob 的展开只有后端能做，前端不猜）——所以语义是
+ *  「这个目录上次被清是什么时候」，对用户仍是有用的决策参照。
+ *  纯函数：大小写不敏感、路径分隔符统一；返回 Record<目录路径, 最新 ts 秒>。 */
+export function lastCleanByPath(
+  entries: readonly { timestamp: string; source: string }[],
+  matchPaths: readonly string[],
+): Record<string, number> {
+  const norm = (p: string) => p.replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase();
+  const roots = matchPaths.map((p) => ({ raw: p, n: norm(p) }));
+  const out: Record<string, number> = {};
+  for (const e of entries) {
+    const ts = Math.floor(Date.parse(e.timestamp) / 1000);
+    if (!Number.isFinite(ts) || ts <= 0) continue;
+    const src = norm(e.source);
+    // 取最长匹配的根（嵌套目录时更具体的那个才是它的归属）。
+    let best: { raw: string; n: string } | null = null;
+    for (const r of roots) {
+      if (src === r.n || src.startsWith(r.n + '\\')) {
+        if (!best || r.n.length > best.n.length) best = r;
+      }
+    }
+    if (!best) continue;
+    if (out[best.raw] === undefined || ts > out[best.raw]) out[best.raw] = ts;
+  }
+  return out;
+}
+
 export function formatLastActive(ts: number | null): string {
   if (ts === null) return t('cleanup.lastActiveNever');
   const now = Math.floor(Date.now() / 1000);

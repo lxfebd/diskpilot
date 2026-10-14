@@ -234,6 +234,12 @@ main.cleanup-page > .cleanup-page {
   color: var(--ink-3);
   font-family: var(--font-mono);
 }
+/* R156：上次清理时刻——弱化小字，勾选前的决策背景信息 */
+.cleanup-row-last {
+  font-size: 10px;
+  color: var(--ink-3);
+  opacity: .85;
+}
 .cleanup-row-days {
   display: flex; align-items: center; gap: 4px;
   font-size: 10.5px;

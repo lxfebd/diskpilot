@@ -9,6 +9,7 @@ import {
   defaultDaysFor,
   detectVariants,
   driveBreakdown,
+  lastCleanByPath,
   sampleEntriesByBytes,
   samplePathsByBytes,
   scopeDayOverrides,
@@ -363,5 +364,50 @@ describe('sampleEntriesByBytes（预览条目按字节降序，保字节）', ()
     const input = [{ source: 'a', bytes_freed: 2 }, { source: 'b', bytes_freed: 1 }];
     sampleEntriesByBytes(input, 10);
     expect(input.map((i) => i.source)).toEqual(['a', 'b']);
+  });
+});
+
+// R156：按目录聚合「上次清理时刻」——scope 行在勾选前显示该目录多久没清。
+describe('lastCleanByPath（上次清理时刻按目录聚合）', () => {
+  const iso = (secs: number) => new Date(secs * 1000).toISOString();
+
+  it('目录前缀匹配，取每个目录的最新时刻', () => {
+    const out = lastCleanByPath(
+      [
+        { timestamp: iso(1000), source: 'C:\\App\\logs\\a.log' },
+        { timestamp: iso(2000), source: 'C:\\App\\logs\\b.log' },
+        { timestamp: iso(1500), source: 'C:\\App\\cache\\c.tmp' },
+      ],
+      ['C:\\App\\logs', 'C:\\App\\cache'],
+    );
+    expect(out).toEqual({ 'C:\\App\\logs': 2000, 'C:\\App\\cache': 1500 });
+  });
+
+  it('大小写与斜杠不敏感；嵌套目录取最长匹配根', () => {
+    const out = lastCleanByPath(
+      [{ timestamp: iso(500), source: 'c:/app/logs/deep/x.log' }],
+      ['C:\\App', 'C:\\App\\logs'],
+    );
+    expect(out).toEqual({ 'C:\\App\\logs': 500 });
+  });
+
+  it('不落在任何目录下 / 时间戳不可解析 → 不计入', () => {
+    expect(
+      lastCleanByPath(
+        [
+          { timestamp: iso(100), source: 'D:\\Other\\x.log' },
+          { timestamp: 'nope', source: 'C:\\App\\logs\\y.log' },
+        ],
+        ['C:\\App\\logs'],
+      ),
+    ).toEqual({});
+  });
+
+  it('相似前缀不误匹配（C:\\App 不吞 C:\\Apple）', () => {
+    const out = lastCleanByPath(
+      [{ timestamp: iso(700), source: 'C:\\Apple\\x.log' }],
+      ['C:\\App'],
+    );
+    expect(out).toEqual({});
   });
 });

@@ -29,6 +29,18 @@ function ScopeRow({ scope }: { scope: Scope }) {
   const allWithinRetention = eligibleEmpty && !trulyEmpty;
   const checked = s.selectedScopes.has(scope.id) && !eligibleEmpty;
   const days = s.daysByScope[scope.id] ?? (scope.prompt?.kind === 'days' ? scope.prompt.default : undefined);
+  // R156：这个 scope 涉及的目录里，最近一次被清理的时刻（取最新）——只按
+  // 目录前缀匹配（glob 展开只有后端能做，前端不猜）；台账没读到 → null。
+  const lastCleanTs = (() => {
+    const map = s.lastCleanByScope;
+    if (!map) return null;
+    let best: number | null = null;
+    for (const m of s.matches) {
+      const ts = map[m.path];
+      if (ts !== undefined && (best === null || ts > best)) best = ts;
+    }
+    return best;
+  })();
   const meta = (() => {
     if (s.scopeSizes === null) return t('cleanup.scanning');
     if (trulyEmpty) return t('cleanup.empty');
@@ -70,6 +82,13 @@ function ScopeRow({ scope }: { scope: Scope }) {
         <div className="cleanup-row-text">
           <span className="cleanup-row-label">{scope.label}</span>
           <span className="cleanup-row-meta">{meta}</span>
+          {/* R156：该目录上次清理时刻——勾选前就知道「刚清过 / 很久没清」。
+              台账没读到（null）或这个目录没清过时不显示，不编造。 */}
+          {lastCleanTs !== null && (
+            <span className="cleanup-row-last muted small">
+              {t('cleanup.lastCleaned', { age: formatLastActive(lastCleanTs) })}
+            </span>
+          )}
         </div>
       </label>
       {scope.prompt?.kind === 'days' && (

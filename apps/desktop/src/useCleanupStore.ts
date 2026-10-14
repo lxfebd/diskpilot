@@ -21,6 +21,7 @@ import {
   driveBreakdown,
   mergeScopeDays,
   persistScopeDays,
+  lastCleanByPath,
   sampleEntriesByBytes,
   tallyDrive,
   type CoverageBreakdown,
@@ -50,6 +51,9 @@ export interface CleanupSession {
   condaEnvs: CondaEnv[] | null;
   selectedEnvs: Set<string>;
   scopeSizes: ScopeSize[] | null;
+  /** R156：各类目录「上次清理时刻」（scopeId → 最新 ts 秒）；null = 还没读到
+   *  台账（失败与空都走这个分支，界面不显示而非编造）。 */
+  lastCleanByScope: Record<string, number> | null;
   /** 只有「大小探测在飞」才亮这个；conda 环境列表加载走独立的 condaLoading。 */
   scopeLoading: boolean;
   condaLoading: boolean;
@@ -140,6 +144,23 @@ function fetchScopeSizes(debounceMs: number): void {
           scopeSizes: aggregateScopeSizes(batch.map((b) => b.sizes)),
           scopeLoading: false,
         }));
+        // R156：顺带拉一次台账，算出各扫描目录的「上次清理时刻」——让 scope
+        // 行在用户勾选前就能看到「这个目录刚清过 / 很久没清」。读失败保持
+        // null（界面不显示），不影响大小探测结果。
+        void api
+          .listUndo(200)
+          .then((list) => {
+            if (seq !== sizeSeq) return;
+            const cur2 = getCur();
+            if (!cur2) return;
+            patchInSession(() => ({
+              lastCleanByScope: lastCleanByPath(list, cur2.matches.map((m) => m.path)),
+            }));
+          })
+          .catch(() => {
+            if (seq !== sizeSeq) return;
+            patchInSession(() => ({ lastCleanByScope: null }));
+          });
       })
       .catch((e) => {
         if (seq !== sizeSeq) return;
@@ -253,6 +274,7 @@ function buildSession(
     condaEnvs: null,
     selectedEnvs: new Set<string>(),
     scopeSizes: null,
+    lastCleanByScope: null,
     // 只有真的会去探测才亮「扫描中」——matches/scopes 为空时 scheduleSizeFetch
     // 直接返回，初值若为 true 就永远转圈了。
     scopeLoading: matches.length > 0 && (scaffold.scopes ?? []).length > 0,

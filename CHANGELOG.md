@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 清理项显示该目录上次清理时间（R156）
+
+- 清理页每个 scope 行在勾选前显示「上次清理 N 天前」——「这个目录刚清过
+  还是很久没清」直接影响该不该再清；此前只有打开预览窗才能看到全局年龄。
+- 新纯函数 `lastCleanByPath(entries, matchPaths)`（cleanup/model.ts）：按
+  目录前缀把台账 source 归到扫描命中目录，取最新时刻；大小写/斜杠不敏感、
+  嵌套目录取最长匹配根、相似前缀不误匹配（C:\App 不吞 C:\Apple）；glob
+  展开只有后端能做，前端只做可靠的前缀匹配。store 在大小探测成功时顺带
+  拉一次 list_undo(200)，失败保持 null（不显示而非编造）。
+- i18n `cleanup.lastCleaned`（zh/en 成对）；CSS `.cleanup-row-last`。
+  cleanup/model.test.ts +4（461 总 / 35 files）。
+
 ### 2026-10-15 预览窗显示上次清理时间（R155）
 
 - dry-run 预览窗在用户决定删除前显示「上次清理：今天 / N 天前 / 超过一个
