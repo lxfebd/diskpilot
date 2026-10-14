@@ -413,7 +413,7 @@ export function BenchPanel() {
               const pts = parseStressCurve(h.result);
               if (!pts) return null;
               const time = new Date(h.at).toLocaleString();
-              return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length] };
+              return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length], at: h.at };
             })
             .filter((s): s is NonNullable<typeof s> => s !== null)
             .slice(0, 8);
@@ -458,7 +458,7 @@ export function BenchPanel() {
               const pts = parseStressCurve(h.result);
               if (!pts) return null;
               const time = new Date(h.at).toLocaleString();
-              return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length] };
+              return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length], at: h.at };
             })
             .filter((s): s is NonNullable<typeof s> => s !== null)
             .slice(0, 8);

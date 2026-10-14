@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 压测叠画标题显示次数与跨度（R152）
+
+- 历次压测温度叠画（CPU/GPU）标题从只有「历次压测温度对比」扩展为
+  「· 共 N 次 · 跨 M 天」——叠了几条、跨了多久决定散热对比结论的强度
+  （2 次同小时的对比与 8 次跨一个月的演变不是一回事）。
+- `StressHistorySeries` 新增可选 `at`（该次压测开始时刻，来自
+  BenchHistoryEntry.at）；跨度复用 R144 的 `scoreSeriesSpanDays`（<2 次
+  或全同刻 → null 不显示，与跑分图同口径）。i18n
+  `stressChart.histCount` / `histSpan`（zh/en 成对）。
+
 ### 2026-10-14 周报巡检到期提示（R151）
 
 - 周巡检简报卡的日期行新增「巡检到期」提示：距上次生成满 7 天显示

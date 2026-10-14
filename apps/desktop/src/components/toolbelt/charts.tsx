@@ -347,6 +347,9 @@ export interface StressHistorySeries {
   label: string;
   points: StressCurvePoint[];
   color: string;
+  /** R152：该次压测的开始时刻（ms，来自 BenchHistoryEntry.at）——供叠画
+   *  标题统计「共 N 次 · 跨 M 天」尺度；缺省则不显示跨度部分。 */
+  at?: number;
 }
 
 /** R129：叠画 y 轴动态上界 = max(100, 全部系列峰值)。固定 0–100 时单条曲线
@@ -381,10 +384,20 @@ export function StressHistoryChart({ series, kind = 'cpu' }: { series: StressHis
   // R127：GPU 压测叠画标题/aria 用 GPU 变体（甜甜圈区块与 CPU 压测区块
   // 同页并存，标题不区分会混淆）。
   const title = kind === 'gpu' ? t('toolbelt.stressChart.historyTitleGpu') : t('toolbelt.stressChart.historyTitle');
+  // R152：尺度标注——「叠了几条、跨了多久」决定散热对比结论的强度；
+  // 跨度复用 R144 的 scoreSeriesSpanDays（<1 天不显示，与跑分图同口径）。
+  const spanDays = scoreSeriesSpanDays(usable.filter((s) => s.at != null) as { at: number }[]);
 
   return (
     <div className="bench-trend" style={{ marginTop: 10 }}>
-      <div className="bench-stress-hist-title muted small">{title}</div>
+      <div className="bench-stress-hist-title muted small">
+        {title}
+        {' · '}
+        {t('toolbelt.stressChart.histCount', { n: usable.length })}
+        {spanDays !== null && spanDays >= 1 && (
+          <> {' · '}{t('toolbelt.stressChart.histSpan', { days: spanDays.toFixed(spanDays >= 10 ? 0 : 1) })}</>
+        )}
+      </div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title} className="bench-trend-svg">
         {[0.25, 0.5, 0.75].map((f) => (
           <line key={f} x1={PAD} x2={W - PAD} y1={PAD + (H - PAD * 2) * f} y2={PAD + (H - PAD * 2) * f} stroke="var(--line)" strokeDasharray="4 4" strokeWidth={1} />
