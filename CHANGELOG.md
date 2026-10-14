@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 清理项显示上次清理的目录覆盖度（R157）
+
+- 承接 R156：同一 scaffold 常有多个命中目录（多账号 / 多个缓存位置），
+  只报「上次清理 3 天前」会让人以为整个 scope 都清过了。现多目录且未清全
+  时补「N/M 个目录清过」，覆盖度不足一眼可见。
+- 新纯函数 `cleanedHitStats(byPath, matchPaths)`（cleaned / total /
+  latestTs；台账 null → cleaned 0 且 latestTs null 不编造）；CleanupBody
+  的 lastCleanTs 改由它计算。i18n `cleanup.lastCleanedPartial`（zh/en
+  成对）。cleanup/model.test.ts +4（465 总 / 35 files）。
+
 ### 2026-10-15 清理项显示该目录上次清理时间（R156）
 
 - 清理页每个 scope 行在勾选前显示「上次清理 N 天前」——「这个目录刚清过

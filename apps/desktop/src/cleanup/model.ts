@@ -247,6 +247,27 @@ export function lastCleanByPath(
   return out;
 }
 
+/** R157：命中目录的覆盖统计——同一 scaffold 常有多个命中目录（多账号 /
+ *  多个缓存位置），只报「最新一次清理」会掩盖「只清过其中一个」。
+ *  纯函数：cleaned = 台账里被清过的目录数，total = 命中目录总数，
+ *  latestTs = 最新清理时刻（无 → null）。 */
+export function cleanedHitStats(
+  byPath: Record<string, number> | null,
+  matchPaths: readonly string[],
+): { cleaned: number; total: number; latestTs: number | null } {
+  const total = matchPaths.length;
+  if (!byPath) return { cleaned: 0, total, latestTs: null };
+  let cleaned = 0;
+  let latestTs: number | null = null;
+  for (const p of matchPaths) {
+    const ts = byPath[p];
+    if (ts === undefined) continue;
+    cleaned += 1;
+    if (latestTs === null || ts > latestTs) latestTs = ts;
+  }
+  return { cleaned, total, latestTs };
+}
+
 export function formatLastActive(ts: number | null): string {
   if (ts === null) return t('cleanup.lastActiveNever');
   const now = Math.floor(Date.now() / 1000);

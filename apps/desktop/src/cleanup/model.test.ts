@@ -9,6 +9,7 @@ import {
   defaultDaysFor,
   detectVariants,
   driveBreakdown,
+  cleanedHitStats,
   lastCleanByPath,
   sampleEntriesByBytes,
   samplePathsByBytes,
@@ -409,5 +410,36 @@ describe('lastCleanByPath（上次清理时刻按目录聚合）', () => {
       ['C:\\App'],
     );
     expect(out).toEqual({});
+  });
+});
+
+// R157：命中目录覆盖统计——多命中目录时「只清过几个」要能看出来。
+describe('cleanedHitStats（命中目录覆盖）', () => {
+  it('全部目录都清过 → cleaned = total', () => {
+    expect(cleanedHitStats({ 'C:\\a': 100, 'C:\\b': 200 }, ['C:\\a', 'C:\\b'])).toEqual({
+      cleaned: 2,
+      total: 2,
+      latestTs: 200,
+    });
+  });
+
+  it('只清过部分 → 如实报覆盖数（不假装整个 scope 都清过）', () => {
+    expect(cleanedHitStats({ 'C:\\a': 100 }, ['C:\\a', 'C:\\b', 'C:\\c'])).toEqual({
+      cleaned: 1,
+      total: 3,
+      latestTs: 100,
+    });
+  });
+
+  it('台账未读到（null）→ cleaned 0 且 latestTs null（不编造）', () => {
+    expect(cleanedHitStats(null, ['C:\\a'])).toEqual({ cleaned: 0, total: 1, latestTs: null });
+  });
+
+  it('一个目录都没清过 → cleaned 0', () => {
+    expect(cleanedHitStats({}, ['C:\\a', 'C:\\b'])).toEqual({
+      cleaned: 0,
+      total: 2,
+      latestTs: null,
+    });
   });
 });

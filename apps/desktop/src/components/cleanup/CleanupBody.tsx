@@ -6,8 +6,7 @@
 import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage } from '../../useCleanupStore';
 import { formatBytes } from '../../format';
-import { formatLastActive } from '../../cleanup/model';
-import { applySelectionMode } from '../../cleanup/model';
+import { applySelectionMode, cleanedHitStats, formatLastActive } from '../../cleanup/model';
 import { SelectionModePicker, useSelectionOptions } from './SelectionMode';
 import { SelectionActionBar } from './SelectionActionBar';
 import { DryRunPreviewDialog } from './DryRunPreviewDialog';
@@ -31,16 +30,10 @@ function ScopeRow({ scope }: { scope: Scope }) {
   const days = s.daysByScope[scope.id] ?? (scope.prompt?.kind === 'days' ? scope.prompt.default : undefined);
   // R156：这个 scope 涉及的目录里，最近一次被清理的时刻（取最新）——只按
   // 目录前缀匹配（glob 展开只有后端能做，前端不猜）；台账没读到 → null。
-  const lastCleanTs = (() => {
-    const map = s.lastCleanByScope;
-    if (!map) return null;
-    let best: number | null = null;
-    for (const m of s.matches) {
-      const ts = map[m.path];
-      if (ts !== undefined && (best === null || ts > best)) best = ts;
-    }
-    return best;
-  })();
+  // R157：同时报覆盖度——多命中目录时只清过其中几个要说清，否则「上次清理
+  // 3 天前」会让人以为整个 scope 都清过了。
+  const hitStats = cleanedHitStats(s.lastCleanByScope, s.matches.map((m) => m.path));
+  const lastCleanTs = hitStats.latestTs;
   const meta = (() => {
     if (s.scopeSizes === null) return t('cleanup.scanning');
     if (trulyEmpty) return t('cleanup.empty');
@@ -87,6 +80,9 @@ function ScopeRow({ scope }: { scope: Scope }) {
           {lastCleanTs !== null && (
             <span className="cleanup-row-last muted small">
               {t('cleanup.lastCleaned', { age: formatLastActive(lastCleanTs) })}
+{hitStats.total > 1 && hitStats.cleaned < hitStats.total && (
+                <> · {t('cleanup.lastCleanedPartial', { n: hitStats.cleaned, total: hitStats.total })}</>
+              )}
             </span>
           )}
         </div>
