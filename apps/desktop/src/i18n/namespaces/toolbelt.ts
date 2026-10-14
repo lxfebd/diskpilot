@@ -471,6 +471,7 @@ export const toolbelt = {
     'toolbelt.healthRating.na': '无数据',
     'toolbelt.healthRating.ratio': '高值占比 {pct}%',
     'toolbelt.healthRating.note': '评级口径：高值占比（温度 ≥70℃ / 内存 ≥85%）<5% 优秀 · <20% 良好 · 否则关注',
+    'toolbelt.healthRating.shortSpan': '样本跨度仅 {span}——样本偏短，评级仅供参考',
 
     // 插件市场（内置工具插件化 + 社区注册表 / 远端索引分发）
     'toolbelt.mkt.loadFailed': '社区注册表加载失败：{msg}',
@@ -1063,6 +1064,7 @@ export const toolbelt = {
     'toolbelt.healthRating.na': 'No data',
     'toolbelt.healthRating.ratio': 'high-share {pct}%',
     'toolbelt.healthRating.note': 'Rating: high-share (temp ≥70°C / mem ≥85%) <5% great · <20% okay · otherwise watch',
+    'toolbelt.healthRating.shortSpan': 'Sample span is only {span} — too short for a long-term rating; treat it as a hint',
 
     // Plugin market (plugin-ising built-in tools + community registry / remote index)
     'toolbelt.mkt.loadFailed': 'Community registry failed to load: {msg}',

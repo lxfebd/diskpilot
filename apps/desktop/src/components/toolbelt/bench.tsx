@@ -12,7 +12,7 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, HealthRatingCard, extractLongSeries, parseTrendJson, buildScoreSeries } from './charts';
+import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, HealthRatingCard, extractLongSeries, parseTrendJson, buildScoreSeries, trendSpan } from './charts';
 import type { TrendPoint } from './charts';
 import { MEM_RAMP, TEMP_RAMP } from '../../colors';
 
@@ -505,6 +505,7 @@ export function BenchPanel() {
                 cpuTemps={trendSeries.cpuTemps}
                 gpuTemps={trendSeries.gpuTemps}
                 memPercents={trendSeries.memPercents}
+                spanSec={trendSpan(trendData.points)?.spanSec}
               />
             )}
             {/* R116：长期历史的温度分布色阶条——只统计有温度的样本 */}

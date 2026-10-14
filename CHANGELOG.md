@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 评级卡样本偏短提示（R139）
+
+- 长期健康度评级卡新增诚实提示：样本跨度不足一天（`spanSec < 86400`）时
+  显示「样本跨度仅 X——样本偏短，评级仅供参考」——几小时的样本称不上
+  「长期」，结论的前提条件必须说清（承接 R138 的 trendSpan）。
+- HealthRatingCard 新增可选 `spanSec` prop（bench.tsx 传
+  `trendSpan(trendData.points)?.spanSec`）；i18n
+  `toolbelt.healthRating.shortSpan`（zh/en）；CSS `.health-rating-warn`
+  用 warn 语义色。charts.test.ts +2（424 总 / 34 files）。
+
 ### 2026-10-14 长期趋势图显示时间跨度（R138）
 
 - 传感器趋势折线图图例行从只显示「N 个采样点」扩展为「· 跨度」（如

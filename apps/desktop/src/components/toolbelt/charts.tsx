@@ -572,16 +572,21 @@ export function HealthRatingCard({
   cpuTemps,
   gpuTemps,
   memPercents,
+  spanSec,
 }: {
   cpuTemps: number[];
   gpuTemps?: number[];
   memPercents: number[];
+  /** R139：样本时间跨度（秒）；<1 天时提示评级仅供参考——样本太短称不上
+   *  「长期」。由调用方从 points 首末 ts 算（trendSpan）。 */
+  spanSec?: number;
 }) {
   const t = useT();
   const tS = distSummary(cpuTemps, 70);
   const gS = distSummary(gpuTemps ?? [], 70);
   const mS = distSummary(memPercents, 85);
   if (!tS && !gS && !mS) return null;
+  const tooShort = spanSec != null && spanSec > 0 && spanSec < 86400;
 
   const rows: { key: string; label: string; summary: { highRatio: number } | null }[] = [
     { key: 'cpu', label: t('toolbelt.healthRating.cpu'), summary: tS },
@@ -594,6 +599,12 @@ export function HealthRatingCard({
       {rows.map((r) => (
         <RatingRow key={r.key} label={r.label} summary={r.summary} />
       ))}
+{/* R139：样本不足一天——如实说清「长期」结论的前提不成立 */}
+      {tooShort && (
+        <div className="health-rating-warn muted small">
+          {t('toolbelt.healthRating.shortSpan', { span: formatSpan(spanSec!) })}
+        </div>
+      )}
       <div className="bench-trend-legend">
         <span className="muted small">{t('toolbelt.healthRating.note')}</span>
       </div>

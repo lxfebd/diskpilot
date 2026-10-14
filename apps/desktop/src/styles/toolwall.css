@@ -603,6 +603,11 @@ html[data-theme="pro"] .tb-tab.active { border-color: var(--accent-strong); back
   align-items: center;
   gap: 8px;
 }
+/* R139：样本跨度不足一天时的诚实提示——用 warn 语义色，不喧宾夺主 */
+.health-rating-warn {
+  color: var(--warn, #f59e0b);
+  line-height: 1.45;
+}
 .health-rating-badge {
   display: inline-flex;
   align-items: center;

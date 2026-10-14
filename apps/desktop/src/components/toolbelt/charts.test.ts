@@ -73,3 +73,17 @@ describe('R138 formatSpan（秒 → 人话跨度）', () => {
     expect(formatSpan(Number.NaN)).toBe('0s');
   });
 });
+
+// R139：评级卡「样本偏短」提示用的跨度格式化边界——不足一天走 h/m 档，
+// 满一天才出现 d 档（提示条件 spanSec < 86400 与 d 档出现互为镜像）。
+describe('R139 跨度格式与偏短阈值边界', () => {
+  it('不足一天只出 h/m 档（无 d 档）', () => {
+    expect(formatSpan(86399)).toBe('23h 59m');
+    expect(formatSpan(3600)).toBe('1h 0m');
+ expect(formatSpan(59)).toBe('59s');
+  });
+  it('满一天起出 d 档（此时不再提示偏短）', () => {
+    expect(formatSpan(86400)).toBe('1d 0h');
+    expect(formatSpan(3 * 86400)).toBe('3d 0h');
+  });
+});
