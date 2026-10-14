@@ -73,7 +73,31 @@ describe('summarizeUndo', () => {
       total: 0,
       bytesFreed: null,
       byAction: { recycle: 0, quarantine: 0, delete: 0 },
+      newestAt: null,
+      oldestAt: null,
     });
+  });
+
+  // R149：台账时间范围——累计数字要给尺度，取可解析时间戳的 min/max
+  // （不依赖列表顺序）。
+  it('时间范围取 min/max，与列表顺序无关', () => {
+    const mid = new Date(2026, 9, 5, 12, 0);
+    const old = new Date(2026, 8, 1, 8, 0);
+    const neu = new Date(2026, 9, 12, 20, 0);
+    const s = summarizeUndo([
+      entry({ timestamp: iso(mid) }),
+      entry({ timestamp: iso(old) }),
+      entry({ timestamp: iso(neu) }),
+    ]);
+    expect(s.oldestAt).toBe(old.toISOString());
+    expect(s.newestAt).toBe(neu.toISOString());
+  });
+
+  it('时间戳全不可解析 → 两个范围字段都为 null', () => {
+    const s = summarizeUndo([entry({ timestamp: '' }), entry({ timestamp: 'not-a-date' })]);
+    expect(s.oldestAt).toBeNull();
+    expect(s.newestAt).toBeNull();
+    expect(s.total).toBe(2);
   });
 });
 

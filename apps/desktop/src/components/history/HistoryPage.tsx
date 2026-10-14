@@ -20,6 +20,13 @@ import {
 // 后端 list_undo 在 take 上限内尽量多取；undo.jsonl 自带裁剪，正常远小于此。
 const LOAD_LIMIT = 500;
 
+/** R149：时间戳 → 本地日期（YYYY-MM-DD）——台账范围文案用，不显示时刻。 */
+function fmtDay(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const ACTION_FILTERS: UndoActionFilter[] = ['all', 'recycle', 'quarantine', 'delete'];
 
 /** 过滤按钮文案：all 走 history 键，动作标签复用 cleanup 既有键（口径不漂移）。 */
@@ -109,6 +116,12 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         )}
         {summary.bytesFreed != null && (
           <span className="hp-freed">{t('history.bytesFreed', { size: formatBytes(summary.bytesFreed) })}</span>
+        )}
+        {/* R149：台账时间范围——累计数字要给个尺度（这些记录是从哪天开始的） */}
+        {summary.oldestAt != null && (
+          <span className="muted small" title={t('history.rangeTitle', { from: fmtDay(summary.oldestAt), to: fmtDay(summary.newestAt ?? summary.oldestAt) })}>
+            {t('history.rangeFrom', { date: fmtDay(summary.oldestAt) })}
+          </span>
         )}
         <button type="button" className="ghost hp-refresh" onClick={refresh} title={t('history.refresh')}>
           <RotateCcw size={12} /> {t('history.refresh')}

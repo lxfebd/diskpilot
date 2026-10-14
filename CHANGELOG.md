@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 清理历史台账显示时间范围（R149）
+
+- 清理历史页头部「累计释放 X」旁新增「最早 YYYY-MM-DD」——台账的累计
+  数字现在有尺度：这些记录是从哪天开始攒的（悬停显示起止范围）。读取
+  失败 / 空台账 / 时间戳全不可解析时不显示（诚实：没读到就不编日期）。
+- `summarizeUndo` 新增 `oldestAt` / `newestAt`（按可解析时间戳取 min/max，
+  不依赖列表顺序）；`fmtDay` 格式化本地日期。i18n `history.rangeFrom` /
+  `rangeTitle`（zh/en 成对）。model.test.ts +2（442 总 / 35 files）。
+
 ### 2026-10-14 空间耗尽预测按样本充分度降级（R148）
 
 - 承接 R145 的采样充分度：空间趋势行样本少（2–4 点，sparse）时，原有的

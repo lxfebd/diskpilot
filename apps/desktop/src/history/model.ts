@@ -16,6 +16,10 @@ export interface UndoSummary {
   /** 后端实测释放字节之和；所有条目都缺实测值时为 null（界面不显示累计） */
   bytesFreed: number | null;
   byAction: Record<UndoEntry['action'], number>;
+  /** R149：台账覆盖的时间范围（最新 / 最早一条的时间戳）；空台账或全部时间戳
+   *  不可解析时为 null——界面据此显示「最早 …」，给累计数字一个时间尺度。 */
+  newestAt: string | null;
+  oldestAt: string | null;
 }
 
 /** 动作过滤 + 关键词过滤（匹配 source / destination / reason）。 */
@@ -36,14 +40,29 @@ export function summarizeUndo(entries: UndoEntry[]): UndoSummary {
   const byAction: Record<UndoEntry['action'], number> = { recycle: 0, quarantine: 0, delete: 0 };
   let bytes = 0;
   let bytesKnown = false;
+  // R149：时间范围按可解析时间戳取 min/max（不依赖列表顺序——调用方可能传
+  // 过滤后的子集或另一种顺序）。
+  let newest: number | null = null;
+  let oldest: number | null = null;
   for (const e of entries) {
     byAction[e.action] += 1;
     if (e.bytes_freed != null) {
       bytes += e.bytes_freed;
       bytesKnown = true;
     }
+    const ts = Date.parse(e.timestamp);
+    if (Number.isFinite(ts)) {
+      if (newest === null || ts > newest) newest = ts;
+      if (oldest === null || ts < oldest) oldest = ts;
+    }
   }
-  return { total: entries.length, bytesFreed: bytesKnown ? bytes : null, byAction };
+  return {
+    total: entries.length,
+    bytesFreed: bytesKnown ? bytes : null,
+    byAction,
+    newestAt: newest === null ? null : new Date(newest).toISOString(),
+    oldestAt: oldest === null ? null : new Date(oldest).toISOString(),
+  };
 }
 
 export interface UndoDayGroup {
