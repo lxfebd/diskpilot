@@ -77,6 +77,9 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
     () => filterUndoEntries(entries ?? [], { action, query }),
     [entries, action, query],
   );
+  // R150：头部统计改为基于「当前筛选集」——筛选 recycle/关键词后，「共 N 条
+  // · 累计释放 · 最早日期」应反映筛选结果而不是永远全量，否则统计与列表脱节。
+  const filteredSummary = useMemo(() => summarizeUndo(filtered), [filtered]);
   const groups = useMemo(() => groupUndoByDay(filtered), [filtered]);
   const now = new Date();
 
@@ -112,15 +115,22 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         {loadErr ? (
           <span className="muted small">{t('history.unread')}</span>
         ) : (
-          <span className="muted small">{t('history.total', { n: summary.total })}</span>
+          <span className="muted small">
+            {t('history.total', { n: summary.total })}
+            {/* R150：有筛选时补一句「筛出 M 条」——否则「共 N 条」与下列
+                列表长度对不上，用户会以为漏了记录。 */}
+            {filtered.length !== summary.total && (
+              <> · {t('history.filteredN', { n: filtered.length })}</>
+            )}
+          </span>
         )}
-        {summary.bytesFreed != null && (
-          <span className="hp-freed">{t('history.bytesFreed', { size: formatBytes(summary.bytesFreed) })}</span>
+        {filteredSummary.bytesFreed != null && (
+          <span className="hp-freed">{t('history.bytesFreed', { size: formatBytes(filteredSummary.bytesFreed) })}</span>
         )}
-        {/* R149：台账时间范围——累计数字要给个尺度（这些记录是从哪天开始的） */}
-        {summary.oldestAt != null && (
-          <span className="muted small" title={t('history.rangeTitle', { from: fmtDay(summary.oldestAt), to: fmtDay(summary.newestAt ?? summary.oldestAt) })}>
-            {t('history.rangeFrom', { date: fmtDay(summary.oldestAt) })}
+        {/* R149+R150：台账时间范围（按当前筛选集）；没读到就不显示 */}
+        {filteredSummary.oldestAt != null && (
+          <span className="muted small" title={t('history.rangeTitle', { from: fmtDay(filteredSummary.oldestAt), to: fmtDay(filteredSummary.newestAt ?? filteredSummary.oldestAt) })}>
+            {t('history.rangeFrom', { date: fmtDay(filteredSummary.oldestAt) })}
           </span>
         )}
         <button type="button" className="ghost hp-refresh" onClick={refresh} title={t('history.refresh')}>
