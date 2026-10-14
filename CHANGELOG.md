@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 可选更新支持「只看驱动」（R167）
+
+- Windows Update 可选更新列表里驱动与语言包/功能更新混在一起——`is_driver`
+  字段此前前端从未使用，用户想找驱动更新得逐条看标题。现加「全部可选
+  更新 / 只看驱动」chips（驱动数为 0 时后者禁用）+ 计数行「可选更新 N 项 ·
+  其中驱动 M 项」；只有非驱动项时给「这批可选更新里没有驱动项」说明。
+- 新纯函数 `driverOnlyUpdates(list)` / `wuUpdateCounts(list)`
+  （SystemTools.tsx 导出）；i18n 4 个新键（zh/en 成对）。SystemTools.test.ts
+  +4（515 总 / 37 files）。
+
 ### 2026-10-15 已装驱动加搜索与分类筛选（R166）
 
 - 已装驱动列表此前整列展示（后端上限 200 条）——想确认"某设备的驱动装了

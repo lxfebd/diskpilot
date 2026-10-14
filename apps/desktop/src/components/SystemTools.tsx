@@ -60,6 +60,17 @@ export function driverClassCounts(list: readonly InstalledDriver[]): { cls: stri
     .sort((a, b) => b.n - a.n || a.cls.localeCompare(b.cls));
 }
 
+/** R167：Windows Update 可选更新里 `is_driver` 一直没被用过——驱动更新与
+ *  语言包/功能更新混在一起，用户常只想看驱动。纯函数：只挑 is_driver 的。 */
+export function driverOnlyUpdates(list: readonly DriverUpdate[]): DriverUpdate[] {
+  return list.filter((u) => u.is_driver);
+}
+
+/** R167：可选更新计数——「共 N 项（其中驱动 M 项）」。 */
+export function wuUpdateCounts(list: readonly DriverUpdate[]): { total: number; drivers: number } {
+  return { total: list.length, drivers: list.filter((u) => u.is_driver).length };
+}
+
 export function SystemTools() {
   return (
     <ErrorBoundary>
@@ -94,9 +105,14 @@ function SystemToolsInner() {
   // R166：已装驱动搜索 + 分类筛选（200 条上限下列表很长）。
   const [drvQuery, setDrvQuery] = useState('');
   const [drvClass, setDrvClass] = useState<string | null>(null);
+  // R167：可选更新只看驱动（Windows Update 混了语言包/功能更新）。
+  const [wuDriverOnly, setWuDriverOnly] = useState(false);
   // R166：筛选结果与分类计数（渲染只读）。
   const visibleDrivers = filterDrivers(drivers ?? [], drvQuery, drvClass);
   const classCounts = driverClassCounts(drivers ?? []);
+  // R167：可选更新的计数与「仅驱动」筛选结果。
+  const wuCounts = wuUpdateCounts(updates ?? []);
+  const visibleUpdates = wuDriverOnly ? driverOnlyUpdates(updates ?? []) : (updates ?? []);
 
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -437,23 +453,52 @@ function SystemToolsInner() {
         </button>
       </div>
       {updates && updates.length > 0 && (
-        <div className="sys-list" style={{ marginTop: 10 }}>
-          {updates.map((u, i) => (
-            <div key={i} className="sys-row">
-              <div className="sys-row-main">
-                <span className="sys-name">{u.title}</span>
-                <span className="sys-sub muted">
-                  {u.kb && <>KB{u.kb} · </>}
-                  {u.category || t('system.driver.catDefault')}
+        <>
+          {/* R167：可选更新里驱动与语言包/功能更新混排——只看驱动的人要能筛 */}
+          <div className="sys-filter-bar">
+            <span className="muted small">
+              {t('system.driver.wuCounts', { total: wuCounts.total, drivers: wuCounts.drivers })}
+            </span>
+            <span className="sys-filter-chips">
+              <button
+                type="button"
+                className={'chip' + (wuDriverOnly ? '' : ' active')}
+                onClick={() => setWuDriverOnly(false)}
+              >
+                {t('system.driver.wuFilterAll')}
+              </button>
+              <button
+                type="button"
+                className={'chip' + (wuDriverOnly ? ' active' : '')}
+                onClick={() => setWuDriverOnly(true)}
+                disabled={wuCounts.drivers === 0}
+              >
+                {t('system.driver.wuFilterDrivers')}
+              </button>
+            </span>
+          </div>
+          <div className="sys-list" style={{ marginTop: 10 }}>
+            {visibleUpdates.length === 0 ? (
+              <div className="muted small">{t('system.driver.wuNoDrivers')}</div>
+            ) : (
+              visibleUpdates.map((u, i) => (
+              <div key={i} className="sys-row">
+                <div className="sys-row-main">
+                  <span className="sys-name">{u.title}</span>
+                  <span className="sys-sub muted">
+                    {u.kb && <>KB{u.kb} · </>}
+                    {u.category || t('system.driver.catDefault')}
+                  </span>
+                </div>
+                <span className="sys-tag sys-tag-blue">
+                  <DownloadCloud size={10} style={{ verticalAlign: '-1px', marginRight: 3 }} />
+                  {t('system.driver.updatable')}
                 </span>
               </div>
-              <span className="sys-tag sys-tag-blue">
-                <DownloadCloud size={10} style={{ verticalAlign: '-1px', marginRight: 3 }} />
-                {t('system.driver.updatable')}
-              </span>
-            </div>
-          ))}
-        </div>
+              ))
+            )}
+          </div>
+        </>
       )}
       {updates && updates.length === 0 && !wuLoading && (
         <div className="muted small" style={{ marginTop: 6 }}>{t('system.driver.noneAvailable')}</div>

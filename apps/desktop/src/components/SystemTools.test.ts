@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { driverClassCounts, fanChannelState, filterDrivers } from './SystemTools';
-import type { FanStatus, FanProbe, InstalledDriver } from '../api';
+import { driverClassCounts, driverOnlyUpdates, fanChannelState, filterDrivers, wuUpdateCounts } from './SystemTools';
+import type { FanStatus, FanProbe, InstalledDriver, DriverUpdate } from '../api';
 
 // R71 诚实性回归：风扇可调通道三态——「状态探测失败」绝不能被渲染成
 // 「当前无可用调速通道」。状态未读到 ≠ 不存在（同一族：未读到 ≠ 空）。
@@ -103,5 +103,42 @@ describe('driverClassCounts（分类计数）', () => {
 
   it('空列表 → 空数组', () => {
     expect(driverClassCounts([])).toEqual([]);
+  });
+});
+
+// R167：Windows Update 可选更新里 is_driver 此前未被使用——只看驱动的人要能筛。
+describe('driverOnlyUpdates / wuUpdateCounts（可选更新筛选）', () => {
+  const mk = (over: Partial<DriverUpdate>): DriverUpdate => ({
+    title: 'X',
+    kb: '',
+    driver_provider: '',
+    driver_version: '',
+    category: '',
+    is_driver: false,
+    ...over,
+  });
+  const list: DriverUpdate[] = [
+    mk({ title: 'NVIDIA 驱动更新', is_driver: true }),
+    mk({ title: '语言包', is_driver: false }),
+    mk({ title: 'Intel 网卡驱动', is_driver: true }),
+  ];
+
+  it('只挑 is_driver', () => {
+    expect(driverOnlyUpdates(list).map((u) => u.title)).toEqual(['NVIDIA 驱动更新', 'Intel 网卡驱动']);
+  });
+
+  it('计数分别为总数与驱动数', () => {
+    expect(wuUpdateCounts(list)).toEqual({ total: 3, drivers: 2 });
+  });
+
+  it('空列表 → 空数组与全 0', () => {
+    expect(driverOnlyUpdates([])).toEqual([]);
+    expect(wuUpdateCounts([])).toEqual({ total: 0, drivers: 0 });
+  });
+
+  it('不改入参数组（纯函数）', () => {
+    const input = [...list];
+    driverOnlyUpdates(input);
+    expect(input).toHaveLength(3);
   });
 });
