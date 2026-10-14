@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 周报环比显示间隔天数（R154）
+
+- 周巡检简报的环比对比标题补「· 间隔 N 天」——对比结论的强度取决于跨度：
+  间隔 7 天是标准周节奏，间隔 30 天则是「月度对比」，笼统说成「本周 vs
+  上周」会误导；两份任缺一份、同刻或倒序时如实不显示。
+- 新纯函数 `weeklyGapDays(cur, prev)`（ts 差换算天数；无效 → null）；
+  i18n `history.weekly.vsGap`（zh/en 成对）。WeeklyHealthCard.test.ts +3
+  （453 总 / 35 files）。
+
 ### 2026-10-15 AI 工具卡「描述待补」标注（R153）
 
 - agent-server 的 MCP 工具描述可能为空或全是虚词——此前卡片静默缺一行、

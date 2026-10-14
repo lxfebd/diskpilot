@@ -35,6 +35,17 @@ export function nextInspectionDue(
   return { due: left <= 0, daysLeft: Math.max(0, left) };
 }
 
+/** R154：两份周报的间隔天数——环比结论的强度取决于对比跨度：间隔 7 天
+ *  是标准周节奏，间隔 30 天则是「月度对比」，说成「本周 vs 上周」会误导。
+ *  纯函数：任一 ts 无效 → null（不编造间隔）；同刻或倒序 → null。 */
+export function weeklyGapDays(cur: WeeklyReport | null, prev: WeeklyReport | null): number | null {
+  const a = cur?.ts ?? 0;
+  const b = prev?.ts ?? 0;
+  if (!Number.isFinite(a) || !Number.isFinite(b) || a <= 0 || b <= 0) return null;
+  const gap = (a - b) / DAY_SECS;
+  return gap > 0 ? gap : null;
+}
+
 /** R95 周报环比：cur 与 prev 两份都存在才对比，字段有一方缺失就返回 null（不编造）。 */
 export interface WeeklyDelta {
   /** 可清理量差值：>0 更多可清，<0 更少，=0 持平。prev 无数据 → null。 */
@@ -69,6 +80,8 @@ export function WeeklyHealthCard({
 
   // R95: 两份都存在才算 delta；任一缺失 → null（不显示对比区）。
   const delta = useMemo(() => weeklyDelta(report, prevReport), [report, prevReport]);
+  // R154：环比间隔天数（给对比结论一个跨度参照）。
+  const gapDays = useMemo(() => weeklyGapDays(report, prevReport), [report, prevReport]);
 
   const refresh = useCallback(() => {
     setLoadErr(null);
@@ -163,7 +176,13 @@ export function WeeklyHealthCard({
           {/* R95 环比对比：两份都有才显示；只有一份 → 提示再生成一份；缺字段不编造。 */}
           {delta ? (
             <div className="wh-vs">
-              <div className="wh-vs-title">{t('history.weekly.vsHead')}</div>
+              <div className="wh-vs-title">
+                {t('history.weekly.vsHead')}
+                {/* R154：环比跨度——间隔 7 天是标准周节奏，间隔更久要说清 */}
+                {gapDays !== null && gapDays >= 1 && (
+                  <span className="muted small"> · {t('history.weekly.vsGap', { n: Math.round(gapDays) })}</span>
+                )}
+              </div>
               <ul className="wh-vs-list">
                 {delta.cleanBytes === null ? (
                   <li className="muted small">{t('history.weekly.vsCleanNone')}</li>

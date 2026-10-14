@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { t } from '../../i18n';
-import { nextInspectionDue, reportAgeLabel, weeklyDelta } from './WeeklyHealthCard';
+import { nextInspectionDue, reportAgeLabel, weeklyDelta, weeklyGapDays } from './WeeklyHealthCard';
 import type { WeeklyReport } from '../../api';
 
 const base = (over: Partial<WeeklyReport>): WeeklyReport => ({
@@ -92,5 +92,23 @@ describe('nextInspectionDue（巡检到期）', () => {
     expect(nextInspectionDue(0, now)).toBeNull();
     expect(nextInspectionDue(-5, now)).toBeNull();
     expect(nextInspectionDue(Number.NaN, now)).toBeNull();
+  });
+});
+
+// R154：环比间隔天数——对比结论的强度取决于跨度（7 天 vs 30 天）。
+describe('weeklyGapDays（环比间隔）', () => {
+  it('标准周节奏 → 7 天', () => {
+    expect(weeklyGapDays(base({ ts: 1_800_000_000 }), base({ ts: 1_800_000_000 - 7 * 86400 }))).toBe(7);
+  });
+
+  it('间隔更久（如 30 天）如实返回', () => {
+    expect(weeklyGapDays(base({ ts: 1_800_000_000 }), base({ ts: 1_800_000_000 - 30 * 86400 }))).toBe(30);
+  });
+
+  it('缺一份 / 同刻 / 倒序 → null（不编造）', () => {
+    expect(weeklyGapDays(base({}), null)).toBeNull();
+    expect(weeklyGapDays(null, base({}))).toBeNull();
+    expect(weeklyGapDays(base({ ts: 100 }), base({ ts: 100 }))).toBeNull();
+    expect(weeklyGapDays(base({ ts: 100 }), base({ ts: 200 }))).toBeNull();
   });
 });
