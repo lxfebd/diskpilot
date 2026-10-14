@@ -1025,6 +1025,18 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 /* 语义：delta>0 = 空间被占用（警示色），delta<0 = 空间释放（安全色） */
 .ao-trend-delta.up b { color: var(--risk-caution); }
 .ao-trend-delta.down b { color: var(--risk-safe); }
+/* R145 采样点充分度：点数少（2–4）时趋势不足为据，用警示色标记 */
+.ao-trend-samples {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  opacity: .8;
+}
+.ao-trend-samples.sparse {
+  color: var(--risk-caution);
+  opacity: 1;
+}
 /* R98 空间耗尽预测：「约 N 天满」/「已满」小标签——占满前给个预警视角 */
 .ao-trend-forecast {
   flex-shrink: 0; min-width: 74px; text-align: right;

@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 空间趋势行显示采样点充分度（R145）
+
+- 空间趋势每行在「+X GB / N 天」旁显示采样点数（悬停说明）——2 个点
+  算出的「每天涨 X GB」与 30 个点算出的完全不是一回事，样本少时趋势
+  与外推不该当结论。点数 2–4 时用警示色标记（`sparse`）。
+- 新纯函数 `spaceTrendSamples(pts)`（≥5 rich / 2–4 sparse / <2 none，
+  非有限 at 滤掉）；i18n `overview.trend.samplesRich` / `samplesSparse`
+  （zh/en 成对）；CSS `.ao-trend-samples(.sparse)`。AssetOverview.test.ts
+  +4（433 总 / 35 files）。
+
 ### 2026-10-14 跑分历史显示时间跨度（R144）
 
 - 分数历史条形图图例行从「共 N 次 · 单位 X」扩展为「· 跨 D 天」——跨度

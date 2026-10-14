@@ -149,6 +149,15 @@ export function buildSpaceSeries(
   return out.sort((a, b) => b.points[b.points.length - 1]?.used_bytes - a.points[a.points.length - 1]?.used_bytes);
 }
 
+/** R145：空间趋势的采样充分度——趋势/外推的可信度取决于有多少个采样点：
+ *  2 个点算出的「每天涨 X GB」和 30 个点算出的完全不是一回事。纯函数：
+ *  ≥5 点 rich（趋势可信）、2–4 点 sparse（仅供参考）、<2 点 none（不出结论）。 */
+export function spaceTrendSamples(pts: readonly { at: number }[]): 'rich' | 'sparse' | 'none' {
+  const n = pts.filter((p) => Number.isFinite(p.at)).length;
+  if (n < 2) return 'none';
+  return n >= 5 ? 'rich' : 'sparse';
+}
+
 /** 近期增量：首尾已用差 + 跨度天数文案（不足 2 条返回「记录不足」）。 */
 export function spaceWeekDelta(pts: SpacePoint[]): { delta: number; days: string } {
   if (pts.length < 2) return { delta: 0, days: t('overview.trend.noRecords') };
@@ -394,6 +403,7 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
           const usage = last.total_bytes > 0 ? (last.used_bytes / last.total_bytes) * 100 : 0;
           const isShrinking = delta < 0; // 负增量 = 空间释放
           // R98 空间耗尽预测：按首尾增速外推「多少天后用满」；0 = 已满。
+          const samples = spaceTrendSamples(points);
           const fullDays = forecastFullDays(points);
           const forecastLabel =
             fullDays === null ? null
@@ -428,6 +438,19 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
                 <b>{delta > 0 ? '+' : ''}{formatBytes(delta)}</b>
                 <small>{days}</small>
               </span>
+{/* R145：采样点充分度——2 点算出的增速不足以当结论 */}
+              {samples !== 'none' && (
+                <span
+                  className={'ao-trend-samples muted small' + (samples === 'sparse' ? ' sparse' : '')}
+                  title={
+                    samples === 'sparse'
+                      ? t('overview.trend.samplesSparse', { n: points.length })
+                      : t('overview.trend.samplesRich', { n: points.length })
+                  }
+                >
+                  {points.length}
+                </span>
+              )}
               {forecastLabel && (
                 <span className={'ao-trend-forecast ' + spaceRisk(fullDays)}>
                   {forecastLabel}

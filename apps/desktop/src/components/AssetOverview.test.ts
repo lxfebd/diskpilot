@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -156,6 +156,31 @@ describe('spaceRisk（耗尽风险分级）', () => {
   it('>90 天 → ok（余量充足）', () => {
     expect(spaceRisk(91)).toBe('ok');
     expect(spaceRisk(500)).toBe('ok');
+  });
+});
+
+// R145 采样充分度：趋势/外推可信度取决于采样点数——2 点算出的增速不足为据。
+describe('spaceTrendSamples（空间趋势采样充分度）', () => {
+  it('≥5 点 → rich（趋势可信）', () => {
+    expect(spaceTrendSamples([1, 2, 3, 4, 5].map((at) => ({ at })))).toBe('rich');
+    expect(spaceTrendSamples(Array.from({ length: 30 }, (_, i) => ({ at: i })))).toBe('rich');
+  });
+
+  it('2–4 点 → sparse（仅供参考）', () => {
+    expect(spaceTrendSamples([{ at: 1 }, { at: 2 }])).toBe('sparse');
+    expect(spaceTrendSamples([{ at: 1 }, { at: 2 }, { at: 3 }, { at: 4 }])).toBe('sparse');
+  });
+
+  it('不足 2 点 → none（不出结论）', () => {
+    expect(spaceTrendSamples([])).toBe('none');
+    expect(spaceTrendSamples([{ at: 7 }])).toBe('none');
+  });
+
+  it('非有限 at 被滤掉后再判档', () => {
+    expect(spaceTrendSamples([{ at: Number.NaN }, { at: 1 }])).toBe('none');
+    expect(
+      spaceTrendSamples([{ at: 1 }, { at: 2 }, { at: 3 }, { at: 4 }, { at: Number.NaN }]),
+    ).toBe('sparse');
   });
 });
 

@@ -39,6 +39,8 @@ export const overview = {
     'overview.trend.noRecords': '记录不足',
     'overview.trend.today': '今日',
     'overview.trend.daysSpan': '{n} 天',
+    'overview.trend.samplesRich': '{n} 个采样点',
+    'overview.trend.samplesSparse': '仅 {n} 个采样点，趋势仅供参考',
     // R90 时间窗口：7 天 / 30 天 / 全部（历史里有数据但窗口过滤后为空时也复用 rangeAll）
     'overview.trend.range7': '7 天',
     'overview.trend.range30': '30 天',
@@ -215,6 +217,8 @@ export const overview = {
     'overview.trend.noRecords': 'Not enough history',
     'overview.trend.today': 'Today',
     'overview.trend.daysSpan': '{n} days',
+    'overview.trend.samplesRich': '{n} sample points',
+    'overview.trend.samplesSparse': 'only {n} sample points — trend is a rough hint',
     // R90 time range: 7 days / 30 days / all (rangeAll is also the exit when a window filters everything out)
     'overview.trend.range7': '7 days',
     'overview.trend.range30': '30 days',
