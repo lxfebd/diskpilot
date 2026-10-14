@@ -11,10 +11,11 @@ import { ProgressButton } from '../ProgressButton';
 import { useEscapeKey } from '../../escapeKey';
 import { formatBytes } from '../../format';
 import { useT } from '../../i18n';
-import { type HwDiskHealth } from '../../api';
+import { api, type HwDiskHealth } from '../../api';
 import { ensureHwLoaded, getHwCache } from '../../hwCache';
 import { driveAliasesOf, resolveLetter, riskyDrives } from '../../diskHealth';
 import type { DryRunPreview } from '../../cleanup/model';
+import { lastCleanAgeKey, type LastCleanKey } from '../../history/model';
 import type { RecycleGranularity } from '../../types';
 
 interface Props {
@@ -67,6 +68,23 @@ export function DryRunPreviewDialog({
     ),
   );
   const riskyBlocked = risky.length > 0 && !ackRisky;
+  // R155：上次清理是多久前——在用户决定删除前给个时间参照，避免刚清完又清。
+  // 读失败则 null（不编造），不拦确认流程。
+  const [lastAge, setLastAge] = useState<{ key: LastCleanKey; n?: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .listUndo(50)
+      .then((list) => {
+        if (!cancelled) setLastAge(lastCleanAgeKey(list));
+      })
+      .catch(() => {
+        if (!cancelled) setLastAge(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const armTimeoutRef = useRef<number | null>(null);
   useEffect(() => () => {
     if (armTimeoutRef.current !== null) window.clearTimeout(armTimeoutRef.current);
@@ -127,6 +145,18 @@ export function DryRunPreviewDialog({
             {t('cleanup.previewRecycle')}
           </span>
         </div>
+
+        {/* R155：上次清理时间参照——刚清完又清一遍是常见误操作 */}
+        {lastAge && (
+          <div className="cleanup-preview-last muted small">
+            {t('cleanup.previewLastClean')}
+            {lastAge.key === 'history.ageDays'
+              ? t('history.ageDays', { n: lastAge.n ?? 0 })
+              : lastAge.key === 'history.ageOld'
+                ? t('history.ageOld')
+                : t('history.ageToday')}
+          </div>
+        )}
 
         {preview.driveCounts.length > 0 && (
           <div className="cleanup-preview-drives muted small">

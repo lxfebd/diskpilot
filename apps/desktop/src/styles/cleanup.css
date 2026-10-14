@@ -404,6 +404,12 @@ main.cleanup-page > .cleanup-page {
   font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 10.5px;
 }
+/* R155：上次清理时间参照——弱化，仅作决策背景信息 */
+.cleanup-preview-last {
+  margin-top: -2px;
+  font-size: 10.5px;
+  opacity: .8;
+}
 .cleanup-preview-more {
   margin-top: 4px;
   padding-top: 4px;

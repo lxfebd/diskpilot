@@ -7,6 +7,7 @@ import {
   summarizeUndo,
   groupUndoByDay,
   dayGroupLabel,
+  lastCleanAgeKey,
   restoreKind,
 } from './model';
 import type { UndoEntry } from '../types';
@@ -154,5 +155,35 @@ describe('restoreKind', () => {
   it('回收条目绝不给原地恢复（后端 restore_quarantined 会拒绝非隔离区条目）', () => {
     // 这条断言挡的是「界面上给了按钮、点了必失败」的回归。
     expect(restoreKind(entry({ timestamp: ts, action: 'recycle', destination: null }))).not.toBe('inline');
+  });
+});
+
+// R155：最近一次操作的年龄档位——预览窗据此提示「上次清理是多久前」。
+describe('lastCleanAgeKey（上次清理年龄）', () => {
+  const nowMs = Date.parse('2026-10-15T12:00:00Z');
+  const iso = (msAgo: number) => new Date(nowMs - msAgo).toISOString();
+  const DAY = 86_400_000;
+
+  it('空台账 / 全部时间戳不可解析 → null（不编造）', () => {
+    expect(lastCleanAgeKey([], nowMs)).toBeNull();
+    expect(lastCleanAgeKey([entry({ timestamp: '' }), entry({ timestamp: 'nope' })], nowMs)).toBeNull();
+  });
+
+  it('最近一次在当日内 → ageToday', () => {
+    expect(lastCleanAgeKey([entry({ timestamp: iso(3600_000) })], nowMs)).toEqual({
+      key: 'history.ageToday',
+    });
+  });
+
+  it('1–30 天 → ageDays 带天数（取最新一条，与列表顺序无关）', () => {
+    expect(
+      lastCleanAgeKey([entry({ timestamp: iso(3 * DAY) }), entry({ timestamp: iso(9 * DAY) })], nowMs),
+    ).toEqual({ key: 'history.ageDays', n: 3 });
+  });
+
+  it('超过 30 天 → ageOld（不给模糊天数）', () => {
+    expect(lastCleanAgeKey([entry({ timestamp: iso(45 * DAY) })], nowMs)).toEqual({
+      key: 'history.ageOld',
+    });
   });
 });

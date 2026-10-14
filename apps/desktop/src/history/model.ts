@@ -101,6 +101,27 @@ export function dayGroupLabel(key: string, now: Date, t: (k: string) => string):
   return key;
 }
 
+/** R155：台账里最近一次操作的年龄档位——预览窗在用户决定删除前告知
+ *  「上次清理是多久前」，避免刚清完又清一遍。纯函数：返回 i18n 键（文案由
+ *  组件求值，符合 i18n 铁律）；无有效时间戳 → null（不编造）。 */
+export type LastCleanKey = 'history.ageToday' | 'history.ageDays' | 'history.ageOld';
+
+export function lastCleanAgeKey(
+  entries: readonly { timestamp: string }[],
+  nowMs: number = Date.now(),
+): { key: LastCleanKey; n?: number } | null {
+  let newest: number | null = null;
+  for (const e of entries) {
+    const ts = Date.parse(e.timestamp);
+    if (Number.isFinite(ts) && (newest === null || ts > newest)) newest = ts;
+  }
+  if (newest === null || newest <= 0) return null;
+  const days = Math.floor((nowMs - newest) / 86_400_000);
+  if (days <= 0) return { key: 'history.ageToday' };
+  if (days <= 30) return { key: 'history.ageDays', n: days };
+  return { key: 'history.ageOld' };
+}
+
 /**
  * 还原出口口径（与后端一致，别在组件里各写各的）：
  * - `inline`：quarantine —— 东西还在隔离区，应用内一键还原（`api.undo`）；

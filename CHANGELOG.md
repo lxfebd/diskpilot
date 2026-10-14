@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 预览窗显示上次清理时间（R155）
+
+- dry-run 预览窗在用户决定删除前显示「上次清理：今天 / N 天前 / 超过一个
+  月」——刚清完又清一遍是常见误操作；只调一次 list_undo(50) 取台账最新
+  时间戳，读失败则不显示（不编造），不拦确认流程。
+- 新纯函数 `lastCleanAgeKey(entries, nowMs)`（返回 i18n 键，文案由组件求值；
+  空台账 / 时间戳不可解析 → null）；i18n `cleanup.previewLastClean` +
+  `history.ageToday/ageDays/ageOld`（zh/en 成对）。model.test.ts +4
+  （457 总 / 35 files）。
+
 ### 2026-10-15 周报环比显示间隔天数（R154）
 
 - 周巡检简报的环比对比标题补「· 间隔 N 天」——对比结论的强度取决于跨度：
