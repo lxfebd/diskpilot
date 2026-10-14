@@ -50,6 +50,15 @@ export function descOverlap(a: Set<string>, b: Set<string>): number {
   return n;
 }
 
+/** R153：AI 工具描述充分度——描述为空或全是虚词（词袋空）时，卡片缺一行、
+ *  同类推荐也匹配不到，用户不知道为什么。显式分档：rich（≥2 个有效词）/
+ *  sparse（1 个）/ none（0 个，空描述或全停用词）。纯函数：复用 descTokens。 */
+export function agentDescQuality(desc: string): 'rich' | 'sparse' | 'none' {
+  const n = descTokens(desc).size;
+  if (n === 0) return 'none';
+  return n >= 2 ? 'rich' : 'sparse';
+}
+
 /** 同类 AI 工具：描述与 target 词袋重叠的（排除自身），按重叠数降序，取前 limit。
  *  无描述/空词袋的工具不参与（无法判断，不硬凑）。纯函数：不改入参。 */
 export function similarAgentTools(

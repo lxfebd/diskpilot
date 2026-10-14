@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 AI 工具卡「描述待补」标注（R153）
+
+- agent-server 的 MCP 工具描述可能为空或全是虚词——此前卡片静默缺一行、
+  同类推荐也匹配不到，用户不知道为什么。现描述充分度不足（有效词 <2）
+  时显示「描述待补」虚线徽标，悬停说明不影响使用、详情以参数表为准。
+- 新纯函数 `agentDescQuality(desc)`（复用 descTokens：0 有效词 none /
+  1 个 sparse / ≥2 rich）；i18n `toolbelt.wall.aiDescWarn(Title)`（zh/en
+  成对）；CSS `.toolwall-ai-descwarn`。similar.test.ts +3（450 总 /
+  35 files）。
+
 ### 2026-10-14 压测叠画标题显示次数与跨度（R152）
 
 - 历次压测温度叠画（CPU/GPU）标题从只有「历次压测温度对比」扩展为

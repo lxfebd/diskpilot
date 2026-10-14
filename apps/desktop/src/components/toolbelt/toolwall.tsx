@@ -22,7 +22,7 @@ import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
 import type { SettingsTab } from '../Settings';
 import { HwReportCard, HwHistorySection } from '../HwPanels';
 import { splitArgs } from './services';
-import { similarAgentTools } from './similar';
+import { agentDescQuality, similarAgentTools } from './similar';
 import {
   CATEGORY_COLOR, CATEGORY_ICON, RISK_ICON, SafeToolIcon, adNoticeFor, catDisplayName,
   plainDescriptionFor, riskLabelDisplay, toolColorFor, toolIconFor,
@@ -1026,6 +1026,13 @@ export function CatalogWall({
                         <span className="toolwall-ai-related muted small">
                           {t('toolbelt.wall.aiRelated')}
                           {aiRelatedMap.get(mt.name)!.join(' · ')}
+                        </span>
+                      )}
+                      {/* R153：描述为空或全是虚词 → 显式标注，不静默缺行；
+                          这也解释了为什么这类工具没有「相关」推荐。 */}
+                      {agentDescQuality(mt.description) !== 'rich' && (
+                        <span className="toolwall-ai-descwarn muted small" title={t('toolbelt.wall.aiDescWarnTitle')}>
+                          {t('toolbelt.wall.aiDescWarn')}
                         </span>
                       )}
                     </button>

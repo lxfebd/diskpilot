@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { descOverlap, descTokens, similarAgentTools } from './similar';
+import { agentDescQuality, descOverlap, descTokens, similarAgentTools } from './similar';
 
 describe('descTokens（描述词袋）', () => {
   it('拉丁词拆分小写', () => {
@@ -55,5 +55,22 @@ describe('similarAgentTools（同类 AI 工具推荐）', () => {
     const all = [{ name: 'b', description: 'Get GPU temperature' }];
     similarAgentTools({ name: 'a', description: 'Get CPU temperature' }, all);
     expect(all).toEqual([{ name: 'b', description: 'Get GPU temperature' }]);
+  });
+});
+
+// R153：AI 工具描述充分度——空/全虚词描述显式标注，解释为何无同类推荐。
+describe('agentDescQuality（描述充分度）', () => {
+  it('空串 / 纯停用词 / 纯标点 → none', () => {
+    expect(agentDescQuality('')).toBe('none');
+    expect(agentDescQuality('的 和 或 一 个')).toBe('none');
+    expect(agentDescQuality('... !!')).toBe('none');
+  });
+  it('只有 1 个有效词 → sparse', () => {
+    expect(agentDescQuality('temperature')).toBe('sparse');
+    expect(agentDescQuality('温度')).toBe('sparse'); // 双字窗内含停用字被滤后剩 0？不——「温」不在停用表，实际产出「温度」一词
+  });
+  it('≥2 个有效词 → rich', () => {
+    expect(agentDescQuality('Get CPU temperature')).toBe('rich'); // get 是停用词，剩 cpu/temperature
+    expect(agentDescQuality('获取磁盘占用')).toBe('rich'); // 获取/取磁/磁盘/占用 ≥2
   });
 });
