@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 「跳过此版本」（R158）
+
+- 设置页的更新提示新增「跳过此版本」——不想装某个版本的用户不必每次打开
+  设置都被提示；跳过后该版本不再提示，**但出现更新的版本仍会提示**（跳过
+  是版本相关的，不是永久静音）。已跳过时如实显示「已跳过 vX」并给「恢复
+  提示」入口，不静默消失。
+- 新文件 `src/updateSkip.ts`：纯函数 `compareVersions`（点分数字段比较、
+  缺位补 0、非数字段按 0 不抛）+ `shouldPromptUpdate`（latest 严格新于跳过
+  版本才提示）；localStorage 键 `settings.updateSkipped`。i18n
+  `settings.general.updateSkip(SkipTitle/Skipped/Unskip)`（zh/en 成对）。
+  updateSkip.test.ts（新）+8（473 总 / 36 files）。
+
 ### 2026-10-15 清理项显示上次清理的目录覆盖度（R157）
 
 - 承接 R156：同一 scaffold 常有多个命中目录（多账号 / 多个缓存位置），

@@ -31,6 +31,7 @@ import {
   type PrefName,
 } from '../theme';
 import { useT, setLang, getLangMode, type Lang } from '../i18n';
+import { UPDATE_SKIP_KEY, shouldPromptUpdate } from '../updateSkip';
 
 type Props = { onClose: () => void; initialTab?: SettingsTab };
 
@@ -136,6 +137,19 @@ export function Settings({ onClose, initialTab }: Props) {
   // 更新链路错误单独存放：与 updatePhase 互斥，避免字符串错误被等于 'confirm'/'installed' 等状态值吞掉。
   const [updateErr, setUpdateErr] = useState<string | null>(null);
   const [updateProgress, setUpdateProgress] = useState(0);
+  // R158：已跳过的版本（localStorage 持久化）——用户明确不想装的版本不再
+  // 反复提示；出现更新的版本时重新提示（跳过是版本相关的，不是永久静音）。
+  const [skippedVer, setSkippedVer] = useState<string | null>(() => localStorage.getItem(UPDATE_SKIP_KEY));
+
+  const skipThisVersion = (ver: string) => {
+    localStorage.setItem(UPDATE_SKIP_KEY, ver);
+    setSkippedVer(ver);
+  };
+
+  const unskipVersion = () => {
+    localStorage.removeItem(UPDATE_SKIP_KEY);
+    setSkippedVer(null);
+  };
 
   const checkUpdate = async () => {
     setCheckingUpdate(true);
@@ -666,8 +680,18 @@ export function Settings({ onClose, initialTab }: Props) {
                   {update !== null && typeof update === 'object' && !update.available && (
                     <span><CheckCircle2 size={13} style={{ verticalAlign: '-2px', color: 'var(--accent-strong)', marginRight: 4 }} />{t('settings.general.updateLatest', { ver: update.current })}</span>
                   )}
-                  {update !== null && typeof update === 'object' && update.available && (
+                  {update !== null && typeof update === 'object' && update.available && shouldPromptUpdate(skippedVer, update.latest) && (
                     <span><b>{t('settings.general.updateFound', { latest: update.latest, current: update.current })}</b></span>
+                  )}
+                  {/* R158：用户已跳过这个版本——如实说清「有新版本但你选了跳过」，
+                      给恢复入口（不是静默不提示）。 */}
+                  {update !== null && typeof update === 'object' && update.available && !shouldPromptUpdate(skippedVer, update.latest) && (
+                    <span className="muted small">
+                      {t('settings.general.updateSkipped', { latest: update.latest })}
+                      <button type="button" className="ghost small" style={{ marginLeft: 6 }} onClick={unskipVersion}>
+                        {t('settings.general.updateUnskip')}
+                      </button>
+                    </span>
                   )}
                 </div>
                 {update !== null && typeof update === 'object' && update.available && update.notes && (
@@ -677,6 +701,17 @@ export function Settings({ onClose, initialTab }: Props) {
                   <a className="ghost small" href={update.url} target="_blank" rel="noreferrer" style={{ marginTop: 4, display: 'inline-block' }}>
                     {t('settings.general.updateGo')} <ExternalLink size={11} style={{ verticalAlign: '-1px' }} />
                   </a>
+                )}
+{update !== null && typeof update === 'object' && update.available && shouldPromptUpdate(skippedVer, update.latest) && (
+                  <button
+                    type="button"
+                    className="ghost small"
+                    style={{ marginTop: 4, display: 'inline-block' }}
+                    onClick={() => skipThisVersion(update.latest)}
+                    title={t('settings.general.updateSkipTitle', { latest: update.latest })}
+                  >
+                    {t('settings.general.updateSkip')}
+                  </button>
                 )}
                 {update !== null && typeof update === 'object' && update.available && isTauri && (
                   <div className="update-install" style={{ marginTop: 8 }}>
