@@ -455,16 +455,20 @@ export function distSummary(values: number[], highThreshold: number): {
 /// 通用分布色阶条（R117 泛化）：把数值样本按 ramp 区间统计成分段色带 +
 /// 峰值/均值/摘要 + 高值占比解读。i18n 文案按 ns 取（heatDist / memDist
 /// 两组键同构）。温度与内存占用两路复用。
+/// R143：可选 spanSec——分布占比也要有尺度参照（1 小时的 3% 与 1 个月的
+/// 3% 含义不同），summary 行追加「· 历时 X」（复用 formatSpan）。
 export function DistributionBar({
   values,
   ramp,
   highThreshold,
   ns,
+  spanSec,
 }: {
   values: number[];
   ramp: Ramp;
   highThreshold: number;
   ns: 'toolbelt.heatDist' | 'toolbelt.memDist' | 'toolbelt.gpuDist';
+  spanSec?: number;
 }) {
   const t = useT();
   if (values.length === 0) return null;
@@ -502,6 +506,9 @@ export function DistributionBar({
           {summary.highRatio > 0.1
             ? t(`${ns}.hot`, { pct: (summary.highRatio * 100).toFixed(0) })
             : t(`${ns}.hotNone`)}
+ {spanSec != null && spanSec >= 60 && (
+            <> {' · '}{t('toolbelt.dist.span', { span: formatSpan(spanSec) })}</>
+          )}
         </p>
       )}
       <div className="bench-trend-legend">

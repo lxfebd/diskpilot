@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 分布色阶条显示样本跨度（R143）
+
+- 分布色阶条（CPU 温度 / GPU 温度 / 内存占用）的摘要行追加「· 历时 X」
+  ——占比要有尺度参照：1 小时里的 3% 与 1 个月里的 3% 含义完全不同。
+- `DistributionBar` 新增可选 `spanSec` prop（≥60s 才显示，复用 R138 的
+  `formatSpan`）；bench.tsx 三处分布条共用一处 `trendSpanSec` 计算（替代
+  此前评级卡里的内联调用）。i18n `toolbelt.dist.span`（zh/en 成对）。
+
 ### 2026-10-14 Esc 关窗推广到工具墙/基准确认窗（R142）
 
 - 承接 R141 的 `useEscapeKey`，推广到 6 个此前只能用鼠标关闭的弹层：

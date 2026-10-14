@@ -13,7 +13,7 @@ import { useT } from '../../i18n';
 import { useStore } from '../../store';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
-import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, HeatDistributionBar, DistributionBar, HealthRatingCard, extractLongSeries, parseTrendJson, buildScoreSeries, trendSpan } from './charts';
+import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, DistributionBar, HealthRatingCard, extractLongSeries, parseTrendJson, buildScoreSeries, trendSpan } from './charts';
 import type { TrendPoint } from './charts';
 import { MEM_RAMP, TEMP_RAMP } from '../../colors';
 
@@ -239,6 +239,8 @@ export function BenchPanel() {
   // R136：cpu/gpu/mem 三路 series 一次提取（此前评级卡 + 3 个分布条 5 处
   // 各自内联 .map().filter()），五处复用；读不到的字段如实滤掉不造 0。
   const trendSeries = extractLongSeries(trendData?.points ?? []);
+  // R143：分布条的尺度参照——三条分布共用同一批样本的跨度。
+  const trendSpanSec = trendSpan(trendData?.points ?? [])?.spanSec;
 
   // range='short' 走 sensor_trend（会追加一条新采样，语义是"记录并查看最近 20"）；
   // range='long' 走 sensor_history（R114 纯只读，取已积累的最多 500 条历史，
@@ -511,16 +513,16 @@ export function BenchPanel() {
                 cpuTemps={trendSeries.cpuTemps}
                 gpuTemps={trendSeries.gpuTemps}
                 memPercents={trendSeries.memPercents}
-                spanSec={trendSpan(trendData.points)?.spanSec}
+                spanSec={trendSpanSec}
               />
             )}
             {/* R116：长期历史的温度分布色阶条——只统计有温度的样本 */}
             {trendData.range === 'long' && (
-              <HeatDistributionBar temps={trendSeries.cpuTemps} />
+<DistributionBar values={trendSeries.cpuTemps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.heatDist" spanSec={trendSpanSec} />
             )}
             {/* R122：长期历史的 GPU 温度分布色阶条——无 GPU 读数时不渲染（如实缺省） */}
             {trendData.range === 'long' && trendSeries.gpuTemps.length > 0 && (
-              <DistributionBar values={trendSeries.gpuTemps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.gpuDist" />
+              <DistributionBar values={trendSeries.gpuTemps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.gpuDist" spanSec={trendSpanSec} />
             )}
             {/* R117：长期历史的内存占用分布色阶条——回答「内存日常够不够挤」 */}
             {trendData.range === 'long' && (
@@ -529,6 +531,7 @@ export function BenchPanel() {
                 ramp={MEM_RAMP}
                 highThreshold={85}
                 ns="toolbelt.memDist"
+                spanSec={trendSpanSec}
               />
             )}
           </>
