@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 工具墙搜索覆盖厂商/版本/架构（R170）
+
+- 工具墙搜索此前只匹配名称 / 描述 / 标签——按厂商（Intel、NVIDIA）、版本号
+  或架构找工具都搜不到，而卡片上明明写着这些信息。现抽纯函数
+  `matchesToolQuery(tool, q)` 统一口径，覆盖名称 / 描述 / 厂商 / 版本 / 架构 /
+  分类 / 目录名 / 标签（null 安全，缺字段不炸）。
+- catalog.tsx 导出该纯函数；toolwall.tsx 的 activeTools 过滤改用它；
+  新增 catalog.test.ts +4（523 总 / 38 files）。
+
 ### 2026-10-15 工具详情显示可选架构版本（R169）
 
 - 工具详情卡此前只显示当前架构（`arch`），而 `arch_variants`（同一工具带的

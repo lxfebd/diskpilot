@@ -25,6 +25,7 @@ import { splitArgs } from './services';
 import { agentDescQuality, similarAgentTools } from './similar';
 import {
   CATEGORY_COLOR, CATEGORY_ICON, RISK_ICON, SafeToolIcon, adNoticeFor, catDisplayName,
+  matchesToolQuery,
   plainDescriptionFor, riskLabelDisplay, toolColorFor, toolIconFor,
 } from './catalog';
 import type { ToolContext } from './shared';
@@ -778,9 +779,8 @@ export function CatalogWall({
       base = cat?.tools ?? [];
     }
     if (q) {
-      base = base.filter(
-        (t) => t.name.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q) || (t.tags ?? []).some((tag) => tag.toLowerCase().includes(q)),
-      );
+      // R170：搜索覆盖厂商 / 版本 / 架构 / 分类 / 目录名（此前只搜 name/desc/tags）。
+      base = base.filter((t) => matchesToolQuery(t, q));
     }
     if (hidePromo) {
       base = base.filter((t) => !t.is_promotion);

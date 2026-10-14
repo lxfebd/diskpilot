@@ -224,3 +224,20 @@ export function SafeToolIcon({ tool, size, color }: { tool: ToolbeltCatalogItem;
     />
   );
 }
+
+/** R170：工具墙搜索匹配——此前只搜 name/description/tags，按厂商（Intel /
+ *  NVIDIA）、版本号或架构找工具都搜不到。纯函数：全字段小写包含匹配，
+ *  query 已由调用方 trim+lower（空串 → true，调用方本就只在有词时调）。 */
+export function matchesToolQuery(tool: ToolbeltCatalogItem, q: string): boolean {
+  if (!q) return true;
+  return (
+    (tool.name ?? '').toLowerCase().includes(q) ||
+    (tool.description ?? '').toLowerCase().includes(q) ||
+    (tool.publisher ?? '').toLowerCase().includes(q) ||
+    (tool.version ?? '').toLowerCase().includes(q) ||
+    (tool.arch ?? '').toLowerCase().includes(q) ||
+    (tool.category ?? '').toLowerCase().includes(q) ||
+    (tool.dir_rel ?? '').toLowerCase().includes(q) ||
+    (tool.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+  );
+}
