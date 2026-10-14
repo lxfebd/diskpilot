@@ -398,6 +398,12 @@ main.cleanup-page > .cleanup-page {
   margin-bottom: 6px;
   line-height: 1.5;
 }
+/* R140：页脚键盘提示——弱化，不抢确认按钮注意力 */
+.cleanup-kbd-hint {
+  opacity: .75;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+}
 .cleanup-preview-more {
   margin-top: 4px;
   padding-top: 4px;

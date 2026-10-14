@@ -92,6 +92,30 @@ export function DryRunPreviewDialog({
     }
     await onConfirm();
   };
+  // R140：键盘流——桌面应用的惯性预期，且比鼠标更防误触。
+  //   Esc  → 直接关窗（任何时候都安全，永不会删东西）；
+  //   Enter → 未预备则「进预备态」（与点按钮等价，不直接真删）；
+  //           已预备则「真删」（等价于 5 秒内再点一次，仍是第二步确认）。
+  // 用 ref 存最新闭包，避免 effect 依赖抖动导致监听反复重挂。
+  const keyRef = useRef({ armed, running, riskyBlocked, armClick, runDelete, onCancel });
+  keyRef.current = { armed, running, riskyBlocked, armClick, runDelete, onCancel };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+const k = keyRef.current;
+      if (k.running) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        k.onCancel();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (k.riskyBlocked) return; // 未勾备份确认：Enter 也不放行
+        if (k.armed) void k.runDelete();
+        else k.armClick();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   return (
     <div className="modal-bg" onClick={onCancel} style={{ zIndex: 60 }}>
       <div className="modal cleanup-preview-modal" onClick={(e) => e.stopPropagation()}>
@@ -185,6 +209,7 @@ export function DryRunPreviewDialog({
               : armed
                 ? t('cleanup.armAgainHint')
                 : t('cleanup.twoStepHint')}
+            <span className="cleanup-kbd-hint"> · {t('cleanup.kbdHint')}</span>
           </div>
           <div className="cleanup-actions">
             <button className="ghost" onClick={onCancel} disabled={running}>{t('cleanup.back')}</button>
