@@ -244,6 +244,17 @@ export function scoreRecentDelta(series: ScoreHistorySeries[]): number | null {
   return Number.isFinite(delta) ? Math.max(0, delta) : null;
 }
 
+/// R144：历次跑分的时间跨度（天）——「共 N 次」之外还要知道这 N 次跨了
+/// 多久：跨度长说明机器状态有漂移，「巅峰 vs 最近」的差距解读要打折扣。
+/// 纯函数：at 是毫秒时间戳；<2 次或跨度 ≤0 → null。
+export function scoreSeriesSpanDays(series: readonly { at: number }[]): number | null {
+  const ts = series.map((s) => s.at).filter((v) => Number.isFinite(v));
+  if (ts.length < 2) return null;
+  const spanMs = Math.max(...ts) - Math.min(...ts);
+  if (spanMs <= 0) return null;
+  return spanMs / 86400000;
+}
+
 /// 分数历史条形图：每根条 = 一次跑分（旧→新 → 左→右），Y 值即分数；
 /// 最高分那根用强调色，其余用主题色——峰值一眼可见。
 export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) {
@@ -293,6 +304,11 @@ export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) 
         )}
         <span className="muted small">
           {t('toolbelt.scoreChart.countLabel', { n: series.length, unit: series[series.length - 1].unit })}
+          {(() => {
+            const days = scoreSeriesSpanDays(series);
+            if (days === null || days < 1) return null; // 不足一天不显示
+            return <> {' · '}{t('toolbelt.scoreChart.spanLabel', { days: days.toFixed(days >= 10 ? 0 : 1) })}</>;
+          })()}
         </span>
       </div>
       {/* R121：巅峰 + 最近差距结论行（不足 2 次不显示差距） */}

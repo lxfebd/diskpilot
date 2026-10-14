@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLongSeries, formatSpan, stressHistYMax, trendSpan, type TrendPoint } from './charts';
+import { extractLongSeries, formatSpan, scoreSeriesSpanDays, stressHistYMax, trendSpan, type TrendPoint } from './charts';
 
 describe('R129 叠画 y 轴动态上界 stressHistYMax', () => {
   it('正常 ≤100 的峰值返回 100（视觉口径与固定 0–100 一致）', () => {
@@ -85,5 +85,20 @@ describe('R139 跨度格式与偏短阈值边界', () => {
   it('满一天起出 d 档（此时不再提示偏短）', () => {
     expect(formatSpan(86400)).toBe('1d 0h');
     expect(formatSpan(3 * 86400)).toBe('3d 0h');
+  });
+});
+
+// R144：历次跑分的时间跨度（天）——跨度长说明机器状态有漂移。
+describe('R144 scoreSeriesSpanDays（跑分历史跨度）', () => {
+  const DAY = 86400000;
+  it('首末差换算成天', () => {
+    expect(scoreSeriesSpanDays([{ at: 0 }, { at: 3 * DAY }])).toBe(3);
+    expect(scoreSeriesSpanDays([{ at: DAY }, { at: DAY * 2.5 }])).toBeCloseTo(1.5, 5);
+  });
+  it('不足 2 次 / 全同时间 / 非有限值 → null', () => {
+    expect(scoreSeriesSpanDays([])).toBeNull();
+    expect(scoreSeriesSpanDays([{ at: 100 }])).toBeNull();
+    expect(scoreSeriesSpanDays([{ at: 5 }, { at: 5 }])).toBeNull();
+    expect(scoreSeriesSpanDays([{ at: Number.NaN }, { at: 1 }])).toBeNull();
   });
 });

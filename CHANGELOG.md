@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 跑分历史显示时间跨度（R144）
+
+- 分数历史条形图图例行从「共 N 次 · 单位 X」扩展为「· 跨 D 天」——跨度
+  长说明机器状态有漂移，「巅峰 vs 最近差距」的解读要打折扣（承接 R138
+  的尺度标注思路）。
+- 新纯函数 `scoreSeriesSpanDays(series)`（at 毫秒 → 天数；<2 次 / 全同
+  时间 / 非有限值 → null）；不足一天不显示。i18n
+  `toolbelt.scoreChart.spanLabel`（zh/en 成对）。charts.test.ts +2
+  （429 总 / 35 files）。
+
 ### 2026-10-14 分布色阶条显示样本跨度（R143）
 
 - 分布色阶条（CPU 温度 / GPU 温度 / 内存占用）的摘要行追加「· 历时 X」
