@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 工具详情显示可选架构版本（R169）
+
+- 工具详情卡此前只显示当前架构（`arch`），而 `arch_variants`（同一工具带的
+  全部可执行文件变体）**前端从未使用**——用户看不到"这工具还有 32 位版本 /
+  另有一个 exe"。现多变体（>1）时列出「可选版本（N）：x86(xxx.exe) · x64(yyy.exe)」，
+  只显示文件名不铺全路径。
+- i18n `toolbelt.detail.archVariants`（zh/en 成对）；无新纯函数，测试维持
+  519（37 files）。
+
 ### 2026-10-15 插件 min_app 兼容性校验（R168）
 
 - `RegistryPluginVersion.min_app`（插件声明的最低应用版本）此前**两端都

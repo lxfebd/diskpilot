@@ -431,6 +431,14 @@ function ToolDetailModal({
               <span className="tdm-meta-item">{t('toolbelt.detail.linkedFrom')}<b>{tool.linked_from.map(catDisplayName).join(' / ')}</b></span>
             )}
             {tool.arch && <span className="tdm-meta-item">{t('toolbelt.detail.arch')}<b>{tool.arch}</b></span>}
+            {/* R169：多架构变体——同一工具常带 x86/x64 两个 exe，用户启动
+                前该知道还有哪些可选（此前 arch_variants 字段前端从未使用）。 */}
+            {tool.arch_variants.length > 1 && (
+              <span className="tdm-meta-item">
+                {t('toolbelt.detail.archVariants', { n: tool.arch_variants.length })}
+                <b>{tool.arch_variants.map((v) => `${v.arch}${v.file_rel ? `(${v.file_rel.split(/[\\/]/).pop()})` : ''}`).join(' · ')}</b>
+              </span>
+            )}
             {(tool.publisher || manifest?.publisher) && (
               <span className="tdm-meta-item">{t('toolbelt.detail.publisher')}<b>{tool.publisher || manifest?.publisher}</b></span>
             )}
