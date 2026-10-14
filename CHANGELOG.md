@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 长期趋势图显示时间跨度（R138）
+
+- 传感器趋势折线图图例行从只显示「N 个采样点」扩展为「· 跨度」（如
+  · 3d 5h）——500 条样本跨 3 小时还是 3 周，直接决定「长期健康度」
+  结论的可信度；悬停显示平均采样间隔（`toolbelt.trend.spanTitle`）。
+- 新纯函数 `trendSpan`（首末 ts 差 = 跨度、间隔数均差；<2 点 / 全同 ts /
+  非有限 ts → null）+ `formatSpan`（天/时/分/秒四档人话）。charts.test.ts
+  +5（422 总 / 34 files）。分钟级以下跨度不显示（无信息量）。
+
 ### 2026-10-14 健康度评级卡行渲染收敛（R137）
 
 - HealthRatingCard 内三段几乎逐字重复的 JSX（label + 档位徽标 / 无数据）

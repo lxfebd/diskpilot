@@ -42,6 +42,32 @@ export function parseTrendJson(text: string): TrendPoint[] | null {
   return points.length >= 2 ? points : null;
 }
 
+/// R138：长期历史的时间跨度——只显示「N 个采样点」无法判断这批数据跨了
+/// 3 小时还是 3 周，而跨度直接决定「长期健康度」结论的可信度。纯函数：
+/// 首末 ts 差 = 跨度，除以间隔数 = 平均采样间隔；少于 2 点或无有效 ts → null。
+export function trendSpan(
+  points: readonly { ts: number }[],
+): { spanSec: number; avgGapSec: number } | null {
+  const ts = points.map((p) => p.ts).filter((v) => Number.isFinite(v));
+  if (ts.length < 2) return null;
+  const spanSec = Math.max(...ts) - Math.min(...ts);
+  if (spanSec <= 0) return null;
+  return { spanSec, avgGapSec: spanSec / (ts.length - 1) };
+}
+
+/// 秒 → 人话跨度（取两位有效量级）：≥1 天「N 天 M 小时」、≥1 小时
+/// 「N 小时 M 分」、≥1 分「N 分」、否则「N 秒」。纯函数，便于单测。
+export function formatSpan(sec: number): string {
+  if (!Number.isFinite(sec) || sec <= 0) return '0s';
+  const d = Math.floor(sec / 86400);
+  if (d >= 1) return `${d}d ${Math.floor((sec % 86400) / 3600)}h`;
+  const h = Math.floor(sec / 3600);
+  if (h >= 1) return `${h}h ${Math.floor((sec % 3600) / 60)}m`;
+  const m = Math.floor(sec / 60);
+  if (m >= 1) return `${m}m`;
+  return `${Math.round(sec)}s`;
+}
+
 export function TrendChart({ points }: { points: TrendPoint[] }) {
   const t = useT();
   const W = 720;
@@ -92,6 +118,15 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
         {gpuVals.length > 0 && <span><i style={{ background: 'var(--gpu-line, #4a9af4)' }} /> {t('toolbelt.trend.legendGpu')}</span>}
         {memVals.length > 0 && <span><i style={{ background: 'var(--warn)' }} /> {t('toolbelt.trend.legendMem')}</span>}
         <span className="muted small">{t('toolbelt.trend.samples', { n: points.length })}</span>
+        {(() => {
+          const sp = trendSpan(points);
+          if (!sp || sp.spanSec < 60) return null; // 分钟级以下的跨度无信息量
+          return (
+            <span className="muted small" title={t('toolbelt.trend.spanTitle', { n: sp.avgGapSec.toFixed(0) })}>
+              · {formatSpan(sp.spanSec)}
+            </span>
+          );
+        })()}
       </div>
     </div>
   );

@@ -426,6 +426,7 @@ export const toolbelt = {
     'toolbelt.trend.legendGpu': 'GPU 温度 ℃',
     'toolbelt.trend.legendMem': '内存占用 %',
     'toolbelt.trend.samples': '共 {n} 个采样点',
+    'toolbelt.trend.spanTitle': '平均每 {n} 秒一个采样',
 
     // 压测实时温度折线图
     'toolbelt.stressChart.aria': '压测实时温度折线图',
@@ -1017,6 +1018,7 @@ export const toolbelt = {
     'toolbelt.trend.legendGpu': 'GPU temperature ℃',
     'toolbelt.trend.legendMem': 'Memory usage %',
     'toolbelt.trend.samples': '{n} sample points',
+    'toolbelt.trend.spanTitle': 'one sample every {n}s on average',
 
     // Live stress-test temperature chart
     'toolbelt.stressChart.aria': 'Live stress-test temperature line chart',

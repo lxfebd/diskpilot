@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLongSeries, stressHistYMax, type TrendPoint } from './charts';
+import { extractLongSeries, formatSpan, stressHistYMax, trendSpan, type TrendPoint } from './charts';
 
 describe('R129 叠画 y 轴动态上界 stressHistYMax', () => {
   it('正常 ≤100 的峰值返回 100（视觉口径与固定 0–100 一致）', () => {
@@ -37,5 +37,39 @@ describe('R136 extractLongSeries（cpu/gpu/mem 三路提取）', () => {
     const input: TrendPoint[] = [{ ts: 1, cpu_temp_c: 50 }];
     extractLongSeries(input);
     expect(input).toEqual([{ ts: 1, cpu_temp_c: 50 }]);
+  });
+});
+
+// R138：长期历史时间跨度（回答「这批数据跨了多久」）。
+describe('R138 trendSpan（采样时间跨度）', () => {
+  it('首末差 = 跨度，除以间隔数 = 平均间隔', () => {
+    expect(
+      trendSpan([{ ts: 100 }, { ts: 400 }, { ts: 1000 }]),
+    ).toEqual({ spanSec: 900, avgGapSec: 450 });
+  });
+  it('少于 2 点 / 全同 ts → null（无法给出跨度）', () => {
+    expect(trendSpan([])).toBeNull();
+    expect(trendSpan([{ ts: 5 }])).toBeNull();
+    expect(trendSpan([{ ts: 7 }, { ts: 7 }])).toBeNull();
+  });
+  it('ts 非有限值被滤掉', () => {
+    expect(trendSpan([{ ts: 0 }, { ts: Number.NaN }, { ts: 60 }])).toEqual({
+      spanSec: 60,
+      avgGapSec: 60,
+    });
+  });
+});
+
+describe('R138 formatSpan（秒 → 人话跨度）', () => {
+  it('天/小时/分/秒四档', () => {
+    expect(formatSpan(3 * 86400 + 5 * 3600)).toBe('3d 5h');
+    expect(formatSpan(2 * 3600 + 10 * 60)).toBe('2h 10m');
+    expect(formatSpan(45 * 60)).toBe('45m');
+    expect(formatSpan(30)).toBe('30s');
+  });
+  it('非正/非法值 → 0s（不抛不编造）', () => {
+    expect(formatSpan(0)).toBe('0s');
+    expect(formatSpan(-5)).toBe('0s');
+    expect(formatSpan(Number.NaN)).toBe('0s');
   });
 });
