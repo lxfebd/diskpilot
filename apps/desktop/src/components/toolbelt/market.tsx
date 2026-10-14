@@ -562,12 +562,22 @@ export function MarketPanel() {
               ) : installed.length === 0 ? (
                 <p className="muted small">{t('toolbelt.mkt.installedEmpty')}</p>
               ) : (
-                installed.map((p) => (
+                installed.map((p) => {
+                  // R160：台账条目也标「有新版」——社区数据里同 id 的版本更新
+                  // 时，「更新」按钮才有意义；否则用户只能点一下试试。
+                  const inCommunity = (community ?? []).find((c) => c.id === p.id);
+                  const upd = inCommunity ? hasRegistryUpdate(inCommunity, [p]) : false;
+                  return (
                   <div key={p.id} className="toolbelt-market-item">
                     <div className="toolbelt-market-item-main">
                       <div className="toolbelt-market-item-title">
                         <b>{p.name}</b>
                         <span className="toolbelt-perm-chip">v{p.version}</span>
+                        {upd && inCommunity?.version && (
+                          <span className="toolwall-plugin-badge toolbelt-mkt-update-badge">
+                            {t('toolbelt.mkt.updateAvailable')} v{inCommunity.version}
+                          </span>
+                        )}
                         <span className="toolbelt-risk-chip">{p.source === 'registry' ? t('toolbelt.mkt.srcRegistry') : p.source === 'url' ? t('toolbelt.mkt.srcUrl') : p.source === 'zip' ? t('toolbelt.mkt.srcZip') : p.source}</span>
                       </div>
                       <p className="muted small">
@@ -577,7 +587,7 @@ export function MarketPanel() {
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        className="ghost small"
+                        className={upd ? 'primary small' : 'ghost small'}
                         disabled={installedId === p.id}
                         onClick={() => void doUpdate(p)}
                         title={t('toolbelt.mkt.updateTitle')}
@@ -604,7 +614,8 @@ export function MarketPanel() {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
