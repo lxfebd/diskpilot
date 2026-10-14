@@ -52,6 +52,38 @@ export function startupCounts(items: readonly StartupItem[]): { on: number; off:
   return { on, off: items.length - on };
 }
 
+/** R165：按来源分组的展示顺序——用户级（HKCU / 用户启动夹）在前，机器级
+ *  （HKLM / 公共启动夹）在后：后者影响全机、改动风险更高，放后面让用户先
+ *  处理自己有把握的。未知来源排在最后（不丢项）。 */
+export const STARTUP_LOCATION_ORDER = [
+  'registry_hkcu',
+  'folder_user',
+  'registry_hklm',
+  'folder_machine',
+] as const;
+
+/** R165：把启动项按来源分组（组内保持原顺序）；未知来源归到 'other' 组。
+ *  纯函数：不改入参，空输入 → 空数组。 */
+export function groupStartupByLocation(
+  items: readonly StartupItem[],
+): { location: string; items: StartupItem[] }[] {
+  const buckets = new Map<string, StartupItem[]>();
+  for (const it of items) {
+    const known = (STARTUP_LOCATION_ORDER as readonly string[]).includes(it.location);
+    const key = known ? it.location : 'other';
+    const arr = buckets.get(key) ?? [];
+    arr.push(it);
+    buckets.set(key, arr);
+  }
+  const order = [...STARTUP_LOCATION_ORDER, 'other'];
+  const out: { location: string; items: StartupItem[] }[] = [];
+  for (const loc of order) {
+    const arr = buckets.get(loc);
+    if (arr && arr.length > 0) out.push({ location: loc, items: arr });
+  }
+  return out;
+}
+
 export function StartupPanel() {
   const t = useT();
   const [startup, setStartup] = useState<StartupItem[] | null>(null);
@@ -120,6 +152,8 @@ export function StartupPanel() {
   // R164：统计与筛选结果（纯函数计算，渲染只读）。
   const counts = startupCounts(startup ?? []);
   const visible = filterStartupItems(startup ?? [], query, filter);
+  // R165：筛选结果按来源分组（用户级在前、机器级在后）。
+  const groups = groupStartupByLocation(visible);
 
   return (
     <>
@@ -176,7 +210,14 @@ export function StartupPanel() {
       )}
       {startup && startup.length > 0 && visible.length > 0 && (
         <div className="sys-list">
-          {visible.map((item) => (
+          {groups.map((g) => (
+            <div key={g.location} className="sys-group">
+              {/* R165：分组标题——用户级在前、机器级在后（后者影响全机） */}
+              <div className="sys-group-head muted small">
+                {g.location === 'other' ? t('system.startup.locOther') : startupLocationLabel(t, g.location)}
+                <span className="sys-group-n">{g.items.length}</span>
+              </div>
+              {g.items.map((item) => (
             <div key={item.id} className={'sys-row' + (item.enabled ? '' : ' sys-row-off')}>
               <div className="sys-row-main">
                 <span className="sys-name">{item.name}</span>
@@ -235,6 +276,8 @@ export function StartupPanel() {
                   />
                 )}
               </div>
+            </div>
+              ))}
             </div>
           ))}
         </div>

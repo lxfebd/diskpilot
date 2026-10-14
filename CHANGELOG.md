@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 启动项按来源分组（R165）
+
+- 启动项列表此前混排（HKCU / 用户启动夹 / HKLM / 公共启动夹挤在一起）——
+  「这条改的是我自己，还是全机」看不出来，而机器级改动影响所有用户、风险
+  更高。现按来源分组并固定顺序：**用户级在前（HKCU → 用户启动夹）、机器级
+  在后（HKLM → 公共启动夹）**，未知来源归「其他来源」排最后（不丢项）；
+  组标题带条数。
+- 新纯函数 `groupStartupByLocation(items)` + `STARTUP_LOCATION_ORDER`
+  （StartupPanel.tsx 导出）；i18n `system.startup.locOther`（zh/en 成对）；
+  CSS `.sys-group-head` / `.sys-group-n`。StartupPanel.test.ts +4
+  （504 总 / 37 files）。
+
 ### 2026-10-15 启动项加搜索与状态筛选（R164）
 
 - 启动项管理面板此前只能整列扫——几十项启动项时找某一项很累，也看不出

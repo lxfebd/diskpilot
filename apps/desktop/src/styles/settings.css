@@ -710,6 +710,23 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 }
 .sys-list-scroll { max-height: calc(300px * var(--font-scale, 1)); }
 /* R164：启动项筛选条——统计 + 状态 chips + 搜索框一行排开 */
+/* R165：来源分组标题——用户级在前、机器级在后 */
+.sys-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 0 3px;
+  font-weight: 700;
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 2px;
+}
+.sys-group-n {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  opacity: .7;
+}
+.sys-group:not(:first-child) {
+  margin-top: 6px;
+}
 .sys-filter-bar {
   display: flex;
   align-items: center;
