@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-14 长期历史三路 series 一次提取（R136）
+
+- 长期历史视图里 cpu/gpu/mem 三路提取（`.map().filter()`）此前在
+  HealthRatingCard + 3 个分布条各自内联（5 处重复同一段），收敛为
+  纯函数 `extractLongSeries(points)` 一次提取、五处复用——读不到的
+  字段（null/缺失/非有限值）如实滤掉不造 0，分布卡各自判空渲染。
+- charts.test.ts +3（滤 null/空点列/纯函数，417 总 / 34 files）。
+
 ### 2026-10-14 AI 分区卡片显示相关工具（R135）
 
 - 「AI 可操作」分区的每张卡片底部显示 top-2 相关工具名（复用 R134 的

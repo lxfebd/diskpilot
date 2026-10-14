@@ -487,6 +487,23 @@ export function HeatDistributionBar({ temps }: { temps: number[] }) {
   return <DistributionBar values={temps} ramp={TEMP_RAMP} highThreshold={70} ns="toolbelt.heatDist" />;
 }
 
+// ── R136：长期历史 series 提取 ──
+// cpu/gpu/mem 三路此前在 HealthRatingCard + 3 个分布条各自内联
+// .map().filter()（5 处重复同一段），收敛成一次提取、五处复用。
+// 读不到的字段（null/undefined/NaN）如实滤掉——分布卡自己判空渲染空态，
+// 不造 0 充数（读失败 ≠ 0）。
+export function extractLongSeries(points: readonly TrendPoint[]): {
+  cpuTemps: number[];
+  gpuTemps: number[];
+  memPercents: number[];
+} {
+  const pick = (k: 'cpu_temp_c' | 'gpu_temp_c' | 'mem_percent'): number[] =>
+    points
+      .map((p) => p[k])
+      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  return { cpuTemps: pick('cpu_temp_c'), gpuTemps: pick('gpu_temp_c'), memPercents: pick('mem_percent') };
+}
+
 // ── R118 长期健康度评级卡 ──
 // 把温度（CPU/GPU）/内存三条分布的高值占比汇总成一句人话结论：<5% 优秀、
 // <20% 良好、否则关注。复用 distSummary（已是纯函数）；任一维度无有效样本
