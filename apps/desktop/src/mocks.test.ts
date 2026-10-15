@@ -3,7 +3,22 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice } from './mocks';
+
+describe('mocks.fanCurveAdvice（总览温度格 + 系统工具风扇建议演示数据）', () => {
+  it('返回均衡档建议 + 温度 52°C（与周报 mock 同源）+ 曲线锚点', async () => {
+    const a = await fanCurveAdvice();
+    expect(a.temp_max_c).toBe(52);
+    expect(a.cpu_load_pct).not.toBeNull();
+    expect(a.level).toBeTruthy();
+    expect(a.level_label).toBeTruthy();
+    expect(a.curve.length).toBeGreaterThanOrEqual(4);
+    for (const p of a.curve) {
+      expect(p.load_pct).toBeGreaterThanOrEqual(0);
+      expect(p.fan_pct).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
 
 describe('mocks.scanDuplicateFiles（总览重复文件查找演示数据）', () => {
   it('返回 ≥2 组重复：每组保留 1 份、其余进回收候选', async () => {

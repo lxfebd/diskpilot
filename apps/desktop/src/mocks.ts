@@ -601,6 +601,43 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R190：预览模式的风扇建议演示数据 ——
+// 真实桌面端读温度/负载传感器 + 风扇信息算建议档位（fan_curve_advice，
+// 只建议不写 EC）；浏览器里没有传感器，给一份与 R187 周报同源（最高温
+// 52°C）的演示建议——总览体检卡的温度格不再是「未读到」，系统工具页
+// 开「风扇曲线建议」权限后有建议可看。风扇控制（写 EC）保持 tauriOnly
+// 拒绝——真实硬件写操作不演示假成功。
+
+export async function fanCurveAdvice(): Promise<{
+  level: string;
+  level_label: string;
+  reason: string;
+  temp_max_c: number | null;
+  cpu_load_pct: number | null;
+  curve: { load_pct: number; fan_pct: number }[];
+  fans: Array<Record<string, unknown>>;
+  note: string;
+}> {
+  await wait(60);
+  return {
+    level: 'balanced',
+    level_label: '均衡',
+    reason: '当前负载与温度处于均衡区间，风扇按默认曲线运行即可。',
+    temp_max_c: 52,
+    cpu_load_pct: 34,
+    curve: [
+      { load_pct: 0, fan_pct: 20 },
+      { load_pct: 30, fan_pct: 30 },
+      { load_pct: 50, fan_pct: 45 },
+      { load_pct: 70, fan_pct: 65 },
+      { load_pct: 90, fan_pct: 85 },
+      { load_pct: 100, fan_pct: 100 },
+    ],
+    fans: [{ name: 'CPU 风扇', rpm: 1180, temp_c: 52 }],
+    note: '演示数据：浏览器预览模式未连接真实温度传感器。',
+  };
+}
+
 // —— R189：预览模式的重复文件查找演示数据 ——
 // 真实桌面端按 size 分组 + 头部哈希聚类找重复（scan_duplicate_files_cmd，
 // 只读）；浏览器里没有真实文件可哈希，给两组确定性样例——组内 ≥2 份、

@@ -373,7 +373,7 @@ export const systemExtApi = {
   fanCurveAdvice: (refresh = false) =>
     isTauri
       ? invoke<FanCurveAdvice>('fan_curve_advice', { refresh: refresh || null })
-      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'fan_curve_advice' }))),
+      : mocks.fanCurveAdvice(),
 
   // 风扇控制（L2，fan.control）：档位/自定义曲线落地调速 + 只读状态 + 恢复默认
   fanControl: (level: string, curve: { load_pct: number; fan_pct: number }[] | undefined, tempBreakerC: number | undefined, confirmed: boolean) => {
