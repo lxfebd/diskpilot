@@ -82,7 +82,7 @@ export const cleanApi = {
           scopeDays: scopeDays ?? null,
           cachedOnly: cachedOnly ?? false,
         })
-      : Promise.resolve([] as { scaffold_id: string; scope_id: string; label: string; desc: string; path: string; bytes: number; files: number; total_bytes: number }[]),
+      : mocks.cleanupSuggestions(rootPath, scopeDays, cachedOnly),
 
   /**
    * 执行单个 scaffold scope。`dryRun=true` 只预览不落盘，可随意调；

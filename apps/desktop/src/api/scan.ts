@@ -47,7 +47,7 @@ export const scanApi = {
       ? invoke<
           { total_bytes: number; used_bytes: number; free_bytes: number; path: string; mapped_to: string }[]
         >('list_drives')
-      : Promise.resolve([]),
+      : mocks.listDrives(),
 
   estimateSize: (path: string) =>
     isTauri ? invoke<number>('estimate_size', { path }) : Promise.resolve(0),

@@ -3,7 +3,45 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives } from './mocks';
+
+describe('mocks.listDrives（总览磁盘详情演示数据）', () => {
+  it('返回与 MOCK_TREE 同源的一块 C 盘（非空，总览不再显示未检测到磁盘）', async () => {
+    const drives = await listDrives();
+    expect(drives.length).toBe(1);
+    const c = drives[0];
+    expect(c.path).toBe('C:\\');
+    expect(c.total_bytes).toBeGreaterThan(0);
+    expect(c.used_bytes).toBeGreaterThan(0);
+    expect(c.free_bytes).toBe(c.total_bytes - c.used_bytes);
+  });
+});
+
+describe('mocks.cleanupSuggestions（总览「可清理」卡片演示数据）', () => {
+  it('对命中目录返回建议项：脚本命中与 MOCK_TREE 的 scaffold_id 一致', async () => {
+    const list = await cleanupSuggestions('C:\\Users\\90740\\AppData\\Local', undefined, true);
+    // MOCK_TREE 的 AppData\Local 下命中 browser-cache / dev-caches / ide-caches / docker-buildx
+    const ids = new Set(list.map((r) => r.scaffold_id));
+    expect(ids.has('browser-cache')).toBe(true);
+    expect(ids.has('dev-caches')).toBe(true);
+    expect(ids.has('wechat-pc')).toBe(false); // 微信在 Documents，不在 Local
+  });
+
+  it('建议项字节 > 0 且 scope_id 存在于对应脚本', async () => {
+    const list = await cleanupSuggestions('C:\\Users\\90740\\AppData\\Local', undefined, true);
+    for (const r of list) {
+      expect(r.bytes).toBeGreaterThan(0);
+      const sc = SCAFFOLDS.find((s) => s.id === r.scaffold_id);
+      expect(sc).toBeTruthy();
+      expect(sc!.scopes.some((s) => s.id === r.scope_id)).toBe(true);
+    }
+  });
+
+  it('未命中目录返回空列表（不编造）', async () => {
+    const list = await cleanupSuggestions('Z:\\nonexistent', undefined, true);
+    expect(list).toEqual([]);
+  });
+});
 
 describe('mocks.scopeSizesBatch（预览模式 scope 尺寸）', () => {
   it('对命中脚本返回与 scopes 一一对应的尺寸表，而非空表', async () => {

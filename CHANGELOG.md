@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 预览模式补全总览页演示链路（R182）
+
+- 承接 R181：清理页能演示了，但总览页还是「未检测到磁盘」——浏览器预览模式
+  下 `api.listDrives` 返回空数组 → `selDrive` 恒为 null → 磁盘详情卡、清理建议
+  卡、空间趋势、救援横幅、底部统计全部空态，`cleanupSuggestions` 也返回空列表，
+  R102 逐项预览和一键清理同样点不出来。
+- `mocks.listDrives`：返回与 MOCK_TREE 同源的一块 C 盘（187.1GB 总量 ·
+  148.1GB 已用 · 39.0GB 可用），总览整页从「未检测到磁盘」恢复成可演示。
+- `mocks.cleanupSuggestions`：按 rootPath 前缀在 MOCK_TREE 收集命中的
+  scaffold 目录（与扫描命中同源），每脚本挑最多 2 个 cache/media scope
+  生成建议项；字节沿用 R181 的 `mockScopeBytes`，总览显示的大小 =
+  执行时真正清的大小（同一口径）。未命中目录返回空列表（不编造）。
+- 浏览器实测：磁盘详情（C 盘 79%）、清理建议「预计可释放 2.91 GB」13 项、
+  逐项预览 12 条样例明细、微信项勾选引导去清理页（G-高3 不受影响）、
+  「打开清理页」跳转正常、底部「本机已用 148 GB · 已扫 1/1 个盘」。
+- mocks.test.ts +2（561 总 / 41 files）：listDrives 单 C 盘且容量自洽、
+  cleanupSuggestions 命中/scope 存在性/未命中空表。
+
 ### 2026-10-15 预览模式补全清理演示链路（R181）
 
 - 浏览器预览模式（非 Tauri）此前 `scopeSizesBatch` 返回空表、`executeScope`

@@ -437,6 +437,18 @@ export async function scan(_path: string): Promise<Node> {
   return structuredClone(MOCK_TREE);
 }
 
+/** R182：预览模式的磁盘清单。真实桌面端从系统读盘（list_drives），浏览器
+ *  里没有真盘——返回与 MOCK_TREE 同源的一块 C 盘（187.1GB 总量），让总览的
+ *  磁盘详情、清理建议、空间趋势、救援横幅在演示时不再是「未检测到磁盘」。 */
+export async function listDrives(): Promise<
+  { total_bytes: number; used_bytes: number; free_bytes: number; path: string; mapped_to: string }[]
+> {
+  await wait(30);
+  const total = 187.1 * GB;
+  const used = 148.1 * GB;
+  return [{ total_bytes: total, used_bytes: used, free_bytes: total - used, path: 'C:\\', mapped_to: '' }];
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();
@@ -601,6 +613,60 @@ export async function executeScope(
     UNDO_LEDGER.push(...entries);
   }
   return entries;
+}
+
+/** R182：总览页「可清理」卡片的演示建议。按 rootPath 前缀在 MOCK_TREE 里找
+ *  命中的 scaffold 目录（与扫描命中的 scaffold 同源），每个脚本挑最多 2 个
+ *  cache/media scope 生成建议项——字节沿用 mockScopeBytes，与清理页 scope 行、
+ *  执行 mock 同一口径（总览显示的大小 = 执行时真正清的大小）。 */
+function collectScaffoldHits(node: Node, rootPath: string, out: Map<string, string>): void {
+  const root = rootPath.toLowerCase();
+  if (node.path && node.path.toLowerCase().startsWith(root)) {
+    if (node.scaffold_id && !out.has(node.scaffold_id)) out.set(node.scaffold_id, node.path);
+  }
+  for (const c of node.children ?? []) collectScaffoldHits(c, rootPath, out);
+}
+
+export interface CleanupSuggestion {
+  scaffold_id: string;
+  scope_id: string;
+  label: string;
+  desc: string;
+  path: string;
+  bytes: number;
+  files: number;
+  total_bytes: number;
+}
+
+export async function cleanupSuggestions(
+  rootPath: string,
+  _scopeDays?: Record<string, number>,
+  _cachedOnly?: boolean,
+): Promise<CleanupSuggestion[]> {
+  await wait(60);
+  const hits = new Map<string, string>();
+  collectScaffoldHits(MOCK_TREE, rootPath, hits);
+  const out: CleanupSuggestion[] = [];
+  for (const [scaffoldId, hitPath] of hits) {
+    const sc = SCAFFOLDS.find((s) => s.id === scaffoldId);
+    if (!sc) continue;
+    const picked = sc.scopes
+      .filter((s) => (s.category === 'cache' || s.category === 'media') && s.prompt?.kind !== 'confirm')
+      .slice(0, 2);
+    for (const scope of picked) {
+      out.push({
+        scaffold_id: sc.id,
+        scope_id: scope.id,
+        label: scope.label,
+        desc: `${sc.name} · ${scope.category === 'media' ? '媒体' : '缓存'}`,
+        path: hitPath,
+        bytes: mockScopeBytes(scope.id),
+        files: mockScopeFileCount(scope.id),
+        total_bytes: mockScopeBytes(scope.id),
+      });
+    }
+  }
+  return out;
 }
 
 const NOW = Math.floor(Date.now() / 1000);
