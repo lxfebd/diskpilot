@@ -601,6 +601,74 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R194：预览模式的 MCP 审计日志演示数据 ——
+// 真实桌面端 mcp_audit_tail 返回最近 call_tool / 服务器增删改记录（只读）；
+// 浏览器里没有真实调用记录，给与 R188 mcpListServers 同源的几条演示
+// 审计——MCP 页「审计」面板在演示时能看到调用/增删记录，而不是
+// 永远「暂无审计记录」。
+
+export async function mcpAuditTail(_limit = 50): Promise<
+  Array<{
+    ts: number;
+    op: string;
+    server_id: string;
+    tool?: string;
+    perm?: string;
+    granted?: boolean;
+    args?: unknown;
+    ok?: boolean;
+    error?: string | null;
+    server_name?: string;
+    writable?: boolean;
+  }>
+> {
+  await wait(40);
+  const now = Math.floor(Date.now() / 1000);
+  return [
+    {
+      ts: now - 5 * 60,
+      op: 'call_tool',
+      server_id: 'filesystem',
+      server_name: '文件系统',
+      tool: 'list_dir',
+      perm: 'L0',
+      granted: true,
+      args: { keys: ['path'] },
+      ok: true,
+      writable: false,
+    },
+    {
+      ts: now - 25 * 60,
+      op: 'call_tool',
+      server_id: 'filesystem',
+      server_name: '文件系统',
+      tool: 'write_file',
+      perm: 'L2',
+      granted: false,
+      args: { keys: ['path', 'content'] },
+      ok: false,
+      error: '权限不足：write_file 需要 L2 授权',
+      writable: true,
+    },
+    {
+      ts: now - 3 * 3600,
+      op: 'update_server',
+      server_id: 'github',
+      server_name: 'GitHub',
+      granted: true,
+      ok: true,
+    },
+    {
+      ts: now - 2 * 86400,
+      op: 'add_server',
+      server_id: 'time',
+      server_name: '时间服务',
+      granted: true,
+      ok: true,
+    },
+  ];
+}
+
 // —— R193：预览模式的插件市场演示数据 ——
 // 真实桌面端 plugin_market 返回内置 CLI 工具的「已插件化」索引，
 // plugin_list_installed 返回已安装台账（含回滚历史）；浏览器里没有

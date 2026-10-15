@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全 MCP 审计日志（R194）
+
+- 设置页「MCP → 审计日志」在浏览器预览模式显示「暂无审计记录」——
+  `api.mcpAuditTail` 非 Tauri 返回 []，审计面板演示断链。
+- `mocks.mcpAuditTail`：4 条与 R188 mcpListServers 同源的演示审计——
+  调用 list_dir（L0 成功）、调用 write_file（L2 已拒绝 + 权限不足原因）、
+  编辑服务器、添加服务器；granted/ok/perm/args 键名齐全，审计徽标
+  （已拒绝红标 / L0 绿标 / 成功勾）都能渲染。
+- `api/mcp.ts` mcpAuditTail 非 Tauri 分支接 mock。
+- 浏览器实测：审计面板显示「调用 list_dir · L0 · 参数 path」、
+  「调用 write_file · L2 · 已拒绝 · 权限不足」、编辑/添加服务器记录。
+- mocks.test.ts +1（580 总 / 41 files）：含成功 + 拒绝 + 增删审计。
+
 ### 2026-10-16 预览模式补全插件市场（R193）
 
 - 设置页「插件市场」在浏览器预览模式两个空态：内置列表

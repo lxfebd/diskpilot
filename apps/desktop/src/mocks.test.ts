@@ -3,7 +3,22 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled } from './mocks';
+
+describe('mocks.mcpAuditTail（MCP 页审计面板演示数据）', () => {
+  it('返回含 call_tool 成功/拒绝 + 服务器增删的审计记录', async () => {
+    const rows = await mcpAuditTail(80);
+    expect(rows.length).toBeGreaterThanOrEqual(4);
+    const ops = rows.map((r) => r.op);
+    expect(ops).toContain('call_tool');
+    expect(ops).toContain('add_server');
+    // 有 granted:false 的拒绝记录（审计「已拒绝」徽标可演示）
+    expect(rows.some((r) => r.granted === false)).toBe(true);
+    // 有成功调用（CheckCircle 可演示）
+    expect(rows.some((r) => r.ok === true)).toBe(true);
+    for (const r of rows) expect(r.ts).toBeGreaterThan(0);
+  });
+});
 
 describe('mocks.pluginMarket + pluginListInstalled（插件市场 tab 演示数据）', () => {
   it('pluginMarket 返回 3 个内置工具、2 个已插件化', async () => {

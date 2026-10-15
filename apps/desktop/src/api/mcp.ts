@@ -127,5 +127,5 @@ export const mcpApi = {
   mcpAuditTail: (limit = 50) =>
     isTauri
       ? invoke<McpAuditEntry[]>('mcp_audit_tail', { limit })
-      : Promise.resolve([]),
+      : mocks.mcpAuditTail(limit),
 };
