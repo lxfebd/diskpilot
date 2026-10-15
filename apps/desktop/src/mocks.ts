@@ -601,6 +601,24 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R196：预览模式的电源计划演示数据 ——
+// 真实桌面端 power_plan 无参时枚举 Windows 电源计划（只读）；带
+// setScheme 时切换系统计划（系统级写，L2 权限 + 两步确认）。浏览器
+// 里没有真实电源状态，读给 3 个标准计划（当前均衡），切换保持
+// tauriOnly 拒绝——演示不假装「已切换系统电源计划」。
+
+export async function powerPlan(): Promise<{ active: string | null; schemes: string[] }> {
+  await wait(40);
+  return {
+    active: '381b4222-f694-41f0-9685-ff5bb260df2e',
+    schemes: [
+      '381b4222-f694-41f0-9685-ff5bb260df2e',
+      '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c',
+      'a1841308-3541-4fab-bc81-f71556f20b4a',
+    ],
+  };
+}
+
 // —— R195：预览模式的社区脚本仓库演示数据 ——
 // 真实桌面端 scaffold_registry_list 从远端仓库拉社区清理脚本（只读，
 // 条目带 Ed25519 签名元数据）；浏览器里没有远端仓库，给 3 条演示脚本

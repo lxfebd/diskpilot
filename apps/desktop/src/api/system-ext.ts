@@ -343,7 +343,9 @@ export const systemExtApi = {
   powerPlan: (setScheme?: string, confirmed?: boolean) =>
     isTauri
       ? invoke<PowerPlanOut>('power_plan', { setScheme: setScheme ?? null, confirmed: confirmed ?? null })
-      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'power_plan' }))),
+      : setScheme
+        ? Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'power_plan' })))
+        : mocks.powerPlan(),
 
   // ── 系统工具（L2：启动项 / 风扇建议 / 驱动检查）──
   // 启动项：枚举（只读）/ 启停（禁用=改名 .disabled 备份，可恢复）/ 删除（进回收站）

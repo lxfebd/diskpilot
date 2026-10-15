@@ -3,7 +3,21 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan } from './mocks';
+
+describe('mocks.powerPlan（系统优化页电源计划演示数据）', () => {
+  it('返回 3 个标准计划 + 当前活动计划（均衡）', async () => {
+    const p = await powerPlan();
+    expect(p.schemes.length).toBeGreaterThanOrEqual(3);
+    // 标准 GUID：均衡/高性能/节能
+    expect(p.schemes).toContain('381b4222-f694-41f0-9685-ff5bb260df2e');
+    expect(p.schemes).toContain('8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c');
+    expect(p.schemes).toContain('a1841308-3541-4fab-bc81-f71556f20b4a');
+    // active 必在 schemes 内
+    expect(p.active).toBeTruthy();
+    expect(p.schemes).toContain(p.active);
+  });
+});
 
 describe('mocks.scaffoldRegistryList（清理模板库社区脚本演示数据）', () => {
   it('返回 ≥3 条带签名与下载量的社区脚本', async () => {

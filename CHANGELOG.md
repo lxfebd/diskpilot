@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全电源计划（R196）
+
+- 系统优化页「电源计划」卡在浏览器预览模式直接报错——`api.powerPlan`
+  非 Tauri 恒 tauriOnly reject，枚举电源计划（只读）断链。
+- `mocks.powerPlan`：3 个标准计划（均衡/高性能/节能 GUID）+ 当前活动
+  = 均衡；电源计划卡能渲染「使用中」标记 + 切换按钮。
+- `api/system-ext.ts` powerPlan 非 Tauri 分支：无参（读）→ mock；
+  带 setScheme（写：切换系统电源计划，L2 + 两步确认）→ 保持 tauriOnly
+  拒绝——演示不假装「已切换系统电源计划」。
+- 浏览器实测：系统优化页「平衡 · 使用中 · 高性能/节能 · 切换」，
+  ⚡ 活动标记齐全（需 power.plan 权限）。
+- mocks.test.ts +1（582 总 / 41 files）：3 标准计划 + active∈schemes。
+
 ### 2026-10-16 预览模式补全社区脚本仓库（R195）
 
 - 工作台右侧「清理模板库 → 社区脚本仓库」在浏览器预览模式展开后
