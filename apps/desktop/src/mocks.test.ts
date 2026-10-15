@@ -3,7 +3,25 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory } from './mocks';
+
+describe('mocks.getSpaceHistory（总览空间趋势演示数据）', () => {
+  it('返回 C 盘 ≥5 个采样点（趋势卡判定 rich）且总量与 listDrives 一致', async () => {
+    const hist = await getSpaceHistory();
+    const pts = hist['C:\\'];
+    expect(pts).toBeDefined();
+    expect(pts.length).toBeGreaterThanOrEqual(5);
+    for (const p of pts) {
+      expect(p.root).toBe('C:\\');
+      expect(p.total_bytes).toBeGreaterThan(0);
+      expect(p.used_bytes).toBeGreaterThan(0);
+      expect(p.used_bytes).toBeLessThanOrEqual(p.total_bytes);
+      expect(p.at).toBeGreaterThan(0);
+    }
+    // 时间升序（趋势按序画线）
+    for (let i = 1; i < pts.length; i++) expect(pts[i].at).toBeGreaterThan(pts[i - 1].at);
+  });
+});
 
 describe('mocks.listDrives（总览磁盘详情演示数据）', () => {
   it('返回与 MOCK_TREE 同源的一块 C 盘（非空，总览不再显示未检测到磁盘）', async () => {

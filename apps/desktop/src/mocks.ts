@@ -449,6 +449,31 @@ export async function listDrives(): Promise<
   return [{ total_bytes: total, used_bytes: used, free_bytes: total - used, path: 'C:\\', mapped_to: '' }];
 }
 
+/** R183：预览模式的空间历史——总览「磁盘空间趋势」卡的演示数据。
+ *  与 listDrives 同一块 C 盘：近 14 天每日一采样，已用空间缓慢爬升（含
+ *  R181/R182 演示清理时释放的一截回落，趋势卡能看到「清完下降」的增量）。
+ *  采样 > 5 点 → 趋势卡判定 rich（可信），增量与耗尽预测都能展示。 */
+export async function getSpaceHistory(): Promise<
+  Record<string, { root: string; total_bytes: number; used_bytes: number; at: number }[]>
+> {
+  await wait(50);
+  const total = 187.1 * GB;
+  const DAY = 86_400;
+  const now = Math.floor(Date.now() / 1000);
+  // 14 天前 ~ 今天，每日 18:00 采样；今天用「刚扫描」的当前值（与 listDrives 一致）。
+  const pts: { root: string; total_bytes: number; used_bytes: number; at: number }[] = [];
+  const base = 143.6 * GB;
+  for (let i = 13; i >= 0; i--) {
+    const dayStart = now - (now % DAY) - i * DAY;
+    const at = dayStart + 18 * 3600;
+    // 缓慢爬升：约 0.4GB/天；第 4 天有一次演示清理回落（-2.0GB，模拟真实场景）。
+    const growth = i === 0 ? 148.1 * GB : base + (13 - i) * 0.42 * GB - (i === 4 ? 2.0 * GB : 0);
+    pts.push({ root: 'C:\\', total_bytes: total, used_bytes: Math.round(growth), at: at > now ? now : at });
+  }
+  pts[pts.length - 1] = { root: 'C:\\', total_bytes: total, used_bytes: 148.1 * GB, at: now };
+  return { 'C:\\': pts };
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();

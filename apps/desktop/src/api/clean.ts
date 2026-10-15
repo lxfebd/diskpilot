@@ -245,7 +245,7 @@ export const cleanApi = {
   getSpaceHistory: () =>
     isTauri
       ? invoke<Record<string, SpacePoint[]>>('get_space_history')
-      : Promise.resolve({}),
+      : mocks.getSpaceHistory(),
 
   // ── 周巡检简报（health-butler P1）──
   /** 手动生成一份本周健康简报（只读 L0：扫建议 + 温度 + 硬件快照对比，绝不清理）。 */
