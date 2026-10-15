@@ -225,6 +225,19 @@ export function SafeToolIcon({ tool, size, color }: { tool: ToolbeltCatalogItem;
   );
 }
 
+/** R172：工具墙按风险等级筛选——卡片上有 low/medium/high 徽标，但没法用它
+ *  筛选；安全敏感的用户想「只看低风险」只能逐张看。纯函数：'all' 原样返回
+ *  副本（不改入参）；风险字段缺失按 low 处理（与卡片徽标兜底同口径）。 */
+export type RiskFilter = 'all' | 'low' | 'medium' | 'high';
+
+export function filterToolsByRisk<T extends { risk?: string | null }>(
+  list: readonly T[],
+  filter: RiskFilter,
+): T[] {
+  if (filter === 'all') return [...list];
+  return list.filter((t) => (t.risk ?? 'low') === filter);
+}
+
 /** R171：AI 分区按写入权限筛选——只读工具无需确认、写操作会改系统状态，
  *  用户常想只看一类（如「只读的安全先试」）。纯函数：'all' 原样返回。 */
 export type AiPermFilter = 'all' | 'read' | 'write';

@@ -25,9 +25,10 @@ import { splitArgs } from './services';
 import { agentDescQuality, similarAgentTools } from './similar';
 import {
   CATEGORY_COLOR, CATEGORY_ICON, RISK_ICON, SafeToolIcon, adNoticeFor, catDisplayName,
-  filterAgentTools, matchesToolQuery,
+  filterAgentTools, filterToolsByRisk, matchesToolQuery,
   plainDescriptionFor, riskLabelDisplay, toolColorFor, toolIconFor,
   type AiPermFilter,
+  type RiskFilter,
 } from './catalog';
 import type { ToolContext } from './shared';
 
@@ -704,6 +705,8 @@ export function CatalogWall({
   const [hidePromo, setHidePromo] = useState<boolean>(() => localStorage.getItem('toolwall.hidePromo') !== '0');
   // R171：AI 分区按写入权限筛选（只读无需确认、写操作改系统状态）。
   const [aiPerm, setAiPerm] = useState<AiPermFilter>('all');
+  // R172：按风险等级筛（安全敏感用户想只看低风险）。
+  const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
   // R142：三个弹层都支持 Esc 关闭（启动确认 / exe 详情 / AI 工具详情）——
   // 此前只有点遮罩能关。Esc 一律是「取消」，不会启动任何工具。
   useEscapeKey(() => setConfirmLaunch(null), confirmLaunch !== null && !launching);
@@ -788,8 +791,10 @@ export function CatalogWall({
     if (hidePromo) {
       base = base.filter((t) => !t.is_promotion);
     }
+    // R172：风险等级筛（在搜索/推广过滤之后，用户看到的与筛后一致）。
+    base = filterToolsByRisk(base, riskFilter);
     return base;
-  }, [catalog, activeCat, query, allTools, hidePromo]);
+  }, [catalog, activeCat, query, allTools, hidePromo, riskFilter]);
 
   const recentTools = useMemo(() => {
     if (activeCat !== '__all__' || query) return [] as ToolbeltCatalogItem[];
@@ -990,6 +995,22 @@ export function CatalogWall({
             )}
             <div className="toolwall-grid-head">
               <span className="toolwall-grid-title">{query ? t('toolbelt.wall.searchResult', { n: activeTools.length }) : (activeCat === '__all__' ? t('toolbelt.wall.allTools') : catDisplayName(activeCat))}</span>
+              {/* R172：风险等级筛——卡片上的 low/medium/high 徽标此前无法用来筛选 */}
+              <span className="sys-filter-chips toolwall-risk-chips">
+                {(['all', 'low', 'medium', 'high'] as RiskFilter[]).map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    className={'chip' + (riskFilter === r ? ' active' : '')}
+                    onClick={() => setRiskFilter(r)}
+                  >
+                    {r === 'all' ? t('toolbelt.wall.riskAll')
+                      : r === 'low' ? t('toolbelt.mkt.riskLow')
+                      : r === 'medium' ? t('toolbelt.mkt.riskMedium')
+                      : t('toolbelt.mkt.riskHigh')}
+                  </button>
+                ))}
+              </span>
               <span className="muted small">{t('toolbelt.wall.gridHint')}</span>
             </div>
             {activeTools.length === 0 ? (

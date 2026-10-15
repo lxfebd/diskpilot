@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 工具墙按风险等级筛选（R172）
+
+- exe 工具卡片上有 low/medium/high 风险徽标，但没法用它们筛选——安全敏感
+  的用户想「只看低风险工具」只能逐张看徽标。现网格标题旁加「全部风险 /
+  低 / 中 / 高」chips（与搜索、隐藏推广可叠加）；缺 risk 字段按 low 处理
+  （与卡片徽标兜底同口径）。
+- 新纯函数 `filterToolsByRisk(list, filter)` + `RiskFilter`（catalog.tsx
+  导出）；i18n `toolbelt.wall.riskAll`（zh/en 成对，等级标签复用 mkt.risk*）；
+  CSS 复用 `.sys-filter-chips`。catalog.test.ts +3（530 总 / 38 files）。
+
 ### 2026-10-15 AI 分区按写入权限筛选（R171）
 
 - 「AI 可操作」分区此前只能按搜索词过滤，卡片上的只读/写徽标无法用来筛

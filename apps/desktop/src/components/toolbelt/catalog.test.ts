@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterAgentTools, matchesToolQuery } from './catalog';
+import { filterAgentTools, filterToolsByRisk, matchesToolQuery } from './catalog';
 import type { ToolbeltCatalogItem } from '../../api';
 
 // R170：工具墙搜索匹配——此前只搜 name/description/tags，按厂商/版本/架构
@@ -83,6 +83,34 @@ describe('filterAgentTools（AI 工具权限筛选）', () => {
     const input = [...list];
     const out = filterAgentTools(input, 'all');
     expect(input).toHaveLength(3);
+    expect(out).not.toBe(input);
+  });
+});
+
+// R172：工具墙按风险等级筛——卡片徽标此前无法用来筛选。
+describe('filterToolsByRisk（风险等级筛选）', () => {
+  const tools = [
+    { name: 'A', risk: 'low' },
+    { name: 'B', risk: 'medium' },
+    { name: 'C', risk: 'high' },
+    { name: 'D' }, // 缺 risk
+  ];
+
+  it('all → 原样（含顺序）', () => {
+    expect(filterToolsByRisk(tools, 'all').map((t) => t.name)).toEqual(['A', 'B', 'C', 'D']);
+  });
+
+  it('按等级筛；缺 risk 归 low（与卡片徽标兜底同口径）', () => {
+    expect(filterToolsByRisk(tools, 'low').map((t) => t.name)).toEqual(['A', 'D']);
+    expect(filterToolsByRisk(tools, 'medium').map((t) => t.name)).toEqual(['B']);
+    expect(filterToolsByRisk(tools, 'high').map((t) => t.name)).toEqual(['C']);
+  });
+
+  it('空列表 → 空数组；all 分支不改入参', () => {
+    expect(filterToolsByRisk([], 'high')).toEqual([]);
+    const input = [...tools];
+    const out = filterToolsByRisk(input, 'all');
+    expect(input).toHaveLength(4);
     expect(out).not.toBe(input);
   });
 });
