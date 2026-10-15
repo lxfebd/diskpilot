@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 清理项显示可清理占比条（R174）
+
+- 清理页每个 scope 行的「总大小 · 可清理 · 保留」三个数字要读一遍才知道
+  「这项能清掉几成」。现加一条 46px 细占比条（可清部分填强调色，悬停显示
+  「约可清掉这项的 N%」），比例一眼可见。
+- 新纯函数 `cleanRatio(bytes, totalBytes)`（cleanup/model.ts）——total 非正
+  或非有限 → null（没分母就不给比例）；结果钳到 [0,1]（可清 > 总 的脏数据
+  不画出超长条）；占比为 0 时不出条。i18n `cleanup.ratioTip`（zh/en 成对）；
+  CSS `.cleanup-ratio` / `.cleanup-ratio-fill`。cleanup/model.test.ts +3
+  （542 总 / 39 files）。
+
 ### 2026-10-15 风扇建议显示与上次的对比（R173）
 
 - 风扇曲线建议此前每次只显示当前档位/温度/锚点，看不出「这次和上次比变了

@@ -240,6 +240,22 @@ main.cleanup-page > .cleanup-page {
   color: var(--ink-3);
   opacity: .85;
 }
+/* R174：可清理占比细条——宽度固定，fill 按比例（accent 语义色） */
+.cleanup-ratio {
+  display: inline-block;
+  width: 46px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.cleanup-ratio-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent-strong);
+  border-radius: 999px;
+}
 .cleanup-row-days {
   display: flex; align-items: center; gap: 4px;
   font-size: 10.5px;

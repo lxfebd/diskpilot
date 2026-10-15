@@ -6,7 +6,7 @@
 import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage } from '../../useCleanupStore';
 import { formatBytes } from '../../format';
-import { applySelectionMode, cleanedHitStats, formatLastActive } from '../../cleanup/model';
+import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive } from '../../cleanup/model';
 import { SelectionModePicker, useSelectionOptions } from './SelectionMode';
 import { SelectionActionBar } from './SelectionActionBar';
 import { DryRunPreviewDialog } from './DryRunPreviewDialog';
@@ -34,6 +34,8 @@ function ScopeRow({ scope }: { scope: Scope }) {
   // 3 天前」会让人以为整个 scope 都清过了。
   const hitStats = cleanedHitStats(s.lastCleanByScope, s.matches.map((m) => m.path));
   const lastCleanTs = hitStats.latestTs;
+  // R174：可清理占比（totalBytes 非正 → null，不画条）。
+  const ratio = cleanRatio(bytes, totalBytes);
   const meta = (() => {
     if (s.scopeSizes === null) return t('cleanup.scanning');
     if (trulyEmpty) return t('cleanup.empty');
@@ -74,13 +76,20 @@ function ScopeRow({ scope }: { scope: Scope }) {
         />
         <div className="cleanup-row-text">
           <span className="cleanup-row-label">{scope.label}</span>
+          {/* R174：可清理占比条——三个数字要读一遍才知道「能清掉几成」，
+              细条让比例一眼可见（总大小作分母，可清部分填色）。 */}
+          {ratio !== null && ratio > 0 && (
+            <span className="cleanup-ratio" title={t('cleanup.ratioTip', { pct: Math.round(ratio * 100) })}>
+              <span className="cleanup-ratio-fill" style={{ width: `${(ratio * 100).toFixed(1)}%` }} />
+            </span>
+          )}
           <span className="cleanup-row-meta">{meta}</span>
           {/* R156：该目录上次清理时刻——勾选前就知道「刚清过 / 很久没清」。
               台账没读到（null）或这个目录没清过时不显示，不编造。 */}
           {lastCleanTs !== null && (
             <span className="cleanup-row-last muted small">
               {t('cleanup.lastCleaned', { age: formatLastActive(lastCleanTs) })}
-{hitStats.total > 1 && hitStats.cleaned < hitStats.total && (
+              {hitStats.total > 1 && hitStats.cleaned < hitStats.total && (
                 <> · {t('cleanup.lastCleanedPartial', { n: hitStats.cleaned, total: hitStats.total })}</>
               )}
             </span>

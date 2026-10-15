@@ -218,6 +218,17 @@ export function sizeOfScope(sizes: ScopeSize[] | null, id: string): ScopeSize | 
   return sizes.find((r) => r.scope_id === id) ?? null;
 }
 
+/** R174：可清理占比（0–1）——scope 行的三个数字（总/可清/保留）要读一遍才能
+ *  判断「这项能清掉几成」；百分比条让这个比例一眼可见。
+ *  纯函数：total 非正 → null（没有分母就不给比例，不编造）；结果钳到 [0,1]
+ *  （可清 > 总 的脏数据不画出超长条）。 */
+export function cleanRatio(bytes: number, totalBytes: number): number | null {
+  if (!Number.isFinite(bytes) || !Number.isFinite(totalBytes) || totalBytes <= 0) return null;
+  const r = bytes / totalBytes;
+  if (!Number.isFinite(r)) return null;
+  return Math.min(1, Math.max(0, r));
+}
+
 /** R156：按目录聚合「上次清理时刻」——台账里每条 undo 的 source 落在哪个
  *  扫描命中目录下，就更新该目录的最新清理时间（秒）。
  *  只按目录前缀匹配（scope glob 的展开只有后端能做，前端不猜）——所以语义是

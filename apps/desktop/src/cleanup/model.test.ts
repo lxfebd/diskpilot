@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   aggregateScopeSizes,
   applySelectionMode,
+  cleanRatio,
   collectWxids,
   computeCoverage,
   computeTotalSelected,
@@ -441,5 +442,26 @@ describe('cleanedHitStats（命中目录覆盖）', () => {
       total: 2,
       latestTs: null,
     });
+  });
+});
+
+// R174：可清理占比——三个数字要读一遍才知道「能清掉几成」，条让比例一眼可见。
+describe('cleanRatio（可清理占比）', () => {
+  it('正常比例', () => {
+    expect(cleanRatio(25, 100)).toBe(0.25);
+    expect(cleanRatio(100, 100)).toBe(1);
+    expect(cleanRatio(0, 100)).toBe(0);
+  });
+
+  it('total ≤ 0 / 非有限 → null（没有分母就不给比例）', () => {
+    expect(cleanRatio(10, 0)).toBeNull();
+    expect(cleanRatio(10, -5)).toBeNull();
+    expect(cleanRatio(10, Number.NaN)).toBeNull();
+    expect(cleanRatio(Number.NaN, 100)).toBeNull();
+  });
+
+  it('脏数据（可清 > 总）钳到 1，不画出超长条', () => {
+    expect(cleanRatio(150, 100)).toBe(1);
+    expect(cleanRatio(-20, 100)).toBe(0);
   });
 });
