@@ -539,6 +539,18 @@ export async function listInstalledDrivers(): Promise<MockInstalledDriver[]> {
   return MOCK_DRIVERS.map((d) => ({ ...d }));
 }
 
+// —— R186：预览模式的磁盘空间外推演示数据 ——
+// 真实桌面端按空间历史外推「预计满盘天数」（check_space_forecast_cmd，只读）；
+// 浏览器里没有历史文件可读，直接用 R183 趋势 mock 的口径外推——与趋势卡的
+// 「约 112 天满」同源，体检/清理提醒的立即检查不再空手而归。
+
+export async function checkSpaceForecast(): Promise<
+  { path: string; days: number | null; reason: string; warn: boolean }[]
+> {
+  await wait(60);
+  return [{ path: 'C:\\', days: 112, reason: 'ok', warn: false }];
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();

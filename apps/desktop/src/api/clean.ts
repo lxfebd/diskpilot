@@ -237,7 +237,7 @@ export const cleanApi = {
   checkSpaceForecast: () =>
     isTauri
       ? invoke<SpaceForecast[]>('check_space_forecast_cmd')
-      : Promise.resolve([]),
+      : mocks.checkSpaceForecast(),
 
   // ── 磁盘空间历史（R6）──
   /** 读取全部磁盘空间趋势（只读）：`{root -> [快照]}`，按时间顺序。

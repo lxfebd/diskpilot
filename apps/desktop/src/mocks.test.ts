@@ -3,7 +3,19 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast } from './mocks';
+
+describe('mocks.checkSpaceForecast（清理提醒/体检空间外推演示数据）', () => {
+  it('返回 C 盘预计满盘天数（与趋势卡约 112 天同源，reason=ok 不告警）', async () => {
+    const rows = await checkSpaceForecast();
+    expect(rows.length).toBe(1);
+    const c = rows[0];
+    expect(c.path).toBe('C:\\');
+    expect(c.days).toBeGreaterThan(0);
+    expect(c.reason).toBe('ok');
+    expect(c.warn).toBe(false);
+  });
+});
 
 describe('mocks.listInstalledDrivers（系统工具驱动检查演示数据）', () => {
   it('返回覆盖常见类别的样例驱动（类别筛选可演示）', async () => {

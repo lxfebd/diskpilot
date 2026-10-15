@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全空间外推检查（R186）
+
+- 设置页「清理提醒 → 检查趋势」在浏览器预览模式一直是空结果——
+  `api.checkSpaceForecast` 非 Tauri 分支返回 `[]`，R100 的「预计满盘天数」
+  体检口径在演示里拿不到数据。
+- `mocks.checkSpaceForecast`：返回 C 盘 `{ days: 112, reason: 'ok',
+  warn: false }`——与 R183 趋势 mock 的「约 112 天满」同源（同一份趋势
+  口径外推），体检/清理提醒的立即检查不再空手而归。
+- `api/clean.ts` checkSpaceForecast 非 Tauri 分支接 mock。
+- 浏览器实测：清理提醒「检查趋势」显示「C:\ · 约 112 天后满」，
+  与趋势卡外推一致。提醒未开启时手动检查会被忽略（设计行为，数据已就绪）。
+- mocks.test.ts +1（567 总 / 41 files）：C 盘正天数、reason=ok、不告警。
+
 ### 2026-10-16 预览模式补全系统工具驱动检查（R185）
 
 - 承接 R184：「系统工具 → 驱动检查」的已装驱动列表在浏览器预览模式是
