@@ -3,7 +3,28 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig } from './mocks';
+
+describe('mocks.reminder（清理提醒开关/阈值 + 立即检查演示数据）', () => {
+  it('开关在会话内可切换（不再点了弹回关闭）', async () => {
+    const before = await getReminderConfig();
+    expect(before.enabled).toBe(false);
+    const on = await setReminderConfig({ enabled: true, min_bytes: 500 * 1024 * 1024 });
+    expect(on.enabled).toBe(true);
+    expect(on.min_bytes).toBe(500 * 1024 * 1024);
+    const back = await getReminderConfig();
+    expect(back.enabled).toBe(true);
+    await setReminderConfig({ enabled: false });
+  });
+
+  it('runReminderCheck 返回 C 盘 2.91GB 提醒负载（与清理建议 mock 同源）', async () => {
+    const p = await runReminderCheck();
+    expect(p.drives.length).toBeGreaterThan(0);
+    expect(p.drives[0].path).toBe('C:\\');
+    expect(p.total_bytes).toBeGreaterThan(0);
+    expect(p.ts).toBeGreaterThan(0);
+  });
+});
 
 describe('mocks.hwInfo + hwDiskHealth（体检卡硬盘健康格 + 工具页硬件面板演示数据）', () => {
   it('hwInfo 返回 CPU/内存/主板/显卡齐全的静态信息', async () => {

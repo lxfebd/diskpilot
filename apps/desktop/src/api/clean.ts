@@ -191,14 +191,7 @@ export const cleanApi = {
   getReminderConfig: () =>
     isTauri
       ? invoke<ReminderConfig>('get_reminder_config')
-      : Promise.resolve({
-          enabled: false,
-          interval_hours: 24,
-          min_bytes: 200 * 1024 * 1024,
-          weekly_report_enabled: false,
-          weekly_interval_days: 7,
-          full_warn_days: 0,
-        }),
+      : mocks.getReminderConfig(),
 
   setReminderConfig: (patch: {
     enabled?: boolean;
@@ -217,20 +210,13 @@ export const cleanApi = {
           weeklyIntervalDays: patch.weekly_interval_days ?? null,
           fullWarnDays: patch.full_warn_days ?? null,
         })
-      : Promise.resolve({
-          enabled: false,
-          interval_hours: 24,
-          min_bytes: 200 * 1024 * 1024,
-          weekly_report_enabled: false,
-          weekly_interval_days: 7,
-          full_warn_days: 0,
-        }),
+      : mocks.setReminderConfig(patch),
 
   /** 手动触发一次提醒检查（只读，只出清单 + 通知，绝不执行）。 */
   runReminderCheck: () =>
     isTauri
       ? invoke<ReminderPayload | null>('run_reminder_check_cmd')
-      : Promise.resolve(null),
+      : mocks.runReminderCheck(),
 
   /** R100 立即检查各盘空间趋势（只读）：逐盘返回预计满盘天数/无法预测的原因。
     *  浏览器模式无真实历史 → 空列表（诚实：没读=没有）。 */

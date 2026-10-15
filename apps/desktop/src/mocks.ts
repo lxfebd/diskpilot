@@ -601,6 +601,56 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R192：预览模式的清理提醒演示数据 ——
+// 真实桌面端提醒配置持久化在 app_data_dir/reminder.json（get/set 同源）；
+// 浏览器里没有磁盘文件，用模块级状态模拟这份配置——开关/间隔/阈值在
+// 会话内可真实切换（不再点了开关弹回关闭）。
+// run_reminder_check_cmd 逐盘查可清量，出提醒负载（只读，绝不执行清理）；
+// 浏览器里没有真实空间历史，给 C 盘一条与清理建议 mock 同源的提醒
+// （2.91 GB）——「现在检查一次」在演示时能显示检查结果。
+
+export interface MockReminderConfig {
+  enabled: boolean;
+  interval_hours: number;
+  min_bytes: number;
+  weekly_report_enabled: boolean;
+  weekly_interval_days: number;
+  full_warn_days: number;
+}
+
+let reminderCfg: MockReminderConfig = {
+  enabled: false,
+  interval_hours: 24,
+  min_bytes: 200 * 1024 * 1024,
+  weekly_report_enabled: false,
+  weekly_interval_days: 7,
+  full_warn_days: 0,
+};
+
+export async function getReminderConfig(): Promise<MockReminderConfig> {
+  await wait(20);
+  return { ...reminderCfg };
+}
+
+export async function setReminderConfig(patch: Partial<MockReminderConfig>): Promise<MockReminderConfig> {
+  await wait(20);
+  reminderCfg = { ...reminderCfg, ...patch };
+  return { ...reminderCfg };
+}
+
+export async function runReminderCheck(): Promise<{
+  drives: { path: string; bytes: number }[];
+  total_bytes: number;
+  ts: number;
+}> {
+  await wait(70);
+  return {
+    drives: [{ path: 'C:\\', bytes: 2.91 * GB }],
+    total_bytes: 2.91 * GB,
+    ts: Math.floor(Date.now() / 1000),
+  };
+}
+
 // —— R191：预览模式的硬件信息演示数据 ——
 // 真实桌面端从 WMI/PowerShell 读静态硬件信息（hw_info）与磁盘健康
 // （hw_disk_health，quick 只跑 WMI）；浏览器里没有真实硬件，给一台与

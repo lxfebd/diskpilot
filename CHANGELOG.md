@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全清理提醒（R192）
+
+- 设置页「清理提醒」在浏览器预览模式两个断点：
+  - 开提醒开关点了没反应——`getReminderConfig` / `setReminderConfig`
+    非 Tauri 分支都返回硬编码默认值（enabled: false），保存的 patch
+    被丢弃，开关永远弹回关闭。
+  - 「现在检查一次」永远 toast「没有可提醒的项目」——`runReminderCheck`
+    非 Tauri 返回 null（浏览器没真实空间历史）。
+- `mocks.getReminderConfig` / `mocks.setReminderConfig`：模块级可变状态
+  （模拟 app_data_dir/reminder.json），开关/间隔/阈值/周报开关在会话内
+  可真实切换（不再弹回关闭）。
+- `mocks.runReminderCheck`：C 盘 2.91 GB 提醒负载（与清理建议 mock
+  同源），只读提醒——绝不执行清理。
+- `api/clean.ts` 三接口非 Tauri 分支接 mock。
+- 浏览器实测：开关 false→true 保持开启；「现在检查一次」→
+  「上次检查：可释放 2.91 GB · C:\ · 2.91 GB（已发通知）」。
+- mocks.test.ts +1（577 总 / 41 files）：开关会话内切换 + 检查负载。
+
 ### 2026-10-16 预览模式补全硬件信息（R191）
 
 - 承接 R190：总览「今日体检」硬盘健康格在浏览器预览模式永远「未读到」——
