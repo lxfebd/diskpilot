@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 进度移入预览弹窗，取消按钮真正可点（R180）
+
+- 承接 R178/R179 发现的问题：真删过程中预览弹窗（zIndex 60 全屏遮罩）一直
+  盖在清理页上方，CleanupBody 里的实时进度条和「取消」按钮用户**根本够不到**
+  ——实测只有 `runRealDelete` 会置 running，且它运行时 `preview` 始终非空，
+  body 进度块从未有机会露出来。用户当时只能看到 ProgressButton 的**模拟进度**
+  （按估算时间渐近爬到 92%，不是真实进度）且**没有取消入口**。
+- 现在把真实进度 + 取消按钮**移进 DryRunPreviewDialog 弹窗内部**：
+  弹窗摘要下方新增实时进度条（`cleanup.progressInfo`：已清 done/total 项 ·
+  已释放字节；取消已登记时切 `cleanup.cancelling` 变淡）；弹窗底部主操作位在
+  真删进行中从「确认删除」换成「取消」按钮（`cleanup.cancellingBtn` 禁用态）。
+- 移除 CleanupBody 中已死的进度块（running 期间永远被弹窗遮住），避免双份
+  进度的维护漂移。取消语义不变：已交批次不撤回（回收站可逆）、后续批次不再提交。
+
 ### 2026-10-15 取消登记即时可见（R179）
 
 - 承接 R178：点「取消」后到批次边界生效前，按钮仍亮、进度照跑，用户不确定

@@ -315,41 +315,6 @@ export function CleanupBody() {
         </>
       )}
 
-      {s.running && (
-        <div className={'cleanup-progress' + (s.cancelRequested ? ' cancelling' : '')}>
-          <div className="cleanup-progress-head">
-            <span>
-              <Loader2 size={12} className="spin" />{' '}
-              {s.cancelRequested
-                ? t('cleanup.cancelling', { size: formatBytes(s.progress.freedBytes) })
-                : t('cleanup.progressInfo', {
-                    done: s.progress.done,
-                    total: s.progress.total,
-                    size: formatBytes(s.progress.freedBytes),
-                  })}
-            </span>
-            <button
-              className="ghost cleanup-cancel"
-              onClick={cancelCleanup}
-              disabled={s.cancelRequested}
-            >
-              {t(s.cancelRequested ? 'cleanup.cancellingBtn' : 'cleanup.cancel')}
-            </button>
-          </div>
-          <div className="cleanup-progress-bar">
-            <div
-              className="cleanup-progress-fill"
-              style={{
-                width:
-                  s.progress.total > 0
-                    ? `${Math.min(100, Math.round((s.progress.done / s.progress.total) * 100))}%`
-                    : '0%',
-              }}
-            />
-          </div>
-        </div>
-      )}
-
       <SelectionActionBar summary={summary}>
         <button
           className={'primary cleanup-execute' + (s.armed ? ' armed' : '')}
@@ -375,6 +340,9 @@ export function CleanupBody() {
           onCancel={cancelPreview}
           estimatedCount={s.preview.totalFiles}
           granularity={s.isConda ? 'directory' : 'file'}
+          progress={s.progress}
+          cancelRequested={s.cancelRequested}
+          onCancelCleanup={cancelCleanup}
         />
       )}
     </div>

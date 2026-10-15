@@ -25,6 +25,11 @@ interface Props {
   onCancel: () => void;
   estimatedCount: number;
   granularity: RecycleGranularity;
+  // R180：真删进行中，进度与取消必须显示在窗内——窗（zIndex 60）盖住 body，
+  // body 里的进度条 / 取消按钮用户根本够不到。ProgressButton 只有模拟进度、没有取消。
+  progress: { done: number; total: number; freedBytes: number };
+  cancelRequested: boolean;
+  onCancelCleanup: () => void;
 }
 
 export function DryRunPreviewDialog({
@@ -34,6 +39,9 @@ export function DryRunPreviewDialog({
   onCancel,
   estimatedCount,
   granularity,
+  progress,
+  cancelRequested,
+  onCancelCleanup,
 }: Props) {
   const t = useT();
   const [armed, setArmed] = useState(false);
@@ -146,6 +154,35 @@ export function DryRunPreviewDialog({
           </span>
         </div>
 
+        {/* R180：真删进行中的实时进度——done/total 项 + 已释放字节，取消已登记时变「取消中」。 */}
+        {running && (
+          <div className={'cleanup-progress' + (cancelRequested ? ' cancelling' : '')}>
+            <div className="cleanup-progress-head">
+              <span>
+                <Loader2 size={12} className="spin" />{' '}
+                {cancelRequested
+                  ? t('cleanup.cancelling', { size: formatBytes(progress.freedBytes) })
+                  : t('cleanup.progressInfo', {
+                      done: progress.done,
+                      total: progress.total,
+                      size: formatBytes(progress.freedBytes),
+                    })}
+              </span>
+            </div>
+            <div className="cleanup-progress-bar">
+              <div
+                className="cleanup-progress-fill"
+                style={{
+                  width:
+                    progress.total > 0
+                      ? `${Math.min(100, Math.round((progress.done / progress.total) * 100))}%`
+                      : '0%',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* R155：上次清理时间参照——刚清完又清一遍是常见误操作 */}
         {lastAge && (
           <div className="cleanup-preview-last muted small">
@@ -240,7 +277,16 @@ export function DryRunPreviewDialog({
           </div>
           <div className="cleanup-actions">
             <button className="ghost" onClick={onCancel} disabled={running}>{t('cleanup.back')}</button>
-            {armed ? (
+            {running ? (
+              // 真删已在跑：主操作位换成「取消」——已交批次不撤回，后续批次不再提交。
+              <button
+                className="ghost cleanup-cancel"
+                onClick={onCancelCleanup}
+                disabled={cancelRequested}
+              >
+                {t(cancelRequested ? 'cleanup.cancellingBtn' : 'cleanup.cancel')}
+              </button>
+            ) : armed ? (
               <ProgressButton
                 className="primary cleanup-execute armed"
                 estimatedCount={estimatedCount}
