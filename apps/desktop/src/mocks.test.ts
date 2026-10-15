@@ -3,7 +3,27 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth } from './mocks';
+
+describe('mocks.hwInfo + hwDiskHealth（体检卡硬盘健康格 + 工具页硬件面板演示数据）', () => {
+  it('hwInfo 返回 CPU/内存/主板/显卡齐全的静态信息', async () => {
+    const info = await hwInfo();
+    expect(info.cpu).toBeTruthy();
+    expect((info.cpu as Array<Record<string, unknown>>)[0].Name).toContain('Intel');
+    expect(info.memory).toBeTruthy();
+    expect(info.board).toBeTruthy();
+    expect(info.os).toBeTruthy();
+  });
+
+  it('hwDiskHealth 返回 C 盘 SSD Healthy（体检卡可显示全部健康）', async () => {
+    const h = await hwDiskHealth();
+    expect(h.reliability).toBe(true);
+    const disks = h.disks as Array<Record<string, unknown>>;
+    expect(disks.length).toBeGreaterThan(0);
+    expect(String(disks[0].health).toLowerCase()).toContain('healthy');
+    expect(disks[0].drive_letters).toBe('C');
+  });
+});
 
 describe('mocks.fanCurveAdvice（总览温度格 + 系统工具风扇建议演示数据）', () => {
   it('返回均衡档建议 + 温度 52°C（与周报 mock 同源）+ 曲线锚点', async () => {

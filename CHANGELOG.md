@@ -5,6 +5,28 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全硬件信息（R191）
+
+- 承接 R190：总览「今日体检」硬盘健康格在浏览器预览模式永远「未读到」——
+  `api.hwInfo` / `api.hwDiskHealth` 非 Tauri 分支 tauriOnly 拒绝，而体检卡
+  其余四格全是模拟数据，五格只缺硬盘健康显得突兀。
+- `mocks.hwInfo`：一台与驱动 mock 同源的演示机器（ThinkPad X1 Carbon +
+  i7-1365U 12 线程 + 16GB Samsung 内存 + Iris Xe 显卡 + Samsung 980 PRO +
+  Win11 专业版 + 温度 32.5°C），字段齐全（cpu/cpu_usage/gpu/gpu_live/
+  memory/system/bios/board/os/disk/thermal）。
+- `mocks.hwDiskHealth`：C 盘 Samsung SSD 980 PRO 1TB，health=Healthy、
+  drive_letters=C、reliability=true、cdi_report Good 100% temp 42°C，
+  note 注明「演示数据：浏览器预览模式未连接真实 SMART 传感器」
+  （诚实标注）。受控压测（hw_run_test）保持 tauriOnly 拒绝——
+  真实负载测试不演示。
+- `api/system-ext.ts` hwInfo / hwDiskHealth 非 Tauri 分支接 mock。
+  工具墙整体保持 isTauri gate（浏览器显示「硬件工具箱仅在桌面应用中
+  可用」）——桌面端工具执行能力不演示，仅硬件信息这类只读快照可看。
+- 浏览器实测：体检卡五格齐全「无红盘 · 可清理 2.91 GB · 最高温 52℃ ·
+  启动项 8 个 · 已禁用 3 · 1 块硬盘健康」（原来「硬盘健康未读到」）。
+- mocks.test.ts +2（575 总 / 41 files）：hwInfo 静态字段齐全 +
+  hwDiskHealth C 盘 Healthy。
+
 ### 2026-10-16 预览模式补全风扇曲线建议（R190）
 
 - 总览「今日体检」温度格在浏览器预览模式永远「未读到温度」——

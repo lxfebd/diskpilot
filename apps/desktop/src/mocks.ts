@@ -601,6 +601,43 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R191：预览模式的硬件信息演示数据 ——
+// 真实桌面端从 WMI/PowerShell 读静态硬件信息（hw_info）与磁盘健康
+// （hw_disk_health，quick 只跑 WMI）；浏览器里没有真实硬件，给一台与
+// 驱动 mock（Intel Iris Xe / Intel Wi-Fi）同源的演示机器——总览体检卡的
+// 硬盘健康格不再是「未读到」，工具页硬件聚合面板有完整信息可看。
+// 受控压测（hw_run_test）保持 tauriOnly 拒绝——真实负载测试不演示。
+
+export async function hwInfo(): Promise<Record<string, unknown>> {
+  await wait(90);
+  return {
+    cpu: [{ Name: '13th Gen Intel(R) Core(TM) i7-1365U', NumberOfCores: 10, NumberOfLogicalProcessors: 12, MaxClockSpeed: 5200, CurrentClockSpeed: 2893, LoadPercentage: 12 }],
+    cpu_usage: [{ PercentProcessorTime: 12 }],
+    gpu: [{ Name: 'Intel(R) Iris(R) Xe Graphics', AdapterRAM: 1073741824 }],
+    gpu_live: { name: 'Intel(R) Iris(R) Xe Graphics', utilization_pct: 6, temperature_c: 41, memory_used_bytes: 230 * MB, memory_total_bytes: 1024 * MB },
+    memory: [{ Capacity: 16 * GB, Speed: 4267, ConfiguredClockSpeed: 4267, Manufacturer: 'Samsung' }],
+    system: [{ Manufacturer: 'LENOVO', Model: 'ThinkPad X1 Carbon Gen 10', TotalPhysicalMemory: 16 * GB }],
+    bios: [{ Manufacturer: 'LENOVO', SMBIOSBIOSVersion: 'N3XET52W (1.27 )', ReleaseDate: '2025-08-12' }],
+    board: [{ Manufacturer: 'LENOVO', Product: '21CB0012CN' }],
+    os: [{ Caption: 'Microsoft Windows 11 专业版', OSArchitecture: '64 位', Version: '10.0.26100' }],
+    disk: [{ FriendlyName: 'Samsung SSD 980 PRO 1TB', Size: 1024 * GB, MediaType: '3' }],
+    thermal: [{ CurrentTemperature: 3251 }],
+  };
+}
+
+export async function hwDiskHealth(): Promise<Record<string, unknown>> {
+  await wait(90);
+  return {
+    disks: [
+      { friendly: 'Samsung SSD 980 PRO 1TB', health: 'Healthy', drive_letters: 'C', reliability: true },
+    ],
+    reliability: true,
+    cdi_report: [{ model: 'Samsung SSD 980 PRO 1TB', health_status: 'Good 100%', temp_c: 42 }],
+    note: '演示数据：浏览器预览模式未连接真实 SMART 传感器。',
+    substs: [],
+  };
+}
+
 // —— R190：预览模式的风扇建议演示数据 ——
 // 真实桌面端读温度/负载传感器 + 风扇信息算建议档位（fan_curve_advice，
 // 只建议不写 EC）；浏览器里没有传感器，给一份与 R187 周报同源（最高温
