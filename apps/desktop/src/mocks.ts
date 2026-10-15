@@ -474,6 +474,39 @@ export async function getSpaceHistory(): Promise<
   return { 'C:\\': pts };
 }
 
+// —— R184：预览模式的启动项演示数据 ——
+// 真实桌面端从注册表/启动文件夹枚举（list_startup_items）；浏览器里没有系统
+// 可读，给一批覆盖四个来源（HKCU/HKLM/用户夹/机器夹）的样例启动项，让设置页
+// 「系统工具 → 启动项」的搜索、来源分组、启停/删除两步确认都能点可看。
+// 只读枚举 mock；启停/删除走 tauriOnly 拒绝（那是有真实系统副作用的写操作，
+// 浏览器里不演示假写成功）。
+
+export interface MockStartupItem {
+  id: string;
+  name: string;
+  command: string;
+  location: string;
+  enabled: boolean;
+  target: string;
+}
+
+const MOCK_STARTUP: MockStartupItem[] = [
+  { id: 'hkcu-qq', name: '腾讯QQ', command: '"C:\\Program Files (x86)\\Tencent\\QQ\\QQ.exe" -autostart', location: 'registry_hkcu', enabled: true, target: 'C:\\Program Files (x86)\\Tencent\\QQ\\QQ.exe' },
+  { id: 'hkcu-wx', name: '微信', command: '"C:\\Program Files\\Tencent\\WeChat\\WeChat.exe" -autostart', location: 'registry_hkcu', enabled: true, target: 'C:\\Program Files\\Tencent\\WeChat\\WeChat.exe' },
+  { id: 'hkcu-obs', name: 'OBS Studio', command: '"C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe" --minimize-to-tray', location: 'registry_hkcu', enabled: false, target: 'C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe' },
+  { id: 'hkcu-ts', name: '腾讯会议', command: '"C:\\Program Files (x86)\\Tencent\\wemeet\\wemeetapp.exe" --autostart', location: 'registry_hkcu', enabled: false, target: 'C:\\Program Files (x86)\\Tencent\\wemeet\\wemeetapp.exe' },
+  { id: 'user-aria', name: 'aria2 下载器', command: 'D:\\Tools\\aria2\\aria2c.exe --enable-rpc', location: 'folder_user', enabled: true, target: 'D:\\Tools\\aria2\\aria2c.exe' },
+  { id: 'user-utools', name: 'uTools 启动器', command: '"C:\\Users\\90740\\AppData\\Local\\Programs\\utools\\utools.exe" --autostart', location: 'folder_user', enabled: true, target: 'C:\\Users\\90740\\AppData\\Local\\Programs\\utools\\utools.exe' },
+  { id: 'hklm-nv', name: 'NVIDIA 控制面板', command: '"C:\\Windows\\System32\\nvcpl.dll" RunDLL32', location: 'registry_hklm', enabled: true, target: 'C:\\Windows\\System32\\nvcpl.dll' },
+  { id: 'machine-hp', name: 'HP 打印助手', command: '"C:\\Program Files\\HP\\HP Print Solutions\\HPPrint.exe" /minimized', location: 'folder_machine', enabled: false, target: 'C:\\Program Files\\HP\\HP Print Solutions\\HPPrint.exe' },
+];
+
+/** 只读枚举：返回样例启动项副本（避免调用方改动污染模块级数组）。 */
+export async function listStartupItems(): Promise<MockStartupItem[]> {
+  await wait(60);
+  return MOCK_STARTUP.map((it) => ({ ...it }));
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();

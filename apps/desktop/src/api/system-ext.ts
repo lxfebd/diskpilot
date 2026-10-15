@@ -350,7 +350,7 @@ export const systemExtApi = {
   listStartupItems: () =>
     isTauri
       ? invoke<StartupItem[]>('list_startup_items')
-      : Promise.resolve([]),
+      : mocks.listStartupItems(),
   setStartupItem: (id: string, enable: boolean, confirmed: boolean) => {
     if (!confirmed) {
       return Promise.reject(new Error(t('errors.confirmSystemWrite')));
