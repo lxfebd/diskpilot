@@ -316,18 +316,24 @@ export function CleanupBody() {
       )}
 
       {s.running && (
-        <div className="cleanup-progress">
+        <div className={'cleanup-progress' + (s.cancelRequested ? ' cancelling' : '')}>
           <div className="cleanup-progress-head">
             <span>
               <Loader2 size={12} className="spin" />{' '}
-              {t('cleanup.progressInfo', {
-                done: s.progress.done,
-                total: s.progress.total,
-                size: formatBytes(s.progress.freedBytes),
-              })}
+              {s.cancelRequested
+                ? t('cleanup.cancelling', { size: formatBytes(s.progress.freedBytes) })
+                : t('cleanup.progressInfo', {
+                    done: s.progress.done,
+                    total: s.progress.total,
+                    size: formatBytes(s.progress.freedBytes),
+                  })}
             </span>
-            <button className="ghost cleanup-cancel" onClick={cancelCleanup}>
-              {t('cleanup.cancel')}
+            <button
+              className="ghost cleanup-cancel"
+              onClick={cancelCleanup}
+              disabled={s.cancelRequested}
+            >
+              {t(s.cancelRequested ? 'cleanup.cancellingBtn' : 'cleanup.cancel')}
             </button>
           </div>
           <div className="cleanup-progress-bar">

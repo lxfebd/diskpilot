@@ -382,6 +382,10 @@ main.cleanup-page > .cleanup-page {
   padding: 3px 12px;
   font-size: 12px;
 }
+/* R179：取消已登记——进度条变淡、标题转灰、按钮禁用，让用户立刻看到「取消已生效」。 */
+.cleanup-progress.cancelling .cleanup-progress-fill { opacity: 0.5; }
+.cleanup-progress.cancelling .cleanup-progress-head { color: var(--ink-3); }
+.cleanup-cancel:disabled { opacity: 0.55; cursor: default; }
 
 /* Coverage breakdown — explains the "13 GB total but only 4 GB in scopes" gap. */
 .cleanup-coverage {

@@ -165,4 +165,14 @@ describe('runRealDelete 实时进度与取消', () => {
     // 全败不能算成功，绝不累加「已回收」。
     expect(useStore.getState().reclaimedBytes).toBe(0);
   });
+
+  it('cancelCleanup 只置位 cancelRequested，不动进度 / running（UI 靠它显示「取消中」）', () => {
+    useCleanupStore.setState({ session: makeSession(makePreview()) });
+    useCleanupStore.getState().cancelCleanup();
+    const s = useCleanupStore.getState().session!;
+    expect(s.cancelRequested).toBe(true);
+    // 取消请求本身不清进度、不改 running——真正的收尾由 runRealDelete 在批次边界做。
+    expect(s.progress).toEqual({ done: 0, total: 0, freedBytes: 0 });
+    expect(s.running).toBe(false);
+  });
 });

@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 取消登记即时可见（R179）
+
+- 承接 R178：点「取消」后到批次边界生效前，按钮仍亮、进度照跑，用户不确定
+  取消到底有没有被接住。现在 `cancelRequested` 一旦置位，进度区立刻进入
+  「取消中」态：文案换成 `cleanup.cancelling`（已交批次继续完成 · 已释放 X）、
+  按钮禁用并显示「取消中…」、进度条变淡、标题转灰。
+- 纯前端呈现层改动，取消语义不变（已交批次不撤回、后续批次不再提交）。
+  i18n `cleanup.cancelling / cancellingBtn`（zh/en 成对）。
+- useCleanupStore.test.ts +1（551 总 / 40 files）：断言 `cancelCleanup` 只置位
+  `cancelRequested`、不清进度 / 不改 running——UI 的「取消中」态正依赖这个契约。
+
 ### 2026-10-15 清理执行可取消 + 实时进度条（R178）
 
 - 真删此前是一次性 `Promise.all` 全并发提交：点了「确认执行」后只能干等，
