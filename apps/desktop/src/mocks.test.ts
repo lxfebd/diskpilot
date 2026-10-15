@@ -3,7 +3,27 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList } from './mocks';
+
+describe('mocks.scaffoldRegistryList（清理模板库社区脚本演示数据）', () => {
+  it('返回 ≥3 条带签名与下载量的社区脚本', async () => {
+    const r = await scaffoldRegistryList();
+    expect(r.items.length).toBeGreaterThanOrEqual(3);
+    for (const it of r.items) {
+      expect(it.id).toBeTruthy();
+      expect(it.name).toBeTruthy();
+      expect(it.description).toBeTruthy();
+      expect(it.risk).toBeTruthy();
+      // 签名徽标（signed）可渲染
+      expect(it.signature).toBeTruthy();
+      expect(it.signer).toBeTruthy();
+      expect(it.downloads).toBeGreaterThanOrEqual(0);
+    }
+    // 有「即将上线」（url 为空 → comingSoon）以外的 ready 条目：url 非空
+    expect(r.items.some((it) => it.url.trim().length > 0)).toBe(true);
+    expect(r.updated_at).toBeGreaterThan(0);
+  });
+});
 
 describe('mocks.mcpAuditTail（MCP 页审计面板演示数据）', () => {
   it('返回含 call_tool 成功/拒绝 + 服务器增删的审计记录', async () => {

@@ -35,7 +35,7 @@ export const cleanApi = {
   scaffoldRegistryList: (): Promise<ScaffoldRegistryOut> =>
     isTauri
       ? invoke<ScaffoldRegistryOut>('scaffold_registry_list')
-      : Promise.resolve({ items: [], warning: null, updated_at: 0 }),
+      : mocks.scaffoldRegistryList(),
 
   /** 从社区仓库一键安装（L2 scaffold.manage + confirmed 双校验，Ed25519 签名强制）。 */
   scaffoldRegistryInstall: (id: string, confirmed: boolean): Promise<string> =>

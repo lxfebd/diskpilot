@@ -601,6 +601,81 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R195：预览模式的社区脚本仓库演示数据 ——
+// 真实桌面端 scaffold_registry_list 从远端仓库拉社区清理脚本（只读，
+// 条目带 Ed25519 签名元数据）；浏览器里没有远端仓库，给 3 条演示脚本
+// ——清理模板库「社区脚本」区在演示时能看到签名/风险/下载量，
+// 而不是永远「暂无社区脚本」。「一键安装」写操作保持 tauriOnly。
+
+export async function scaffoldRegistryList(): Promise<{
+  items: Array<{
+    id: string;
+    name: string;
+    version: string;
+    author: string;
+    description: string;
+    risk: string;
+    tags: string[];
+    url: string;
+    sha256: string;
+    signature: string;
+    signer: string;
+    downloads: number;
+  }>;
+  warning: string | null;
+  updated_at: number;
+}> {
+  await wait(60);
+  return {
+    items: [
+      {
+        id: 'edge-cache-cleaner',
+        name: 'Edge 浏览器缓存清理',
+        version: '1.3.0',
+        author: 'DiskPilot 社区',
+        description: '清理 Microsoft Edge 的缓存、临时文件与崩溃转储（浏览数据除外）',
+        risk: 'low',
+        tags: ['browser', 'cache'],
+        url: 'https://registry.example.com/edge-cache-cleaner.zip',
+        sha256: '3f8a2b1c9d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d',
+        signature: 'ed25519:ab12cd34',
+        signer: 'DiskPilot 签名密钥',
+        downloads: 2314,
+      },
+      {
+        id: 'temp-purge',
+        name: '临时文件深度清理',
+        version: '2.1.0',
+        author: 'xieyang',
+        description: '扫描 %TEMP% 与系统 Temp 目录，按最后访问时间清理过期临时文件',
+        risk: 'medium',
+        tags: ['temp', 'system'],
+        url: 'https://registry.example.com/temp-purge.zip',
+        sha256: '9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e',
+        signature: 'ed25519:ef56ab78',
+        signer: 'DiskPilot 签名密钥',
+        downloads: 1287,
+      },
+      {
+        id: 'log-cleanup',
+        name: '系统日志归档清理',
+        version: '0.9.2',
+        author: 'DiskPilot 团队',
+        description: '归档并清理 Windows 事件日志与旧应用日志（保留近 30 天）',
+        risk: 'low',
+        tags: ['logs', 'system'],
+        url: 'https://registry.example.com/log-cleanup.zip',
+        sha256: 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
+        signature: 'ed25519:cd78ef90',
+        signer: 'DiskPilot 签名密钥',
+        downloads: 865,
+      },
+    ],
+    warning: null,
+    updated_at: Math.floor(Date.now() / 1000) - 3600,
+  };
+}
+
 // —— R194：预览模式的 MCP 审计日志演示数据 ——
 // 真实桌面端 mcp_audit_tail 返回最近 call_tool / 服务器增删改记录（只读）；
 // 浏览器里没有真实调用记录，给与 R188 mcpListServers 同源的几条演示

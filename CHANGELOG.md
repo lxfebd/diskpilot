@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全社区脚本仓库（R195）
+
+- 工作台右侧「清理模板库 → 社区脚本仓库」在浏览器预览模式展开后
+  显示「暂无社区脚本」——`api.scaffoldRegistryList` 非 Tauri 返回
+  {items: [], warning: null}，社区仓库区演示断链。
+- `mocks.scaffoldRegistryList`：3 条演示社区脚本（Edge 缓存清理 /
+  临时文件深度清理 / 系统日志归档清理），带版本/作者/风险标签/
+  Ed25519 签名徽标元数据。「一键安装」写操作保持 tauriOnly。
+- `api/clean.ts` scaffoldRegistryList 非 Tauri 分支接 mock。
+- 浏览器实测：展开社区仓库 → 三条目齐全，✓ Ed25519 已签名徽标 +
+  风险标签 + 安装按钮。
+- mocks.test.ts +1（581 总 / 41 files）：≥3 条带签名与下载量条目。
+- 验证注记：Studio 右栏需收起 AI 侧栏（1280px 窗口三栏预算不足时
+  rightVisible=false）才能看到——这是窗口响应式设计，非 bug。
+
 ### 2026-10-16 预览模式补全 MCP 审计日志（R194）
 
 - 设置页「MCP → 审计日志」在浏览器预览模式显示「暂无审计记录」——
