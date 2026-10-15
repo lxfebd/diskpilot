@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 清理行动条显示「占可清总量」比例（R175）
+
+- 底部行动条的「已选 N 项 · 共 X GB」没说这次选择覆盖了全盘可清量的几成
+  ——用户不知道自己的选择是「清一半」还是「几乎全清」。现在选中有字节时
+  补「（占可清总量 N%）」，比例一眼可见。
+- 新纯函数 `computeAllCleanableBytes(s)`（useCleanupStore.ts，所有可见
+  scope 可清字节之和，未测到按 0）；复用 R174 的 `cleanRatio` 算占比；
+  i18n `cleanup.summaryShare`（zh/en 成对）。总可清量为 0 时不显示比例
+  （避免除零）。
+
 ### 2026-10-15 清理项显示可清理占比条（R174）
 
 - 清理页每个 scope 行的「总大小 · 可清理 · 保留」三个数字要读一遍才知道

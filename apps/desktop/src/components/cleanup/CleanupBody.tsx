@@ -4,7 +4,7 @@
 // 三段执行语义（预览 → 预备 → 真删）由 store.execute 驱动，本组件只画按钮；
 // DryRunPreviewDialog 在 preview !== null 时挂在 body 末尾（zIndex:60 盖住行动条）。
 import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
-import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage } from '../../useCleanupStore';
+import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage, computeAllCleanableBytes } from '../../useCleanupStore';
 import { formatBytes } from '../../format';
 import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive } from '../../cleanup/model';
 import { SelectionModePicker, useSelectionOptions } from './SelectionMode';
@@ -162,6 +162,9 @@ export function CleanupBody() {
   const sc = s.scaffold;
   const total = computeSessionTotal(s);
   const coverage = computeSessionCoverage(s);
+  // R175：全盘可清总量 + 本次选择覆盖比例——用户知道自己选了多少成。
+  const allCleanable = computeAllCleanableBytes(s);
+  const pickRatio = cleanRatio(total.bytes, allCleanable);
   const canExecute = !s.running && !s.previewing && !s.preview && total.count > 0;
   const userEnvs = (s.condaEnvs ?? []).filter((e) => !e.is_base);
   const baseEnv = (s.condaEnvs ?? []).find((e) => e.is_base);
@@ -177,6 +180,9 @@ export function CleanupBody() {
       ? (
         <>
           {t('cleanup.summaryLead')} <strong>{total.count}</strong> {t('cleanup.summaryMid')} <strong>{formatBytes(total.bytes)}</strong> {t('cleanup.summaryTail')}
+          {pickRatio !== null && allCleanable > 0 && (
+            <span className="muted small">{t('cleanup.summaryShare', { pct: Math.round(pickRatio * 100) })}</span>
+          )}
           {s.scopeLoading && <Loader2 size={11} className="spin" style={{ marginLeft: 6 }} />}
         </>
       )

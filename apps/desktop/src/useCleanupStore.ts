@@ -241,6 +241,17 @@ export function computeSessionCoverage(s: CleanupSession): CoverageBreakdown | n
   return computeCoverage(s.isConda, s.matches, s.scopeSizes);
 }
 
+/** R175：全盘可清总量——所有可见 scope 的可清字节之和（未测到按 0）。
+ *  行动条据此在「已选 X」旁补「占可清总量 N%」，让用户知道选择覆盖了多少；
+ *  总量为 0 时返回 0（调用方不显示比例，避免除零）。纯函数。 */
+export function computeAllCleanableBytes(s: CleanupSession): number {
+  let sum = 0;
+  for (const sc of s.visibleScopes) {
+    sum += scopeBytes(s, sc.id);
+  }
+  return sum;
+}
+
 function buildSession(
   root: Node | null,
   scaffold: Scaffold,
