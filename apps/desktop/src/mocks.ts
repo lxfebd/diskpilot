@@ -123,6 +123,34 @@ const MOCK_TREE: Node = {
             },
             leaf('.cargo', 'C:\\Users\\90740\\.cargo', 0.8 * GB, 12_400, 'dev-caches'),
             leaf('.cache/huggingface', 'C:\\Users\\90740\\.cache\\huggingface', 4.6 * GB, 320, 'huggingface-cache'),
+            // R198：加 anaconda3（pkgs + envs）让清理页 Conda 脚本命中——
+            // 命中后 isConda session 触发 listCondaEnvs mock，环境区可演示。
+            {
+              name: 'anaconda3', path: 'C:\\Users\\90740\\anaconda3', is_dir: true,
+              size: 13.1 * GB, file_count: 42_300, scaffold_id: 'conda',
+              top_extensions: [
+                { ext: '.conda', bytes: 5.1 * GB, count: 1_240 },
+                { ext: '.tar.bz2', bytes: 3.2 * GB, count: 860 },
+              ],
+              children: [
+                {
+                  name: 'pkgs', path: 'C:\\Users\\90740\\anaconda3\\pkgs', is_dir: true,
+                  size: 4.2 * GB, file_count: 31_400, scaffold_id: 'conda',
+                  top_extensions: [{ ext: '.conda', bytes: 3.1 * GB, count: 880 }],
+                  children: [
+                    leaf('cache', 'C:\\Users\\90740\\anaconda3\\pkgs\\cache', 0.9 * GB, 3_800, 'conda'),
+                  ],
+                },
+                {
+                  name: 'envs', path: 'C:\\Users\\90740\\anaconda3\\envs', is_dir: true,
+                  size: 8.9 * GB, file_count: 10_900, scaffold_id: 'conda',
+                  top_extensions: [], children: [
+                    leaf('tf2', 'C:\\Users\\90740\\anaconda3\\envs\\tf2', 6.8 * GB, 6_400, 'conda'),
+                    leaf('web', 'C:\\Users\\90740\\anaconda3\\envs\\web', 2.1 * GB, 4_500, 'conda'),
+                  ],
+                },
+              ],
+            },
           ],
         },
       ],
@@ -500,6 +528,31 @@ const MOCK_STARTUP: MockStartupItem[] = [
   { id: 'hklm-nv', name: 'NVIDIA 控制面板', command: '"C:\\Windows\\System32\\nvcpl.dll" RunDLL32', location: 'registry_hklm', enabled: true, target: 'C:\\Windows\\System32\\nvcpl.dll' },
   { id: 'machine-hp', name: 'HP 打印助手', command: '"C:\\Program Files\\HP\\HP Print Solutions\\HPPrint.exe" /minimized', location: 'folder_machine', enabled: false, target: 'C:\\Program Files\\HP\\HP Print Solutions\\HPPrint.exe' },
 ];
+
+// —— R198：预览模式的 conda 环境演示数据 ——
+// 真实桌面端 list_conda_envs 枚举 conda 安装下的 base + user 环境（只读，
+// 含大小与最后活跃时间）；浏览器里没有 conda 可读，给 base + 2 个 user
+// 环境（1 个 stale 90d 默认勾选），让清理页「Conda / Anaconda」脚本的
+// 环境区能演示 base 灰显不可勾 + 用户环境勾选，而不是空列表。
+
+export interface MockCondaEnv {
+  name: string;
+  path: string;
+  size_bytes: number;
+  last_active_ts: number | null;
+  is_base: boolean;
+  default_checked: boolean;
+}
+
+export async function listCondaEnvs(): Promise<MockCondaEnv[]> {
+  await wait(60);
+  const now = Math.floor(Date.now() / 1000);
+  return [
+    { name: 'base', path: 'C:\\Users\\90740\\anaconda3', size_bytes: 4.2 * GB, last_active_ts: now - 2 * DAY, is_base: true, default_checked: false },
+    { name: 'tf2', path: 'C:\\Users\\90740\\anaconda3\\envs\\tf2', size_bytes: 6.8 * GB, last_active_ts: now - 120 * DAY, is_base: false, default_checked: true },
+    { name: 'web', path: 'C:\\Users\\90740\\anaconda3\\envs\\web', size_bytes: 2.1 * GB, last_active_ts: now - 15 * DAY, is_base: false, default_checked: false },
+  ];
+}
 
 // 模块级可变启动项状态（R197）：浏览器演示中「禁用/启用/删除」写操作
 // 作用于这份内存态（同 R192 reminderCfg 模式），列表刷新后真实反映

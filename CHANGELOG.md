@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全 Conda 环境区（R198）
+
+- 清理页「Conda / Anaconda」脚本在浏览器显示「未检测到」且永远无环境区：
+  `api.listCondaEnvs` 非 Tauri 返回 `[]`（环境区空），且 MOCK_TREE 没有
+  anaconda3 目录（conda 脚本的 must_have_child:['pkgs'] 永不命中）。
+- `mocks.listCondaEnvs`：base + 2 个用户环境（tf2 stale 90d 默认勾选 /
+  web），base 灰显不可勾、大小与最后活跃时间齐全。
+- MOCK_TREE `C:\Users\90740\` 下加 anaconda3（pkgs 4.2GB + envs/tf2 6.8GB +
+  envs/web 2.1GB = 13.1GB，scaffold_id: 'conda'）——conda 脚本命中后
+  isConda session 触发 listCondaEnvs mock，环境区可演示。
+- `api/clean.ts` listCondaEnvs 非 Tauri 分支接 mock。
+- 浏览器实测（清 scanCache IndexedDB 强制重扫）：清理页 Conda 13.1 GB
+  detected，环境区「base · 不可清 4.20 GB · tf2 6.80 GB · 90 天没动过 ·
+  web 2.10 GB」+ 包缓存 scope 待清 232 MB 全渲染。
+- mocks.test.ts +1（584 总 / 41 files）：base 不可勾 + ≥2 用户环境 + stale 默认勾选。
+
 ### 2026-10-16 预览模式启动项启停/删除真实生效（R197）
 
 - `api.setStartupItem` / `removeStartupItem` 非 Tauri 分支原先 `Promise.resolve()`

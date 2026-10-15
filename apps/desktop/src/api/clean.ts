@@ -151,7 +151,7 @@ export const cleanApi = {
   listCondaEnvs: (condaRoot: string) =>
     isTauri
       ? invoke<CondaEnv[]>('list_conda_envs', { condaRoot })
-      : Promise.resolve([] as CondaEnv[]),
+      : mocks.listCondaEnvs(),
 
   inspect: (path: string, sampleCount: number) =>
     isTauri ? invoke<string[]>('inspect_path', { path, sampleCount }) : mocks.inspect(path, sampleCount),

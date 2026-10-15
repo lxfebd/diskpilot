@@ -3,7 +3,25 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs } from './mocks';
+
+describe('mocks.listCondaEnvs（清理页 Conda 脚本环境区演示数据）', () => {
+  it('返回 base + ≥2 个用户环境，base 不可勾选、stale 环境默认勾选', async () => {
+    const envs = await listCondaEnvs();
+    const base = envs.find((e) => e.is_base);
+    expect(base).toBeTruthy();
+    expect(base?.default_checked).toBe(false);
+    const users = envs.filter((e) => !e.is_base);
+    expect(users.length).toBeGreaterThanOrEqual(2);
+    for (const e of envs) {
+      expect(e.name).toBeTruthy();
+      expect(e.path).toBeTruthy();
+      expect(e.size_bytes).toBeGreaterThan(0);
+    }
+    // 至少一个用户环境默认勾选（stale 90d 推荐清理）
+    expect(users.some((e) => e.default_checked)).toBe(true);
+  });
+});
 
 describe('mocks.powerPlan（系统优化页电源计划演示数据）', () => {
   it('返回 3 个标准计划 + 当前活动计划（均衡）', async () => {
