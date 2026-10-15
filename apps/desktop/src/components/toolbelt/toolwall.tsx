@@ -707,6 +707,9 @@ export function CatalogWall({
   const [aiPerm, setAiPerm] = useState<AiPermFilter>('all');
   // R172：按风险等级筛（安全敏感用户想只看低风险）。
   const [riskFilter, setRiskFilter] = useState<RiskFilter>('all');
+  // R176：主网格排序——工具箱几十上百个工具，默认目录序不好找，
+  // 按名称/风险/分类重排；默认保持分类目录原序（不重排）。
+  const [sortBy, setSortBy] = useState<'default' | 'name' | 'risk' | 'category'>('default');
   // R142：三个弹层都支持 Esc 关闭（启动确认 / exe 详情 / AI 工具详情）——
   // 此前只有点遮罩能关。Esc 一律是「取消」，不会启动任何工具。
   useEscapeKey(() => setConfirmLaunch(null), confirmLaunch !== null && !launching);
@@ -793,8 +796,18 @@ export function CatalogWall({
     }
     // R172：风险等级筛（在搜索/推广过滤之后，用户看到的与筛后一致）。
     base = filterToolsByRisk(base, riskFilter);
+    // R176：主网格排序（在过滤之后，排序只影响呈现顺序，不影响集合）。
+    if (sortBy === 'name') {
+      base = [...base].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
+    } else if (sortBy === 'risk') {
+      const rank = (r: string | null | undefined) => (r === 'high' ? 0 : r === 'medium' ? 1 : 2);
+      base = [...base].sort((a, b) => rank(a.risk) - rank(b.risk) || a.name.localeCompare(b.name, 'zh-Hans-CN'));
+    } else if (sortBy === 'category') {
+      const catOf = (t: ToolbeltCatalogItem) => (t as ToolbeltCatalogItem & { _cat?: string })._cat ?? '';
+      base = [...base].sort((a, b) => catOf(a).localeCompare(catOf(b), 'zh-Hans-CN') || a.name.localeCompare(b.name, 'zh-Hans-CN'));
+    }
     return base;
-  }, [catalog, activeCat, query, allTools, hidePromo, riskFilter]);
+  }, [catalog, activeCat, query, allTools, hidePromo, riskFilter, sortBy]);
 
   const recentTools = useMemo(() => {
     if (activeCat !== '__all__' || query) return [] as ToolbeltCatalogItem[];
@@ -1012,6 +1025,23 @@ export function CatalogWall({
                 ))}
               </span>
               <span className="muted small">{t('toolbelt.wall.gridHint')}</span>
+              {/* R176：主网格排序——几十上百个工具，默认目录序不好找，按名称/风险/分类重排 */}
+              <span className="sys-filter-chips toolwall-sort">
+                <span className="muted small sort-label">{t('toolbelt.wall.sortLabel')}</span>
+                {(['default', 'name', 'risk', 'category'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={'chip' + (sortBy === k ? ' active' : '')}
+                    onClick={() => setSortBy(k)}
+                  >
+                    {k === 'default' ? t('toolbelt.wall.sortDefault')
+                      : k === 'name' ? t('toolbelt.wall.sortName')
+                      : k === 'risk' ? t('toolbelt.wall.sortRisk')
+                      : t('toolbelt.wall.sortCategory')}
+                  </button>
+                ))}
+              </span>
             </div>
             {activeTools.length === 0 ? (
               <div className="tb-empty small">
