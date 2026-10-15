@@ -3,7 +3,23 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles } from './mocks';
+
+describe('mocks.scanDuplicateFiles（总览重复文件查找演示数据）', () => {
+  it('返回 ≥2 组重复：每组保留 1 份、其余进回收候选', async () => {
+    const groups = await scanDuplicateFiles('C:\\');
+    expect(groups.length).toBeGreaterThanOrEqual(2);
+    for (const g of groups) {
+      expect(g.size).toBeGreaterThan(0);
+      expect(g.files.length).toBeGreaterThanOrEqual(2);
+      expect(g.keep).toBeTruthy();
+      expect(g.files.some((f) => f.path === g.keep)).toBe(true);
+      expect(g.recycle_candidates.length).toBeGreaterThanOrEqual(1);
+      for (const c of g.recycle_candidates) expect(c).not.toBe(g.keep);
+      expect(g.running).toEqual([]);
+    }
+  });
+});
 
 describe('mocks.mcpListServers（设置页 MCP tab 演示数据）', () => {
   it('返回 stdio/http 混合样例服务器（列表与权限摘要可演示）', async () => {

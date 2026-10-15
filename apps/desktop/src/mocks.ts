@@ -601,6 +601,65 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R189：预览模式的重复文件查找演示数据 ——
+// 真实桌面端按 size 分组 + 头部哈希聚类找重复（scan_duplicate_files_cmd，
+// 只读）；浏览器里没有真实文件可哈希，给两组确定性样例——组内 ≥2 份、
+// keep 建议保留一份、其余进 recycle_candidates——让总览「重复文件查找」
+// 的 AI 清理提案窗在演示时能弹出清单（清理执行仍走确认窗铁律）。
+
+export interface MockDupGroup {
+  size: number;
+  files: { path: string; mtime: number | null; is_running: boolean }[];
+  keep: string;
+  recycle_candidates: string[];
+  running: string[];
+}
+
+export async function scanDuplicateFiles(_rootPath: string, _minSize?: number): Promise<MockDupGroup[]> {
+  await wait(120);
+  const now = Math.floor(Date.now() / 1000);
+  return [
+    {
+      size: 486 * MB,
+      files: [
+        { path: 'C:\\Users\\90740\\Downloads\\installer_x64.exe', mtime: now - 60 * 86_400, is_running: false },
+        { path: 'C:\\Users\\90740\\Downloads\\installer_x64 (1).exe', mtime: now - 30 * 86_400, is_running: false },
+        { path: 'C:\\Users\\90740\\Downloads\\installer_x64 - 副本.exe', mtime: now - 12 * 86_400, is_running: false },
+      ],
+      keep: 'C:\\Users\\90740\\Downloads\\installer_x64.exe',
+      recycle_candidates: [
+        'C:\\Users\\90740\\Downloads\\installer_x64 (1).exe',
+        'C:\\Users\\90740\\Downloads\\installer_x64 - 副本.exe',
+      ],
+      running: [],
+    },
+    {
+      size: 121 * MB,
+      files: [
+        { path: 'C:\\Users\\90740\\Videos\\meeting-2026-09.mp4', mtime: now - 45 * 86_400, is_running: false },
+        { path: 'C:\\Users\\90740\\Videos\\meeting-2026-09-copy.mp4', mtime: now - 44 * 86_400, is_running: false },
+        { path: 'C:\\Users\\90740\\Desktop\\meeting-2026-09.mp4', mtime: now - 43 * 86_400, is_running: false },
+      ],
+      keep: 'C:\\Users\\90740\\Videos\\meeting-2026-09.mp4',
+      recycle_candidates: [
+        'C:\\Users\\90740\\Videos\\meeting-2026-09-copy.mp4',
+        'C:\\Users\\90740\\Desktop\\meeting-2026-09.mp4',
+      ],
+      running: [],
+    },
+    {
+      size: 8 * MB,
+      files: [
+        { path: 'C:\\Users\\90740\\Documents\\report-final.docx', mtime: now - 20 * 86_400, is_running: false },
+        { path: 'C:\\Users\\90740\\Documents\\report-final-final.docx', mtime: now - 19 * 86_400, is_running: false },
+      ],
+      keep: 'C:\\Users\\90740\\Documents\\report-final.docx',
+      recycle_candidates: ['C:\\Users\\90740\\Documents\\report-final-final.docx'],
+      running: [],
+    },
+  ];
+}
+
 // —— R188：预览模式的 MCP 服务器演示数据 ——
 // 真实桌面端从 mcp.rs 读服务器配置 + 健康探测（mcp_list_servers）；浏览器里
 // 没有后端进程可连，给 2 个样例服务器（stdio/http 各一 + 工具数 + 权限摘要），

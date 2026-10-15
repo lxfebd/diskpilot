@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全重复文件查找（R189）
+
+- 总览「快速操作 → 重复文件查找」在浏览器预览模式点了没反应——
+  `api.scanDuplicateFiles` 非 Tauri 分支返回 `[]`，AI 清理提案窗
+  （CleanupProposalDialog）演示链路在「重复文件」这一环断掉。
+- `mocks.scanDuplicateFiles`：3 组确定性重复（installer 486MB ×3 份、
+  meeting 视频 121MB ×3 份、report docx 8MB ×2 份），每组 keep 建议保留
+  一份（path 最短）、其余进 recycle_candidates；running 为空
+  （不做「跳过原因」演示分支）。只读 mock——清理执行仍走确认窗铁律
+  （executeAiPlan user_confirmed），本 mock 不碰文件。
+- `api/clean.ts` scanDuplicateFiles 非 Tauri 分支接 mock。
+- 浏览器实测：点「重复文件查找」→ 清理提案窗弹出，installer_x64 /
+  meeting-2026-09 重复组带路径可见，可回收合计 >0。
+- mocks.test.ts +1（572 总 / 41 files）：≥2 组、每组 keep∈files 且
+  recycle_candidates 不含 keep。
+
 ### 2026-10-16 预览模式补全 MCP 服务器列表（R188）
 
 - 设置页「MCP」tab 在浏览器预览模式一直是空表——`api.mcpListServers`

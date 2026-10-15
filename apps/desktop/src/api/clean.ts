@@ -185,7 +185,7 @@ export const cleanApi = {
           rootPath,
           minSize: minSize ?? null,
         })
-      : Promise.resolve([] as DupGroup[]),
+      : mocks.scanDuplicateFiles(rootPath, minSize),
 
   // ── 清理提醒（R3）──
   getReminderConfig: () =>
