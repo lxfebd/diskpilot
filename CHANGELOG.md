@@ -5,6 +5,25 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 预览模式补全清理演示链路（R181）
+
+- 浏览器预览模式（非 Tauri）此前 `scopeSizesBatch` 返回空表、`executeScope`
+  返回 `[]`——清理页所有 scope 显示「空」且 checkbox 禁用，「勾选 → 预览 →
+  真删 → 进度条/取消 → 历史台账」整条链路在浏览器里**无法演示**（作者在
+  dev server 里调 UI 看不到 R178–R180 的效果，只能靠单测）。
+- `mocks.scopeSizesBatch` 改为按 scaffold 的 scopes 生成**确定性尺寸表**
+  （scope_id 哈希，50MB–2.5GB 量级、含 file_count），同 scope 两次查询结果
+  一致、刷新不跳变；未知脚本仍返回空表（不编造）。
+- 新增 `mocks.executeScope`：dry-run 返回样例清单（路径拼在命中目录下，
+  条目数 = 命中体量换算，上限 64 条），**只出清单不写台账**；真删才追加
+  回收条目到台账（与 `listUndo` 共用），同步把 `api.executeScope` 非 Tauri
+  分支从 `Promise.resolve([])` 接到 mock——历史页可见真删结果。
+- 已在浏览器实测：勾选 4 个 scope → 预览窗显示「90 个文件 · 共 2.00 GB ·
+  进系统回收站」→ 确认后弹窗内实时进度「正在清理 · 4/8 项 · 已释放 1.22 GB」
+  （R180）+「取消」按钮 → 取消瞬间出「已取消 · 先清掉 54 个文件 · 约 1.22 GB」。
+- mocks.test.ts +6（557 总 / 41 files）：尺寸表与 scopes 一一对应、确定性、
+  未知脚本空表、dry-run 不写台账、真删追加台账、条目上限。
+
 ### 2026-10-15 进度移入预览弹窗，取消按钮真正可点（R180）
 
 - 承接 R178/R179 发现的问题：真删过程中预览弹窗（zIndex 60 全屏遮罩）一直

@@ -111,7 +111,7 @@ export const cleanApi = {
           envFilter: opts.envFilter ?? null,
           confirmed: opts.confirmed ?? null,
         })
-      : Promise.resolve([] as UndoEntry[]);
+      : mocks.executeScope(scaffoldId, scopeId, rootPath, dryRun, opts);
   },
 
   // AI 清理执行入口（仅由确认窗在用户显式确认后调用）。前端第一道闸：

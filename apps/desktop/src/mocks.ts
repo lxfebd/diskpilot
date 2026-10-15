@@ -519,12 +519,88 @@ export async function undo(index: number, source: string): Promise<UndoEntry | n
 
 function wait(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); }
 
+// —— 预览模式（非 Tauri）清理演示数据 ——
+// 真实桌面端走后端 scope_sizes_batch / execute_scope；浏览器里没有磁盘可扫，
+// 这些 mock 让「勾选 scope → 预览清单 → 真删 → 进度条/取消 → 历史台账」整条
+// 链路在浏览器里可点可看（数字是演示数据，与 MOCK_TREE 的目录规模同量级）。
+// 用 scope_id 做确定性哈希：同一 scope 每次返回同一批尺寸，界面刷新不跳变。
+
+const MB = 1024 ** 2;
+
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** scope 的演示体量：50MB–2.5GB，按 id 哈希稳定。 */
+function mockScopeBytes(scopeId: string): number {
+  const h = hashString(scopeId);
+  return (30 + ((h % 220) / 100)) * 10 * MB * 0.5 + (h % 170) * MB;
+}
+
+function mockScopeFileCount(scopeId: string): number {
+  return 40 + (hashString(scopeId + ':n') % 4000);
+}
+
+/** dry-run / 真删的演示命中条目：路径拼在扫描命中目录下，文件名按 scope 稳定。 */
+function mockScopeEntries(scopeId: string, rootPath: string, n: number): UndoEntry[] {
+  const bytes = mockScopeBytes(scopeId);
+  const per = Math.max(1, Math.floor(bytes / Math.max(1, n)));
+  const stem = hashString(scopeId + ':stem');
+  const out: UndoEntry[] = [];
+  for (let i = 0; i < n; i++) {
+    out.push({
+      timestamp: new Date().toISOString(),
+      action: 'recycle' as const,
+      source: `${rootPath}\\${scopeId}\\mock_${stem % 13}_chunk_${i + 1}`,
+      reason: scopeId,
+      bytes_freed: i === 0 ? bytes - per * (n - 1) : per,
+    });
+  }
+  return out;
+}
+
 export async function scopeSizesBatch(
-  _scaffoldId: string,
+  scaffoldId: string,
   rootPaths: string[],
 ): Promise<{ root_path: string; sizes: { scope_id: string; bytes: number; file_count: number; total_bytes: number; total_files: number }[] }[]> {
   await wait(50);
-  return rootPaths.map((p) => ({ root_path: p, sizes: [] }));
+  const scaffold = SCAFFOLDS.find((s) => s.id === scaffoldId);
+  const sizes = (scaffold?.scopes ?? []).map((sc) => {
+    const bytes = mockScopeBytes(sc.id);
+    const files = mockScopeFileCount(sc.id);
+    return {
+      scope_id: sc.id,
+      bytes,
+      file_count: files,
+      total_bytes: bytes,
+      total_files: files,
+    };
+  });
+  return rootPaths.map((p) => ({ root_path: p, sizes }));
+}
+
+/** 演示执行：dry-run 返回样例清单（条目数 = 命中体量换算）；真删追加到台账并返回回收条目。 */
+export async function executeScope(
+  scaffoldId: string,
+  scopeId: string,
+  rootPath: string,
+  dryRun: boolean,
+  opts: { olderThanDays?: number | null; wxidFilter?: string[] | null; envFilter?: string[] | null; confirmed?: boolean | null } = {},
+): Promise<UndoEntry[]> {
+  void scaffoldId;
+  void opts;
+  await wait(dryRun ? 60 : 120);
+  const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId) / (24 * MB))));
+  const entries = mockScopeEntries(scopeId, rootPath, n);
+  if (!dryRun) {
+    UNDO_LEDGER.push(...entries);
+  }
+  return entries;
 }
 
 const NOW = Math.floor(Date.now() / 1000);
