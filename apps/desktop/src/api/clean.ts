@@ -16,7 +16,7 @@ export const cleanApi = {
 
   /** 一键安装社区 scaffold：后端校验 toml → 写入用户目录 → 热重载。返回脚本 id。 */
   installScaffold: (toml: string): Promise<string> =>
-    isTauri ? invoke<string>('install_scaffold', { toml }) : Promise.resolve(''),
+    isTauri ? invoke<string>('install_scaffold', { toml }) : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'install_scaffold' }))),
 
   /** 把 AI 权限快照同步到后端（权限中心改动/应用启动时调用）。后端写命令
    * （execute_ai_plan / toolbelt_run / plugin_*）据此做纵深校验。 */

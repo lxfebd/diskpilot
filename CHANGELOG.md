@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式脚本安装改为诚实拒绝（R199）
+
+- `api.installScaffold` 非 Tauri 分支原先 `Promise.resolve('')` ——Studio
+  「+ 安装脚本」导入 toml 后 toast「安装成功 id: 」却什么都没写（假成功，
+  空 id）。
+- 改为 `Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'install_scaffold' })))`
+  ——浏览器演示导入解析/勾选流程，确认安装时给出诚实错误
+  「install_scaffold 仅在 Tauri 环境可用」。Studio.tsx 两个调用点
+  （toml tab L291 / winapp2 tab L403）均有 try/catch，无未处理拒绝。
+- `uninstallScaffold` 保持现状：UninstallButton 仅 `source==='user'` 显示，
+  而 `scaffoldSource` 非 Tauri 固定返回 'embedded' → 浏览器不可达，无假成功面。
+- 浏览器实测：Studio 安装模态填合法 toml → 安装 → 错误区显示
+  「install_scaffold 仅在 Tauri 环境可用」。
+- 无新测试（reject 行为，与 R195/R196 先例一致）；584 总 / 41 files。
+
 ### 2026-10-16 预览模式补全 Conda 环境区（R198）
 
 - 清理页「Conda / Anaconda」脚本在浏览器显示「未检测到」且永远无环境区：
