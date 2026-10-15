@@ -50,5 +50,5 @@ export const scanApi = {
       : mocks.listDrives(),
 
   estimateSize: (path: string) =>
-    isTauri ? invoke<number>('estimate_size', { path }) : Promise.resolve(0),
+    isTauri ? invoke<number>('estimate_size', { path }) : mocks.estimateSize(path),
 };

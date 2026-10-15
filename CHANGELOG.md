@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式重复文件确认窗显示真实大小（R201）
+
+- 总览页「重复文件查找」→ CleanupProposalDialog 逐项实测
+  `api.estimateSize` 非 Tauri 恒返回 0 → 每项被标「路径不存在 · 约 0 B」，
+  勾选统计也是 0 B，与「约 1.19 GB 可回收」标题自相矛盾。
+- `mocks.estimateSize`：新增 MOCK_KNOWN_FILES 表（scanDuplicateFiles 的
+  8 个重复文件路径 → 组大小 486/121/8 MB），命中返回真实大小、未命中
+  返回 0（与后端「路径不存在/空」同语义——确认窗的 missing 提示在预览
+  模式依然诚实，只是 mock 数据本身能命中）。
+- `api/scan.ts` estimateSize 非 Tauri 分支接 mock。
+- `MB` 常量上移到文件顶部（原在 L1319 清理演示区，MOCK_KNOWN_FILES 顶层
+  引用触发 TDZ）。
+- 浏览器实测：重复文件确认窗 installer_x64 (1).exe 显示 486 MB，
+  「路径不存在」误标消失，标题「约 1.19 GB 可回收」一致。
+- mocks.test.ts +2（586 总 / 41 files）：候选路径命中返回组大小 / 未知名
+  路径返回 0。
+
 ### 2026-10-16 预览模式「打开系统回收站」改为诚实拒绝（R200）
 
 - 历史页 recycle 类条目渲染「打开系统回收站」按钮（restoreKind

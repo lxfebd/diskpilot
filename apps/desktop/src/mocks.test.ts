@@ -3,7 +3,7 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs } from './mocks';
 
 describe('mocks.listCondaEnvs（清理页 Conda 脚本环境区演示数据）', () => {
   it('返回 base + ≥2 个用户环境，base 不可勾选、stale 环境默认勾选', async () => {
@@ -169,6 +169,22 @@ describe('mocks.scanDuplicateFiles（总览重复文件查找演示数据）', (
       for (const c of g.recycle_candidates) expect(c).not.toBe(g.keep);
       expect(g.running).toEqual([]);
     }
+  });
+});
+
+describe('mocks.estimateSize（确认窗逐项实测大小演示数据）', () => {
+  it('重复文件的回收候选路径命中已知表并返回组大小（不再是恒 0 误标「路径不存在」）', async () => {
+    const groups = await scanDuplicateFiles('C:\\');
+    for (const g of groups) {
+      for (const c of g.recycle_candidates) {
+        const sz = await estimateSize(c);
+        expect(sz).toBe(g.size);
+      }
+    }
+  });
+
+  it('不在已知表的路径返回 0（与后端「路径不存在/空」同语义）', async () => {
+    await expect(estimateSize('C:\\不存在\\路径\\x.bin')).resolves.toBe(0);
   });
 });
 

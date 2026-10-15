@@ -1,6 +1,7 @@
 import type { Node, Scaffold, UndoEntry, SteamInventory, WorkshopItem } from './types';
 
 const GB = 1024 ** 3;
+const MB = 1024 ** 2;
 
 function leaf(name: string, path: string, size: number, files: number, scaffold_id: string | null = null): Node {
   return {
@@ -1106,6 +1107,33 @@ export interface MockDupGroup {
   running: string[];
 }
 
+/**
+ * R201：mock「已知文件大小表」——scanDuplicateFiles 的重复组与 estimateSize
+ * 共用同一张表，让 CleanupProposalDialog 的逐项实测（estimateSize）在浏览器
+ * 演示里命中 mock 文件并显示真实大小，而不是恒 0 → 所有项被误标
+ * 「路径不存在 · 约 0 B」。
+ */
+const MOCK_KNOWN_FILES: Record<string, number> = {
+  'C:\\Users\\90740\\Downloads\\installer_x64.exe': 486 * MB,
+  'C:\\Users\\90740\\Downloads\\installer_x64 (1).exe': 486 * MB,
+  'C:\\Users\\90740\\Downloads\\installer_x64 - 副本.exe': 486 * MB,
+  'C:\\Users\\90740\\Videos\\meeting-2026-09.mp4': 121 * MB,
+  'C:\\Users\\90740\\Videos\\meeting-2026-09-copy.mp4': 121 * MB,
+  'C:\\Users\\90740\\Desktop\\meeting-2026-09.mp4': 121 * MB,
+  'C:\\Users\\90740\\Documents\\report-final.docx': 8 * MB,
+  'C:\\Users\\90740\\Documents\\report-final-final.docx': 8 * MB,
+};
+
+/**
+ * R201：浏览器里没有真盘可实测，返回 mock 已知文件的大小；
+ * 不在表里的路径返回 0（与后端「路径不存在/空」同语义——确认窗的
+ * 「路径不存在」提示在预览模式同样诚实，只是 mock 数据本身能命中）。
+ */
+export async function estimateSize(path: string): Promise<number> {
+  await wait(40);
+  return MOCK_KNOWN_FILES[path] ?? 0;
+}
+
 export async function scanDuplicateFiles(_rootPath: string, _minSize?: number): Promise<MockDupGroup[]> {
   await wait(120);
   const now = Math.floor(Date.now() / 1000);
@@ -1288,8 +1316,6 @@ function wait(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)); 
 // 这些 mock 让「勾选 scope → 预览清单 → 真删 → 进度条/取消 → 历史台账」整条
 // 链路在浏览器里可点可看（数字是演示数据，与 MOCK_TREE 的目录规模同量级）。
 // 用 scope_id 做确定性哈希：同一 scope 每次返回同一批尺寸，界面刷新不跳变。
-
-const MB = 1024 ** 2;
 
 function hashString(s: string): number {
   let h = 2166136261;
