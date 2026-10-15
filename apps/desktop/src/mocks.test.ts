@@ -3,7 +3,32 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers } from './mocks';
+
+describe('mocks.listInstalledDrivers（系统工具驱动检查演示数据）', () => {
+  it('返回覆盖常见类别的样例驱动（类别筛选可演示）', async () => {
+    const drivers = await listInstalledDrivers();
+    expect(drivers.length).toBeGreaterThan(0);
+    const classes = new Set(drivers.map((d) => d.class));
+    expect(classes.has('display')).toBe(true);
+    expect(classes.has('network')).toBe(true);
+    expect(classes.has('sound')).toBe(true);
+    expect(classes.has('storage')).toBe(true);
+    for (const d of drivers) {
+      expect(d.name).toBeTruthy();
+      expect(d.provider).toBeTruthy();
+      expect(d.version).toBeTruthy();
+      expect(d.date).toBeTruthy();
+    }
+  });
+
+  it('两次调用返回独立副本（调用方改动不污染模块级数据）', async () => {
+    const a = await listInstalledDrivers();
+    const b = await listInstalledDrivers();
+    a[0].version = '9.9.9.9';
+    expect(b[0].version).not.toBe('9.9.9.9');
+  });
+});
 
 describe('mocks.listStartupItems（设置页系统工具演示数据）', () => {
   it('返回覆盖四个来源分组的样例启动项（搜索/分组可演示）', async () => {

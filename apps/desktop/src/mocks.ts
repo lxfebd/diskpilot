@@ -507,6 +507,38 @@ export async function listStartupItems(): Promise<MockStartupItem[]> {
   return MOCK_STARTUP.map((it) => ({ ...it }));
 }
 
+// —— R185：预览模式的已装驱动演示数据 ——
+// 真实桌面端用 CIM 枚举（list_installed_drivers，秒回只读）；浏览器里没有系统
+// 可读，给一批覆盖常见类别的样例驱动，让「系统工具 → 驱动检查」的已装列表、
+// 类别筛选（R166）可点可看。只读 mock；`check_driver_updates` 联网查询走
+// tauriOnly 拒绝（那是授权联网命令，浏览器不演示假查询）。
+
+export interface MockInstalledDriver {
+  name: string;
+  provider: string;
+  version: string;
+  date: string;
+  class: string;
+}
+
+const MOCK_DRIVERS: MockInstalledDriver[] = [
+  { name: 'Intel(R) Iris(R) Xe Graphics', provider: 'Intel Corporation', version: '31.0.101.5186', date: '2026-06-18', class: 'display' },
+  { name: 'Realtek(R) Audio', provider: 'Realtek Semiconductor Corp.', version: '6.0.9717.1', date: '2026-05-12', class: 'sound' },
+  { name: 'Intel(R) Wi-Fi 6E AX211 160MHz', provider: 'Intel Corporation', version: '23.30.0.7', date: '2026-07-02', class: 'network' },
+  { name: 'Realtek PCIe GbE Family Controller', provider: 'Realtek Semiconductor Corp.', version: '10.66.1.5', date: '2026-03-28', class: 'network' },
+  { name: 'Samsung SSD 980 PRO 1TB', provider: 'Microsoft', version: '10.0.26100.1', date: '2026-01-10', class: 'storage' },
+  { name: 'Intel(R) Chipset Device Software', provider: 'Intel Corporation', version: '10.1.19627.8423', date: '2026-04-15', class: 'chipset' },
+  { name: 'HID 标准键盘', provider: 'Microsoft', version: '10.0.26100.1', date: '2026-02-20', class: 'input' },
+  { name: 'HID-compliant mouse', provider: 'Microsoft', version: '10.0.26100.1', date: '2026-02-20', class: 'input' },
+  { name: 'Lenovo T480s Webcam', provider: 'Luxvisions Innovation Limited', version: '10.0.26100.1', date: '2026-03-05', class: 'input' },
+];
+
+/** 只读枚举：返回样例驱动副本（避免调用方改动污染模块级数组）。 */
+export async function listInstalledDrivers(): Promise<MockInstalledDriver[]> {
+  await wait(80);
+  return MOCK_DRIVERS.map((d) => ({ ...d }));
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();

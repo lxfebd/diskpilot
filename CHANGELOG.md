@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全系统工具驱动检查（R185）
+
+- 承接 R184：「系统工具 → 驱动检查」的已装驱动列表在浏览器预览模式是
+  空态（`api.listInstalledDrivers` 非 Tauri 分支返回 `[]`），开权限后
+  也只能看到空表。
+- `mocks.listInstalledDrivers`：9 条样例驱动，覆盖常见类别
+  （display ×1：Intel Iris Xe Graphics；sound ×1：Realtek Audio；
+  network ×2：Intel Wi-Fi 6E AX211 / Realtek GbE；storage ×1：Samsung
+  980 PRO；chipset ×1；input ×3），带厂商/版本/日期字段；每次调用返回
+  副本（防污染）。只读 mock——`check_driver_updates` 联网查询保持
+  tauriOnly 拒绝（授权联网命令不演示假查询）。
+- `api/system-ext.ts` listInstalledDrivers 非 Tauri 分支接 mock。
+- 权限闸保持原设计：驱动检查需开启「驱动更新检查」（L2 session）。
+- 浏览器实测（权限开启后）：「已装驱动 9 个」+ 类别筛选计数
+  （input 3 · network 2 · chipset 1 · display 1 · sound 1 · storage 1），
+  每条驱动带厂商·版本·日期·类别。
+- mocks.test.ts +2（566 总 / 41 files）：类别覆盖 + 独立副本。
+
 ### 2026-10-15 预览模式补全系统工具启动项（R184）
 
 - 设置页「系统工具 → 启动项」在浏览器预览模式一直是「空列表」——

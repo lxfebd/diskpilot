@@ -421,7 +421,7 @@ export const systemExtApi = {
   listInstalledDrivers: () =>
     isTauri
       ? invoke<InstalledDriver[]>('list_installed_drivers')
-      : Promise.resolve([]),
+      : mocks.listInstalledDrivers(),
   checkDriverUpdates: () =>
     isTauri
       ? invoke<DriverUpdate[]>('check_driver_updates')
