@@ -252,12 +252,12 @@ export const cleanApi = {
   generateWeeklyReport: () =>
     isTauri
       ? invoke<WeeklyReport>('generate_weekly_report_cmd')
-      : Promise.resolve(emptyWeeklyReport()),
+      : mocks.generateWeeklyReport(),
   /** 读最近 N 份周报（只读，历史页回显）。 */
   getWeeklyReports: (limit?: number) =>
     isTauri
       ? invoke<WeeklyReport[]>('get_weekly_reports', { limit: limit ?? 5 })
-      : Promise.resolve([]),
+      : mocks.getWeeklyReports(limit),
 };
 
 // 清理域内部类型（节点正由 types.ts 提供；此处为本域独立形状，语义同 rust 端
@@ -377,19 +377,6 @@ export interface WeeklyDiskHealth {
   letters: string;
   health: string;
   grade: string;
-}
-
-/** 非 Tauri/清空态兜底：字段类型齐全但不产生真实数据。 */
-export function emptyWeeklyReport(): WeeklyReport {
-  return {
-    ts: 0,
-    drives: [],
-    total_bytes: 0,
-    temp_max_c: null,
-    hw_snapshots: 0,
-    hw_delta: [],
-    disks: [],
-  };
 }
 
 // ── 磁盘空间历史（R6，后端 space_history.rs 返回形状）──

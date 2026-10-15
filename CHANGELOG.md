@@ -5,6 +5,26 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全周巡检简报（R187）
+
+- 历史页「周巡检简报」卡在浏览器预览模式只有空壳——`api.getWeeklyReports`
+  返回 `[]`（卡片空态），`generateWeeklyReport` 返回 emptyWeeklyReport
+  （生成一份全空周报），R95 环比对比、R154 间隔天数、盘健康摘要全无。
+- `mocks.generateWeeklyReport` / `getWeeklyReports`：C 盘样例周报，可清字节
+  = 2.91GB（与 R182 cleanupSuggestions 演示口径同源）、最高温 52°C、
+  硬件快照 2 份、盘健康 1 块 good、周内硬件变化（CPU 温降 3°C / 通电
+  +168h）。未生成过时先出一份 7 天前的样例——环比一开始就有数据可看
+  （生成前就有「与上周对比」入口，不用先点一次生成）。
+  生成写入演示归档，`getWeeklyReports` 立即读到，最新在前。
+- `api/clean.ts` 两个接口非 Tauri 分支接 mock；删除死代码
+  `emptyWeeklyReport`（原兜底已被 mock 取代）。
+- 浏览器实测：「全盘可清理约 2.91 GB · 最高温 52°C · 7 天前 · 硬件快照 2 份」；
+  点「生成本周简报」→「刚刚 · 7 天后到期」+「与上周对比 · 间隔 7 天 ·
+  可清理量与上周持平 · 最高温与上周持平」+「去清理页看明细 C:\ 2.91 GB」+
+  「硬盘健康 1 块盘全部健康」+ 硬件变化明细。
+- mocks.test.ts +2（569 总 / 41 files）：未生成时样例一份、生成后归档+1
+  且最新在前。
+
 ### 2026-10-16 预览模式补全空间外推检查（R186）
 
 - 设置页「清理提醒 → 检查趋势」在浏览器预览模式一直是空结果——

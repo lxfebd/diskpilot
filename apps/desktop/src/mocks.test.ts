@@ -3,7 +3,26 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports } from './mocks';
+
+describe('mocks 周报（历史页周体检卡演示数据）', () => {
+  it('未生成过时 getWeeklyReports 出一份样例（环比一开始可看）', async () => {
+    const list = await getWeeklyReports(2);
+    expect(list.length).toBe(1);
+    const r = list[0];
+    expect(r.total_bytes).toBeGreaterThan(0);
+    expect(r.drives.length).toBeGreaterThan(0);
+    expect(r.ts).toBeGreaterThan(0);
+  });
+
+  it('generate 写入归档，随后 getWeeklyReports 可读到（最新在前）', async () => {
+    const a = await getWeeklyReports(10);
+    const gen = await generateWeeklyReport();
+    const b = await getWeeklyReports(10);
+    expect(b.length).toBe(a.length + 1);
+    expect(b[0].ts).toBe(gen.ts);
+  });
+});
 
 describe('mocks.checkSpaceForecast（清理提醒/体检空间外推演示数据）', () => {
   it('返回 C 盘预计满盘天数（与趋势卡约 112 天同源，reason=ok 不告警）', async () => {

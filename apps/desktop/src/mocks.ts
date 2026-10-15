@@ -551,6 +551,56 @@ export async function checkSpaceForecast(): Promise<
   return [{ path: 'C:\\', days: 112, reason: 'ok', warn: false }];
 }
 
+// —— R187：预览模式的周体检简报演示数据 ——
+// 真实桌面端从扫描建议 + 温度 + 硬盘快照算周报（generate_weekly_report_cmd），
+// 浏览器里没有传感器/归档，给一份与 R182/R183 同源的 C 盘样例（可清字节 =
+// cleanupSuggestions 演示口径的合计），历史页的周体检卡、环比 delta（R95）、
+// 间隔天数（R154）在演示时都有数据可看。
+
+export interface MockWeeklyReport {
+  ts: number;
+  drives: { path: string; bytes: number }[];
+  total_bytes: number;
+  temp_max_c: number | null;
+  hw_snapshots: number;
+  hw_delta: string[];
+  disks: { friendly: string; letters: string; health: string; grade: string }[];
+}
+
+function weeklyReportAt(ts: number): MockWeeklyReport {
+  return {
+    ts,
+    drives: [{ path: 'C:\\', bytes: 2.91 * GB }],
+    total_bytes: 2.91 * GB,
+    temp_max_c: 52,
+    hw_snapshots: 2,
+    hw_delta: ['CPU 最高温 52°C（上周 55°C）', '硬盘通电累计 +168 小时'],
+    disks: [{ friendly: 'Samsung SSD 980 PRO 1TB', letters: 'C', health: 'Healthy 100% (Samsung Magician 口径)', grade: 'good' }],
+  };
+}
+
+const WEEKLY_ARCHIVE: MockWeeklyReport[] = [];
+
+/** 生成一份新周报：写入演示归档（getWeeklyReports 立即能读到）。 */
+export async function generateWeeklyReport(): Promise<MockWeeklyReport> {
+  await wait(150);
+  const now = Math.floor(Date.now() / 1000);
+  const r = weeklyReportAt(now);
+  WEEKLY_ARCHIVE.unshift(r);
+  if (WEEKLY_ARCHIVE.length > 10) WEEKLY_ARCHIVE.pop();
+  return r;
+}
+
+/** 最近 N 份周报（最新在前）。未生成过时先出一份上周的样例，让环比一开始可看。 */
+export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport[]> {
+  await wait(40);
+  if (WEEKLY_ARCHIVE.length === 0) {
+    const now = Math.floor(Date.now() / 1000);
+    WEEKLY_ARCHIVE.push(weeklyReportAt(now - 7 * 86_400));
+  }
+  return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();
