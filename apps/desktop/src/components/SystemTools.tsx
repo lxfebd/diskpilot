@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, DownloadCloud, Fan, AlertTriangle, Search } from 'lucide-react';
 import { api, type FanCurveAdvice, type FanStatus, type InstalledDriver, type DriverUpdate } from '../api';
+import {
+  FAN_SNAP_KEY,
+  fanAdviceDelta,
+  formatFanSnapshot,
+  parseFanSnapshot,
+  type FanSnapshot,
+} from '../fanHistory';
 import { isPermEnabled } from '../permissions';
 import { isTauri } from '../env';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -82,6 +89,8 @@ export function SystemTools() {
 function SystemToolsInner() {
   const t = useT();
   const [fan, setFan] = useState<FanCurveAdvice | null>(null);
+  // R173：上一次风扇建议快照（localStorage 持久化），用于「变了没」对比。
+  const [prevFan, setPrevFan] = useState<FanSnapshot | null>(null);
   const [fanErr, setFanErr] = useState<string | null>(null);
   const [fanLoading, setFanLoading] = useState(false);
   // 风扇控制（fan.control，L2）：状态 + 档位 + 确认 + 熔断通知。
@@ -113,6 +122,11 @@ function SystemToolsInner() {
   // R167：可选更新的计数与「仅驱动」筛选结果。
   const wuCounts = wuUpdateCounts(updates ?? []);
   const visibleUpdates = wuDriverOnly ? driverOnlyUpdates(updates ?? []) : (updates ?? []);
+  // R173：与上次风扇建议对比（档位是否抬升 / 温度差）。
+  const fanDelta = fan ? fanAdviceDelta(
+    { level: fan.level, levelLabel: fan.level_label, tempMaxC: fan.temp_max_c },
+    prevFan,
+  ) : null;
 
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -129,7 +143,17 @@ function SystemToolsInner() {
     setFanLoading(true);
     setFanErr(null);
     try {
-      setFan(await api.fanCurveAdvice());
+      const advice = await api.fanCurveAdvice();
+      setFan(advice);
+      // R173：读一次记一次快照——下次对照「变了没」。读到失败不记（保持上次）。
+      const snap: FanSnapshot = {
+        level: advice.level,
+        levelLabel: advice.level_label,
+        tempMaxC: advice.temp_max_c,
+        atMs: Date.now(),
+      };
+      setPrevFan(parseFanSnapshot(localStorage.getItem(FAN_SNAP_KEY)));
+      localStorage.setItem(FAN_SNAP_KEY, formatFanSnapshot(snap));
     } catch (e) {
       setFanErr(String(e instanceof Error ? e.message : e));
     } finally {
@@ -270,6 +294,21 @@ function SystemToolsInner() {
             </span>
           </div>
           <p className="sys-fan-reason small">{fan.reason}</p>
+          {/* R173：与上次建议对比——档位抬升/温度差让「变了没」一眼可见 */}
+          {fanDelta && (
+            <p className="muted small sys-fan-delta">
+              {fanDelta.levelChanged
+                ? t('system.fan.deltaLevelChanged', { from: fanDelta.prevLevelLabel, to: fan.level_label })
+                : t('system.fan.deltaLevelSame', { level: fan.level_label })}
+              {fanDelta.tempDeltaC != null && (
+                <> · {fanDelta.tempDeltaC > 0
+                  ? t('system.fan.deltaTempUp', { delta: Math.round(fanDelta.tempDeltaC) })
+                  : fanDelta.tempDeltaC < 0
+                    ? t('system.fan.deltaTempDown', { delta: Math.round(-fanDelta.tempDeltaC) })
+                    : t('system.fan.deltaTempSame')}</>
+              )}
+            </p>
+          )}
           <div className="sys-fan-curve">
             <span className="muted small" style={{ marginBottom: 3 }}>{t('system.fan.curveAnchors')}</span>
             <div className="sys-fan-anchors">

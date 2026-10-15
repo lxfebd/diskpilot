@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 风扇建议显示与上次的对比（R173）
+
+- 风扇曲线建议此前每次只显示当前档位/温度/锚点，看不出「这次和上次比变了
+  没」——档位抬升说明负载或温度在涨，回落说明变凉快了。现每次读取后记录
+  快照（localStorage），并显示「档位较上次：静音 → 均衡 · 最高温 +8℃」或
+  「档位与上次一致（均衡）· 最高温持平」。
+- 新文件 `src/fanHistory.ts`：`parseFanSnapshot` / `formatFanSnapshot`
+  （坏 JSON / 缺 level / 非法温度 → null，不编造）+ `fanAdviceDelta`
+  （任一方温度读不到 → 温差 null）；SystemTools 的 loadFan 成功后存快照、
+  渲染前算 delta。i18n 5 个新键（zh/en 成对）；CSS `.sys-fan-delta`。
+  fanHistory.test.ts（新）+9（539 总 / 39 files）。
+
 ### 2026-10-15 工具墙按风险等级筛选（R172）
 
 - exe 工具卡片上有 low/medium/high 风险徽标，但没法用它们筛选——安全敏感

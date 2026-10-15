@@ -768,6 +768,11 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   color: var(--ink);
   min-width: 150px;
 }
+/* R173：风扇建议的历史对比行——比 reason 更弱，仅作「变了没」参照 */
+.sys-fan-delta {
+  margin-top: 4px;
+  opacity: .85;
+}
 .sys-row {
   /* flex-column 容器 + overflow-y:auto 时，子项默认 min-height:auto 会被当 0，
      136 行驱动会被 flex-shrink 压进容器高变成每行 2px（内容半行字都显示不出）。
