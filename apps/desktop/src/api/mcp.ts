@@ -5,6 +5,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '../env';
 import { t } from '../i18n';
+import * as mocks from '../mocks';
 
 export type McpTransportType = 'stdio' | 'http';
 
@@ -89,7 +90,7 @@ export interface McpAuditEntry {
 export const mcpApi = {
   /** 服务器列表 + 每个 enabled 服务器的健康探测。 */
   mcpListServers: () =>
-    isTauri ? invoke<McpServerStatus[]>('mcp_list_servers') : Promise.resolve([]),
+    isTauri ? invoke<McpServerStatus[]>('mcp_list_servers') : mocks.mcpListServers(),
   /** 测试单个服务器：连接 + tools/list，返回工具清单。 */
   mcpTestServer: (id: string) =>
     isTauri ? invoke<McpToolMeta[]>('mcp_test_server', { id }) : Promise.reject(new Error(t('mcp.desktopOnly'))),

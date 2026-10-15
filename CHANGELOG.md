@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全 MCP 服务器列表（R188）
+
+- 设置页「MCP」tab 在浏览器预览模式一直是空表——`api.mcpListServers`
+  非 Tauri 分支返回 `[]`，MCP 是桌面端特色能力，列表/权限摘要/工具数
+  在演示里看不到。
+- `mocks.mcpListServers`：3 个样例服务器——filesystem（stdio · 启用 ·
+  可写 · 3 个 L0 / 4 个 L1 · 7 个工具）、time（http · 启用 · 4 个 L0 ·
+  4 个工具）、github（http · 停用 · 未接入，不编造工具数）；
+  enabled 服务器有 tool_count，停用的为 null（诚实）。
+- `api/mcp.ts` mcpListServers 非 Tauri 分支接 mock（补 mocks import）。
+  增删改/调用工具保持 tauriOnly 拒绝（真后端副作用不演示假成功），
+  写操作仍需 mcp.manage 权限。
+- 浏览器实测：「MCP 服务器（3）」列表 + 每行启用状态/传输类型/权限摘要/
+  工具数/测试编辑删除按钮 + 停用行「未接入」。
+- mocks.test.ts +2（571 总 / 41 files）：stdio/http 混合覆盖、
+  停用服务器不编造工具数。
+
 ### 2026-10-16 预览模式补全周巡检简报（R187）
 
 - 历史页「周巡检简报」卡在浏览器预览模式只有空壳——`api.getWeeklyReports`

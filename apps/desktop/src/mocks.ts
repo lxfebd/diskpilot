@@ -601,6 +601,56 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R188：预览模式的 MCP 服务器演示数据 ——
+// 真实桌面端从 mcp.rs 读服务器配置 + 健康探测（mcp_list_servers）；浏览器里
+// 没有后端进程可连，给 2 个样例服务器（stdio/http 各一 + 工具数 + 权限摘要），
+// 设置页 MCP tab 不再空表。只读 mock；增删改/调用走 tauriOnly 拒绝（真后端
+// 副作用不演示假成功）。
+
+export interface MockMcpServerStatus {
+  id: string;
+  name: string;
+  enabled: boolean;
+  writable: boolean;
+  tool_prefix?: string | null;
+  transport_type: 'stdio' | 'http';
+  transport: { type: 'stdio' | 'http'; command?: string; args?: string[]; env?: Record<string, string>; cwd?: string | null; url?: string; headers?: Record<string, string>; timeout_secs?: number | null };
+  tool_count: number | null;
+  error: string | null;
+  perm_scope: string;
+  permission_map?: Record<string, string> | null;
+}
+
+export async function mcpListServers(): Promise<MockMcpServerStatus[]> {
+  await wait(60);
+  return [
+    {
+      id: 'mock-mcp-fs', name: 'filesystem', enabled: true, writable: true, tool_prefix: null,
+      transport_type: 'stdio',
+      transport: { type: 'stdio', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', 'D:/data'], cwd: null, timeout_secs: 30 },
+      tool_count: 7, error: null,
+      perm_scope: '3 个 L0 / 4 个 L1',
+      permission_map: { list_allowed_directories: 'L0', read_text_file: 'L0', write_text_file: 'L1', create_directory: 'L1' },
+    },
+    {
+      id: 'mock-mcp-time', name: 'time', enabled: true, writable: false, tool_prefix: null,
+      transport_type: 'http',
+      transport: { type: 'http', url: 'https://mcp.time.com/sse', headers: {}, timeout_secs: 15 },
+      tool_count: 4, error: null,
+      perm_scope: '4 个 L0',
+      permission_map: { get_current_time: 'L0', get_timezone: 'L0' },
+    },
+    {
+      id: 'mock-mcp-disabled', name: 'github', enabled: false, writable: false, tool_prefix: null,
+      transport_type: 'http',
+      transport: { type: 'http', url: 'https://api.github.com/mcp', headers: {}, timeout_secs: 15 },
+      tool_count: null, error: '已停用（未探测）',
+      perm_scope: '—',
+      permission_map: null,
+    },
+  ];
+}
+
 export async function inspect(path: string, n: number): Promise<string[]> {
   await wait(150);
   const lower = path.toLowerCase();

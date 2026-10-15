@@ -3,7 +3,31 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers } from './mocks';
+
+describe('mocks.mcpListServers（设置页 MCP tab 演示数据）', () => {
+  it('返回 stdio/http 混合样例服务器（列表与权限摘要可演示）', async () => {
+    const servers = await mcpListServers();
+    expect(servers.length).toBeGreaterThan(0);
+    const transports = new Set(servers.map((s) => s.transport_type));
+    expect(transports.has('stdio')).toBe(true);
+    expect(transports.has('http')).toBe(true);
+    for (const s of servers) {
+      expect(s.id).toBeTruthy();
+      expect(s.name).toBeTruthy();
+      expect(s.perm_scope).toBeTruthy();
+    }
+  });
+
+  it('enabled 服务器有工具数，停用的不编造（tool_count=null）', async () => {
+    const servers = await mcpListServers();
+    const enabledOnes = servers.filter((s) => s.enabled);
+    const disabledOnes = servers.filter((s) => !s.enabled);
+    expect(enabledOnes.length).toBeGreaterThan(0);
+    for (const s of enabledOnes) expect(s.tool_count).toBeGreaterThan(0);
+    for (const s of disabledOnes) expect(s.tool_count).toBeNull();
+  });
+});
 
 describe('mocks 周报（历史页周体检卡演示数据）', () => {
   it('未生成过时 getWeeklyReports 出一份样例（环比一开始可看）', async () => {
