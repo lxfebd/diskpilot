@@ -159,6 +159,7 @@ export function CleanupBody() {
   const execute = useCleanupStore((st) => st.execute);
   const runRealDelete = useCleanupStore((st) => st.runRealDelete);
   const cancelPreview = useCleanupStore((st) => st.cancelPreview);
+  const cancelCleanup = useCleanupStore((st) => st.cancelCleanup);
   if (!s) return null;
 
   const sc = s.scaffold;
@@ -312,6 +313,35 @@ export function CleanupBody() {
           {s.msg && <div className="ok">{s.msg}</div>}
           {s.err && <div className="error">{s.err}</div>}
         </>
+      )}
+
+      {s.running && (
+        <div className="cleanup-progress">
+          <div className="cleanup-progress-head">
+            <span>
+              <Loader2 size={12} className="spin" />{' '}
+              {t('cleanup.progressInfo', {
+                done: s.progress.done,
+                total: s.progress.total,
+                size: formatBytes(s.progress.freedBytes),
+              })}
+            </span>
+            <button className="ghost cleanup-cancel" onClick={cancelCleanup}>
+              {t('cleanup.cancel')}
+            </button>
+          </div>
+          <div className="cleanup-progress-bar">
+            <div
+              className="cleanup-progress-fill"
+              style={{
+                width:
+                  s.progress.total > 0
+                    ? `${Math.min(100, Math.round((s.progress.done / s.progress.total) * 100))}%`
+                    : '0%',
+              }}
+            />
+          </div>
+        </div>
       )}
 
       <SelectionActionBar summary={summary}>

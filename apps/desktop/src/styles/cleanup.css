@@ -343,6 +343,46 @@ main.cleanup-page > .cleanup-page {
   50%      { box-shadow: 0 0 0 5px rgba(196, 51, 88, 0); }
 }
 
+/* R178: live progress while a real delete runs — bar + freed bytes + cancel button. */
+.cleanup-progress {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--ink-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cleanup-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.cleanup-progress-head strong { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 700; }
+.cleanup-progress-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--ink-4, #2a2f37);
+  overflow: hidden;
+}
+.cleanup-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2, var(--accent)));
+  background-color: var(--accent);
+  transition: width 0.25s ease;
+  border-radius: 4px;
+}
+.cleanup-cancel {
+  flex: 0 0 auto;
+  padding: 3px 12px;
+  font-size: 12px;
+}
+
 /* Coverage breakdown — explains the "13 GB total but only 4 GB in scopes" gap. */
 .cleanup-coverage {
   margin-top: 4px;

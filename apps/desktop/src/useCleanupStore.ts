@@ -64,6 +64,11 @@ export interface CleanupSession {
   preview: DryRunPreview | null;
   /** 预备态：第一次点「清理」后置位，5s 不操作自动回退。 */
   armed: boolean;
+  /** R178：执行中被用户取消——前端在批次边界拦截后续提交；已交后端的批次不撤回
+   * （清进回收站可逆），所以取消是「不再继续」而非「回滚已删」。 */
+  cancelRequested: boolean;
+  /** R178：真删实时进度：已完成 scope×path 任务数 / 总任务数 / 已释放字节（后端实测）。 */
+  progress: { done: number; total: number; freedBytes: number };
   msg: string | null;
   err: string | null;
 }
@@ -82,6 +87,8 @@ interface CleanupStoreState {
   runDryRun: () => Promise<void>;
   runRealDelete: () => Promise<void>;
   cancelPreview: () => void;
+  /** R178：请求取消正在进行的真删（批次边界生效）。 */
+  cancelCleanup: () => void;
   refreshSizes: () => void;
 }
 
@@ -294,6 +301,8 @@ function buildSession(
     previewing: false,
     preview: null,
     armed: false,
+    cancelRequested: false,
+    progress: { done: 0, total: 0, freedBytes: 0 },
     msg: null,
     err: null,
   };
@@ -603,27 +612,33 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
   },
 
   // 第二步：真删。失败逐项收集，结束时按「全败 / 部分败 / 全成」三种口径出文案。
+  // R178：改一次性 Promise.all 为分批（CONCURRENCY 并发）执行，每批结束后在批次边界
+  // 检查 cancelRequested——已交后端的批次不撤回（清进回收站可逆），取消只「不再继续」。
+  // 进度（done/total/freedBytes）随批实时写回，供界面显示进度条与已释放字节。
   runRealDelete: async () => {
     const s0 = getCur();
     if (!s0 || s0.preview === null) return;
-    patchInSession(() => ({ running: true, msg: null, err: null }));
+    patchInSession(() => ({
+      running: true,
+      cancelRequested: false,
+      progress: { done: 0, total: 0, freedBytes: 0 },
+      msg: null,
+      err: null,
+    }));
     try {
       const s = getCur();
       const preview = s0.preview;
       if (!s || !preview) return;
       let totalEntries = 0;
-      let totalFreedBytes = 0;
+      let freedBytes = 0;
       const failures: string[] = [];
-      const runReal = (scopeId: string, path: string, opts: ExecuteScopeOpts) =>
+      // 每个任务封装成 () => Promise<{ entries: UndoEntry[] }>，错误在内部吞掉并记进 failures，
+      // 不因单任务失败中断整批（与旧 Promise.all 的语义一致，只是改在批边界可中断）。
+      const makeTask = (scopeId: string, path: string, opts: ExecuteScopeOpts) => () =>
         api
           .executeScope(s.scaffold.id, scopeId, path, false, { ...opts, confirmed: true })
           .then(
-            (entries) => {
-              totalEntries += entries.length;
-              // 后端已返回每项实际释放字节（UndoEntry.bytes_freed），据此累加，
-              // 不再用预览预估值记账（True/False 干删口径见后端）。
-              for (const e of entries) totalFreedBytes += e.bytes_freed ?? 0;
-            },
+            (entries) => ({ entries }),
             (e) => {
               // 诊断串（scope @ 路径: 后端原文），全 ASCII 分隔符便于拼进文案表。
               failures.push(`${scopeId} @ ${path}: ${String(e)}`);
@@ -631,46 +646,70 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
                 `[diskpilot] executeScope ${s.scaffold.id}/${scopeId} on ${path} failed:`,
                 e,
               );
+              return { entries: [] as { bytes_freed?: number | null }[] };
             },
           );
 
+      // 先把所有任务描述收集成数组，再分批跑——这样取消时直接不再提交后续批次。
+      const taskList: (() => Promise<{ entries: { bytes_freed?: number | null }[] }>)[] = [];
       if (preview.isCondaSnapshot) {
         // 用预览时点快照的 env 列表 + matches 路径，不用 runRealDelete 时的最新勾选/换盘。
         const envFilterArg = preview.envSnapshot;
         const paths = preview.matchesPaths.length > 0 ? preview.matchesPaths : [s.matches[0]?.path];
         const rootPath = preview.matchesPaths[0] ?? s.matches[0]?.path;
         if (rootPath) {
-          const tasks: Promise<unknown>[] = [];
           for (const scopeId of preview.scopeIds) {
             if (scopeId === 'envs-stale') {
-              tasks.push(runReal(scopeId, rootPath, { envFilter: envFilterArg }));
+              taskList.push(makeTask(scopeId, rootPath, { envFilter: envFilterArg }));
             } else {
               const days = preview.daysSnapshot[scopeId];
               for (const mPath of paths) {
-                tasks.push(runReal(scopeId, mPath, { olderThanDays: days }));
+                taskList.push(makeTask(scopeId, mPath, { olderThanDays: days }));
               }
             }
           }
-          await Promise.all(tasks);
         }
-        const refreshed = await api.listCondaEnvs(rootPath).catch(() => [] as CondaEnv[]);
-        patchInSession(() => ({
-          condaEnvs: refreshed,
-          selectedEnvs: new Set(refreshed.filter((e) => e.default_checked).map((e) => e.name)),
-        }));
-        if (preview.scopeIds.some((id) => id !== 'envs-stale')) fetchSizesNow();
       } else {
         // 快照口径：预览时勾选的账号过滤 + 命中路径，预览窗停留期间改勾选/换盘不影响本次真删。
         const wxidFilter = preview.wxidSnapshot ?? undefined;
         const paths = preview.matchesPaths.length > 0 ? preview.matchesPaths : s.matches.map((m) => m.path);
-        const tasks: Promise<unknown>[] = [];
         for (const scopeId of preview.scopeIds) {
           const days = preview.daysSnapshot[scopeId];
           for (const mPath of paths) {
-            tasks.push(runReal(scopeId, mPath, { olderThanDays: days, wxidFilter }));
+            taskList.push(makeTask(scopeId, mPath, { olderThanDays: days, wxidFilter }));
           }
         }
-        await Promise.all(tasks);
+      }
+
+      // 分批执行 + 批次边界取消检查 + 实时进度。
+      const CONCURRENCY = 4;
+      let done = 0;
+      patchInSession(() => ({ progress: { done: 0, total: taskList.length, freedBytes: 0 } }));
+      for (let i = 0; i < taskList.length; i += CONCURRENCY) {
+        if (getCur()?.cancelRequested) break;
+        const slice = taskList.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(slice.map((fn) => fn()));
+        for (const r of results) {
+          totalEntries += r.entries.length;
+          for (const e of r.entries) freedBytes += e.bytes_freed ?? 0;
+          done += 1;
+        }
+        patchInSession(() => ({ progress: { done, total: taskList.length, freedBytes } }));
+      }
+      const cancelled = !!getCur()?.cancelRequested;
+
+      // 收尾：conda 刷新环境列表 / 非 conda 重测大小并清勾选。与旧逻辑一致，只是现在在批循环后。
+      if (preview.isCondaSnapshot) {
+        const rootPath = preview.matchesPaths[0] ?? s.matches[0]?.path;
+        if (rootPath) {
+          const refreshed = await api.listCondaEnvs(rootPath).catch(() => [] as CondaEnv[]);
+          patchInSession(() => ({
+            condaEnvs: refreshed,
+            selectedEnvs: new Set(refreshed.filter((e) => e.default_checked).map((e) => e.name)),
+          }));
+          if (preview.scopeIds.some((id) => id !== 'envs-stale')) fetchSizesNow();
+        }
+      } else {
         fetchSizesNow();
         patchInSession(() => ({ selectedScopes: new Set() }));
       }
@@ -678,8 +717,20 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       // 只有真清掉东西才累加「已回收」。字节数用后端实测（bytes_freed 累计），
       // 而非预览预估值——后端已返 actual，不再标「预估」。全败时不记账（失败不能算成功）。
       const allFailed = failures.length > 0 && totalEntries === 0;
-      if (!allFailed) useStore.getState().addReclaimed(totalFreedBytes);
-      if (allFailed) {
+      if (!allFailed) useStore.getState().addReclaimed(freedBytes);
+      if (cancelled) {
+        // 中途取消：已交批次不可逆（回收站可达），按「清了一部分」如实报。
+        patchInSession(() => ({
+          msg:
+            totalEntries > 0
+              ? t('cleanup.cancelled', { n: totalEntries, size: formatBytes(freedBytes) }) +
+                (failures.length > 0
+                  ? t('cleanup.partialFail', { n: failures.length, msg: failures[failures.length - 1] })
+                  : '')
+              : t('cleanup.cancelledNone'),
+          preview: null,
+        }));
+      } else if (allFailed) {
         patchInSession(() => ({
           err: t('cleanup.allFailed', {
             n: failures.length,
@@ -690,7 +741,7 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       } else {
         patchInSession(() => ({
           msg:
-            t('cleanup.done', { n: totalEntries, size: formatBytes(totalFreedBytes) }) +
+            t('cleanup.done', { n: totalEntries, size: formatBytes(freedBytes) }) +
             (failures.length > 0
               ? t('cleanup.partialFail', {
                   n: failures.length,
@@ -710,6 +761,12 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
 
   cancelPreview: () => {
     clearArmTimer();
-    patchInSession(() => ({ preview: null, armed: false }));
+    patchInSession(() => ({ preview: null, armed: false, cancelRequested: false }));
+  },
+
+  // R178：执行中请求取消。批次边界生效——已交后端的批次不撤回（回收站可逆），
+  // 只是不再提交后续批次，进度停在当前值。
+  cancelCleanup: () => {
+    patchInSession(() => ({ cancelRequested: true }));
   },
 }));

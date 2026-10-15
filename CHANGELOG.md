@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-15 清理执行可取消 + 实时进度条（R178）
+
+- 真删此前是一次性 `Promise.all` 全并发提交：点了「确认执行」后只能干等，
+  大目录清理期间既看不到进展也无法中止。现在 `runRealDelete` 改为**分批执行
+  （CONCURRENCY=4）**，每批结束在**批次边界**检查 `cancelRequested`——已交后端
+  的批次不撤回（清进回收站可逆），取消只「不再提交后续批次」。
+- 执行中界面新增进度区：`已清 done/total 项 · 已释放 {size}` + 进度条 + 「取消」
+  按钮（CleanupBody）。进度 `done/total/freedBytes` 随批实时写回 session；字节用
+  后端实测 `bytes_freed` 累计，非预览预估。
+- 收尾文案按四种口径如实报：全成 `cleanup.done` / 中途取消已清一部分
+  `cleanup.cancelled` / 取消但还没清掉任何文件 `cleanup.cancelledNone` / 全败
+  `cleanup.allFailed`；部分失败仍追加 `cleanup.partialFail`。i18n
+  `cleanup.progressInfo / cancelled / cancelledNone`（zh/en 成对）。
+- 后端 `execute_scope` 无取消令牌，故取消是纯前端可中断性——回收站删除可还原，
+  中途停下安全。新增 useCleanupStore.test.ts +4（550 总 / 40 files）。纯前端改动。
+
 ### 2026-10-15 清理分类组按可清大小降序排序（R177）
 
 - 清理页三个分类组（媒体 / 缓存 / 备份，conda 下为依赖包）原本只有「媒体」组

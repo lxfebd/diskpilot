@@ -63,6 +63,10 @@ export const cleanup = {
       '清理失败：{n} 项全部出错，没有任何文件被移动。最后一条错误：{msg}',
     'cleanup.done': '已清理 {n} 个文件 · 约 {size}（预估）· 进了系统回收站',
     'cleanup.partialFail': ' · {n} 项失败：{msg}',
+    'cleanup.cancelled': '已取消 · 先清掉 {n} 个文件 · 约 {size} · 已清的进了回收站（可还原）',
+    'cleanup.cancelledNone': '已取消 · 还没清掉任何文件（回收站里没有新增）',
+    // R178：执行中的实时进度（已清批次 / 总批次 · 已释放字节）。
+    'cleanup.progressInfo': '正在清理 · {done}/{total} 项 · 已释放 {size}',
 
     // ── CleanupModal：底部合计与主按钮（两步确认第一段） ──
     'cleanup.summaryLead': '共',
@@ -221,6 +225,10 @@ export const cleanup = {
       'Cleanup failed: all {n} items errored and nothing was moved. Last error: {msg}',
     'cleanup.done': 'Cleaned {n} files · about {size} (estimate) · moved to the system Recycle Bin',
     'cleanup.partialFail': ' · {n} items failed: {msg}',
+    'cleanup.cancelled': 'Cancelled · cleared {n} files first · about {size} · moved to the Recycle Bin (restorable)',
+    'cleanup.cancelledNone': 'Cancelled · nothing was cleared yet (nothing added to the Recycle Bin)',
+    // R178: live progress while executing (cleared batches / total batches · bytes freed).
+    'cleanup.progressInfo': 'Cleaning · {done}/{total} items · {size} freed',
 
     // ── CleanupModal: footer total and primary button (step 1 of the two-step confirm) ──
     'cleanup.summaryLead': 'Selected',
