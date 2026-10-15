@@ -6,7 +6,7 @@
 import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage, computeAllCleanableBytes } from '../../useCleanupStore';
 import { formatBytes } from '../../format';
-import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive } from '../../cleanup/model';
+import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive, sortScopesByBytes } from '../../cleanup/model';
 import { SelectionModePicker, useSelectionOptions } from './SelectionMode';
 import { SelectionActionBar } from './SelectionActionBar';
 import { DryRunPreviewDialog } from './DryRunPreviewDialog';
@@ -120,7 +120,9 @@ function ScopeGroup({ label, group }: { label: string; group: Scope[] }) {
   const clearScopes = useCleanupStore((st) => st.clearScopes);
   const opts = useSelectionOptions();
   if (group.length === 0) return null;
-  const ids = group.map((g) => g.id);
+  // R177：分类组统一按可清大小降序（与 media 组口径对齐，不再按目录顺序乱跳）。
+  const ordered = sortScopesByBytes(group, (sc) => scopeBytes(s, sc.id));
+  const ids = ordered.map((g) => g.id);
   const allOn = ids.every((id) => s.selectedScopes.has(id));
   // 分组语义：全选=本组替换（只挑 bytes>0）；全不选=摘本组。用 applySelectionMode
   // 算出要勾的集合，再与外层 selectedScopes 合并：all → 并入，none → 摘掉。
@@ -145,7 +147,7 @@ function ScopeGroup({ label, group }: { label: string; group: Scope[] }) {
         />
       </div>
       <ul className="cleanup-rows">
-        {group.map((sc) => <ScopeRow key={sc.id} scope={sc} />)}
+        {ordered.map((sc) => <ScopeRow key={sc.id} scope={sc} />)}
       </ul>
     </section>
   );
@@ -169,9 +171,9 @@ export function CleanupBody() {
   const userEnvs = (s.condaEnvs ?? []).filter((e) => !e.is_base);
   const baseEnv = (s.condaEnvs ?? []).find((e) => e.is_base);
 
-  const sortedMediaScopes = s.visibleScopes
-    .filter((x) => x.category === 'media')
-    .sort((a, b) => scopeBytes(s, b.id) - scopeBytes(s, a.id));
+  // R177：三组不再各自内联排序——统一交给 ScopeGroup 按可清大小降序渲染，
+  // 避免 media 排过、cache/backup 漏排导致顺序口径不一致。
+  const mediaScopes = s.visibleScopes.filter((x) => x.category === 'media');
   const cacheScopes = s.visibleScopes.filter((x) => (x.category ?? 'cache') === 'cache');
   const backupScopes = s.visibleScopes.filter((x) => x.category === 'backup');
 
@@ -296,7 +298,7 @@ export function CleanupBody() {
 
           {!s.isConda && (
             <>
-              <ScopeGroup label={t('cleanup.groupMedia')} group={sortedMediaScopes} />
+              <ScopeGroup label={t('cleanup.groupMedia')} group={mediaScopes} />
               <ScopeGroup label={t('cleanup.groupCache')} group={cacheScopes} />
               <ScopeGroup label={t('cleanup.groupBackup')} group={backupScopes} />
             </>

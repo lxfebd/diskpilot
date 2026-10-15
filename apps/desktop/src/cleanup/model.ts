@@ -422,3 +422,15 @@ export function applySelectionMode<T>(
   }
   return out;
 }
+
+/**
+ * R177：清理分类组排序——同组 scope 按「可清大小」降序；大小相同维持原目录序
+ * （依赖引擎稳定排序），sizeOf 取不到视为 0。让 cache/backup/pkgs 等原本按目录
+ * 顺序展示的组与 media 组口径对齐（用户按体量挑大的先看），且不改入参。
+ */
+export function sortScopesByBytes<T>(
+  scopes: readonly T[],
+  sizeOf: (item: T) => number,
+): T[] {
+  return [...scopes].sort((a, b) => sizeOf(b) - sizeOf(a));
+}

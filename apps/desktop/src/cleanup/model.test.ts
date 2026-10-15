@@ -15,6 +15,7 @@ import {
   sampleEntriesByBytes,
   samplePathsByBytes,
   scopeDayOverrides,
+  sortScopesByBytes,
   tallyDrive,
   type ScopeSize,
 } from './model';
@@ -463,5 +464,37 @@ describe('cleanRatio（可清理占比）', () => {
   it('脏数据（可清 > 总）钳到 1，不画出超长条', () => {
     expect(cleanRatio(150, 100)).toBe(1);
     expect(cleanRatio(-20, 100)).toBe(0);
+  });
+});
+
+describe('sortScopesByBytes（R177 清理分类组排序）', () => {
+  const items = [
+    { id: 'a', b: 10 },
+    { id: 'b', b: 50 },
+    { id: 'c', b: 30 },
+  ];
+  it('按可清大小降序', () => {
+    const out = sortScopesByBytes(items, (x) => x.b);
+    expect(out.map((x) => x.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('不改入参（原数组顺序保持）', () => {
+    const before = items.map((x) => x.id);
+    sortScopesByBytes(items, (x) => x.b);
+    expect(items.map((x) => x.id)).toEqual(before);
+  });
+
+  it('大小相同维持原顺序（稳定）', () => {
+    const tie = [
+      { id: 'x', b: 20 },
+      { id: 'y', b: 20 },
+      { id: 'z', b: 5 },
+    ];
+    expect(sortScopesByBytes(tie, (x) => x.b).map((x) => x.id)).toEqual(['x', 'y', 'z']);
+  });
+
+  it('sizeOf 缺失（取不到）按 0 排到末尾', () => {
+    const out = sortScopesByBytes([{ id: 'p', b: 0 }, { id: 'q', b: 7 }], (x) => x.b);
+    expect(out.map((x) => x.id)).toEqual(['q', 'p']);
   });
 });
