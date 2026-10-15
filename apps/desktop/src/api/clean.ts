@@ -146,7 +146,9 @@ export const cleanApi = {
 
   /** 打开系统回收站（只开窗口，不代还原）——「回收」类条目的还原出口。 */
   openRecycleBin: () =>
-    isTauri ? invoke<void>('open_recycle_bin') : Promise.resolve(),
+    isTauri
+      ? invoke<void>('open_recycle_bin')
+      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'open_recycle_bin' }))),
 
   listCondaEnvs: (condaRoot: string) =>
     isTauri

@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式「打开系统回收站」改为诚实拒绝（R200）
+
+- 历史页 recycle 类条目渲染「打开系统回收站」按钮（restoreKind
+  'osRecycleBin'，mock UNDO_LEDGER 有 action='recycle' 条目），但
+  `api.openRecycleBin` 非 Tauri 分支 `Promise.resolve()`——点击静默无操作。
+- 改为 `Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'open_recycle_bin' })))`；
+  HistoryPage L224 由 `void api.openRecycleBin()` 改为 `.catch` + 页面级
+  `setErr`（新增 i18n `cleanup.openRecycleBinFailed`，CN/EN 平行，含
+  「浏览器预览模式无桌面回收站」说明）。
+- 浏览器实测：历史页点「打开系统回收站」→ 错误横幅
+  「打不开系统回收站：Error: open_recycle_bin 仅在 Tauri 环境可用（浏览器
+  预览模式无桌面回收站，此操作仅桌面应用可用）」。
+- 无新测试（reject 行为，与 R195/R196/R199 先例一致）；584 总 / 41 files。
+
 ### 2026-10-16 预览模式脚本安装改为诚实拒绝（R199）
 
 - `api.installScaffold` 非 Tauri 分支原先 `Promise.resolve('')` ——Studio

@@ -171,6 +171,7 @@ export const cleanup = {
     'cleanup.restoreFailed': '恢复失败：{msg}',
     'cleanup.recycleUndoHint': '已移入系统回收站：这里恢复不了，请到系统回收站还原',
     'cleanup.openRecycleBin': '打开系统回收站',
+    'cleanup.openRecycleBinFailed': '打不开系统回收站：{msg}（浏览器预览模式无桌面回收站，此操作仅桌面应用可用）',
   },
   en: {
     // ── CleanupModal: title and scope rows ──
@@ -337,5 +338,6 @@ export const cleanup = {
     'cleanup.restoreFailed': 'Restore failed: {msg}',
     'cleanup.recycleUndoHint': 'Moved to the system Recycle Bin — restore it there, not here',
     'cleanup.openRecycleBin': 'Open Recycle Bin',
+    'cleanup.openRecycleBinFailed': "Cannot open the Recycle Bin: {msg} (browser preview has no desktop Recycle Bin — desktop app only)",
   },
 };
