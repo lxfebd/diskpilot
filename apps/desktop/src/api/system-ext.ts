@@ -359,7 +359,7 @@ export const systemExtApi = {
     }
     return isTauri
       ? invoke<void>('set_startup_item', { id, enable, confirmed })
-      : Promise.resolve();
+      : mocks.setStartupItem(id, enable);
   },
   // 返回备份路径：注册表启动项没有回收站，后端删除前会写一份 .reg（空 = 文件夹项，走系统回收站）。
   removeStartupItem: (id: string, confirmed: boolean) => {
@@ -368,7 +368,7 @@ export const systemExtApi = {
     }
     return isTauri
       ? invoke<string>('remove_startup_item', { id, confirmed })
-      : Promise.resolve('');
+      : mocks.removeStartupItem(id);
   },
 
   // 风扇曲线建议：读温度/负载传感器 + 风扇信息，生成建议档位与曲线锚点（只建议，不写 EC）

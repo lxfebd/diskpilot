@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式启动项启停/删除真实生效（R197）
+
+- `api.setStartupItem` / `removeStartupItem` 非 Tauri 分支原先 `Promise.resolve()`
+  / `Promise.resolve('')` ——演示里点「禁用/恢复」toast 显示成功但列表纹丝不动
+  （假成功，最差的演示口径）。
+- `mocks.setStartupItem` / `removeStartupItem`：作用于模块级内存态
+  `startupItems`（同 R192 reminderCfg 模式）——启停翻转 enabled、删除移出
+  列表且返回备份路径（注册表项 .reg 备份 / 文件夹项回收站空串）；
+  `listStartupItems` 改读内存态副本，会话内切换/删除真实持久（刷新页面重置）。
+- 真实桌面端行为不变（写注册表/启动文件夹 + .disabled 备份 + 回收站），
+  浏览器只在内存态演示，不假装写了系统。
+- 浏览器实测：系统优化页「开机自启 5 项 → 6 项」（恢复 OBS Studio），
+  OBS 行 sys-row-off → sys-row，两步确认「确认恢复？」→ 恢复全链路可用
+  （需 startup.manage 权限）。
+- mocks.test.ts +1（583 总 / 41 files）：启停持久 + 删除返回备份路径/移出列表。
+
 ### 2026-10-16 预览模式补全电源计划（R196）
 
 - 系统优化页「电源计划」卡在浏览器预览模式直接报错——`api.powerPlan`

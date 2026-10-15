@@ -501,10 +501,36 @@ const MOCK_STARTUP: MockStartupItem[] = [
   { id: 'machine-hp', name: 'HP 打印助手', command: '"C:\\Program Files\\HP\\HP Print Solutions\\HPPrint.exe" /minimized', location: 'folder_machine', enabled: false, target: 'C:\\Program Files\\HP\\HP Print Solutions\\HPPrint.exe' },
 ];
 
-/** 只读枚举：返回样例启动项副本（避免调用方改动污染模块级数组）。 */
+// 模块级可变启动项状态（R197）：浏览器演示中「禁用/启用/删除」写操作
+// 作用于这份内存态（同 R192 reminderCfg 模式），列表刷新后真实反映
+// 切换/删除效果——不再「假成功」：toast 显示成功却列表纹丝不动。
+// 真实桌面端 set/remove 会写注册表/启动文件夹（.disabled 备份 / 回收站），
+// 浏览器只在内存态演示；删除项在本会话内不再出现（刷新页面即重置）。
+let startupItems: MockStartupItem[] = MOCK_STARTUP.map((it) => ({ ...it }));
+
+/** 只读枚举：返回当前启动项副本（调用方改动不污染模块级数组）。 */
 export async function listStartupItems(): Promise<MockStartupItem[]> {
   await wait(60);
-  return MOCK_STARTUP.map((it) => ({ ...it }));
+  return startupItems.map((it) => ({ ...it }));
+}
+
+/** 启停（写）：内存态翻转 enabled。真实桌面端 = 值/文件名加 .disabled 备份。 */
+export async function setStartupItem(id: string, enable: boolean): Promise<void> {
+  await wait(50);
+  const it = startupItems.find((i) => i.id === id);
+  if (it) it.enabled = enable;
+}
+
+/** 删除（写）：从内存态移除。真实桌面端 = 注册表值先写 .reg 备份 / 文件夹项进回收站。 */
+export async function removeStartupItem(id: string): Promise<string> {
+  await wait(50);
+  const it = startupItems.find((i) => i.id === id);
+  if (!it) return '';
+  startupItems = startupItems.filter((i) => i.id !== id);
+  // 演示备份路径：注册表项给 .reg 备份，文件夹项走回收站（空 = 回收站接住）。
+  return it.location.startsWith('registry')
+    ? `${it.name}.reg 备份（演示）`
+    : '';
 }
 
 // —— R185：预览模式的已装驱动演示数据 ——

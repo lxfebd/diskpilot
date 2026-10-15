@@ -3,7 +3,7 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan } from './mocks';
 
 describe('mocks.powerPlan（系统优化页电源计划演示数据）', () => {
   it('返回 3 个标准计划 + 当前活动计划（均衡）', async () => {
@@ -255,6 +255,27 @@ describe('mocks.listStartupItems（设置页系统工具演示数据）', () => 
     const b = await listStartupItems();
     a[0].enabled = !a[0].enabled;
     expect(b[0].enabled).not.toBe(a[0].enabled);
+  });
+
+  it('启停/删除在会话内真实生效（不再假成功）', async () => {
+    // hkcu-obs 初始禁用 → 启用后列表反映（内存态持久跨 list 调用）
+    await setStartupItem('hkcu-obs', true);
+    let items = await listStartupItems();
+    expect(items.find((i) => i.id === 'hkcu-obs')?.enabled).toBe(true);
+    // 删除 machine-hp（文件夹项）→ 返回空 = 回收站接住，且列表不再含它
+    const backup = await removeStartupItem('machine-hp');
+    expect(backup).toBe('');
+    items = await listStartupItems();
+    expect(items.find((i) => i.id === 'machine-hp')).toBeUndefined();
+    // 注册表项删除返回 .reg 备份路径（演示）
+    const backupReg = await removeStartupItem('hklm-nv');
+    expect(backupReg.length).toBeGreaterThan(0);
+    expect(backupReg.includes('.reg')).toBe(true);
+    // 不存在 id：删除返回空、不报错
+    await expect(removeStartupItem('no-such-id')).resolves.toBe('');
+    // 自愈：把改过的状态恢复，避免影响同文件其他测试
+    await setStartupItem('hkcu-obs', false);
+    // machine-hp / hklm-nv 已删，无法恢复——放在最后执行且不依赖它们的测试在后
   });
 });
 
