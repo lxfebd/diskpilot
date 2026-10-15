@@ -5,6 +5,29 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式补全插件市场（R193）
+
+- 设置页「插件市场」在浏览器预览模式两个空态：内置列表
+  （`pluginMarket` → []）与已安装台账（`pluginListInstalled` →
+  {installed: [], total_events: 0}）都是空，市场页演示断链。
+- `mocks.pluginMarket`：3 个内置 CLI 工具（智能清理/启动项管理/驱动
+  检测），2 个已插件化（与 R184/R185 的启动项/驱动 mock 呼应）。
+- `mocks.pluginListInstalled`：2 条台账（智能清理 v2.3.1 注册表源 +
+  2 个历史版本；启动项管理 v1.2.0 远程 URL + 1 个历史版本）——
+  「更新」「回滚」「卸载」三按钮都能出现，R162 台账排序（新在前）
+  可看。
+- `api/system-ext.ts` 两接口非 Tauri 分支接 mock。社区索引
+  （pluginRegistryList/Search）保持 EMPTY_REGISTRY——它依赖真实
+  URL 配置，写操作全 tauriOnly，mock 列表会假装有远端内容（语义
+  不符）；「未配置索引 URL」提示是诚实状态。
+- 浏览器实测：市场 tab「已插件化 2 / 3」+ 三条目；
+  社区 tab 进阶区「已安装 2」台账：启动项管理 v1.2.0（历史 1 个版本）
+  / 智能清理 v2.3.1（历史 2 个版本），更新/回滚/卸载按钮齐全。
+- mocks.test.ts +2（579 总 / 41 files）：市场列表形状 +
+  台账含 ≥2 历史版本条目（回滚/更新按钮可演示）。
+- 修 tsc 报错：MockInstalledPlugin.history 用具体结构类型
+  MockLedgerEntry[]（与 api LedgerEntry 同形，避免 Record 不兼容）。
+
 ### 2026-10-16 预览模式补全清理提醒（R192）
 
 - 设置页「清理提醒」在浏览器预览模式两个断点：

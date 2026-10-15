@@ -240,7 +240,7 @@ export const systemExtApi = {
   pluginListInstalled: () =>
     isTauri
       ? invoke<{ installed: InstalledPlugin[]; total_events: number }>('plugin_list_installed')
-      : Promise.resolve({ installed: [], total_events: 0 }),
+      : mocks.pluginListInstalled(),
   pluginRegistryUpdate: (id: string, version: string | undefined, confirmed: boolean) =>
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
@@ -262,7 +262,7 @@ export const systemExtApi = {
   pluginMarket: () =>
     isTauri
       ? invoke<MarketPlugin[]>('plugin_market')
-      : Promise.resolve<MarketPlugin[]>([]),
+      : mocks.pluginMarket(),
   pluginActivate: (tool: string, confirmed: boolean) =>
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>

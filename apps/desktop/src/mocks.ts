@@ -601,6 +601,133 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+// —— R193：预览模式的插件市场演示数据 ——
+// 真实桌面端 plugin_market 返回内置 CLI 工具的「已插件化」索引，
+// plugin_list_installed 返回已安装台账（含回滚历史）；浏览器里没有
+// 真实安装目录，给两条与 R184/R185 mock（启动项/驱动）呼应的演示条目。
+// 安装/激活/卸载/更新等写操作保持 tauriOnly 拒绝——真实文件系统写入
+// 不演示假成功；社区索引 URL 保持未配置（诚实：写操作无法演示）。
+
+export interface MockMarketPlugin {
+  id: string;
+  name: string;
+  category: string;
+  purpose: string;
+  risk: string;
+  permission_level: string;
+  publisher: string;
+  exe_rel: string;
+  installed: boolean;
+}
+
+export async function pluginMarket(): Promise<MockMarketPlugin[]> {
+  await wait(50);
+  return [
+    {
+      id: 'disk-cleaner',
+      name: '智能清理',
+      category: '系统清理',
+      purpose: '按内置规则扫描并清理各类缓存与临时文件（回收站可还原）',
+      risk: 'medium',
+      permission_level: 'L2',
+      publisher: 'DiskPilot 团队',
+      exe_rel: 'tools/disk-cleaner',
+      installed: true,
+    },
+    {
+      id: 'startup-manager',
+      name: '启动项管理',
+      category: '系统优化',
+      purpose: '查看与开关开机自启项（注册表/启动文件夹）',
+      risk: 'low',
+      permission_level: 'L2',
+      publisher: 'DiskPilot 团队',
+      exe_rel: 'tools/startup-manager',
+      installed: true,
+    },
+    {
+      id: 'driver-checker',
+      name: '驱动检测',
+      category: '驱动',
+      purpose: '列出已装驱动并检查 Windows 更新中的驱动版本',
+      risk: 'low',
+      permission_level: 'L1',
+      publisher: 'DiskPilot 团队',
+      exe_rel: 'tools/driver-checker',
+      installed: false,
+    },
+  ];
+}
+
+export interface MockLedgerEntry {
+  ts: number;
+  kind: string;
+  id: string;
+  name: string;
+  version: string;
+  source: string;
+  dir_rel: string;
+  blob: string;
+  blob_hash: string;
+  signer: string;
+  from_version: string;
+}
+
+export interface MockInstalledPlugin {
+  id: string;
+  name: string;
+  version: string;
+  source: string;
+  dir_rel: string;
+  installed_at: number;
+  signer: string;
+  blob: string;
+  blob_hash: string;
+  history: MockLedgerEntry[];
+}
+
+export async function pluginListInstalled(): Promise<{
+  installed: MockInstalledPlugin[];
+  total_events: number;
+}> {
+  await wait(60);
+  const now = Math.floor(Date.now() / 1000);
+  return {
+    installed: [
+      {
+        id: 'disk-cleaner',
+        name: '智能清理',
+        version: '2.3.1',
+        source: 'registry',
+        dir_rel: 'tools/disk-cleaner',
+        installed_at: now - 45 * 86_400,
+        signer: 'DiskPilot',
+        blob: '',
+        blob_hash: '',
+        history: [
+          { ts: now - 45 * 86_400, kind: 'install', id: 'disk-cleaner', name: '智能清理', version: '2.3.1', source: 'registry', dir_rel: 'tools/disk-cleaner', blob: '', blob_hash: '', signer: 'DiskPilot', from_version: '' },
+          { ts: now - 90 * 86_400, kind: 'update', id: 'disk-cleaner', name: '智能清理', version: '2.2.0', source: 'registry', dir_rel: 'tools/disk-cleaner', blob: '', blob_hash: '', signer: 'DiskPilot', from_version: '2.1.0' },
+        ],
+      },
+      {
+        id: 'startup-manager',
+        name: '启动项管理',
+        version: '1.2.0',
+        source: 'url',
+        dir_rel: 'tools/startup-manager',
+        installed_at: now - 12 * 86_400,
+        signer: 'DiskPilot',
+        blob: '',
+        blob_hash: '',
+        history: [
+          { ts: now - 12 * 86_400, kind: 'install', id: 'startup-manager', name: '启动项管理', version: '1.2.0', source: 'url', dir_rel: 'tools/startup-manager', blob: '', blob_hash: '', signer: 'DiskPilot', from_version: '' },
+        ],
+      },
+    ],
+    total_events: 3,
+  };
+}
+
 // —— R192：预览模式的清理提醒演示数据 ——
 // 真实桌面端提醒配置持久化在 app_data_dir/reminder.json（get/set 同源）；
 // 浏览器里没有磁盘文件，用模块级状态模拟这份配置——开关/间隔/阈值在

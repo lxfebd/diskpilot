@@ -3,7 +3,35 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, scanDuplicateFiles, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled } from './mocks';
+
+describe('mocks.pluginMarket + pluginListInstalled（插件市场 tab 演示数据）', () => {
+  it('pluginMarket 返回 3 个内置工具、2 个已插件化', async () => {
+    const list = await pluginMarket();
+    expect(list.length).toBeGreaterThanOrEqual(3);
+    for (const p of list) {
+      expect(p.id).toBeTruthy();
+      expect(p.name).toBeTruthy();
+      expect(p.category).toBeTruthy();
+      expect(typeof p.installed).toBe('boolean');
+    }
+    expect(list.filter((p) => p.installed).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('pluginListInstalled 返回台账 + 历史事件（可演示回滚/更新按钮）', async () => {
+    const r = await pluginListInstalled();
+    expect(r.installed.length).toBeGreaterThanOrEqual(2);
+    for (const p of r.installed) {
+      expect(p.id).toBeTruthy();
+      expect(p.version).toBeTruthy();
+      expect(p.installed_at).toBeGreaterThan(0);
+      expect(Array.isArray(p.history)).toBe(true);
+    }
+    // 至少一条有 ≥2 个历史版本（更新按钮 + 回滚按钮都出现）
+    expect(r.installed.some((p) => p.history.length >= 2)).toBe(true);
+    expect(r.total_events).toBeGreaterThan(0);
+  });
+});
 
 describe('mocks.reminder（清理提醒开关/阈值 + 立即检查演示数据）', () => {
   it('开关在会话内可切换（不再点了弹回关闭）', async () => {
