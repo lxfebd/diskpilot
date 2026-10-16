@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 剪枝落盘：刷新后不再复活已删目录（R226）
+
+- 缺口：R222/R224 的 `applyRecycledPrune` 只改内存 scanCache，剪过的树
+  **不同步 IndexedDB**——刷新后 `takeDrive` 命中持久化旧树，已回收目录
+  「复活」。真实后端无此问题（每次扫描走磁盘），mock 演示必须一致。
+- 现在 `applyRecycledPrune` 在缓存树有变化时同步 `persistScanCacheIdb`，
+  剪完立即落盘，刷新后不再出现已删目录。
+- 新增单测：`recyclePaths` 剪枝后，fake IDB 里持久化树已不含被剪路径
+  （**616 总 / 42 files**）。
+- 浏览器实测：清崩溃转储后直读 IDB `scanTrees`，持久化树已不含
+  CrashDumps（C:\Users 等其余目录保留）。
+
 ### 2026-10-16 预览模式清理闭环：真实路径回收 + 剪枝同源收敛（R225）
 
 - 缺口：mock `executeScope` 真删返回的 source 是合成路径

@@ -410,6 +410,10 @@ export const useStore = create<AppState>((set, get) => {
       selectedPath: null,
       selectedNode: null,
     });
+    // R226：剪枝落盘——scanCache 剪过的树若不同步 IDB，刷新后 takeDrive
+    // 命中旧缓存，已回收目录「复活」。真实后端无此问题（每次扫描走磁盘），
+    // mock 演示必须一致：剪完立即持久化，刷新后不再出现已删目录。
+    if (cacheChanged) void persistScanCacheIdb(prunedCache);
   };
 
   return {

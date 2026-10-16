@@ -13,6 +13,7 @@ vi.mock('./api', () => ({
 }));
 
 import { useStore, type ChatTurn } from './store';
+import { api } from './api';
 
 function mk(name: string, path: string, size: number, file_count: number, children: Node[] = []): Node {
   return { name, path, is_dir: true, size, file_count, children, top_extensions: [] };
@@ -64,8 +65,54 @@ describe('selectPath (C3 node reference)', () => {
 });
 
 describe('recycle prune clears selection', () => {
+  // R226：剪枝后 scanCache 同步落盘 IDB——刷新后 takeDrive 命中持久化树
+  // 不再复活已删目录。用与下方「扫描树持久化」describe 相同的内存 fake IDB。
+  const data = new Map<string, unknown>();
+  const microReq = (result: unknown) => {
+    const req: { result: unknown; onsuccess: ((e: unknown) => void) | null; onerror: unknown } = {
+      result, onsuccess: null, onerror: null,
+    };
+    queueMicrotask(() => req.onsuccess?.({ target: { result } }));
+    return req;
+  };
+  const os = {
+    put: (v: unknown, k: string) => { data.set(k, structuredClone(v)); },
+    delete: (k: string) => { data.delete(k); },
+    getAllKeys: () => microReq([...data.keys()]),
+    getAll: () => microReq([...data.values()]),
+  };
+  const fakeDb = {
+    createObjectStore: () => ({}),
+    close: () => {},
+    transaction: () => {
+      const tx: { objectStore: () => typeof os; oncomplete: (() => void) | null; onerror: unknown; onabort: unknown } = {
+        objectStore: () => os, oncomplete: null, onerror: null, onabort: null,
+      };
+      queueMicrotask(() => tx.oncomplete?.());
+      return tx;
+    },
+  };
+  const fakeFactory = {
+    open: () => {
+      const req: { result: typeof fakeDb; onupgradeneeded: (() => void) | null; onsuccess: ((e: unknown) => void) | null; onerror: unknown; onblocked: unknown } = {
+        result: fakeDb, onupgradeneeded: null, onsuccess: null, onerror: null, onblocked: null,
+      };
+      queueMicrotask(() => {
+        req.onupgradeneeded?.();
+        req.onsuccess?.({ target: { result: fakeDb } });
+      });
+      return req;
+    },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
+    data.clear();
+    vi.stubGlobal('indexedDB', fakeFactory);
+    // 回滚回收路径返回真实条目（成功剪枝的前提）。
+    (api.recyclePaths as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { source: 'C:\\Users', action: 'recycle' as const, reason: '手动回收', timestamp: '' },
+    ]);
     useStore.setState({
       root: ROOT,
       scanCache: { 'C:': ROOT },
@@ -73,6 +120,10 @@ describe('recycle prune clears selection', () => {
       selectedNode: null,
       chat: { node: null, scaffoldId: null, turns: [], busy: false },
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('clears selectedPath and selectedNode after a successful recycle', async () => {
@@ -84,6 +135,16 @@ describe('recycle prune clears selection', () => {
     expect(s.selectedPath).toBeNull();
     expect(s.selectedNode).toBeNull(); // C3：剪枝后引用必须随 path 一起清，防 FileDetailPanel 读到已删节点
     expect(s.root!.children!.map((c) => c.name)).toEqual(['Windows']);
+  });
+
+  it('R226：剪枝后的 scanCache 同步落盘 IDB（刷新不复活已删目录）', async () => {
+    await useStore.getState().recyclePaths([{ path: 'C:\\Users' }], '手动回收');
+    await new Promise((r) => setTimeout(r, 20)); // persist 是 fire-and-forget 异步链
+    const saved = data.get('C:') as Node;
+    expect(saved).toBeTruthy();
+    // 持久化树里 C:\Users 已被剪掉——刷新后 takeDrive 不再复活它。
+    const names = (saved.children ?? []).map((c) => c.name);
+    expect(names).toEqual(['Windows']);
   });
 });
 
