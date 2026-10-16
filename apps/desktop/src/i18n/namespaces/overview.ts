@@ -76,6 +76,9 @@ export const overview = {
     // 建议清理项目（两步确认 + 结果三态，措辞不许软化）
     'overview.clean.title': '建议清理项目',
     'overview.clean.openPage': '打开清理页',
+    // R217：逐条建议项「去清理」——直达清理页并预选该脚本
+    'overview.clean.goto': '去清理',
+    'overview.clean.gotoTip': '在清理页预选「{label}」脚本',
     'overview.clean.checking': '正在检查可清理项…',
     'overview.clean.checkingList': '正在检查可清理项目…',
     'overview.clean.estimated': '预计可释放 {size}',
@@ -256,6 +259,9 @@ export const overview = {
     // Suggested cleanup (two-step confirm + three-state result; wording must stay explicit)
     'overview.clean.title': 'Suggested cleanup',
     'overview.clean.openPage': 'Open cleanup page',
+    // R217: per-item jump to cleanup page, preselecting this script
+    'overview.clean.goto': 'Clean up',
+    'overview.clean.gotoTip': 'Preselect “{label}” on the cleanup page',
     'overview.clean.checking': 'Checking what can be cleaned…',
     'overview.clean.checkingList': 'Checking cleanup items…',
     'overview.clean.estimated': 'About {size} to free',

@@ -37,7 +37,7 @@ type Props = {
   onRefresh: (path: string) => void;
   /** 跳工作台；R91 后带可选盘路径（趋势行点击定位到该盘，无参调用=仅切页）。 */
   onGoWorkspace: (drivePath?: string) => void;
-  onOpenCleanup: () => void;
+  onOpenCleanup: (scaffoldId?: string) => void;
   /** 跳到工具页的硬件面板看硬盘健康明细（体检条的硬盘格用）。 */
   onGoHardware?: () => void;
 };
@@ -1231,7 +1231,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             <h2 className="ao-card-title">
               <Trash2 size={16} /> {t('overview.clean.title')}
               <span className="ao-clean-summary">{cleanSummaryText}</span>
-              <button className="ghost small" onClick={onOpenCleanup} style={{ marginLeft: 'auto' }}>
+              <button className="ghost small" onClick={() => onOpenCleanup()} style={{ marginLeft: 'auto' }}>
                 {t('overview.clean.openPage')}
               </button>
             </h2>
@@ -1261,6 +1261,17 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                         <i>{it.desc}</i>
                       </span>
                       <span className="ao-clean-size">{formatBytes(it.bytes)}</span>
+                      <button
+                        type="button"
+                        className="ao-clean-goto"
+                        // R217：逐条建议项可直达清理页并预选该脚本——此前只有
+                        // 顶部「打开清理页」（无参，进页自动挑第一个命中），
+                        // 用户想针对某个建议项去清理页得自己翻脚本列表。
+                        onClick={() => onOpenCleanup(it.scaffoldId)}
+                        title={t('overview.clean.gotoTip', { label: it.label })}
+                      >
+                        {t('overview.clean.goto')}
+                      </button>
                       <button
                         type="button"
                         className="ao-clean-peek"

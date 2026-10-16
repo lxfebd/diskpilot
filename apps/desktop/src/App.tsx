@@ -580,7 +580,7 @@ export default function App() {
                 // R91: 趋势行点击带盘路径 → 先打开该盘（缓存命中秒开）再切页，
                 // 用户从「C 盘曲线」进来就该落在 C 盘工作台，而不是默认视图。
                 onGoWorkspace={(p) => { if (p) scan([p]); setView('workspace'); }}
-                onOpenCleanup={() => openCleanup()}
+                onOpenCleanup={(scaffoldId?: string) => openCleanup(scaffoldId)}
                 onGoHardware={() => setView('tools')}
               />
             </Suspense>

@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 总览建议项可直达清理页并预选脚本（R217）
+
+- 可用性缺口修复：此前总览「建议清理项目」只有顶部「打开清理页」
+  （无参，进页自动挑第一个命中），想针对某个具体建议项去清理页
+  处理得自己在脚本列表里翻——逐条建议项新增「去清理」按钮：
+  带该条的 scaffoldId 调 `openCleanup(id)` 直落清理页并预选该脚本
+  （App.tsx `openCleanup` 本就支持可选 scaffoldId，AssetsOverview
+  的 `onOpenCleanup` 签名补上可选参数贯通）。
+- 新增 i18n `overview.clean.goto` / `overview.clean.gotoTip`（CN/EN）。
+- 浏览器实测：总览「OBS 日志文件（OBS Studio 缓存 · 缓存 310 MB）」
+  点「去清理」→ 落在清理页且预选「OBS Studio 缓存 1.10 GB」，
+  详情区渲染 OBS 2 个 scope 行可勾选。
+- 无新测试（纯组件接线 + 签名贯通；现有 612 全绿）。
+  **612 总 / 42 files。**
+
 ### 2026-10-16 补 executeScope 执行路径天数联动测试（R216）
 
 - R212 的天数缩放只覆盖了 `scopeSizesBatch`（尺寸探测路径），
