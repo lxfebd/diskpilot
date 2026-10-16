@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 总览「立即清理」加权限门：cleanup.execute 关闭时拒绝（R260）
+
+- 缺口：AssetOverview.doClean（总览一键清理）直接 api.executeScope 真删——
+  绕过清理页 R257 已加的 cleanup.execute 权限门。权限中心关掉后总览仍能静默
+  真删。
+- R260 修复：doClean 开头加 isPermEnabled('cleanup.execute')（同 R257 文案
+  errors.permExecuteMissing）——关闭时 toast 拒绝，不做任何执行。
+- 排查确认全部真删入口现已统一带门：总览 doClean / 清理页 runRealDelete /
+  AI 提案（cleanup.execute）；右键与 AI 面板回收（file.recycle）。
+- 无新增测试（门逻辑同 R257 已覆盖；组件接线由 tsc/eslint/build 把关）
+  （**673 总 / 43 files**）。
+- 浏览器实测：cleanup.execute 关闭 → 总览点「立即清理」→ toast「清理执行
+  未授权：请前往「设置 → AI 权限中心」开启「执行清理计划」后再试」。
+
 ### 2026-10-16 AI 面板回收走 store 权限门：file.recycle 关闭时拒绝（R259）
 
 - 缺口：ChatPanel.confirmRecycle 直接调 api.recyclePaths——绕过 store.

@@ -6,6 +6,7 @@ import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format'
 import { ensureHwDiskQuick } from '../hwCache';
 import { pathDriveLetter, riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
+import { isPermEnabled } from '../permissions';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, type DriveEntry } from '../drives';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
@@ -951,6 +952,13 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const doClean = async () => {
     const sel = cleanItems.filter((i) => checked[i.key]);
     if (!sel.length || !selDrive) return;
+    // R260：权限门（与清理页 runRealDelete / AI 提案同口径）——cleanup.execute
+    // 是 L2 高危默认关。总览「立即清理」之前直接 executeScope，权限中心关掉
+    // 后仍能真删：与 R257 清理页同类的漏网入口。关闭时拒绝并指引权限中心。
+    if (!isPermEnabled('cleanup.execute')) {
+      toast(t('errors.permExecuteMissing'), 'err');
+      return;
+    }
     // 微信项被勾选：不静默清所有账号，引导去清理页（那里能选账号）。
     if (wechatChecked) {
       toast(t('overview.clean.wechatRedirect'), 'err');
