@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 硬件报告生成预览放行：只读正文演示（R285）
+
+- R277 放行 get_hardware_info / analyze_disk_health 时整体藏了 generate_hw_report。
+  但它无 savePath 时是纯只读正文生成（markdown 报告文本），预览下「给我
+  一份硬件报告」AI 无工具可用；只有带 savePath 才写文件。
+- R285 修复：放行 generate_hw_report——非 Tauri 分支配平 savePath：无
+  savePath 基于 hwInfo mock 渲染演示报告正文（标注预览模式，只读无副作用）；
+  带 savePath 明确拒绝「浏览器预览模式不支持写文件」。桌面端仍走
+  api.hwReport 完整报告（含保存）。
+- 新增 3 测试（tools.test 67→70）：不带 tauriOnly + 执行层（演示正文 / 带
+  savePath 拒绝）。
+  （**731 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 清理清单生成闭环测试：确认窗数据链路验证（R284）
 
 - R283 放行 propose_cleanup_plan 只测了 execute 返回文案，没测关键链路：

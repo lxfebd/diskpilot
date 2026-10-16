@@ -725,16 +725,49 @@ export const toolRegistry: ToolDef[] = [
       savePath: { type: 'string', description: '可选：保存到该绝对路径' },
     },
     required: [],
-    tauriOnly: true,
+    // R285：浏览器预览放行（无 savePath 时）——基于 hwInfo mock 渲染演示
+    // 报告文本（与系统信息页同源），只读无副作用；带 savePath 写文件仍
+    // 拒绝（预览不假装能写文件），并走 L1 权限门。
     execute: async (args) => {
       const fmt = String(args.format ?? 'markdown').trim() || 'markdown';
       const savePath = typeof args.savePath === 'string' && args.savePath.trim()
         ? args.savePath.trim()
         : undefined;
-      // 带 savePath 写文件属于 L1「导出报告到文件」：权限中心未开启时拒绝，
-      // 不静默退回只读预览（后端也没有独立的保存确认门，全靠这层权限）。
       if (savePath && !isPermEnabled('hw.export')) {
         return '导出报告到文件未授权：请前往「设置 → AI 权限中心」开启「导出报告到文件」后重试（不带 savePath 的预览不受影响）。';
+      }
+      if (!isTauri) {
+        if (savePath) {
+          return '浏览器预览模式不支持写文件：导出报告文件需桌面应用（不带 savePath 可生成报告正文预览）。';
+        }
+        const cache = await ensureHwLoaded();
+        const info = cache.info ?? {};
+        const first = (k: string): Record<string, unknown> | undefined => {
+          const arr = info[k as keyof HwInfo];
+          const item = Array.isArray(arr) ? arr[0] : undefined;
+          return item && typeof item === 'object' ? (item as Record<string, unknown>) : undefined;
+        };
+        const cpu0 = first('cpu');
+        const mem0 = first('memory');
+        const board0 = first('board');
+        const bios0 = first('bios');
+        const gpu0 = first('gpu');
+        const os0 = first('os');
+        const infoLines = [
+          `系统：${os0?.Caption ?? '未读到'}`,
+          `CPU：${cpu0?.Name ?? '未读到'}`,
+          `内存：${mem0?.Capacity != null ? `${Math.round(Number(mem0.Capacity) / (1024 ** 3))} GB` : '未读到'}`,
+          `主板：${board0?.Product ?? '未读到'}`,
+          `BIOS：${bios0?.SMBIOSBIOSVersion ?? '未读到'}`,
+          `显卡：${gpu0?.Name ?? '未读到'}`,
+        ];
+        const body = `# 硬件检测报告（浏览器预览模式演示数据）\n\n${infoLines.join('\n')}\n\n（真实报告需桌面应用读取本机硬件生成；预览只读演示数据。）`;
+        return [
+          `报告格式：${fmt}`,
+          '',
+          '—— 正文预览 ——',
+          clip(body, 3000, '要完整正文可带 savePath 导出报告文件（桌面端）。'),
+        ].join('\n');
       }
       const out = await api.hwReport(fmt, savePath);
       return [

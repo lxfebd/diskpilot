@@ -359,7 +359,7 @@ describe('toolRegistry get_disk_health 预览模式可用（R276）', () => {
 // （savePath 写文件）保持 tauriOnly + 权限门。
 describe('toolRegistry 硬件只读工具预览模式可用（R277）', () => {
   const PREVIEW_HW_READONLY = ['get_hardware_info', 'analyze_disk_health'];
-  const STILL_HW_TAURI_ONLY = ['run_hardware_test', 'generate_hw_report'];
+  const STILL_HW_TAURI_ONLY = ['run_hardware_test'];
 
   for (const name of PREVIEW_HW_READONLY) {
     it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
@@ -451,6 +451,17 @@ describe('toolRegistry 清理清单生成预览模式可用（R283）', () => {
   });
 });
 
+// R285：generate_hw_report 预览放行——无 savePath 时基于 hwInfo mock 渲染
+// 演示报告文本（只读无副作用）；带 savePath 写文件仍拒绝并说明预览不支持。
+describe('toolRegistry 硬件报告生成预览模式可用（R285）', () => {
+  it('generate_hw_report 不带 tauriOnly（无 savePath 只读报告正文）', () => {
+    const t = toolRegistry.find((x) => x.name === 'generate_hw_report')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBeUndefined();
+    expect(typeof t.execute).toBe('function');
+  });
+});
+
 describe('mcpTool 写工具权限门（R265）', () => {
   beforeEach(() => {
     // node 测试环境无 window：stub localStorage 供 isPermEnabled 读。
@@ -520,6 +531,8 @@ describe('toolRegistry 只读工具预览支路执行可用（R280）', () => {
     { name: 'get_tool_manifest', args: { toolName: 'CPU-Z' }, want: (s) => expect(s).toContain('预览') },
     { name: 'get_cli_tool_usage', args: { toolName: '不存在工具XYZ' }, want: (s) => expect(s).toContain('未收录') },
     { name: 'propose_cleanup_plan', args: { title: '演示清理', items: [{ path: 'C:\\Users\\me\\AppData\\Local\\Temp', what: '临时文件', purpose: '缓存', impact: '可重建', risk: 'safe' }] }, want: (s) => expect(s).toContain('确认') },
+    { name: 'generate_hw_report', args: {}, want: (s) => expect(s).toContain('演示数据') },
+    { name: 'generate_hw_report', args: { savePath: 'C:\\Users\\me\\report.md' }, want: (s) => expect(s).toContain('浏览器预览模式不支持写文件') },
   ];
 
   for (const c of CASES) {
