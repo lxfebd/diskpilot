@@ -103,11 +103,18 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
   const emptyText = root === null ? t('cleanup.needScan') : t('cleanup.noScripts');
 
   // 进页 / 换盘自动选中第一个命中脚本；正在执行时不打断。
+  // R250：搜索/筛选后当前选中的脚本若不在 filtered 集里，右侧主体还显示
+  // 它会造成「左侧列表已过滤、右侧是别的脚本」的左右不一致——筛选变化时
+  // 自动改选 filtered 首个（与 tagFilter 的既有语义一致）。
   useEffect(() => {
     const cur = useCleanupStore.getState().session;
     if (cur && (cur.running || cur.previewing)) return;
     if (cards.length === 0) {
       if (cur) select(undefined, { force: true });
+      return;
+    }
+    if (filtered.length > 0 && cur && !filtered.some((c) => c.scaffold.id === cur.scaffold.id)) {
+      select(filtered[0].scaffold.id, { force: true });
       return;
     }
     if (!cur) {
@@ -122,7 +129,7 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
     if (!cards.some((c) => c.scaffold.id === cur.scaffold.id)) {
       select(cards[0].scaffold.id, { force: true });
     }
-  }, [root, cards, select]);
+  }, [root, cards, filtered, select]);
 
   return (
     <div className="cleanup-page">
