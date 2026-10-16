@@ -969,6 +969,26 @@ describe('mocks.recyclePaths（R268 右键回收与建议同源收敛）', () =>
     expect(restored[0].used_bytes).toBeGreaterThan(after[0].used_bytes);
     expect(restored[0].used_bytes).toBeLessThanOrEqual(before[0].used_bytes);
   });
+
+  // R272：树外/不存在路径不产生回收条目（与 executeAiPlan 同一诚实语义——
+  // 不假装「删了不存在的路径」成功），记账/台账都不受影响。
+  it('R272：树外路径不产生回收条目（不假装删除成功）', async () => {
+    const ghost = 'E:\\不存在\\ghost.tmp';
+    const beforeList = await listUndo(500);
+    const beforeDrives = await listDrives();
+    const entries = await recyclePaths([ghost], '回收幽灵路径');
+    expect(entries.length).toBe(0);
+    const afterList = await listUndo(500);
+    expect(afterList.length).toBe(beforeList.length);
+    const afterDrives = await listDrives();
+    expect(afterDrives[0].used_bytes).toBe(beforeDrives[0].used_bytes);
+    // 混合：一个真实 + 一个幽灵 → 只有真实的产生条目
+    const real = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    const mixed = await recyclePaths([ghost, real], '混合回收');
+    expect(mixed.length).toBe(1);
+    expect(mixed[0].source).toBe(real);
+    expect(mixed[0].bytes_freed).toBeGreaterThan(0);
+  });
 });
 
 // R225：按路径在树里找节点（真删 source 必须对应树里的真实节点）。

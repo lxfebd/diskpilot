@@ -1752,17 +1752,22 @@ export async function recyclePaths(paths: string[], reason: string): Promise<Und
     walk(tree);
     return found;
   };
+  // R272：只对「磁盘上真实存在」的路径回收——树内节点或已知文件表命中；
+  // 树外路径（不存在/已回收被剪）不产生条目，不假装「删成功了」。与
+  // executeAiPlan（R267）同一诚实语义：调用方按返回条目数计成功、按
+  // bytes_freed 记实际释放，未知路径如实计失败。
   const entries = paths.map((src) => {
     const bytes = sizeOf(src);
+    if (bytes === null) return null;
     return {
       timestamp: new Date().toISOString(),
       action: 'recycle' as const,
       source: src,
       destination: null,
       reason,
-      bytes_freed: bytes !== null && bytes > 0 ? bytes : null,
+      bytes_freed: bytes > 0 ? bytes : null,
     };
-  });
+  }).filter((e): e is NonNullable<typeof e> => e !== null);
   UNDO_LEDGER.push(...entries);
   for (const e of entries) {
     const freed = e.bytes_freed ?? 0;
