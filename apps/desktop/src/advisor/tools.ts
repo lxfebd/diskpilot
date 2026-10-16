@@ -624,7 +624,7 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_hardware_info',
-    description: '读取本机硬件信息：CPU / GPU / 内存 / 主板 / BIOS / 磁盘 / 温度传感器。只读操作，零风险，随时可调用。返回结构化 JSON。用户问"我这电脑什么配置""配置怎么样"时调用。',
+    description: '读取本机硬件信息：CPU / GPU / 内存 / 主板 / BIOS / 磁盘 / 温度传感器。只读操作，零风险，随时可调用。返回结构化 JSON。用户问"我这电脑什么配置""配置怎么样"时调用。浏览器预览模式下返回演示硬件信息（与系统信息页同源）。',
     properties: {
       categories: {
         type: 'array',
@@ -633,7 +633,8 @@ export const toolRegistry: ToolDef[] = [
       },
     },
     required: [],
-    tauriOnly: true,
+    // R277：浏览器预览放行——hwInfo 有 mock 演示数据源（与「系统信息」页
+    // 同源），只读枚举无副作用。
     execute: async (args, o) => {
       const cache = await ensureHwLoaded();
       const info = cache.info ?? {};
@@ -655,10 +656,11 @@ export const toolRegistry: ToolDef[] = [
   {
     name: 'analyze_disk_health',
     description:
-      '分析硬盘健康状态：读取 SMART 通电时间 / 温度 / 磨损度 / 读写错误，返回已分级的文本（健康 / 注意 / 不良 / 未上报）并带盘符与型号。只读操作，零风险。用户问"我的硬盘还好吗""硬盘寿命多少"时调用。读不到的字段已写明「未读到」——照抄即可，不要凭常识补数或把「未上报」说成坏盘。',
+      '分析硬盘健康状态：读取 SMART 通电时间 / 温度 / 磨损度 / 读写错误，返回已分级的文本（健康 / 注意 / 不良 / 未上报）并带盘符与型号。只读操作，零风险。用户问"我的硬盘还好吗""硬盘寿命多少"时调用。读不到的字段已写明「未读到」——照抄即可，不要凭常识补数或把「未上报」说成坏盘。浏览器预览模式下返回演示硬盘健康（与系统信息页同源）。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R277：浏览器预览放行——hwDiskHealth 有 mock 演示数据源（与「系统
+    // 信息」页同源），只读枚举无副作用。
     execute: async (_args, o) => {
       const cache = await ensureHwLoaded();
       o.onHwCard?.({ info: cache.info, health: cache.health });

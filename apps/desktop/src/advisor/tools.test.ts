@@ -353,6 +353,32 @@ describe('toolRegistry get_disk_health 预览模式可用（R276）', () => {
   });
 });
 
+// R277：get_hardware_info / analyze_disk_health 预览放行——hwInfo /
+// hwDiskHealth 有 mock 演示数据源（与「系统信息」页同源），只读枚举
+// 无副作用；run_hardware_test（压测写系统）与 generate_hw_report
+// （savePath 写文件）保持 tauriOnly + 权限门。
+describe('toolRegistry 硬件只读工具预览模式可用（R277）', () => {
+  const PREVIEW_HW_READONLY = ['get_hardware_info', 'analyze_disk_health'];
+  const STILL_HW_TAURI_ONLY = ['run_hardware_test', 'generate_hw_report'];
+
+  for (const name of PREVIEW_HW_READONLY) {
+    it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBeUndefined();
+      expect(typeof t.execute, name).toBe('function');
+    });
+  }
+
+  for (const name of STILL_HW_TAURI_ONLY) {
+    it(`${name} 仍带 tauriOnly（写系统/写文件，预览保持隐藏）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBe(true);
+    });
+  }
+});
+
 describe('mcpTool 写工具权限门（R265）', () => {
   beforeEach(() => {
     // node 测试环境无 window：stub localStorage 供 isPermEnabled 读。

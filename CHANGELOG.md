@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 硬件只读工具预览放行：配置/硬盘健康（R277）
+
+- R274-R276 放行了测量/汇总/磁盘容量类只读工具，但 get_hardware_info /
+  analyze_disk_health（用户问「这电脑什么配置」「硬盘还好吗」时 AI 必调
+  的两个只读工具）仍 tauriOnly——底层 hwInfo / hwDiskHealth 有 mock 演示
+  数据源（与「系统信息」页同源），预览模式 AI 答配置问题时只能凭记忆。
+- R277 修复：放行这两个硬件只读工具（预览用 mock 同源数据，只读无副作用）；
+  run_hardware_test（写系统压测）与 generate_hw_report（savePath 写文件）
+  保持 tauriOnly + 权限门——预览不假装能写。
+- 新增 4 测试（tools.test 44→48）：get_hardware_info / analyze_disk_health
+  不带 tauriOnly；run_hardware_test / generate_hw_report 仍带 tauriOnly。
+  （**704 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 磁盘健康工具预览放行：AI 可读演示磁盘清单（R276）
 
 - R274/R275 放行了测量与汇总只读工具，但 get_disk_health（问「哪块盘满
