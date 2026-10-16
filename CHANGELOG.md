@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 Conda 环境区与回收台账同源：删掉的环境不再列出（R238）
+
+- 缺口：listCondaEnvs 静态返回 base + tf2 + web——清理页 envs-stale 真删
+  掉 tf2 后，删除完成时刷新环境区仍列出已删环境（真实桌面端 conda env
+  删了枚举就没了）。
+- R238 修复：listCondaEnvs 过滤回收台账——已回收路径（含其目录下文件）
+  的环境不再返回；base 永不被清、始终保留。
+- 新测试：_mockRecyclePath 后 tf2 不再列出、base + web 保留（**631 总 /
+  42 files**）。
+- 浏览器实测：删 tf2 前环境区含 envs 8.90GB（tf2 6.80GB）；删后 envs 子树
+  消失、环境区只剩 pkgs，tf2 不再列出。
+
 ### 2026-10-16 重复文件查找尊重选中盘 + 回收台账：重扫不列已清文件（R237）
 
 - 缺口：scanDuplicateFiles 忽略 rootPath——扫 D 盘仍返回 C 盘重复组；

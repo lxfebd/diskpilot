@@ -945,11 +945,20 @@ export interface MockCondaEnv {
 export async function listCondaEnvs(): Promise<MockCondaEnv[]> {
   await wait(60);
   const now = Math.floor(Date.now() / 1000);
-  return [
+  // R238：与回收台账同源——envs-stale 等 scope 真删环境目录后（executeScope
+  // 写 _mockRecyclePath），删除完成时清理页刷新本列表不再返回已删环境
+  // （真实桌面端 conda env 删了枚举就没了）；base 不受影响（永不被清）。
+  const recycled = recycledPaths.map((p) => p.replace(/[\\/]+$/, '').toLowerCase());
+  const isRecycled = (path: string) => {
+    const low = path.replace(/[\\/]+$/, '').toLowerCase();
+    return recycled.some((r) => low === r || low.startsWith(r + '\\') || low.startsWith(r + '/'));
+  };
+  const all: MockCondaEnv[] = [
     { name: 'base', path: 'C:\\Users\\90740\\anaconda3', size_bytes: 4.2 * GB, last_active_ts: now - 2 * DAY, is_base: true, default_checked: false },
     { name: 'tf2', path: 'C:\\Users\\90740\\anaconda3\\envs\\tf2', size_bytes: 6.8 * GB, last_active_ts: now - 120 * DAY, is_base: false, default_checked: true },
     { name: 'web', path: 'C:\\Users\\90740\\anaconda3\\envs\\web', size_bytes: 2.1 * GB, last_active_ts: now - 15 * DAY, is_base: false, default_checked: false },
   ];
+  return all.filter((e) => e.is_base || !isRecycled(e.path));
 }
 
 // 模块级可变启动项状态（R197）：浏览器演示中「禁用/启用/删除」写操作

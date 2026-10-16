@@ -29,6 +29,17 @@ describe('mocks.listCondaEnvs（清理页 Conda 脚本环境区演示数据）',
     // 至少一个用户环境默认勾选（stale 90d 推荐清理）
     expect(users.some((e) => e.default_checked)).toBe(true);
   });
+
+  // R238：与回收台账同源——envs-stale 真删环境目录后，环境区刷新不再
+  // 返回已删环境（真实桌面端 conda env 删了枚举就没了）；base 永不被清。
+  it('R238：回收台账内的用户环境不再列出（base 始终保留）', async () => {
+    _mockRecyclePath('C:\\Users\\90740\\anaconda3\\envs\\tf2');
+    const envs = await listCondaEnvs();
+    const names = envs.map((e) => e.name);
+    expect(names).not.toContain('tf2');
+    expect(names).toContain('base');
+    expect(names).toContain('web');
+  });
 });
 
 describe('mocks.powerPlan（系统优化页电源计划演示数据）', () => {
