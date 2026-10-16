@@ -818,7 +818,8 @@ export const SCAFFOLDS: Scaffold[] = [
 
 export async function scan(_path: string): Promise<Node> {
   await wait(800);
-  return structuredClone(MOCK_TREE);
+  // R225：克隆前先剪已回收路径——「清完重扫」不再复活已删目录。
+  return pruneRecycledFrom(structuredClone(MOCK_TREE));
 }
 
 /** R182：预览模式的磁盘清单。真实桌面端从系统读盘（list_drives），浏览器
@@ -1699,16 +1700,91 @@ function mockScopeFileCount(scopeId: string): number {
 }
 
 /** dry-run / 真删的演示命中条目：路径拼在扫描命中目录下，文件名按 scope 稳定。 */
-function mockScopeEntries(scopeId: string, rootPath: string, n: number, days?: number): UndoEntry[] {
+/** R225：mock 模块级「已回收路径」台账——真删后 scan / cleanupSuggestions /
+ *  scopeSizesBatch 都基于修剪后的树返回，总览建议项与工作台体量在演示里
+ *  与 store 前端剪枝同源收敛（真实后端剪枝发生在内存树，这里等价模拟）。 */
+let recycledPaths: string[] = [];
+
+export function _mockRecyclePath(p: string): void {
+  if (!p) return;
+  if (!recycledPaths.some((x) => samePath(x, p))) recycledPaths.push(p);
+}
+
+/** 测试专用：清空 mock 级回收台账（各 describe 互不污染）。 */
+export function _mockResetRecycled(): void {
+  recycledPaths = [];
+}
+
+function samePath(a: string, b: string): boolean {
+  return a.replace(/[\\/]+$/, '').toLowerCase() === b.replace(/[\\/]+$/, '').toLowerCase();
+}
+
+/** 把已回收路径从一棵克隆树上剪掉（整目录移除；祖先 size 聚合自动扣减）。 */
+function pruneRecycledFrom(tree: Node): Node {
+  if (recycledPaths.length === 0) return tree;
+  const targets = new Set(recycledPaths.map((p) => p.replace(/[\\/]+$/, '').toLowerCase()));
+  const walk = (n: Node): Node => {
+    let removedSize = 0;
+    let removedFiles = 0;
+    const kids: Node[] = [];
+    for (const c of n.children ?? []) {
+      if (targets.has(c.path.replace(/[\\/]+$/, '').toLowerCase())) {
+        removedSize += c.size || 0;
+        removedFiles += c.file_count || 0;
+        continue;
+      }
+      const nc = walk(c);
+      removedSize += Math.max(0, (c.size || 0) - (nc.size || 0));
+      removedFiles += Math.max(0, (c.file_count || 0) - (nc.file_count || 0));
+      kids.push(nc);
+    }
+    if (removedSize === 0 && removedFiles === 0) return n;
+    return {
+      ...n,
+      children: kids,
+      size: Math.max(0, (n.size || 0) - removedSize),
+      file_count: Math.max(0, (n.file_count || 0) - removedFiles),
+    };
+  };
+  return walk(tree);
+}
+
+/** R225：从 MOCK_TREE 收集指定 scaffold 的真实命中节点路径（与扫描树同源）。
+ *  真删条目用这些路径做 source——R222/R224 的前端剪枝按 source 从 root/
+ *  scanCache 剪掉，演示里执行后总览/工作台体量才能真实下降。
+ *  只收集「位于 rootPath 之下」的命中，避免跨盘误剪（treeMayContain 前缀判定）。 */
+function mockRealScopePaths(scaffoldId: string, rootPath: string): string[] {
+  const root = rootPath.replace(/[\\/]+$/, '').toLowerCase();
+  const out: string[] = [];
+  const walk = (n: Node) => {
+    if (n.path && n.scaffold_id === scaffoldId) {
+      const p = n.path.replace(/[\\/]+$/, '').toLowerCase();
+      if (p === root || p.startsWith(root + '\\')) out.push(n.path);
+    }
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(MOCK_TREE);
+  return out;
+}
+
+function mockScopeEntries(scopeId: string, rootPath: string, n: number, days?: number, realPaths?: string[]): UndoEntry[] {
   const bytes = mockScopeBytes(scopeId, days);
   const per = Math.max(1, Math.floor(bytes / Math.max(1, n)));
   const stem = hashString(scopeId + ':stem');
   const out: UndoEntry[] = [];
   for (let i = 0; i < n; i++) {
+    // R225：真删优先用真实树节点路径本身（回收目录语义）——pruneMany 按
+    // 节点路径匹配整目录移除，与「回收了该目录」一致；同一目录可被多个
+    // 条目引用（演示按文件数展开清单），剪枝去重后只剪一次。
+    // 真实命中不足时用合成路径兜底（演示口径不变）。
+    const source =
+      realPaths && realPaths.length > 0
+        ? realPaths[i % realPaths.length]
+        : `${rootPath}\\${scopeId}\\mock_${stem % 13}_chunk_${i + 1}`;
     out.push({
       timestamp: new Date().toISOString(),
       action: 'recycle' as const,
-      source: `${rootPath}\\${scopeId}\\mock_${stem % 13}_chunk_${i + 1}`,
+      source,
       reason: scopeId,
       bytes_freed: i === 0 ? bytes - per * (n - 1) : per,
     });
@@ -1753,9 +1829,14 @@ export async function executeScope(
   void scaffoldId;
   await wait(dryRun ? 60 : 120);
   const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, opts.olderThanDays ?? undefined) / (24 * MB))));
-  const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined);
+  // R225：真删时收集真实树路径（dry-run 保持合成清单，预览不受影响）。
+  const realPaths = dryRun ? undefined : mockRealScopePaths(scaffoldId, rootPath);
+  const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined, realPaths);
   if (!dryRun) {
     UNDO_LEDGER.push(...entries);
+    // R225：真删路径进 mock 级台账——后续 scan / cleanupSuggestions 从
+    // 修剪后的树返回，演示里「清完再看」各处体量一致下降。
+    if (realPaths) for (const p of realPaths) _mockRecyclePath(p);
   }
   return entries;
 }
@@ -1789,8 +1870,11 @@ export async function cleanupSuggestions(
   _cachedOnly?: boolean,
 ): Promise<CleanupSuggestion[]> {
   await wait(60);
+  // R225：与 scan 同源——总览建议从「剪过已回收路径的树」算，真删后
+  // 建议项立即消失/变小，不再显示已清掉的目录。
+  const tree = pruneRecycledFrom(structuredClone(MOCK_TREE));
   const hits = new Map<string, string>();
-  collectScaffoldHits(MOCK_TREE, rootPath, hits);
+  collectScaffoldHits(tree, rootPath, hits);
   const out: CleanupSuggestion[] = [];
   for (const [scaffoldId, hitPath] of hits) {
     const sc = SCAFFOLDS.find((s) => s.id === scaffoldId);

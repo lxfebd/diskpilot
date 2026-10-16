@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式清理闭环：真实路径回收 + 剪枝同源收敛（R225）
+
+- 缺口：mock `executeScope` 真删返回的 source 是合成路径
+  （`{root}\{scope}\mock_..._chunk_N`），与扫描树不同源——R222/R224 的
+  `pruneRecycled` 按 source 剪 root/scanCache 是空操作，演示里「清完
+  再看」各处体量不变。
+- R225 三处收敛：
+  - mock 真删 source 改为 **MOCK_TREE 真实命中节点路径**（与扫描同源）；
+  - mock 级「已回收路径」台账 + 修剪函数：`scan` / `cleanupSuggestions`
+    从剪过再克隆的树返回——总览「可清理」建议项、工作台体量在真删后
+    与 store 前端剪枝同源收敛，不再复活已删目录；
+  - dry-run 保持合成清单（预览展示不受影响）。
+- 新测试：真删 source 对应树里真实 crash-dumps 节点；回收后
+  cleanupSuggestions 不再建议已清目录（**615 总 / 42 files**）。
+- 浏览器实测：清崩溃转储后回总览，「应用崩溃转储」建议项与分类条
+  全部消失（此前常驻显示 75.1 MB）。
+
 ### 2026-10-16 总览页「立即清理」后跨页同步剪树（R224）
 
 - R222 只补了清理页 runRealDelete——总览页 doClean「立即清理」执行成功后

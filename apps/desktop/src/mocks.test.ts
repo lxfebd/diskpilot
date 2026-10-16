@@ -2,8 +2,14 @@
 // scopeSizesBatch 必须按 scaffold 的 scopes 返回尺寸（不是空表），
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
-import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE } from './mocks';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled } from './mocks';
+
+beforeEach(() => {
+  // R225：mock 级回收台账在每条测试前复位，避免真删路径跨用例累积污染
+  // 后续 scan / cleanupSuggestions 断言（UNDO_LEDGER 历史台账刻意保留累积）。
+  _mockResetRecycled();
+});
 
 describe('mocks.listCondaEnvs（清理页 Conda 脚本环境区演示数据）', () => {
   it('返回 base + ≥2 个用户环境，base 不可勾选、stale 环境默认勾选', async () => {
@@ -469,7 +475,49 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     expect(small.length).toBeGreaterThan(0);
     expect(bytesOf(small)).toBeGreaterThan(bytesOf(large));
   });
+
+  // R225：真删条目 source 用 MOCK_TREE 真实命中节点路径（与扫描树同源）——
+  // 前端 pruneRecycled 按 source 剪 root/scanCache，演示里执行后总览/工作台
+  // 体量才真实下降。dry-run 保持合成清单（预览可读），真删才换真实路径。
+  it('R225：真删 source 取自扫描树真实命中节点（dry-run 仍是合成清单）', async () => {
+    const dry = await executeScope('crash-dumps', 'dumps', 'C:\\Users\\90740', true, {});
+    for (const e of dry) {
+      expect(e.source).toContain('mock_');
+      expect(e.source).not.toContain('CrashDumps');
+    }
+    const real = await executeScope('crash-dumps', 'dumps', 'C:\\Users\\90740', false, { confirmed: true });
+    const realSet = new Set(real.map((e) => e.source));
+    expect(realSet.size).toBeGreaterThan(0);
+    for (const p of realSet) {
+      const hit = collectMatchingNode(MOCK_TREE, p);
+      expect(hit).not.toBeNull();
+      expect(hit!.scaffold_id).toBe('crash-dumps');
+    }
+  });
+
+  // R225：真删路径进 mock 级台账后，cleanupSuggestions 不再建议已清目录
+  // （总览「可清理」与工作台体量同源收敛——「清完再看」不再复活已删项）。
+  it('R225：真删后 cleanupSuggestions 不再建议已清掉的目录', async () => {
+    const before = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
+    expect(before.some((r) => r.scaffold_id === 'crash-dumps')).toBe(true);
+    await executeScope('crash-dumps', 'dumps', 'C:\\Users\\90740', false, { confirmed: true });
+    const after = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
+    expect(after.some((r) => r.scaffold_id === 'crash-dumps')).toBe(false);
+    // 其他脚本建议不受影响
+    expect(after.some((r) => r.scaffold_id === 'browser-cache')).toBe(true);
+  });
 });
+
+// R225：按路径在树里找节点（真删 source 必须对应树里的真实节点）。
+function collectMatchingNode(node: import('./types').Node, path: string): import('./types').Node | null {
+  const norm = (s: string) => s.replace(/[\\/]+$/, '').toLowerCase();
+  if (norm(node.path) === norm(path)) return node;
+  for (const c of node.children ?? []) {
+    const found = collectMatchingNode(c, path);
+    if (found) return found;
+  }
+  return null;
+}
 
 // R205：隐私清理页（tagFilter="privacy" 的 CleanupPage）命中 MOCK_TREE——
 // windows-privacy（Recent / thumbcache / INetCache）与 browser-privacy
