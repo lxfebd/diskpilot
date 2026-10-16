@@ -316,6 +316,32 @@ describe('toolRegistry 只读测量工具预览模式可用（R274）', () => {
   });
 });
 
+// R275：更多只读工具底层有 mock 演示数据（cleanupSuggestions /
+// STEAM_INVENTORY / fanStatus），预览模式一并放行——只读枚举无副作用，
+// 写操作类（run_cli_tool / adjust_fan_curve 等）保持 tauriOnly 藏着。
+describe('toolRegistry 只读汇总工具预览模式可用（R275）', () => {
+  const PREVIEW_READONLY = ['get_cleanup_suggestions', 'get_steam_library_summary', 'get_fan_status'];
+  const STILL_TAURI_ONLY = ['run_system_probe', 'list_top_processes', 'get_disk_health',
+    'run_cli_tool', 'adjust_fan_curve', 'get_cli_tool_usage', 'get_tool_manifest'];
+
+  for (const name of PREVIEW_READONLY) {
+    it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBeUndefined();
+      expect(typeof t.execute, name).toBe('function');
+    });
+  }
+
+  for (const name of STILL_TAURI_ONLY) {
+    it(`${name} 仍带 tauriOnly（写操作或底层无 mock，预览保持隐藏）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBe(true);
+    });
+  }
+});
+
 describe('mcpTool 写工具权限门（R265）', () => {
   beforeEach(() => {
     // node 测试环境无 window：stub localStorage 供 isPermEnabled 读。

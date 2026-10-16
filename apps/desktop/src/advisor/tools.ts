@@ -297,10 +297,11 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_steam_library_summary',
-    description: '只读汇总本机 Steam 游戏库：游戏总数、总占用、沉睡（大体积且久未启动）游戏 Top 榜、鬼魂安装数、创意工坊订阅数。用户问「Steam 占了多少空间/有哪些游戏可以卸载腾空间/Steam 库情况」时调用本工具拿真实数据。注意：本工具只读元数据（ACF），不读取游戏文件内容；卸载建议只提示用户去 Steam Inspector 或 Steam 客户端操作，你不能执行任何卸载。',
+    description: '只读汇总本机 Steam 游戏库：游戏总数、总占用、沉睡（大体积且久未启动）游戏 Top 榜、鬼魂安装数、创意工坊订阅数。用户问「Steam 占了多少空间/有哪些游戏可以卸载腾空间/Steam 库情况」时调用本工具拿真实数据。注意：本工具只读元数据（ACF），不读取游戏文件内容；卸载建议只提示用户去 Steam Inspector 或 Steam 客户端操作，你不能执行任何卸载。浏览器预览模式下返回演示库数据（与 Steam 盘点页同源）。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R275：浏览器预览放行——listSteamGames 有 STEAM_INVENTORY 演示数据
+    // 源（与「工作台 → Steam 盘点」同源），只读汇总无副作用。
     execute: async () => {
       const inv = await api.listSteamGames();
       if (!inv.steam_root) {
@@ -344,9 +345,11 @@ export const toolRegistry: ToolDef[] = [
       scope_days: { type: 'object', description: '可选：{ scope_id: 保留天数 }，只对指定清理范围限制天数；省略则用默认策略', additionalProperties: { type: 'number' } },
     },
     required: ['path'],
-    tauriOnly: true,
     execute: async (args) => {
-      // 清理建议：直接调后端已算好的 cleanup_suggestions，不重复计算
+      // 清理建议：直接调后端已算好的 cleanup_suggestions，不重复计算。
+      // R275：浏览器预览放行——cleanupSuggestions 有 mock 演示数据源
+      // （与总览建议同源），只读枚举无副作用，AI 在预览里能问「某个目录
+      // 能清多少」而不是只能凭记忆答。
       const rootPath = String(args.path ?? '').trim();
       const scopeDays = args.scope_days && typeof args.scope_days === 'object'
         ? (args.scope_days as Record<string, unknown>)
@@ -368,10 +371,12 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_fan_status',
-    description: '读取当前风扇控制状态（只读）：通道探测结果（WMI 只读 / CLI 外挂可写）、当前温度、是否已应用自定义转速、后台温度守护是否运行。用户问"风扇现在什么状态""能不能调速"时调用。',
+    description: '读取当前风扇控制状态（只读）：通道探测结果（WMI 只读 / CLI 外挂可写）、当前温度、是否已应用自定义转速、后台温度守护是否运行。用户问"风扇现在什么状态""能不能调速"时调用。浏览器预览模式下返回只读演示状态（无真实通道），写操作仍不可用。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R275：浏览器预览放行——fanStatus 有只读演示返回（writable:false +
+    // 「只读通道」说明），只读无副作用；真正的写操作 adjust_fan_curve
+    // 保持 tauriOnly + 权限门（不假装可调速）。
     execute: async () => {
       const st = await api.fanStatus();
       const probe = st.probe ?? {};

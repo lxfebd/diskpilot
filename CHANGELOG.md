@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 只读汇总工具预览放行：清理建议/Steam 盘点/风扇状态（R275）
+
+- R274 只放行了 path_size / inspect_dir 两个测量工具，但其余只读汇总工具
+  （get_cleanup_suggestions / get_steam_library_summary / get_fan_status）仍
+  标 tauriOnly 被整体隐藏——底层（cleanupSuggestions / STEAM_INVENTORY /
+  fanStatus）都有 mock 演示数据源（与总览建议、Steam 盘点页、系统工具页
+  同源）。预览模式 AI 问「这个目录能清多少」「Steam 占多大」「风扇什么
+  状态」时无工具可用，只能凭记忆答。
+- R275 修复：放行这三个只读汇总工具（预览模式用 mock 同源数据，只读
+  无副作用）；写操作类（run_cli_tool / adjust_fan_curve / 安装/切换电源
+  等）与底层无 mock 的（run_system_probe / list_top_processes /
+  get_disk_health）保持 tauriOnly——预览不假装可写/有真实系统数据。
+- 新增 10 测试（tools.test 34→44）：三个放行工具不带 tauriOnly；七个
+  保持工具仍带 tauriOnly（写操作或底层无 mock）。
+  （**700 总 / 43 files**——测试总数里程碑 700；tsc/eslint/build 关）。
+
 ### 2026-10-17 只读测量工具预览模式放行：AI 可核实路径大小/内容（R274）
 
 - 缺口：advisor 的 path_size / inspect_dir（只读测量）标了 tauriOnly，在
