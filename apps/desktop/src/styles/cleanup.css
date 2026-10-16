@@ -68,6 +68,28 @@ main.cleanup-page > .cleanup-page {
 }
 .cp-search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
 .cp-search::placeholder { color: var(--ink-3); }
+/* R221：命中状态过滤 chips（全部 / 已命中 / 未检测到） */
+.cp-status-chips {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 0;
+}
+.cp-status-chip {
+  flex: 1;
+  padding: 5px 4px;
+  font-size: 11.5px;
+  text-align: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cp-status-chip:hover { background: var(--accent-bg); }
+.cp-status-chip.active { background: var(--accent); color: var(--on-accent, var(--ink)); border-color: var(--accent); font-weight: 600; }
 .cp-script {
   display: grid;
   grid-template-columns: 1fr auto auto;

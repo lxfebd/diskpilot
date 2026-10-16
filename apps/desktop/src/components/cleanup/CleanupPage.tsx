@@ -26,6 +26,9 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
   const select = useCleanupStore((s) => s.select);
   // R220：脚本列表本地搜索——输入即过滤，无需后端；空查询显示全部。
   const [query, setQuery] = useState('');
+  // R221：命中状态过滤 chips（全部 / 已命中 / 未检测到），与搜索叠加。
+  type StatusFilter = 'all' | 'hit' | 'miss';
+  const [status, setStatus] = useState<StatusFilter>('all');
 
   const allCards = useMemo(() => collectScaffoldCards(root, scaffolds), [root, scaffolds]);
   const cards = useMemo(
@@ -34,13 +37,16 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
   );
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return cards;
+    let out = cards;
+    if (status === 'hit') out = out.filter((c) => c.matches.length > 0);
+    else if (status === 'miss') out = out.filter((c) => c.matches.length === 0);
+    if (!q) return out;
     const haystack = (c: { scaffold: { id: string; name: string; tags?: string[] } }) => {
       const parts = [c.scaffold.name, ...(c.scaffold.tags ?? []), ...(SCRIPT_SEARCH_ALIASES[c.scaffold.id] ?? [])];
       return parts.join(' ').toLowerCase();
     };
-    return cards.filter((c) => haystack(c).includes(q));
-  }, [cards, query]);
+    return out.filter((c) => haystack(c).includes(q));
+  }, [cards, query, status]);
   // 空态归因：没扫描树（root=null）时脚本无从匹配，引导先去扫描；有扫描树
   // 仍无卡片才是「没装脚本/没有该类脚本」。两种情况文案不同，避免误导。
   const emptyText = root === null ? t('cleanup.needScan') : t('cleanup.noScripts');
@@ -83,6 +89,20 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
             onChange={(e) => setQuery(e.target.value)}
             aria-label={t('cleanup.scriptsSearch')}
           />
+          <div className="cp-status-chips" role="group" aria-label={t('cleanup.scriptsStatus')}>
+            {(['all', 'hit', 'miss'] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                className={'cp-status-chip' + (status === st ? ' active' : '')}
+                onClick={() => setStatus(st)}
+              >
+                {st === 'all' ? t('cleanup.scriptsStatusAll')
+                  : st === 'hit' ? t('cleanup.scriptsStatusHit')
+                  : t('cleanup.scriptsStatusMiss')}
+              </button>
+            ))}
+          </div>
           <div className="cp-list-rows">
             {cards.length === 0 ? (
               <div className="cp-empty">{emptyText}</div>

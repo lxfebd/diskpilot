@@ -121,6 +121,11 @@ export const cleanup = {
     // R220：脚本列表本地搜索（按脚本名/风险标签过滤，无需后端）
     'cleanup.scriptsSearch': '搜索脚本…',
     'cleanup.scriptsSearchEmpty': '没有匹配「{q}」的脚本',
+    // R221：命中状态过滤 chips
+    'cleanup.scriptsStatus': '按命中状态过滤',
+    'cleanup.scriptsStatusAll': '全部',
+    'cleanup.scriptsStatusHit': '已命中',
+    'cleanup.scriptsStatusMiss': '未检测到',
     'cleanup.notDetected': '未检测到',
     'cleanup.pickScript': '在左侧选一个要清理的软件',
     'cleanup.noScripts': '还没有安装任何清理脚本',
@@ -291,6 +296,11 @@ export const cleanup = {
     // R220: local script-list search (by name/risk tag, no backend)
     'cleanup.scriptsSearch': 'Search scripts…',
     'cleanup.scriptsSearchEmpty': 'No scripts match “{q}”',
+    // R221: hit-status filter chips
+    'cleanup.scriptsStatus': 'Filter by detection status',
+    'cleanup.scriptsStatusAll': 'All',
+    'cleanup.scriptsStatusHit': 'Detected',
+    'cleanup.scriptsStatusMiss': 'Not detected',
     'cleanup.notDetected': 'Not detected',
     'cleanup.pickScript': 'Pick an app on the left to start cleaning',
     'cleanup.noScripts': 'No cleanup scripts installed yet',
