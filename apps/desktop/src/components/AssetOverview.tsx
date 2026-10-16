@@ -1090,7 +1090,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       onDupScan();
       return;
     }
-    if (id === 'junk') {
+    if (id === 'junk' || id === 'ai') {
+      // R245：一键智能清理与系统垃圾清理都进清理页——清理页有脚本列表 +
+      // 全选 + 保留期 + 两步预览，是「一键清」的正确落点（此前 ai 分支
+      // 跳工作台，点「清理」却进「浏览」，语义脱节）。
       onOpenCleanup();
       return;
     }
