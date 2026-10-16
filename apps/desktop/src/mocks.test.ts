@@ -511,4 +511,17 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(bp).toBeTruthy();
     expect(bp!.matches.some((m) => /Profiles/i.test(m.path))).toBe(true);
   });
+
+  // R208：Windows 更新缓存（windows-update）——C:\Windows\
+  // SoftwareDistribution\Download 每台 Windows 必有，预览演示更新缓存清理。
+  it('windows-update 命中 SoftwareDistribution（R208 Windows 更新缓存演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'windows-update');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /SoftwareDistribution/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(0);
+    // 命中目录下存在更新包文件（.cab / .msu）——只有目录名没有真实更新包
+    // 会让「清理」失去意义，这里校验命中体量来自真实结构。
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });

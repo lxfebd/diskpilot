@@ -284,6 +284,23 @@ export const MOCK_TREE: Node = {
       children: [
         leaf('System32', 'C:\\Windows\\System32', 8.2 * GB, 32_400),
         leaf('WinSxS', 'C:\\Windows\\WinSxS', 7.7 * GB, 48_200),
+        // R208：Windows 更新已下载缓存（windows-update）——真实 Windows
+        // 必有 SoftwareDistribution\Download 目录的演示命中。
+        {
+          name: 'SoftwareDistribution', path: 'C:\\Windows\\SoftwareDistribution', is_dir: true,
+          size: 2.4 * GB, file_count: 4_100, scaffold_id: 'windows-update', top_extensions: [],
+          children: [
+            {
+              name: 'Download', path: 'C:\\Windows\\SoftwareDistribution\\Download', is_dir: true,
+              size: 2.4 * GB, file_count: 4_090, scaffold_id: 'windows-update', top_extensions: [],
+              children: [
+                file('kb5048652_amd64.cab', 'C:\\Windows\\SoftwareDistribution\\Download\\kb5048652_amd64.cab', 680 * 1024 * 1024),
+                file('kb5048652_arm64.cab', 'C:\\Windows\\SoftwareDistribution\\Download\\kb5048652_arm64.cab', 340 * 1024 * 1024),
+                file('windows11.0-kb5049032-x64.msu', 'C:\\Windows\\SoftwareDistribution\\Download\\windows11.0-kb5049032-x64.msu', 420 * 1024 * 1024),
+              ],
+            },
+          ],
+        },
       ],
     },
     {

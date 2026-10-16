@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「Windows 更新缓存」命中演示（R208）
+
+- 清理页 21 脚本仍有 8 个未命中（安全软件/QQ/游戏引擎/Discord/Teams/OBS/
+  Zoom/Windows 更新）。Windows 更新缓存是真实 Windows 必有目录（
+  SoftwareDistribution\Download 存放已下载未清理的更新包），演示价值高。
+- MOCK_TREE 补 `C:\Windows\SoftwareDistribution\Download`（windows-update，
+  2.4 GB，含 kb*.cab / *.msu 更新包文件）——挂 scaffold_id 直接命中。
+- 新增 1 测试（mocks.test.ts）：windows-update 命中 SoftwareDistribution
+  且体量 >1GB（校验命中来自真实更新包结构而非空目录）。598 总（+1）/
+  42 files。
+- 浏览器实测：清理页 21 脚本 14 个命中，列表新增「Windows 更新缓存
+  2.40 GB」；详情显示 2 个 scope（安装包缓存 218 MB · 635 文件，因
+  recommended_selected 默认预选 ✓ + 传递优化 171 MB · 2,602 文件）。
+- 顺带验证：总览页「建议清理项目 → 打开清理页」跨页跳转正常（自动选中
+  浏览器缓存）；工具墙 18 个硬件工具卡完整渲染。
+
 ### 2026-10-16 清理页补齐 3 个高频脚本命中演示（临时文件 / 崩溃转储 / Firefox 缓存）（R207）
 
 - 扫描 MOCK_TREE 对 21 个清理脚本的命中：11 个未命中（安全软件/崩溃转储/
