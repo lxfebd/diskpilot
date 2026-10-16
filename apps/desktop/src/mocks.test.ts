@@ -443,6 +443,28 @@ describe('mocks.cleanupSuggestions（总览「可清理」卡片演示数据）'
     const list = await cleanupSuggestions('Z:\\nonexistent', undefined, true);
     expect(list).toEqual([]);
   });
+
+  // R236：盘根口径（总览选中 C:）建议字节限定在盘内命中目录——合计
+  // 不再虚高到「可清 70% 磁盘」（旧口径每脚本挑 2 scope × 全全局字节）。
+  it('R236：C 盘根口径合计合理（各建议项 >0 且合计远小于磁盘容量）', async () => {
+    const list = await cleanupSuggestions('C:\\', undefined, true);
+    expect(list.length).toBeGreaterThan(0);
+    const total = list.reduce((s, r) => s + r.bytes, 0);
+    // 全部建议项限定在 C 盘命中目录内：合计 < 磁盘 187GB 的一半（可清潜力
+    // 不该是「清掉大半块盘」），且每项都是实际命中目录大小
+    expect(total).toBeLessThan(100 * 1024 ** 3);
+    expect(total).toBeGreaterThan(0);
+    for (const r of list) expect(r.bytes).toBeGreaterThan(0);
+    // 多目录脚本（crash-dumps 的 WER/Minidump）在盘根下都计入——合计包含
+    // 各命中目录，不是只挑前 2 个 scope 的全局叠加
+    const crashDump = list.filter((r) => r.scaffold_id === 'crash-dumps');
+    expect(crashDump.length).toBeGreaterThan(0);
+    // 与 scopeSizesBatch 盘根口径一致（不翻倍）
+    const batch = await scopeSizesBatch('crash-dumps', ['C:\\']);
+    const batchTotal = batch[0].sizes.reduce((s, x) => s + x.total_bytes, 0);
+    const sugTotal = crashDump.reduce((s, r) => s + r.bytes, 0);
+    expect(sugTotal).toBeLessThanOrEqual(batchTotal);
+  });
 });
 
 describe('mocks.scopeSizesBatch（预览模式 scope 尺寸）', () => {

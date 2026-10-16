@@ -2098,13 +2098,17 @@ export async function cleanupSuggestions(
       // 保留天数缩放（总览建议的大小 = 进清理页勾选后真正清的大小）。
       // R227：改真实命中字节（与清理页/工作台同源），不再用哈希公式。
       // R228：按 scope 的 glob 目录名取自己的真实字节。
+      // R236：rootPath 是盘根（总览选中盘）时传回过滤——建议字节限定在
+      // 该盘命中目录内，不含无关目录（多目录脚本各目录都算，合计不再虚高）。
       const days = scope.prompt?.kind === 'days' ? (scope.prompt.default ?? 30) : undefined;
-      // R228：建议项字节 = 该 scope 目录在树里的真实大小（全局不过滤——
-      // hitPath 只是「该 scaffold 已命中」的证明，过滤会让多目录脚本的
-      // 建议项字节变 0）。
-      const real = scopeRealBytes(sc.id, scope.id, scope.glob);
+      const real = rootPath.toLowerCase().replace(/[\\/]+$/, '') === 'c:'
+        ? scopeRealBytes(sc.id, scope.id, scope.glob, rootPath)
+        : scopeRealBytes(sc.id, scope.id, scope.glob);
       const raw = real ?? mockScopeBytes(scope.id);
       const bytes = days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
+      // R236：rootPath 过滤下该 scope 不在盘内（返回 0）→ 该建议项不算入，
+      // 避免「0 字节建议」占位。
+      if (bytes <= 0) continue;
       out.push({
         scaffold_id: sc.id,
         scope_id: scope.id,
