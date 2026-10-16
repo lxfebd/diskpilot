@@ -586,4 +586,16 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(card!.matches.some((m) => /obs-studio/i.test(m.path))).toBe(true);
     expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
   });
+
+  // R213：Microsoft Teams 双变体——1.x 经典版（%APPDATA%\Microsoft\Teams）
+  // 与 2.x 新版（%LOCALAPPDATA%\Packages\MSTeams_8wekyb3d8bbwe）各一个命中
+  // 目录，R210 的 detectVariants 修复让两组 scope 同屏渲染。
+  it('teams 双变体命中：1.x 经典 + 2.x 新版（R213 变体同屏演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'teams');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /Microsoft\\Teams/i.test(m.path))).toBe(true);
+    expect(card!.matches.some((m) => /MSTeams_8wekyb3d8bbwe/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });

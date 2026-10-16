@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「Microsoft Teams」双变体命中演示（R213）
+
+- 清理页 21 脚本命中升至 19/21（剩余：安全软件套装 / Discord / Zoom）。
+- MOCK_TREE 补两个 Teams 命中目录，完整覆盖 R210 的 detectVariants
+  修复（同脚本双变体同屏渲染）：
+  - 1.x 经典版：`AppData\Roaming\Microsoft\Teams\{Cache,GPUCache,
+    media-stack}`（0.9 GB，独立节点不抢 Microsoft 的 windows-privacy）；
+  - 2.x 新版：`AppData\Local\Packages\MSTeams_8wekyb3d8bbwe\
+    {LocalCache,TempState}`（3.2 GB，UWP 容器）。
+- Roaming 体量 20.3→21.2 GB；Local 体量 51→54.2 GB。
+- 新增 1 测试（mocks.test.ts）：teams 双变体命中（1.x 经典 + 2.x 新版
+  各一个命中目录，totalSize > 1GB）。**609 总（+1）/ 42 files。**
+- 浏览器实测：列表「Microsoft Teams 4.10 GB」，详情同屏渲染 2 组
+  scope——1.x 组（Chromium 缓存 510 MB / 运行日志 405 MB…）+ 2.x 组
+  （新版 LocalCache 357 MB…），共 2 section 11 勾选项；对照组
+  WeChat 4.x/3.x 大版本共存不受影响。
+
 ### 2026-10-16 保留天数选择与可清字节联动（R212）
 
 - 修复真实缺陷：预览模式里 scope 行的「保留最近 N 天」天数选择器改值

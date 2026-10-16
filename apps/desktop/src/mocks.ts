@@ -58,7 +58,7 @@ export const MOCK_TREE: Node = {
               scaffold_id: null, top_extensions: [],
               children: [
                 {
-                  name: 'Local', path: 'C:\\Users\\90740\\AppData\\Local', is_dir: true, size: 51 * GB, file_count: 280_110,
+                  name: 'Local', path: 'C:\\Users\\90740\\AppData\\Local', is_dir: true, size: 54.2 * GB, file_count: 308_510,
                   scaffold_id: null, top_extensions: [],
                   children: [
                     // R205：Windows 使用痕迹（windows-privacy 命中）——Recent /
@@ -204,10 +204,40 @@ export const MOCK_TREE: Node = {
                         file('explorer.exe.2026-10-14.dmp', 'C:\\Users\\90740\\AppData\\Local\\CrashDumps\\explorer.exe.2026-10-14.dmp', 128 * 1024 * 1024),
                       ],
                     },
+                    // R213：Microsoft Teams 2.x 新版——%LOCALAPPDATA%\Packages\
+                    // MSTeams_8wekyb3d8bbwe 真实常驻（UWP 容器），与 Roaming 下
+                    // 1.x 经典版双变体同屏演示（R210 的 detectVariants 修复点）。
+                    {
+                      name: 'Packages', path: 'C:\\Users\\90740\\AppData\\Local\\Packages', is_dir: true,
+                      size: 3.2 * GB, file_count: 28_400, scaffold_id: null, top_extensions: [],
+                      children: [
+                        {
+                          name: 'MSTeams_8wekyb3d8bbwe', path: 'C:\\Users\\90740\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe', is_dir: true,
+                          size: 3.2 * GB, file_count: 28_380, scaffold_id: 'teams', top_extensions: [],
+                          children: [
+                            {
+                              name: 'LocalCache', path: 'C:\\Users\\90740\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe\\LocalCache', is_dir: true,
+                              size: 1.8 * GB, file_count: 12_400, scaffold_id: 'teams', top_extensions: [],
+                              children: [
+                                file('chrome_cache_001', 'C:\\Users\\90740\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe\\LocalCache\\chrome_cache_001', 48 * 1024 * 1024),
+                                file('blob_media_20261015.bin', 'C:\\Users\\90740\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe\\LocalCache\\blob_media_20261015.bin', 32 * 1024 * 1024),
+                              ],
+                            },
+                            {
+                              name: 'TempState', path: 'C:\\Users\\90740\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe\\TempState', is_dir: true,
+                              size: 1.4 * GB, file_count: 15_900, scaffold_id: 'teams', top_extensions: [],
+                              children: [
+                                file('tmp_meeting_20261016.dat', 'C:\\Users\\90740\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe\\TempState\\tmp_meeting_20261016.dat', 64 * 1024 * 1024),
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
                   ],
                 },
                 {
-                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 20.3 * GB, file_count: 119_900,
+                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 21.2 * GB, file_count: 123_110,
                   scaffold_id: null, top_extensions: [], children: [
                     // R209：腾讯 QQ（经典版）——%APPDATA%\Tencent\QQ 是真实
                     // 常驻目录，预览演示 QQ 接收文件/图片/缓存清理。
@@ -285,6 +315,37 @@ export const MOCK_TREE: Node = {
                           children: [
                             file('2026-10-15 21-07-12.txt', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs\\2026-10-15 21-07-12.txt', 16 * 1024 * 1024),
                             file('2026-10-13 19-44-50.txt', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs\\2026-10-13 19-44-50.txt', 12 * 1024 * 1024),
+                          ],
+                        },
+                      ],
+                    },
+                    // R213：Microsoft Teams 1.x 经典版——%APPDATA%\Microsoft\Teams
+                    // 真实常驻（Chromium 缓存），挂独立节点不抢 Microsoft 的
+                    // windows-privacy 命中；与 Local 下 2.x 新版双变体同屏演示。
+                    {
+                      name: 'Teams', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams', is_dir: true,
+                      size: 0.9 * GB, file_count: 3_210, scaffold_id: 'teams', top_extensions: [],
+                      children: [
+                        {
+                          name: 'Cache', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\Cache', is_dir: true,
+                          size: 0.4 * GB, file_count: 1_480, scaffold_id: 'teams', top_extensions: [],
+                          children: [
+                            file('f_0001A2.dat', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\Cache\\f_0001A2.dat', 32 * 1024 * 1024),
+                            file('f_0001B4.dat', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\Cache\\f_0001B4.dat', 24 * 1024 * 1024),
+                          ],
+                        },
+                        {
+                          name: 'GPUCache', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\GPUCache', is_dir: true,
+                          size: 0.3 * GB, file_count: 620, scaffold_id: 'teams', top_extensions: [],
+                          children: [
+                            file('data_0', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\GPUCache\\data_0', 16 * 1024 * 1024),
+                          ],
+                        },
+                        {
+                          name: 'media-stack', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\media-stack', is_dir: true,
+                          size: 0.2 * GB, file_count: 1_100, scaffold_id: 'teams', top_extensions: [],
+                          children: [
+                            file('audio_20261015.bin', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Teams\\media-stack\\audio_20261015.bin', 24 * 1024 * 1024),
                           ],
                         },
                       ],
