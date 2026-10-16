@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 右键回收与建议同源收敛：mock 级台账补齐（R268）
+
+- 缺口：mocks.recyclePaths（工作台树右键「移入回收站」）只写 UNDO_LEDGER
+  台账、不记 mock 级回收台账——前端 applyRecycledPrune 剪的是内存树，
+  演示建议数据源（cleanupSuggestions/scopeSizesBatch）没剪，右键清完的
+  目录总览「可清理」还建议（与 executeScope R225 / executeAiPlan R267
+  不一致，后两者都记）。
+- R268 修复：mocks.recyclePaths 成功后也 _mockRecyclePath 每条 source——
+  三条执行路径（清理页 / AI 提案 / 右键回收）统一收敛，总览建议不再
+  复活已右键回收的目录。
+- 新增 2 测试（mocks.test 75→77）：①右键回收目录后 crash-dumps-local
+  建议字节下降（CrashDumps 被剪，剩 WER/Minidump 兜底）；②右键回收写
+  台账且 AI 提案 dry-run 不再返回该路径（双路径共享同一台账）。
+  （**682 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 AI 提案执行补 mock：浏览器演示「AI 提案清理」真能清（R267）
 
 - 缺口：预览模式 executeAiPlan 恒返回空数组——总览「重复文件查找 → AI

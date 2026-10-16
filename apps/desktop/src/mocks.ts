@@ -1722,6 +1722,12 @@ export async function recyclePaths(paths: string[], reason: string): Promise<Und
     reason,
   }));
   UNDO_LEDGER.push(...entries);
+  // R268：与 executeScope（R225）/ executeAiPlan（R267）同一收敛语义——
+  // 回收成功的路径也进 mock 级回收台账，后续 scan/cleanupSuggestions/
+  // scopeSizesBatch 基于修剪后的树返回，总览「可清理」不会把刚右键回收
+  // 的目录再建议一遍（前端 applyRecycledPrune 剪的是内存树，mock 级
+  // 台账管的是演示建议数据源，两者都要剪才一致）。
+  for (const e of entries) _mockRecyclePath(e.source);
   return entries;
 }
 

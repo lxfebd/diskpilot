@@ -3,7 +3,7 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, executeAiPlan, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, _mockResetReclaimed, undo } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, executeAiPlan, recyclePaths, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, _mockResetReclaimed, undo } from './mocks';
 
 beforeEach(() => {
   // R225：mock 级回收台账在每条测试前复位，避免真删路径跨用例累积污染
@@ -873,6 +873,36 @@ describe('mocks.executeAiPlan（R267 AI 提案执行）', () => {
     expect(dangerous.length).toBe(0);
     const root = await executeAiPlan(['C:\\'], true, true);
     expect(root.length).toBe(0);
+  });
+});
+
+describe('mocks.recyclePaths（R268 右键回收与建议同源收敛）', () => {
+  it('右键回收目录后 cleanupSuggestions 不再建议它（与 executeScope 同语义）', async () => {
+    // 先确认该 scope 在建议里（crash-dumps 含 CrashDumps 目录）
+    const before = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
+    const beforeLocal = before.find((r) => r.scope_id === 'crash-dumps-local');
+    expect(beforeLocal).toBeTruthy();
+    expect(beforeLocal!.bytes).toBeGreaterThan(0);
+    // 右键回收 CrashDumps 目录（mock 级台账应记入）
+    await recyclePaths(['C:\\Users\\90740\\AppData\\Local\\CrashDumps'], '测试右键回收');
+    const after = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
+    // crash-dumps-local 的字节下降（CrashDumps 被剪，只剩 WER/Minidump 兜底）
+    const afterLocal = after.find((r) => r.scope_id === 'crash-dumps-local');
+    expect(afterLocal).toBeTruthy();
+    expect(afterLocal!.bytes).toBeLessThan(beforeLocal!.bytes);
+  });
+
+  it('右键回收写入台账（历史页可见）且 dry-run executeAiPlan 不再返回该路径', async () => {
+    const target = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    const before = await listUndo(500);
+    await recyclePaths([target], '右键回收');
+    const after = await listUndo(500);
+    expect(after.length).toBe(before.length + 1);
+    expect(after[0].action).toBe('recycle');
+    expect(after[0].source).toBe(target);
+    // 已回收 → AI 提案 dry-run 也不返回该路径（双路径共享同一台账）
+    const dry = await executeAiPlan([target], true, true);
+    expect(dry.length).toBe(0);
   });
 });
 
