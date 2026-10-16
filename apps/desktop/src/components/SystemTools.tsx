@@ -173,6 +173,11 @@ function SystemToolsInner() {
   };
 
   const applyFanControl = async () => {
+    // R263：执行时权限门（fan.control L2 高危，写风扇档位）——UI 之外也拦。
+    if (!isPermEnabled('fan.control')) {
+      setFanCtrlErr(t('system.fan.permOff'));
+      return;
+    }
     try {
       setFanCtrlBusy(true);
       const res = await api.fanControl(fanLevel, undefined, 90, true);
@@ -190,6 +195,11 @@ function SystemToolsInner() {
   };
 
   const restoreDefaultFan = async () => {
+    // R263：执行时权限门（恢复默认风扇曲线也是写路径，fan.adjust 门）。
+    if (!isPermEnabled('fan.adjust')) {
+      setFanCtrlErr(t('system.fan.permOff'));
+      return;
+    }
     try {
       setFanRestoring(true);
       const res = await api.fanCurveApply(true, true);
@@ -216,6 +226,11 @@ function SystemToolsInner() {
   };
 
   const checkWuUpdates = async () => {
+    // R263：执行时权限门（driver.check L2，联网检查并返回可更新驱动）。
+    if (!isPermEnabled('driver.check')) {
+      setDrvErr(t('system.driver.permOff'));
+      return;
+    }
     setWuLoading(true);
     setDrvErr(null);
     try {

@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 风扇控制/恢复默认/驱动检查加执行时权限门（R263）
+
+- 缺口：SystemTools.applyFanControl（写风扇档位）/ restoreDefaultFan（恢复
+  默认曲线）/ checkWuUpdates（联网查驱动更新）执行函数无门——只有 UI 层
+  fanCtrlPerm/driverPerm 条件渲染。fan.control/fan.adjust/driver.check 均 L2
+  高危，UI 之外不拦。
+- R263 修复：三函数开头加对应 isPermEnabled 门（复用 system.fan.permOff /
+  system.driver.permOff 文案）——关闭时 setErr 拒绝。
+- 无新增测试（4 行组件闭包门，同 R261/R262 模式；tsc/eslint/build 把关）
+  （**673 总 / 43 files**）。
+
 ### 2026-10-17 MCP 服务器新增/JSON 导入加执行时权限门（R262）
 
 - 缺口：McpServers 的 update/remove 已有 manageOk 门，但 save（新增 addServer）
