@@ -435,10 +435,11 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_system_info',
-    description: '读取本机系统信息 + 实时状态（Windows 版本 / CPU 核心与当前占用 / 内存总量与使用率 / 各磁盘容量 / 开机时长）。用户问"我这电脑什么配置""电脑现在卡不卡""帮我看看电脑状态"时调用。要评价电脑当前运行情况（CPU/内存是否吃紧），用本工具或 run_system_probe 拿真实数据。',
+    description: '读取本机系统信息 + 实时状态（Windows 版本 / CPU 核心与当前占用 / 内存总量与使用率 / 各磁盘容量 / 开机时长）。用户问"我这电脑什么配置""电脑现在卡不卡""帮我看看电脑状态"时调用。要评价电脑当前运行情况（CPU/内存是否吃紧），用本工具或 run_system_probe 拿真实数据。浏览器预览模式下 CPU/内存为浏览器近似值、磁盘为演示清单。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R278：浏览器预览放行——execute 已有非 Tauri 回退支路（Windows 版本
+    // 从 UA 解析 + CPU/内存浏览器近似值），只是被 tauriOnly 整体藏起来了。
     execute: async () => {
       const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
       const plat = ua.match(/Windows NT (\d+\.\d+)/)?.[1] ?? '';
@@ -478,12 +479,31 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'run_system_probe',
-    description: '实时采集电脑运行状态：CPU 总占用百分比、内存总量/已用/使用率、各磁盘容量使用率、开机时长、CPU 逻辑核心数。用户让你"评价电脑运行情况""看看现在卡不卡""跑测试时帮我盯一下负载"时调用本工具拿真实数据；sample=true 时做 600ms 双采样测 CPU 实时占用更准（默认单次更快）。烤机/压测期间可反复调用观察负载变化。',
+    description: '实时采集电脑运行状态：CPU 总占用百分比、内存总量/已用/使用率、各磁盘容量使用率、开机时长、CPU 逻辑核心数。用户让你"评价电脑运行情况""看看现在卡不卡""跑测试时帮我盯一下负载"时调用本工具拿真实数据；sample=true 时做 600ms 双采样测 CPU 实时占用更准（默认单次更快）。烤机/压测期间可反复调用观察负载变化。浏览器预览模式下 CPU/内存为浏览器近似值、磁盘为演示清单（与 get_system_info 预览支路同源）。',
     properties: { sample: { type: 'boolean', description: 'true = 双采样测实时 CPU 占用（多花 ~0.6 秒）；默认 false' } },
     required: [],
-    tauriOnly: true,
+    // R278：浏览器预览放行——非 Tauri 走浏览器近似值（hardwareConcurrency /
+    // deviceMemory）+ listDrives 演示清单，只读无副作用；桌面端走真实探针。
     execute: async (args) => {
       const sample = args.sample === true;
+      if (!isTauri) {
+        const cores = (navigator as { hardwareConcurrency?: number }).hardwareConcurrency ?? null;
+        const memGb = (navigator as { deviceMemory?: number }).deviceMemory ?? null;
+        const drives = await api.listDrives();
+        const lines = [
+          `CPU 占用：浏览器拿不到实时占用（预览模式），逻辑核心 ${cores ?? '未知'}`,
+          `内存：${memGb != null ? `${memGb} GB（浏览器近似值）` : '未知（浏览器近似值）'}`,
+          `开机时长：浏览器拿不到（预览模式）`,
+        ];
+        if (drives.length > 0) {
+          lines.push('磁盘（演示清单，与总览磁盘卡同源）：');
+          for (const d of drives) {
+            const pct = d.total_bytes > 0 ? (d.used_bytes / d.total_bytes) * 100 : 0;
+            lines.push(`- ${d.path}：总 ${formatBytes(d.total_bytes)} / 已用 ${formatBytes(d.used_bytes)}（${pct.toFixed(1)}%）`);
+          }
+        }
+        return lines.join('\n');
+      }
       const p = await ensureSysProbe(sample);
       const upDays = Math.floor(p.uptime_secs / 86400);
       const upHrs = Math.floor((p.uptime_secs % 86400) / 3600);

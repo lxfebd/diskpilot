@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 系统状态工具预览放行：配置/运行状态（R278）
+
+- R274-R277 放行了测量/汇总/硬件类只读工具，但 get_system_info（execute
+  本就内置非 Tauri 回退支路：Windows 版本 UA 解析 + CPU/内存浏览器近似值）
+  与 run_system_probe（「看看现在卡不卡」时 AI 必调）仍 tauriOnly 被藏。
+  预览模式 AI 答「电脑什么状态」时只能用 get_hardware_info 的静态配置，
+  没有实时状态口径。
+- R278 修复：放行 get_system_info（现有回退支路即预览数据源）；run_system_probe
+  补同样预览支路（browser 近似值 + listDrives 演示清单，明示「浏览器拿不到
+  实时占用」）并放行。list_top_processes 无进程快照数据源保持隐藏（不假装
+  有真实进程列表）。
+- 新增 2 测试（tools.test 47→49）：get_system_info / run_system_probe 不带
+  tauriOnly。
+  （**705 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 硬件只读工具预览放行：配置/硬盘健康（R277）
 
 - R274-R276 放行了测量/汇总/磁盘容量类只读工具，但 get_hardware_info /

@@ -321,7 +321,7 @@ describe('toolRegistry 只读测量工具预览模式可用（R274）', () => {
 // 写操作类（run_cli_tool / adjust_fan_curve 等）保持 tauriOnly 藏着。
 describe('toolRegistry 只读汇总工具预览模式可用（R275）', () => {
   const PREVIEW_READONLY = ['get_cleanup_suggestions', 'get_steam_library_summary', 'get_fan_status'];
-  const STILL_TAURI_ONLY = ['run_system_probe', 'list_top_processes',
+  const STILL_TAURI_ONLY = ['list_top_processes',
     'run_cli_tool', 'adjust_fan_curve', 'get_cli_tool_usage', 'get_tool_manifest'];
 
   for (const name of PREVIEW_READONLY) {
@@ -375,6 +375,23 @@ describe('toolRegistry 硬件只读工具预览模式可用（R277）', () => {
       const t = toolRegistry.find((x) => x.name === name)!;
       expect(t, name).toBeTruthy();
       expect(t.tauriOnly, name).toBe(true);
+    });
+  }
+});
+
+// R278：get_system_info / run_system_probe 预览放行——execute 已有非 Tauri
+// 回退支路（Windows 版本 UA 解析 + CPU/内存浏览器近似值 + listDrives 演示
+// 清单），只是被 tauriOnly 整体藏起来；list_top_processes 无进程快照数据
+// 源仍保持隐藏（不假装有真实进程列表）。
+describe('toolRegistry 系统状态工具预览模式可用（R278）', () => {
+  const PREVIEW_SYS_READONLY = ['get_system_info', 'run_system_probe'];
+
+  for (const name of PREVIEW_SYS_READONLY) {
+    it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBeUndefined();
+      expect(typeof t.execute, name).toBe('function');
     });
   }
 });
