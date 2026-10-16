@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「Zoom」命中演示，21 脚本全命中（R215）
+
+- 清理页 21 脚本命中升至 21/21（21 个检测项只剩「安全软件套装」因杀软
+  互斥风险按设计不演示——这是诚实行为，不是遗漏）。
+- MOCK_TREE 补 `AppData\Roaming\zoom.us\{data\{WebRTC,Telemetry},logs}`
+  （zoom，1.7 GB，音视频会议缓存/遥测/日志）挂 scaffold_id 命中；
+  Roaming 体量 22.6→24.3 GB。
+- 新增 1 测试（mocks.test.ts）：zoom 命中 zoom.us 且 >1GB。
+  **611 总（+1）/ 42 files。**
+- 浏览器实测：列表「Zoom 1.70 GB」，详情 6 个 scope 行（音视频缓存 /
+  遥测 / 日志 / 安装包归档 / Chromium 缓存 / 应用日志）可勾选可预览。
+- 里程碑：从 R205 的 8/21 命中到 R215 的 21/21 全命中，清理页每
+  个脚本都有真实可点的演示数据。
+
 ### 2026-10-16 清理页补「Discord」命中演示（R214）
 
 - 清理页 21 脚本命中升至 20/21（剩余：安全软件套装 / Zoom）。

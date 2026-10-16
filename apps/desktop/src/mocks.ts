@@ -237,7 +237,7 @@ export const MOCK_TREE: Node = {
                   ],
                 },
                 {
-                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 22.6 * GB, file_count: 130_310,
+                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 24.3 * GB, file_count: 137_120,
                   scaffold_id: null, top_extensions: [], children: [
                     // R209：腾讯 QQ（经典版）——%APPDATA%\Tencent\QQ 是真实
                     // 常驻目录，预览演示 QQ 接收文件/图片/缓存清理。
@@ -353,6 +353,44 @@ export const MOCK_TREE: Node = {
                           size: 0.2 * GB, file_count: 700, scaffold_id: 'discord', top_extensions: [],
                           children: [
                             file('reports_20261014.dmp', 'C:\\Users\\90740\\AppData\\Roaming\\discord\\Crashpad\\reports_20261014.dmp', 16 * 1024 * 1024),
+                          ],
+                        },
+                      ],
+                    },
+                    // R215：Zoom——%APPDATA%\zoom.us 真实常驻（视频会议高频），
+                    // 预览演示 Zoom 音视频缓存/遥测/日志清理。补上后 21 脚本
+                    // 全命中（仅剩「安全软件套装」需杀软互斥不演示）。
+                    {
+                      name: 'zoom.us', path: 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us', is_dir: true,
+                      size: 1.7 * GB, file_count: 6_810, scaffold_id: 'zoom', top_extensions: [],
+                      children: [
+                        {
+                          name: 'data', path: 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\data', is_dir: true,
+                          size: 1.1 * GB, file_count: 3_900, scaffold_id: 'zoom', top_extensions: [],
+                          children: [
+                            {
+                              name: 'WebRTC', path: 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\data\\WebRTC', is_dir: true,
+                              size: 0.6 * GB, file_count: 2_100, scaffold_id: 'zoom', top_extensions: [],
+                              children: [
+                                file('rtc_video_20261015.bin', 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\data\\WebRTC\\rtc_video_20261015.bin', 42 * 1024 * 1024),
+                                file('rtc_audio_20261015.bin', 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\data\\WebRTC\\rtc_audio_20261015.bin', 28 * 1024 * 1024),
+                              ],
+                            },
+                            {
+                              name: 'Telemetry', path: 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\data\\Telemetry', is_dir: true,
+                              size: 0.5 * GB, file_count: 1_800, scaffold_id: 'zoom', top_extensions: [],
+                              children: [
+                                file('telemetry_20261015.log', 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\data\\Telemetry\\telemetry_20261015.log', 12 * 1024 * 1024),
+                              ],
+                            },
+                          ],
+                        },
+                        {
+                          name: 'logs', path: 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\logs', is_dir: true,
+                          size: 0.6 * GB, file_count: 2_900, scaffold_id: 'zoom', top_extensions: [],
+                          children: [
+                            file('zoom_20261015.log', 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\logs\\zoom_20261015.log', 16 * 1024 * 1024),
+                            file('zoom_20261014.log', 'C:\\Users\\90740\\AppData\\Roaming\\zoom.us\\logs\\zoom_20261014.log', 14 * 1024 * 1024),
                           ],
                         },
                       ],

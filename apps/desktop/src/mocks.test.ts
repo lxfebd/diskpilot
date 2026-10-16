@@ -608,4 +608,14 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(card!.matches.some((m) => /discord/i.test(m.path))).toBe(true);
     expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
   });
+
+  // R215：Zoom——%APPDATA%\zoom.us 真实常驻（视频会议高频），补上后
+  // 21 脚本除「安全软件套装」全命中。
+  it('zoom 命中 zoom.us（R215 Zoom 演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'zoom');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /zoom\.us/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });
