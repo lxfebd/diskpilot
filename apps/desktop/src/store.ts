@@ -491,6 +491,14 @@ export const useStore = create<AppState>((set, get) => {
   // 成功的节点即时从当前树里剪掉，并按同样规则从按盘缓存里剪掉——删完
   // 立刻看得见，且点盘符缓存命中时不会复活已删文件。
   recyclePaths: async (paths, reason) => {
+    // R258：权限门（与 aiRecyclePaths 同口径）——file.recycle 是 L2 高危，
+    // 默认关闭。工作台右键「移入回收站」之前直接 recycle_paths，权限中心
+    // 关掉后仍能真删：与清理页 R257 同类的漏网入口。关闭时拒绝并指引
+    // 权限中心，绝不静默执行。
+    if (!isPermEnabled('file.recycle')) {
+      get().toast(t('errors.permExecuteMissing'), 'err');
+      return { done: 0, failed: paths.length, bytes: 0 };
+    }
     let done = 0;
     let failed = 0;
     let bytes = 0;

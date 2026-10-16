@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 右键回收加权限门：file.recycle 关闭时拒绝（R258）
+
+- 缺口：recyclePaths（工作台右键「移入回收站」）直接 recycle_paths，没有
+  file.recycle 权限门（L2 高危默认关）——权限中心关掉后仍能真删，与 R257
+  清理页同类的漏网入口。
+- R258 修复：recyclePaths 开头加 isPermEnabled('file.recycle')，关闭时
+  toast 指引权限中心 + 返回全失败，不剪树不记账。至此三个执行入口全有门：
+  清理页 runRealDelete（cleanup.execute）、AI 提案 aiRecyclePaths
+  （cleanup.execute）、右键 recyclePaths（file.recycle）。
+- 新增 1 测试（file.recycle 关闭 → 拒绝，api 不被调、树不剪、scanSeq 不变；
+  store.test 预置双权限开启，既有剪枝测试回归全绿）（**673 总 / 43 files**）。
+- 浏览器确认 file.recycle 默认即关（权限表 L2 语义正确）。
+
 ### 2026-10-16 清理页真删加权限门：cleanup.execute 关闭时拒绝执行（R257）
 
 - 缺口：aiRecyclePaths 有 cleanup.execute 权限门（L2 高危默认关），清理页

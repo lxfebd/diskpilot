@@ -109,8 +109,9 @@ describe('recycle prune clears selection', () => {
     vi.clearAllMocks();
     data.clear();
     vi.stubGlobal('indexedDB', fakeFactory);
-    // R256：aiRecyclePaths 有 cleanup.execute 权限门（L2 默认关）——测试里
-    // 预置已开启，否则提前 return，剪枝与 bumpScanSeq 都不会发生。
+    // R256/R258：aiRecyclePaths 有 cleanup.execute 门、recyclePaths 有
+    // file.recycle 门（均 L2 默认关）——测试里预置开启，否则提前 return，
+    // 剪枝与 bumpScanSeq 都不会发生。
     const store = new Map<string, string>();
     vi.stubGlobal('window', {
       localStorage: {
@@ -121,7 +122,7 @@ describe('recycle prune clears selection', () => {
     });
     window.localStorage.setItem(
       'diskpilot.perms.v1',
-      JSON.stringify({ enabled: { 'cleanup.execute': true } }),
+      JSON.stringify({ enabled: { 'cleanup.execute': true, 'file.recycle': true } }),
     );
     // 回滚回收路径返回真实条目（成功剪枝的前提）。
     (api.recyclePaths as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
@@ -183,6 +184,21 @@ describe('recycle prune clears selection', () => {
     const before = useStore.getState().scanSeq;
     useStore.getState().pruneRecycled(['C:\\Users']);
     expect(useStore.getState().scanSeq).toBe(before + 1);
+  });
+
+  // R258：recyclePaths 权限门——file.recycle 是 L2 高危默认关。权限中心
+  // 关掉后右键「移入回收站」必须拒绝（此前直接 recycle_paths 漏过权限表）。
+  it('R258：file.recycle 关闭 → recyclePaths 拒绝，不调 api，不剪树不记账', async () => {
+    window.localStorage.setItem(
+      'diskpilot.perms.v1',
+      JSON.stringify({ enabled: { 'cleanup.execute': true, 'file.recycle': false } }),
+    );
+    const beforeSeq = useStore.getState().scanSeq;
+    const res = await useStore.getState().recyclePaths([{ path: 'C:\\Users' }], '手动回收');
+    expect(res).toEqual({ done: 0, failed: 1, bytes: 0 });
+    expect(api.recyclePaths).not.toHaveBeenCalled();
+    expect(useStore.getState().scanSeq).toBe(beforeSeq); // 剪枝未发生
+    expect(useStore.getState().root!.children!.map((c) => c.name)).toEqual(['Users', 'Windows']);
   });
 });
 
