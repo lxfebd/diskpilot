@@ -388,7 +388,10 @@ describe('mocks.scopeSizesBatch（预览模式 scope 尺寸）', () => {
       expect(row).toBeTruthy();
       expect(row!.bytes).toBeGreaterThan(0);
       expect(row!.file_count).toBeGreaterThan(0);
-      expect(row!.total_bytes).toBe(row!.bytes);
+      // R227：total_bytes 是目录全量、bytes 是按保留天数过滤后的可清量——
+      // 真实后端 total > bytes 是正常语义（有保留期时只清旧文件）。
+      expect(row!.total_bytes).toBeGreaterThanOrEqual(row!.bytes);
+      expect(row!.total_bytes).toBeGreaterThan(0);
     }
   });
 
@@ -430,7 +433,36 @@ describe('mocks.scopeSizesBatch（预览模式 scope 尺寸）', () => {
     const rb = b[0].sizes.find((r) => r.scope_id === noPrompt.id)!;
     expect(ra.bytes).toBe(rb.bytes);
   });
+
+  // R227：清理页 scope 行字节 = 工作台树里该目录的真实命中 size（口径同源），
+  // 不再用哈希公式——「工作台 0.9 GB / 清理页 75 MB / 总览 180 MB」的三处
+  // 数字对不上在演示里消失：所有 scope 行显示的都是 MOCK_TREE 目录真实字节。
+  it('R227：scope 行字节 = MOCK_TREE 真实命中 size（与工作台同源）', async () => {
+    const batch = await scopeSizesBatch('crash-dumps', ['C:\\'], {});
+    const sizes = batch[0].sizes;
+    expect(sizes.length).toBeGreaterThan(0);
+    // 树里 crash-dumps 的真实命中 size（CrashDumps 0.9GB + WER + Minidump）
+    const real = realNodeBytesSum('crash-dumps');
+    expect(real).toBeGreaterThan(0);
+    for (const row of sizes) {
+      // 每个 scope 行显示真实目录可清量（与 R212 天数缩放相乘后仍是大致量级）
+      expect(row.bytes).toBeLessThanOrEqual(real);
+      expect(row.bytes).toBeGreaterThan(real * 0.2); // 天数缩放封底 30%，不缩到 0
+    }
+  });
 });
+
+// R227：树里某 scaffold 全部命中节点的 size 之和（与 mocks.ts 的
+// scaffoldRealBytes 同算法，测试侧独立核算不依赖 mocks 内部实现）。
+function realNodeBytesSum(scaffoldId: string): number {
+  const walk = (n: import('./types').Node, acc: number): number => {
+    let s = acc;
+    if (n.scaffold_id === scaffoldId) s += n.size || 0;
+    for (const c of n.children ?? []) s = walk(c, s);
+    return s;
+  };
+  return walk(MOCK_TREE, 0);
+}
 
 describe('mocks.executeScope（预览模式清理执行）', () => {
   it('dry-run 返回样例清单且不写入台账', async () => {

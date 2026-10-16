@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理字节口径同源：全部来自扫描树真实命中（R227）
+
+- 缺口：清理页 scope 行 / 总览建议 / 执行释放的字节此前走哈希公式
+  （`mockScopeBytes`），与工作台树里目录的真实 size 各说各话——
+  「工作台 0.9 GB / 清理页 75 MB / 总览 180 MB」数字对不上。
+- R227 收敛：`scopeSizesBatch` / `cleanupSuggestions` / `executeScope`
+  的字节优先取 **MOCK_TREE 修剪后命中节点的真实 size**（哈希只作
+  未命中兜底）；`total_bytes` 显示目录全量、`bytes` 显示按保留天数
+  过滤后的可清量（R212 天数缩放保留，语义与真实后端 mtime 过滤一致）。
+- 新测试：scope 行字节 ≤ 树里真实命中总量（且不缩到 0），total ≥ bytes
+  （**617 总 / 42 files**）。
+- 浏览器实测：崩溃转储脚本行 922 MB（= 树真实 0.9 GB），三个 scope 行
+  「共 922 MB · 待清 276 MB」——全量/可清/总览建议同源一致。
+
 ### 2026-10-16 剪枝落盘：刷新后不再复活已删目录（R226）
 
 - 缺口：R222/R224 的 `applyRecycledPrune` 只改内存 scanCache，剪过的树

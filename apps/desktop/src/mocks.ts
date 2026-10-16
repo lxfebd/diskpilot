@@ -1699,6 +1699,22 @@ function mockScopeFileCount(scopeId: string): number {
   return 40 + (hashString(scopeId + ':n') % 4000);
 }
 
+/** R227：MOCK_TREE 里某 scaffold 的「真实命中总字节」（修剪后）。口径同源：
+ *  清理页所有 scope 行总和 ≈ 工作台树里该目录的 size，不会再出现
+ *  「工作台 0.9 GB / 清理页 75 MB / 总览 180 MB」三处数字对不上。
+ *  找不到该 scaffold 的节点（未检测到）时返回哈希兜底，保证列表恒有值。 */
+function scaffoldRealBytes(scaffoldId: string): number | null {
+  const tree = pruneRecycledFrom(structuredClone(MOCK_TREE));
+  let sum = 0;
+  let found = false;
+  const walk = (n: Node) => {
+    if (n.scaffold_id === scaffoldId) { sum += n.size || 0; found = true; }
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(tree);
+  return found ? sum : null;
+}
+
 /** dry-run / 真删的演示命中条目：路径拼在扫描命中目录下，文件名按 scope 稳定。 */
 /** R225：mock 模块级「已回收路径」台账——真删后 scan / cleanupSuggestions /
  *  scopeSizesBatch 都基于修剪后的树返回，总览建议项与工作台体量在演示里
@@ -1767,8 +1783,13 @@ function mockRealScopePaths(scaffoldId: string, rootPath: string): string[] {
   return out;
 }
 
-function mockScopeEntries(scopeId: string, rootPath: string, n: number, days?: number, realPaths?: string[]): UndoEntry[] {
-  const bytes = mockScopeBytes(scopeId, days);
+function mockScopeEntries(scopeId: string, rootPath: string, n: number, days?: number, realPaths?: string[], realBytes?: number | null): UndoEntry[] {
+  // R227：真删/预览的释放字节与扫描树同源（realBytes = 该 scope 目录真实
+  // 可清量）；无真实基准确认时空值退回哈希，保证演示口径不回退。
+  const bytes =
+    realBytes !== undefined && realBytes !== null
+      ? (days === undefined ? realBytes : Math.round(realBytes * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7)))
+      : mockScopeBytes(scopeId, days);
   const per = Math.max(1, Math.floor(bytes / Math.max(1, n)));
   const stem = hashString(scopeId + ':stem');
   const out: UndoEntry[] = [];
@@ -1800,18 +1821,25 @@ export async function scopeSizesBatch(
   await wait(50);
   void scopeDays;
   const scaffold = SCAFFOLDS.find((s) => s.id === scaffoldId);
+  // R227：优先用 MOCK_TREE 真实命中字节（修剪后）——清理页 scope 行不再
+  // 用哈希公式，数字与工作台树的目录 size 同源。找不到真实节点时退回
+  // 哈希兜底（未检测到的脚本也能展示列表）。
+  const realTotal = scaffold !== undefined ? scaffoldRealBytes(scaffoldId) : null;
   const sizes = (scaffold?.scopes ?? []).map((sc) => {
     // R212：接入保留天数——只有带 prompt.days 的 scope 按用户天数缩放可清字节
     // （真实后端 scope_sizes_batch 带 scopeDays 时按 mtime 过滤；无保留期的
     // scope 不受 scopeDays 影响）。天数越大可清越少，封底 30%。
     const days = sc.prompt?.kind === 'days' ? (scopeDays?.[sc.id] ?? sc.prompt.default ?? 30) : undefined;
-    const bytes = mockScopeBytes(sc.id, days);
+    // R227：真实字节同源——total_bytes 显示目录全量（真实后端是该 scope
+    // 全部命中），bytes 显示按保留天数过滤后的可清量（R212 天数缩放）。
+    const raw = realTotal ?? mockScopeBytes(sc.id);
+    const bytes = days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
     const files = mockScopeFileCount(sc.id);
     return {
       scope_id: sc.id,
       bytes,
       file_count: files,
-      total_bytes: bytes,
+      total_bytes: raw,
       total_files: files,
     };
   });
@@ -1831,7 +1859,9 @@ export async function executeScope(
   const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, opts.olderThanDays ?? undefined) / (24 * MB))));
   // R225：真删时收集真实树路径（dry-run 保持合成清单，预览不受影响）。
   const realPaths = dryRun ? undefined : mockRealScopePaths(scaffoldId, rootPath);
-  const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined, realPaths);
+  // R227：真删/预览的释放字节与扫描树同源（该 scope 目录真实可清量）。
+  const realBytes = scaffoldRealBytes(scaffoldId);
+  const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined, realPaths, realBytes);
   if (!dryRun) {
     UNDO_LEDGER.push(...entries);
     // R225：真删路径进 mock 级台账——后续 scan / cleanupSuggestions 从
@@ -1885,8 +1915,11 @@ export async function cleanupSuggestions(
     for (const scope of picked) {
       // R212：与清理页 scope 行同一口径——带 prompt.days 的 scope 用默认
       // 保留天数缩放（总览建议的大小 = 进清理页勾选后真正清的大小）。
+      // R227：改真实命中字节（与清理页/工作台同源），不再用哈希公式。
       const days = scope.prompt?.kind === 'days' ? (scope.prompt.default ?? 30) : undefined;
-      const bytes = mockScopeBytes(scope.id, days);
+      const real = scaffoldRealBytes(sc.id);
+      const raw = real ?? mockScopeBytes(scope.id);
+      const bytes = days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
       out.push({
         scaffold_id: sc.id,
         scope_id: scope.id,
