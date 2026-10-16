@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote, toolRegistry } from './tools';
+import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote, toolRegistry, takeProposal, resetAgentPending } from './tools';
 import type { ToolManifestInvocation } from '../api';
 
 const inv = (over: Partial<ToolManifestInvocation> = {}): ToolManifestInvocation =>
@@ -429,6 +429,25 @@ describe('toolRegistry 清理清单生成预览模式可用（R283）', () => {
     expect(t.tauriOnly).toBeUndefined();
     expect(typeof t.execute).toBe('function');
     expect(t.required).toEqual(['title', 'items']);
+  });
+
+  // R284：闭环测试——AI 调 execute 出的清单必须能被 agentChat 的
+  // takeProposal() 取走（UI 确认窗数据来源），预览与桌面端同链路。
+  it('生成的清单可被 takeProposal 取走（确认窗数据链路）', async () => {
+    resetAgentPending();
+    const t = toolRegistry.find((x) => x.name === 'propose_cleanup_plan')!;
+    const out = await t.execute(
+      { title: '演示清理', items: [{ path: 'C:\\Users\\me\\AppData\\Local\\Temp', what: '临时文件', purpose: '缓存', impact: '可重建', risk: 'safe' }] },
+      { user: 'test' },
+    );
+    expect(out).toContain('确认');
+    const proposal = takeProposal();
+    expect(proposal).toBeTruthy();
+    expect(proposal!.title).toBe('演示清理');
+    expect(proposal!.items[0].path).toBe('C:\\Users\\me\\AppData\\Local\\Temp');
+    // 取走后不留残留：再取为空
+    expect(takeProposal()).toBeNull();
+    resetAgentPending();
   });
 });
 

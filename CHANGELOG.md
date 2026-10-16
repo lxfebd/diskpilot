@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 清理清单生成闭环测试：确认窗数据链路验证（R284）
+
+- R283 放行 propose_cleanup_plan 只测了 execute 返回文案，没测关键链路：
+  AI 出的清单要经 pendingProposal → takeProposal() 交给 UI 确认窗。若这
+  个链路断，清单只存在于工具返回文本里，UI 确认窗拿到的是空——预览与
+  桌面端同链路，不能只靠返回文案。
+- R284 修复：新增闭环测试——execute 生成清单 → takeProposal 取走 → 断言
+  title/items 完整 → 再取为空（无残留）。
+- 新增 1 测试（tools.test 67→68）。
+  （**729 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 清理清单生成预览放行：AI 演示完整清理流程（R283）
 
 - R274-R282 放行了大批只读工具，但 propose_cleanup_plan（生成【待用户
