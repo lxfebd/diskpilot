@@ -487,8 +487,9 @@ export const toolRegistry: ToolDef[] = [
     execute: async (args) => {
       const sample = args.sample === true;
       if (!isTauri) {
-        const cores = (navigator as { hardwareConcurrency?: number }).hardwareConcurrency ?? null;
-        const memGb = (navigator as { deviceMemory?: number }).deviceMemory ?? null;
+        const nav = typeof navigator !== 'undefined' ? (navigator as { hardwareConcurrency?: number; deviceMemory?: number }) : null;
+        const cores = nav?.hardwareConcurrency ?? null;
+        const memGb = nav?.deviceMemory ?? null;
         const drives = await api.listDrives();
         const lines = [
           `CPU 占用：浏览器拿不到实时占用（预览模式），逻辑核心 ${cores ?? '未知'}`,

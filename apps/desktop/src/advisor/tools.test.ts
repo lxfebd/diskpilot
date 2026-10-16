@@ -467,3 +467,40 @@ describe('mcpTool 写工具权限门（R265）', () => {
     expect(out).not.toContain('未授权');
   });
 });
+
+// R280：放行的只读工具执行层验证——node 环境 isTauri=false 走浏览器预览
+// 支路（mock 演示数据源），真实跑 execute 断言产出文本且不抛错。注册表
+// 断言只证明「注册了」，执行层断言才能证明「预览模式真的能用」。
+describe('toolRegistry 只读工具预览支路执行可用（R280）', () => {
+  const CASES: { name: string; args: Record<string, unknown>; want: (s: string) => void }[] = [
+    { name: 'path_size', args: { path: 'C:\\Users\\90740\\AppData\\Local\\CrashDumps' }, want: (s) => expect(s).toContain('实测占用') },
+    { name: 'path_size', args: { path: 'C:\\不存在\\路径\\x.bin' }, want: (s) => expect(s).toContain('0 B') },
+    { name: 'inspect_dir', args: { path: 'C:\\Users\\90740\\AppData\\Local\\Edge' }, want: (s) => expect(s.length).toBeGreaterThan(0) },
+    { name: 'get_disk_health', args: {}, want: (s) => expect(s).toContain('演示数据') },
+    { name: 'get_system_info', args: {}, want: (s) => expect(s).toContain('系统') },
+    { name: 'run_system_probe', args: {}, want: (s) => expect(s).toContain('磁盘') },
+    { name: 'get_cleanup_suggestions', args: { path: 'C:\\' }, want: (s) => expect(s.length).toBeGreaterThan(0) },
+    { name: 'get_steam_library_summary', args: {}, want: (s) => expect(s.length).toBeGreaterThan(0) },
+    { name: 'get_fan_status', args: {}, want: (s) => expect(s).toContain('可调速通道') },
+    { name: 'get_hardware_info', args: {}, want: (s) => expect(s).toContain('"') },
+    { name: 'analyze_disk_health', args: {}, want: (s) => expect(s).toContain('物理盘') },
+    { name: 'get_cli_tool_usage', args: { toolName: 'WizTree' }, want: (s) => expect(s).toContain('预览') },
+    { name: 'get_tool_manifest', args: { toolName: 'CPU-Z' }, want: (s) => expect(s).toContain('预览') },
+    { name: 'get_cli_tool_usage', args: { toolName: '不存在工具XYZ' }, want: (s) => expect(s).toContain('未收录') },
+  ];
+
+  for (const c of CASES) {
+    it(`${c.name} 预览支路产出文本（非 Tauri 环境不抛错）`, async () => {
+      const t = toolRegistry.find((x) => x.name === c.name)!;
+      const out = await t.execute(c.args, { user: 'test' });
+      expect(typeof out).toBe('string');
+      c.want(out);
+    });
+  }
+
+  it('get_fan_status 预览明确只读（写操作仍不可用）', async () => {
+    const t = toolRegistry.find((x) => x.name === 'get_fan_status')!;
+    const out = await t.execute({}, { user: 'test' });
+    expect(out).not.toContain('已应用自定义转速：是');
+  });
+});

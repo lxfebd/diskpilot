@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 只读工具预览支路执行层测试：跑真数据验证放行非空转（R280）
+
+- R274-R279 放行了 12 个只读工具，但测试只断言「注册表不带 tauriOnly」——
+  注册存在 ≠ 预览支路真的产出数据。若某工具预览分支依赖缺失的
+  navigator/window（node 环境）会崩，或 mock 数据源没给够字段会空转，
+  注册表断言发现不了。
+- R280 修复：新增执行层测试块——node 环境 isTauri=false 走浏览器预览
+  支路，真实跑 14 组 execute 断言产出文本内容（path_size 实测曝光、
+  get_disk_health 演示数据标注、get_fan_status 只读口径、get_cli_tool_usage
+  /get_tool_manifest 预览标注与未收录提示等）；顺带给 run_system_probe
+  的预览支路补 navigator 守卫（node 环境无名 crash）。
+- 新增 15 测试（tools.test 50→65）。
+  （**721 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 工具箱信息工具预览放行：能力说明书（R279）
 
 - R274-R278 放行了大批只读工具，但 get_tool_manifest / get_cli_tool_usage
