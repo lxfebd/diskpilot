@@ -4,7 +4,7 @@
 //   ① 取消只在批次边界生效，已交批次照常完成、进度保留；
 //   ② 进度 done/total/freedBytes 随批累加；
 //   ③ 四种收尾文案：done / cancelled / cancelledNone / allFailed。
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { api } from './api';
 import { useCleanupStore, type CleanupSession } from './useCleanupStore';
 import { useStore } from './store';
@@ -87,8 +87,26 @@ beforeEach(() => {
   vi.clearAllMocks();
   // 固定中文，让收尾文案可断言（默认语言在 node 环境会落到 en）。
   setLang('zh');
+  // R257：runRealDelete 有 cleanup.execute 权限门（L2 默认关）——测试环境
+  // stub window.localStorage，默认预置已开启，权限关闭场景单独覆盖。
+  const store = new Map<string, string>();
+  vi.stubGlobal('window', {
+    localStorage: {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, v); },
+      removeItem: (k: string) => { store.delete(k); },
+    },
+  });
+  window.localStorage.setItem(
+    'diskpilot.perms.v1',
+    JSON.stringify({ enabled: { 'cleanup.execute': true } }),
+  );
   useCleanupStore.setState({ session: null });
   useStore.setState({ reclaimedBytes: 0 });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe('runRealDelete 实时进度与取消', () => {
@@ -234,5 +252,38 @@ describe('recheckPreflight（重跑占用进程检测）', () => {
     useCleanupStore.setState({ session: null });
     await useCleanupStore.getState().recheckPreflight();
     expect(useCleanupStore.getState().session).toBeNull();
+  });
+});
+
+// R257：runRealDelete 权限门——cleanup.execute 是 L2 高危，默认关闭。
+// 权限中心关掉后清理页必须拒绝真删（此前直接 executeScope 漏过权限表）。
+describe('runRealDelete 权限门（cleanup.execute）', () => {
+  it('权限关闭 → 拒绝执行，不调 executeScope，预览/预备清空', async () => {
+    window.localStorage.setItem(
+      'diskpilot.perms.v1',
+      JSON.stringify({ enabled: { 'cleanup.execute': false } }),
+    );
+    useCleanupStore.setState({ session: makeSession(makePreview()) });
+
+    await useCleanupStore.getState().runRealDelete();
+
+    expect(executeScope).not.toHaveBeenCalled();
+    const s = useCleanupStore.getState().session!;
+    expect(s.err).toContain('未授权');
+    expect(s.preview).toBeNull();
+    expect(s.armed).toBe(false);
+    expect(s.running).toBe(false);
+    expect(useStore.getState().reclaimedBytes).toBe(0);
+  });
+
+  it('权限开启 → 正常执行（回归：默认配置不误拦）', async () => {
+    executeScope.mockImplementation(async () => [{ source: 'a', bytes_freed: 1000 }]);
+    useCleanupStore.setState({ session: makeSession(makePreview()) });
+
+    await useCleanupStore.getState().runRealDelete();
+    const s = useCleanupStore.getState().session!;
+    expect(executeScope).toHaveBeenCalled();
+    expect(s.progress.done).toBe(6);
+    expect(s.msg).toBeTruthy();
   });
 });

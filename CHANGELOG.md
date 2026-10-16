@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页真删加权限门：cleanup.execute 关闭时拒绝执行（R257）
+
+- 缺口：aiRecyclePaths 有 cleanup.execute 权限门（L2 高危默认关），清理页
+  runRealDelete 却直接 executeScope——权限中心关掉「执行清理计划」后清理页
+  仍能真删，权限表形同虚设。
+- R257 修复：runRealDelete 开头加 isPermEnabled('cleanup.execute') 权限门
+  （与 aiRecyclePaths 同文案 errors.permExecuteMissing）——关闭时拒绝执行、
+  清空预览与预备态，绝不静默执行。排查还确认 recyclePaths（右键回收）走
+  file.recycle 门（L2 默认关）一致语义。
+- 新增 2 测试（权限关闭→拒绝且不调 executeScope；权限开启→正常执行回归；
+  测试 stub window.localStorage + 预置权限）
+  （**672 总 / 43 files**）。
+
 ### 2026-10-16 剪枝统一 bump scanSeq：右键回收 / AI 提案也刷新脚本卡徽标（R256）
 
 - 缺口：applyRecycledPrune（剪树）只在 pruneRecycled（清理页）路径后 bump

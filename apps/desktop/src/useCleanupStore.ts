@@ -10,6 +10,7 @@ import { api } from './api';
 import type { ExecuteScopeOpts } from './api';
 import { formatBytes } from './format';
 import { t } from './i18n';
+import { isPermEnabled } from './permissions';
 import {
   aggregateScopeSizes,
   collectWxids,
@@ -631,6 +632,18 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
   runRealDelete: async () => {
     const s0 = getCur();
     if (!s0 || s0.preview === null) return;
+    // R257：权限门（与 aiRecyclePaths 同口径）——cleanup.execute 是 L2 高危，
+    // 默认关闭。清理页之前直接 executeScope，权限中心关掉后仍能真删：这是
+    // 「权限表形同虚设」的漏网入口。关掉时拒绝并指引权限中心，绝不静默执行。
+    if (!isPermEnabled('cleanup.execute')) {
+      patchInSession(() => ({
+        err: t('errors.permExecuteMissing'),
+        preview: null,
+        running: false,
+        armed: false,
+      }));
+      return;
+    }
     patchInSession(() => ({
       running: true,
       cancelRequested: false,
