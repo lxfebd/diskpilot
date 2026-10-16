@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 总览「立即清理」记账改用实测字节：与清理页同口径（R266）
+
+- 缺口：总览 doClean 记账用预览预估 it.bytes，而清理页 runRealDelete 用
+  后端实测 bytes_freed——同一 scope 两条路径「已释放 X」显示不一致
+  （days 过滤后实际删 vs 全量预估）。
+- R266 修复：①记账改 entries.reduce(bytes_freed) 实测累加（L724 同口径）；
+  ②bytes=0 时 toast 用 common.recycle.doneNoBytes 兜底，不再显示「释放约
+  0 B」误导（与清理页/AI 提案同口径）。
+- 浏览器实测：总览一键清理 17 项 →「已清理 17 项 · 释放约 58.1 GB（已进
+  回收站）」。
+- 无新增测试（组件闭包口径修复；tsc/eslint/build 把关）（**676 总 /
+  43 files**）。
+
 ### 2026-10-17 AI 写工具权限未开时给「未授权」指引：不再说成“用户取消”（R265）
 
 - 缺口：mcpTool 通用确认门把「权限未开」和「用户点取消」都回成「需要用户

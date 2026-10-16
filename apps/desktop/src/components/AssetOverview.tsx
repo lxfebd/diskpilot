@@ -995,7 +995,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             confirmed: true,
           });
           if (entries.length > 0) {
-            bytes += it.bytes;
+            // R266：记账用后端实测 bytes_freed（与清理页 runRealDelete L724
+            // 同一口径），不再用预览预估 it.bytes——days 过滤后实际删多少就记
+            // 多少，「已释放 X」与清理页清同一 scope 完全一致。
+            bytes += entries.reduce((s, e) => s + (e.bytes_freed ?? 0), 0);
             cleaned += 1;
             for (const e of entries) if (e.source) recycledPaths.push(e.source);
           }
@@ -1009,9 +1012,13 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       // R224：成功回收跨页同步剪树（root + 受影响缓存树）。
       if (recycledPaths.length > 0) useStore.getState().pruneRecycled(recycledPaths);
       if (cleaned > 0) {
+        // R266：bytes 为 0 不显示「约 0 B」误导（实测没统计到/真 0 字节文件），
+        // 用 doneNoBytes 兜底——与清理页 / AI 提案 toast 同一口径。
         toast(
-          t('overview.clean.done', { n: cleaned, size: formatBytes(bytes) })
-            + (failed > 0 ? t('overview.clean.someFailed', { n: failed }) : ''),
+          bytes > 0
+            ? t('overview.clean.done', { n: cleaned, size: formatBytes(bytes) })
+              + (failed > 0 ? t('overview.clean.someFailed', { n: failed }) : '')
+            : t('common.recycle.doneNoBytes', { n: cleaned }),
           failed > 0 ? 'err' : 'ok',
         );
       } else {
