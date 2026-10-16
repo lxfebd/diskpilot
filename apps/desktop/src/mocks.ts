@@ -1044,7 +1044,11 @@ export async function checkSpaceForecast(): Promise<
   // 只影响那一天；外推取净爬升段 ≈0.42GB/天）。
   const dailyGrowth = 0.42 * GB;
   const days = dailyGrowth > 0 ? Math.floor(free / dailyGrowth) : null;
-  return [{ path: 'C:\\', days, reason: 'ok', warn: days !== null && days < 30 }];
+  // R239：预警判定与用户设置联动——读 reminderCfg.full_warn_days（R99 配置，
+  // 0=关）。真实后端 space-full 提醒「≤ 阈值天数的盘」按该配置逐盘判，mock
+  // 硬编码 <30 会与设置页阈值脱节（设 14 天却按 30 天预警）。
+  const threshold = reminderCfg.full_warn_days > 0 ? reminderCfg.full_warn_days : null;
+  return [{ path: 'C:\\', days, reason: 'ok', warn: days !== null && threshold !== null && days <= threshold }];
 }
 
 // —— R187：预览模式的周体检简报演示数据 ——

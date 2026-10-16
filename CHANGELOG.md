@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 空间耗尽预警与设置阈值联动：不再硬编码 30 天（R239）
+
+- 缺口：checkSpaceForecast 的 warn 硬编码 `days < 30`——用户把预警阈值
+  设成 3/7/14/30 天时，mock 判定与设置页脱节（API 契约写明「days ≤ 预警
+  阈值，未设阈值恒 false」，mock 却不读配置）。
+- R239 修复：warn 读 reminderCfg.full_warn_days（0=关恒不预警）；设了阈值
+  才按 `days ≤ threshold` 判。与真实后端 space-full 提醒逐盘判语义一致。
+- 新测试：0=关恒不 warn；阈值 200 天（>92 初始外推）触发预警；阈值 10 天
+  不预警（**632 总 / 42 files**）。
+- 浏览器实测：设置预警阈值 30 天 → C 盘约 92 天满 → 无 ⚠ 预警（诚实：
+  92 > 30 不触发，配置联动生效）。
+
 ### 2026-10-16 Conda 环境区与回收台账同源：删掉的环境不再列出（R238）
 
 - 缺口：listCondaEnvs 静态返回 base + tf2 + web——清理页 envs-stale 真删

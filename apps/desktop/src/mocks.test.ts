@@ -316,6 +316,23 @@ describe('mocks.checkSpaceForecast（清理提醒/体检空间外推演示数据
     // 天数增加量与实际释放量成比例（释放 0.276GB / 日增 0.42GB ≈ +0.66 天）
     expect(after[0].days! - before[0].days!).toBeGreaterThan(0);
   });
+
+  // R239：预警判定与用户设置联动——full_warn_days 设了阈值才按该阈值判
+  // warn（0=关恒不 warn），不再硬编码 <30 与设置页阈值脱节。
+  it('R239：设 full_warn_days 阈值后按配置预警（0=关恒不 warn）', async () => {
+    await setReminderConfig({ full_warn_days: 0 });
+    const off = await checkSpaceForecast();
+    expect(off[0].warn).toBe(false);
+    // 初始外推 ≈92 天 → 阈值 200 天必然触发预警（演示「盘快满」分支）
+    await setReminderConfig({ full_warn_days: 200 });
+    const on = await checkSpaceForecast();
+    expect(on[0].warn).toBe(true);
+    expect(on[0].days!).toBeLessThanOrEqual(200);
+    // 阈值 10 天（远小于 92 天）不预警
+    await setReminderConfig({ full_warn_days: 10 });
+    const tight = await checkSpaceForecast();
+    expect(tight[0].warn).toBe(false);
+  });
 });
 
 describe('mocks.listInstalledDrivers（系统工具驱动检查演示数据）', () => {
