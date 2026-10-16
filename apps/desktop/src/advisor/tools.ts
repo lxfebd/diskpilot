@@ -546,16 +546,27 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_tool_manifest',
-    description: '获取图吧工具箱中某个工具的结构化能力说明书（Tool Manifest JSON）：用途、适用场景、调用参数、风险等级、副作用、示例。比 get_cli_tool_usage 更详细（含完整参数表/副作用/官方链接）。执行 run_cli_tool 前若需要确认参数细节可用本工具。',
+    description: '获取图吧工具箱中某个工具的结构化能力说明书（Tool Manifest JSON）：用途、适用场景、调用参数、风险等级、副作用、示例。比 get_cli_tool_usage 更详细（含完整参数表/副作用/官方链接）。执行 run_cli_tool 前若需要确认参数细节可用本工具。浏览器预览模式下返回演示目录描述信息（无完整参数表）。',
     properties: { toolName: { type: 'string', description: '工具名，如 WizTree、CrystalDiskInfo、Prime95' } },
     required: ['toolName'],
-    tauriOnly: true,
+    // R279：浏览器预览放行——TOOLBELT_CATALOG 演示目录提供描述级信息，
+    // 诚实标注无完整参数表；桌面端仍走完整 Manifest。
     execute: async (args) => {
       // 按需查单个工具的五段式能力说明书（结构化 JSON）：AI 在执行前可只
       // 取自己关心的字段（invocation.params / risk / side_effects），比注入
       // 全量索引省 token。非 Tauri / 未收录返回 null。
       const tool = String(args.toolName ?? '').trim();
       if (!tool) return '工具名为空：请提供 toolName。';
+      if (!isTauri) {
+        // R279：浏览器预览放行——演示目录 TOOLBELT_CATALOG 只有描述级字段，
+        // 返回它（诚实：无完整参数表，明示预览数据）；有该工具则给，没有
+        // 就如实说未收录。
+        const cat = await api.toolbeltCatalog();
+        const hit = cat.categories.flatMap((c) => c.tools).find((t) => t.name.toLowerCase() === tool.toLowerCase());
+        if (!hit) return `工具箱中没有「${tool}」（预览目录未收录）。`;
+        const risk = (hit as { risk?: string }).risk ?? 'low';
+        return `# ${hit.name}（${hit.category}，风险 ${risk}）\n用途（预览目录描述）：${hit.description}\n标签：${hit.tags.join(' / ') || '无'}\n（浏览器预览模式：仅演示目录信息，无完整参数表/副作用；桌面端提供完整 Manifest。）`;
+      }
       const m = await getManifestFor(tool);
       if (!m) return `工具箱中没有「${tool}」的能力说明书（未收录或非 Tauri 环境）。`;
       return clip(JSON.stringify(m, null, 2), 4000, '需要完整说明书可再调 get_cli_tool_usage。');
@@ -563,13 +574,28 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_cli_tool_usage',
-    description: '获取图吧工具箱中某个命令行工具的完整使用文档（绝对路径、参数表、示例、注意事项）。执行 run_cli_tool 之前必须先调用本工具确认参数，再执行。',
+    description: '获取图吧工具箱中某个命令行工具的完整使用文档（绝对路径、参数表、示例、注意事项）。执行 run_cli_tool 之前必须先调用本工具确认参数，再执行。浏览器预览模式下返回演示目录描述信息（无完整参数表/绝对路径）。',
     properties: { toolName: { type: 'string', description: '工具名，如 WizTree、CrystalDiskInfo、Prime95、FurMark、autorunsc' } },
     required: ['toolName'],
-    tauriOnly: true,
+    // R279：浏览器预览放行——TOOLBELT_CATALOG 演示目录提供描述级信息，
+    // 诚实标注无完整参数表；桌面端仍走完整使用文档。
     execute: async (args) => {
       const tool = String(args.toolName ?? '').trim();
       if (!tool) return '工具名为空：请提供 toolName。';
+      if (!isTauri) {
+        // R279：浏览器预览放行——演示目录 TOOLBELT_CATALOG 只有描述级字段，
+        // 诚实返回（无完整参数表/示例/绝对路径），预览不编造命令行用法。
+        const cat = await api.toolbeltCatalog();
+        const hit = cat.categories.flatMap((c) => c.tools).find((t) => t.name.toLowerCase() === tool.toLowerCase());
+        if (!hit) return `工具箱中没有「${tool}」（预览目录未收录）。`;
+        const risk = (hit as { risk?: string }).risk ?? 'low';
+        return [
+          `# ${hit.name}（${hit.category}，风险 ${risk}）`,
+          `用途（预览目录描述）：${hit.description}`,
+          `标签：${hit.tags.join(' / ') || '无'}`,
+          '（浏览器预览模式：仅演示目录信息，无完整参数表/绝对路径/示例；桌面端提供完整使用文档。）',
+        ].join('\n');
+      }
       const u = await api.toolbeltUsage(tool);
       const m = await getManifestFor(tool);
       if (m) {

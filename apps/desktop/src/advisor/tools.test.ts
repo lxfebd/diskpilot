@@ -322,7 +322,7 @@ describe('toolRegistry 只读测量工具预览模式可用（R274）', () => {
 describe('toolRegistry 只读汇总工具预览模式可用（R275）', () => {
   const PREVIEW_READONLY = ['get_cleanup_suggestions', 'get_steam_library_summary', 'get_fan_status'];
   const STILL_TAURI_ONLY = ['list_top_processes',
-    'run_cli_tool', 'adjust_fan_curve', 'get_cli_tool_usage', 'get_tool_manifest'];
+    'run_cli_tool', 'adjust_fan_curve'];
 
   for (const name of PREVIEW_READONLY) {
     it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
@@ -394,6 +394,29 @@ describe('toolRegistry 系统状态工具预览模式可用（R278）', () => {
       expect(typeof t.execute, name).toBe('function');
     });
   }
+});
+
+// R279：get_cli_tool_usage / get_tool_manifest 预览放行——TOOLBELT_CATALOG
+// 演示目录（18 工具）提供描述级信息，诚实标注无完整参数表；桌面端仍走
+// 完整 Manifest/使用文档。run_cli_tool（真正执行工具）保持 tauriOnly。
+describe('toolRegistry 工具箱信息工具预览模式可用（R279）', () => {
+  const PREVIEW_BELT_READONLY = ['get_cli_tool_usage', 'get_tool_manifest'];
+
+  for (const name of PREVIEW_BELT_READONLY) {
+    it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBeUndefined();
+      expect(typeof t.execute, name).toBe('function');
+      expect(t.required, name).toEqual(['toolName']);
+    });
+  }
+
+  it('run_cli_tool 仍带 tauriOnly（执行真实工具，预览不假装可运行）', () => {
+    const t = toolRegistry.find((x) => x.name === 'run_cli_tool')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBe(true);
+  });
 });
 
 describe('mcpTool 写工具权限门（R265）', () => {

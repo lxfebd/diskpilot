@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 工具箱信息工具预览放行：能力说明书（R279）
+
+- R274-R278 放行了大批只读工具，但 get_tool_manifest / get_cli_tool_usage
+  （AI 执行 run_cli_tool 前必查参数的工具）仍 tauriOnly——预览模式
+  toolbeltManifests/toolbeltUsage 返回空/拒绝，AI 想问「这个工具怎么用」
+  无任何数据。而 TOOLBELT_CATALOG mock（与工具墙同源，18 个工具的描述/
+  分类/风险/标签）一直存在却没用上。
+- R279 修复：两个工具加非 Tauri 预览支路——按名在 TOOLBELT_CATALOG 里查，
+  命中返回描述级信息并明示「预览仅演示目录信息，无完整参数表」；未收录
+  如实说明。桌面端仍走完整 Manifest/使用文档。run_cli_tool（真正执行）保持
+  tauriOnly。
+- 新增 3 测试（tools.test 47→50）：两个信息工具不带 tauriOnly + run_cli_tool
+  仍带。
+  （**706 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 系统状态工具预览放行：配置/运行状态（R278）
 
 - R274-R277 放行了测量/汇总/硬件类只读工具，但 get_system_info（execute
