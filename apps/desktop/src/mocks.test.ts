@@ -3,7 +3,7 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, undo } from './mocks';
 
 beforeEach(() => {
   // R225：mock 级回收台账在每条测试前复位，避免真删路径跨用例累积污染
@@ -580,6 +580,40 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     expect(crashSugs.length).toBeGreaterThan(0);
     expect(crashSugs.some((r) => /CrashDumps/i.test(r.path))).toBe(false);
     expect(crashSugs.some((r) => /WER|Minidump/i.test(r.path))).toBe(true);
+  });
+
+  // R230：还原 = 目录回补扫描树——quarantine 条目 undo 成功后，被回收的
+  // 目录从 mock 级台账移除，cleanupSuggestions 重新建议它（演示里还原与
+  // 清理是互逆操作，不会出现「还原了但总览还缺这个目录」）。
+  it('R230：undo 还原后目录回到扫描树（回收台账移除该路径）', async () => {
+    const path = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    // 先回收该目录（模拟真删剪枝）
+    _mockRecyclePath(path);
+    const before = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
+    // CrashDumps 被剪后，crash-dumps-local scope 的建议字节不含 CrashDumps
+    // （只剩 WER/Minidump 的兜底）——回补后应回到 CrashDumps 的真实大小。
+    const beforeLocal = before.find((r) => r.scope_id === 'crash-dumps-local');
+    expect(beforeLocal).toBeTruthy();
+    // 注入一条隔离条目（source = 被回收的目录）
+    _mockPushUndoEntry({
+      timestamp: new Date().toISOString(),
+      action: 'quarantine' as const,
+      source: path,
+      reason: '隔离测试',
+      bytes_freed: 0.9 * 1024 ** 3,
+    });
+    // 找到注入条目在台账里的位置（listUndo 返回按时间倒序）
+    const list = await listUndo(500);
+    const idx = list.findIndex((e) => e.source === path);
+    expect(idx).toBeGreaterThanOrEqual(0);
+    const restored = await undo(idx, path);
+    expect(restored).not.toBeNull();
+    // 还原后 CrashDumps 目录回补到树——crash-dumps-local scope 的建议字节
+    // 增长（CrashDumps 0.9GB 回到 byName 兑底，不再是 WER+Minidump 之和）。
+    const after = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
+    const afterLocal = after.find((r) => r.scope_id === 'crash-dumps-local');
+    expect(afterLocal).toBeTruthy();
+    expect(afterLocal!.bytes).toBeGreaterThan(beforeLocal!.bytes);
   });
 });
 

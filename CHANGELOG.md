@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 还原回补扫描树：还原与清理互逆（R230）
+
+- 缺口（R225 遗留）：mock 级回收台账 `recycledPaths` 只进不出——真删
+  剪掉目录后，即使隔离条目还原成功，扫描树里该目录也回不来（演示上
+  「还原了但总览还缺这个目录」）。
+- R230 修复：mock `undo()` 还原 quarantine 条目成功时，把 source 从
+  mock 级回收台账移除——被还原的目录回到 scan / cleanupSuggestions /
+  scopeSizesBatch 的树里；新增测试 hook `_mockPushUndoEntry` 注入隔离
+  条目覆盖该语义（预览模式 scaffolds 全是 recycle mode，无法自然生成
+  隔离条目，测试注入以验证「还原 = 目录回补」）。
+- 新测试：还原后 crash-dumps-local 建议字节增长（CrashDumps 0.9GB 回补）
+  （**621 总 / 42 files**）。
+- 浏览器实测：历史页隔离条目点「恢复」→ 提示「已恢复：旧报告.docx」
+  → 台账条目消失，还原链路完整。
+
 ### 2026-10-16 执行只清所选 scope 目录：不误伤同脚本其它目录（R229）
 
 - 缺口（R228 遗留）：executeScope 真删剪枝用 mockRealScopePaths 收集

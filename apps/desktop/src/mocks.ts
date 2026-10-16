@@ -1675,7 +1675,10 @@ export async function listUndo(limit?: number): Promise<UndoEntry[]> {
   return limit && limit > 0 ? sorted.slice(0, limit) : sorted;
 }
 
-/** 只有隔离条目能原地还原（与后端 restore_quarantined 同口径）；回收条目返回 null。 */
+/** 只有隔离条目能原地还原（与后端 restore_quarantined 同口径）；回收条目返回 null。
+ *  R230：还原成功后把 source 从 mock 级回收台账移除——被还原的目录回到
+ *  scan / cleanupSuggestions / scopeSizesBatch 的树里（「还原了，树里回来」），
+ *  演示里还原与清理是互逆操作，不会出现「还原了但工作台还缺这个目录」。 */
 export async function undo(index: number, source: string): Promise<UndoEntry | null> {
   await wait(300);
   const sorted = [...UNDO_LEDGER].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -1683,6 +1686,9 @@ export async function undo(index: number, source: string): Promise<UndoEntry | n
   if (!e || e.action !== 'quarantine' || e.source !== source) return null;
   const at = UNDO_LEDGER.indexOf(e);
   if (at >= 0) UNDO_LEDGER.splice(at, 1);
+  // R230：还原 = 文件回到原位，目录从回收台账回来（仅当该目录确实被清过）。
+  const idx = recycledPaths.findIndex((p) => samePath(p, source));
+  if (idx >= 0) recycledPaths.splice(idx, 1);
   return e;
 }
 
@@ -1790,6 +1796,14 @@ export function _mockRecyclePath(p: string): void {
 /** 测试专用：清空 mock 级回收台账（各 describe 互不污染）。 */
 export function _mockResetRecycled(): void {
   recycledPaths = [];
+}
+
+/** R230：测试专用——注入一条台账条目（quarantine 类），验证还原回补树。
+ *  真实链路里 quarantine 条目由后端 restore_quarantined 产生；mock 的
+ *  scaffolds 全是 recycle mode，预览模式无法自然生成隔离条目，测试注入
+ *  一条以覆盖「还原 = 目录回补扫描树」的演示语义。 */
+export function _mockPushUndoEntry(e: import('./types').UndoEntry): void {
+  UNDO_LEDGER.push(e);
 }
 
 function samePath(a: string, b: string): boolean {
