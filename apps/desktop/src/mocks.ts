@@ -89,6 +89,17 @@ export const MOCK_TREE: Node = {
                                 file('D4E5F607.dat', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\INetCache\\IE\\D4E5F607.dat', 96 * 1024 * 1024),
                               ],
                             },
+                            // R228：WER 错误报告（crash-dumps scope 2）——%LOCALAPPDATA%\
+                            // Microsoft\Windows\WER 真实常驻，崩溃转储脚本的第二个
+                            // scope 行显示自己的真实字节（不再与 CrashDumps 共享总量）。
+                            {
+                              name: 'WER', path: 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\WER', is_dir: true,
+                              size: 320 * MB, file_count: 1_480, scaffold_id: 'crash-dumps', top_extensions: [],
+                              children: [
+                                file('ReportQueue\\20261015_WER_Explorer.exe_cab', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\WER\\ReportQueue\\20261015_WER_Explorer.exe_cab', 96 * 1024 * 1024),
+                                file('ReportArchive\\20261001_WER_notepad.exe_cab', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\WER\\ReportArchive\\20261001_WER_notepad.exe_cab', 64 * 1024 * 1024),
+                              ],
+                            },
                           ],
                         },
                       ],
@@ -515,6 +526,16 @@ export const MOCK_TREE: Node = {
                 file('windows11.0-kb5049032-x64.msu', 'C:\\Windows\\SoftwareDistribution\\Download\\windows11.0-kb5049032-x64.msu', 420 * 1024 * 1024),
               ],
             },
+          ],
+        },
+        // R228：系统崩溃转储（crash-dumps scope 3）——C:\Windows\Minidump
+        // 真实常驻，系统崩溃转储 scope 行显示自己的真实字节。
+        {
+          name: 'Minidump', path: 'C:\\Windows\\Minidump', is_dir: true,
+          size: 140 * MB, file_count: 42, scaffold_id: 'crash-dumps', top_extensions: [],
+          children: [
+            file('kernel.dmp', 'C:\\Windows\\Minidump\\kernel.dmp', 96 * 1024 * 1024),
+            file('win32k.dmp', 'C:\\Windows\\Minidump\\win32k.dmp', 32 * 1024 * 1024),
           ],
         },
       ],
@@ -1700,19 +1721,59 @@ function mockScopeFileCount(scopeId: string): number {
 }
 
 /** R227：MOCK_TREE 里某 scaffold 的「真实命中总字节」（修剪后）。口径同源：
- *  清理页所有 scope 行总和 ≈ 工作台树里该目录的 size，不会再出现
- *  「工作台 0.9 GB / 清理页 75 MB / 总览 180 MB」三处数字对不上。
- *  找不到该 scaffold 的节点（未检测到）时返回哈希兜底，保证列表恒有值。 */
-function scaffoldRealBytes(scaffoldId: string): number | null {
+*  清理页所有 scope 行总和 ≈ 工作台树里该目录的 size，不会再出现
+*  「工作台 0.9 GB / 清理页 75 MB / 总览 180 MB」三处数字对不上。
+*  找不到该 scaffold 的节点（未检测到）时返回哈希兜底，保证列表恒有值。
+*  R228：按 scope 的 glob 目录名拆分子目录——crash-dumps 的三个 scope 行
+*  各显示自己的真实目录（CrashDumps / WER / Minidump），不再共享总量。 */
+function scaffoldDirBytes(scaffoldId: string, rootPath?: string): Map<string, number> {
   const tree = pruneRecycledFrom(structuredClone(MOCK_TREE));
-  let sum = 0;
-  let found = false;
+  const root = rootPath ? rootPath.replace(/[\\/]+$/, '').toLowerCase() : null;
+  const byName = new Map<string, number>();
   const walk = (n: Node) => {
-    if (n.scaffold_id === scaffoldId) { sum += n.size || 0; found = true; }
+    if (n.scaffold_id === scaffoldId) {
+      // R228：带 rootPath 时只累计位于该命中目录之下的节点——多个命中
+      // 目录（CrashDumps / WER / Minidump）各算各的，aggregateScopeSizes
+      // 累加后不再翻倍。
+      if (root === null) {
+        const name = n.name;
+        byName.set(name, (byName.get(name) ?? 0) + (n.size || 0));
+      } else {
+        const p = n.path.replace(/[\\/]+$/, '').toLowerCase();
+        if (p === root || p.startsWith(root + '\\')) {
+          const name = n.name;
+          byName.set(name, (byName.get(name) ?? 0) + (n.size || 0));
+        }
+      }
+    }
     for (const c of n.children ?? []) walk(c);
   };
   walk(tree);
-  return found ? sum : null;
+  return byName;
+}
+
+/** scope 的真实可清字节：优先按 glob 里的目录名（CrashDumps/WER/Minidump）
+ *  取该目录的树字节；目录名匹配不到时退回 scaffold 总量；再退回哈希。
+ *  R228：rootPath 限定命中目录范围——同一 scope 在多个命中目录下时各算
+ *  各的；带 rootPath 且该 scope 的目录不在此 root 下时返回 0（该目录
+ *  没有这个 scope 的命中，aggregate 累加才不翻倍）。 */
+function scopeRealBytes(scaffoldId: string, scopeId: string, glob: string, rootPath?: string): number | null {
+  const byName = scaffoldDirBytes(scaffoldId, rootPath);
+  if (byName.size === 0) return null;
+  // glob 里最具体的目录名（如 CrashDumps / WER / Minidump）→ 匹配树节点名。
+  const parts = glob.split(/[\\/]/).filter(Boolean);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const name = parts[i];
+    // R228：跳过通配段与 brace 段（`**`、`{A,B}` 都不是目录名）。
+    if (name.includes('*') || name.includes('{') || name.includes('}')) continue;
+    if (byName.has(name)) return byName.get(name)!;
+  }
+  // R228：rootPath 过滤后目录表非空但 glob 目录名不在其中——该命中目录
+  // 与这个 scope 无关，返回 0（不退回 scaffold 总量，否则多个目录聚合翻倍）。
+  if (rootPath !== undefined) return 0;
+  let total = 0;
+  for (const v of byName.values()) total += v;
+  return total;
 }
 
 /** dry-run / 真删的演示命中条目：路径拼在扫描命中目录下，文件名按 scope 稳定。 */
@@ -1824,26 +1885,32 @@ export async function scopeSizesBatch(
   // R227：优先用 MOCK_TREE 真实命中字节（修剪后）——清理页 scope 行不再
   // 用哈希公式，数字与工作台树的目录 size 同源。找不到真实节点时退回
   // 哈希兜底（未检测到的脚本也能展示列表）。
-  const realTotal = scaffold !== undefined ? scaffoldRealBytes(scaffoldId) : null;
-  const sizes = (scaffold?.scopes ?? []).map((sc) => {
-    // R212：接入保留天数——只有带 prompt.days 的 scope 按用户天数缩放可清字节
-    // （真实后端 scope_sizes_batch 带 scopeDays 时按 mtime 过滤；无保留期的
-    // scope 不受 scopeDays 影响）。天数越大可清越少，封底 30%。
-    const days = sc.prompt?.kind === 'days' ? (scopeDays?.[sc.id] ?? sc.prompt.default ?? 30) : undefined;
-    // R227：真实字节同源——total_bytes 显示目录全量（真实后端是该 scope
-    // 全部命中），bytes 显示按保留天数过滤后的可清量（R212 天数缩放）。
-    const raw = realTotal ?? mockScopeBytes(sc.id);
-    const bytes = days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
-    const files = mockScopeFileCount(sc.id);
-    return {
-      scope_id: sc.id,
-      bytes,
-      file_count: files,
-      total_bytes: raw,
-      total_files: files,
-    };
+  // R228：每个 scope 行按自己的 glob 目录名取真实字节（crash-dumps 的
+  // CrashDumps / WER / Minidump 三个目录各自显示，不再共享总量）。
+  // 每个 root_path 是独立的命中目录——sizes 在 map 内按各自 rootPath
+  // 过滤，aggregate 累加多个目录时才不会把同一目录算两遍。
+  return rootPaths.map((p) => {
+    const sizes = (scaffold?.scopes ?? []).map((sc) => {
+      // R212：接入保留天数——只有带 prompt.days 的 scope 按用户天数缩放可清字节
+      // （真实后端 scope_sizes_batch 带 scopeDays 时按 mtime 过滤；无保留期的
+      // scope 不受 scopeDays 影响）。天数越大可清越少，封底 30%。
+      const days = sc.prompt?.kind === 'days' ? (scopeDays?.[sc.id] ?? sc.prompt.default ?? 30) : undefined;
+      // R227：真实字节同源——total_bytes 显示目录全量（真实后端是该 scope
+      // 全部命中），bytes 显示按保留天数过滤后的可清量（R212 天数缩放）。
+      const real = scaffold !== undefined ? scopeRealBytes(scaffoldId, sc.id, sc.glob, p) : null;
+      const raw = real ?? mockScopeBytes(sc.id);
+      const bytes = days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
+      const files = mockScopeFileCount(sc.id);
+      return {
+        scope_id: sc.id,
+        bytes,
+        file_count: files,
+        total_bytes: raw,
+        total_files: files,
+      };
+    });
+    return { root_path: p, sizes };
   });
-  return rootPaths.map((p) => ({ root_path: p, sizes }));
 }
 
 /** 演示执行：dry-run 返回样例清单（条目数 = 命中体量换算）；真删追加到台账并返回回收条目。 */
@@ -1860,7 +1927,14 @@ export async function executeScope(
   // R225：真删时收集真实树路径（dry-run 保持合成清单，预览不受影响）。
   const realPaths = dryRun ? undefined : mockRealScopePaths(scaffoldId, rootPath);
   // R227：真删/预览的释放字节与扫描树同源（该 scope 目录真实可清量）。
-  const realBytes = scaffoldRealBytes(scaffoldId);
+  // R228：按 scope 的 glob 目录名取自己的真实字节（CrashDumps/WER/Minidump）。
+  const realBytes = (() => {
+    const sc = SCAFFOLDS.find((s) => s.id === scaffoldId)?.scopes.find((x) => x.id === scopeId);
+    // R228：executeScope 的 rootPath 是扫描根（可能覆盖多个目录），释放
+    // 字节取该 scope 目录全局真实大小（与 scopeSizesBatch/cleanupSuggestions
+    // 同源），不做 rootPath 过滤。
+    return sc ? scopeRealBytes(scaffoldId, scopeId, sc.glob) : null;
+  })();
   const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined, realPaths, realBytes);
   if (!dryRun) {
     UNDO_LEDGER.push(...entries);
@@ -1916,8 +1990,12 @@ export async function cleanupSuggestions(
       // R212：与清理页 scope 行同一口径——带 prompt.days 的 scope 用默认
       // 保留天数缩放（总览建议的大小 = 进清理页勾选后真正清的大小）。
       // R227：改真实命中字节（与清理页/工作台同源），不再用哈希公式。
+      // R228：按 scope 的 glob 目录名取自己的真实字节。
       const days = scope.prompt?.kind === 'days' ? (scope.prompt.default ?? 30) : undefined;
-      const real = scaffoldRealBytes(sc.id);
+      // R228：建议项字节 = 该 scope 目录在树里的真实大小（全局不过滤——
+      // hitPath 只是「该 scaffold 已命中」的证明，过滤会让多目录脚本的
+      // 建议项字节变 0）。
+      const real = scopeRealBytes(sc.id, scope.id, scope.glob);
       const raw = real ?? mockScopeBytes(scope.id);
       const bytes = days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
       out.push({

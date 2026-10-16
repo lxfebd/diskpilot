@@ -5,6 +5,26 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 多目录脚本每行真实字节：不翻倍不截断（R228）
+
+- 缺口（R227 遗留）：crash-dumps 的三个 scope 行此前共享同一总量
+  （都显示 922 MB），且多命中目录经 aggregateScopeSizes 累加会翻倍
+  （浏览器实测三行都是 1.80 GB）；WER 目录被外层 windows-privacy
+  的 Windows 节点截断，detect 目标命中不了。
+- R228 修复：
+  - MOCK_TREE 补 WER（320MB）与 Minidump（140MB）真实节点；
+  - `scopeRealBytes` 按 rootPath 过滤、按 glob 目录名绑定 scope 行——
+    每个 scope 只算自己目录的字节（CrashDumps/WER/Minidump 各一行）；
+    brace/通配段不参与目录名匹配（WER 的 `{ReportQueue,ReportArchive}`）；
+  - `collectScaffoldCards` 命中后仍下钻（嵌套脚本目录不再被截断），
+    每目录只算给自己的脚本；
+  - `scopeSizesBatch` 的 sizes 移入 rootPaths.map 内，每个命中目录
+    各算各的，聚合不再翻倍。
+- 新测试：多 root_path 各算各的聚合不翻倍、C:\Windows 下只算 Minidump、
+  crash-dumps 命中 WER/Minidump 不截断（**620 总 / 42 files**）。
+- 浏览器实测：脚本行 1.35 GB = CrashDumps 0.9 + WER 320MB + Minidump
+  140MB 精确同源；三行各显示自己目录真实字节与天数缩放待清量。
+
 ### 2026-10-16 清理字节口径同源：全部来自扫描树真实命中（R227）
 
 - 缺口：清理页 scope 行 / 总览建议 / 执行释放的字节此前走哈希公式

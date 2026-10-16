@@ -437,18 +437,52 @@ describe('mocks.scopeSizesBatch（预览模式 scope 尺寸）', () => {
   // R227：清理页 scope 行字节 = 工作台树里该目录的真实命中 size（口径同源），
   // 不再用哈希公式——「工作台 0.9 GB / 清理页 75 MB / 总览 180 MB」的三处
   // 数字对不上在演示里消失：所有 scope 行显示的都是 MOCK_TREE 目录真实字节。
-  it('R227：scope 行字节 = MOCK_TREE 真实命中 size（与工作台同源）', async () => {
+  // R228：按 glob 目录名拆分子目录——三个 scope 行各绑定自己的目录
+  // （CrashDumps / WER / Minidump），total_bytes 之和 = 树里全部命中字节。
+  it('R227/R228：scope 行 total 之和 = 树真实命中字节（按目录拆分不重复计数）', async () => {
     const batch = await scopeSizesBatch('crash-dumps', ['C:\\'], {});
     const sizes = batch[0].sizes;
     expect(sizes.length).toBeGreaterThan(0);
-    // 树里 crash-dumps 的真实命中 size（CrashDumps 0.9GB + WER + Minidump）
+    // 树里 crash-dumps 的真实命中 size（CrashDumps 0.9GB + WER 320MB + Minidump 140MB）
     const real = realNodeBytesSum('crash-dumps');
     expect(real).toBeGreaterThan(0);
+    const sum = sizes.reduce((s, r) => s + r.total_bytes, 0);
+    expect(sum).toBe(real); // 每个目录恰好绑定一个 scope 行，不重复不遗漏
     for (const row of sizes) {
-      // 每个 scope 行显示真实目录可清量（与 R212 天数缩放相乘后仍是大致量级）
-      expect(row.bytes).toBeLessThanOrEqual(real);
-      expect(row.bytes).toBeGreaterThan(real * 0.2); // 天数缩放封底 30%，不缩到 0
+      expect(row.total_bytes).toBeGreaterThan(0);
+      expect(row.bytes).toBeGreaterThan(0);
+      expect(row.bytes).toBeLessThanOrEqual(row.total_bytes); // 保留天数过滤后 ≤ 全量
     }
+  });
+
+  // R228：多个命中目录传不同 rootPath 时各算各的——C:\Windows 下只有
+  // Minidump（系统崩溃转储），scope 行不把 CrashDumps/WER 也算进去
+  // （此前 rootPath 不参与过滤，命中多个目录时 aggregate 累加翻倍）。
+  it('R228：scope 行字节按 rootPath 过滤（只算自己目录，不翻倍）', async () => {
+    const batch = await scopeSizesBatch('crash-dumps', ['C:\\Windows'], {});
+    const sizes = batch[0].sizes;
+    const dumpRow = sizes.find((r) => r.scope_id === 'crash-dumps-local')!;
+    const sysRow = sizes.find((r) => r.scope_id === 'crash-dumps-system')!;
+    // C:\Windows 下只有 Minidump（0.14GB = 140MB）——系统崩溃转储行等于它，
+    // 应用崩溃转储（CrashDumps 目录，在 C:\Users 下）不应被算进来。
+    expect(sysRow.total_bytes).toBe(140 * 1024 * 1024);
+    expect(dumpRow.total_bytes).not.toBe(0.9 * 1024 * 1024 * 1024);
+  });
+
+  // R228：三个命中目录（CrashDumps / WER / Minidump）作为多个 root_path
+  // 传入时，每个目录只算自己的字节——aggregateScopeSizes 累加不翻倍
+  // （浏览器里看到的「三行都是 1.80 GB」就是共享 rootPaths[0] 过滤的 bug）。
+  it('R228：多 root_path 各算各的，聚合不翻倍', async () => {
+    const paths = [
+      'C:\\Users\\90740\\AppData\\Local\\CrashDumps',
+      'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\WER',
+      'C:\\Windows\\Minidump',
+    ];
+    const batch = await scopeSizesBatch('crash-dumps', paths, {});
+    expect(batch).toHaveLength(3);
+    const total = batch.reduce((s, b) => s + b.sizes.reduce((x, r) => x + r.total_bytes, 0), 0);
+    // 三目录真实字节：0.9GB + 320MB + 140MB（= realNodeBytesSum）
+    expect(total).toBe(realNodeBytesSum('crash-dumps'));
   });
 });
 
@@ -618,6 +652,21 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(card).toBeTruthy();
     expect(card!.matches.some((m) => /CrashDumps/i.test(m.path))).toBe(true);
     expect(card!.totalSize).toBeGreaterThan(0);
+  });
+
+  // R228：命中后仍下钻——Local\Microsoft\Windows（windows-privacy）下的
+  // WER 是 crash-dumps 的 detect 目标（%LOCALAPPDATA%/Microsoft/Windows/WER），
+  // 不能被外层 Windows 节点截断；每个目录只算给自己的脚本。
+  it('R228：crash-dumps 命中 WER 与 Minidump（下钻不再被外层脚本截断）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'crash-dumps');
+    expect(card).toBeTruthy();
+    const paths = card!.matches.map((m) => m.path);
+    expect(paths.some((p) => /\\WER$/i.test(p))).toBe(true);
+    expect(paths.some((p) => /\\Minidump$/i.test(p))).toBe(true);
+    // 3 个目录（CrashDumps / WER / Minidump）各算各的，总量 = 三者之和
+    const sum = card!.matches.reduce((s, m) => s + m.size, 0);
+    expect(sum).toBe(card!.totalSize);
   });
 
   it('firefox-cache 命中 cache2 且不与 browser-privacy 抢 Profiles（R207）', () => {

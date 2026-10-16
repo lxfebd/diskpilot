@@ -58,7 +58,9 @@ export function collectScaffoldCards(root: Node | null, scaffolds: Scaffold[]): 
       const list = hits.get(n.scaffold_id) ?? [];
       list.push(n);
       hits.set(n.scaffold_id, list);
-      return;
+      // R228：命中后仍下钻——一个目录下可嵌套另一脚本的 detect 目录
+      // （如 Local\Microsoft\Windows 是 windows-privacy，其下 WER 是
+      // crash-dumps 的 detect 目标）；每目录只算给自己的脚本，不重复。
     }
     for (const c of n.children) visit(c);
   };
