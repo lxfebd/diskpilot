@@ -826,35 +826,22 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'list_plugins',
-    description: '列出工具箱里所有已安装的插件（目录内含 tool.plugin.json 的工具）。返回每个插件的 id/名称/版本/作者/分类/入口/权限声明。用户问"有哪些插件/装了哪些扩展"时调用。',
+    description: '列出工具箱里所有已安装的插件（目录内含 tool.plugin.json 的工具）。返回每个插件的 id/名称/版本/作者/分类/入口/权限声明。用户问"有哪些插件/装了哪些扩展"时调用。浏览器预览模式下返回演示插件清单（与插件页同源）。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R287：浏览器预览放行——pluginListInstalled 有 mock 演示数据源（与
+    // 插件页同源），只读枚举无副作用。
     execute: async () => {
-      const cat = await api.toolbeltCatalog();
-      const plugs = cat.categories
-        .flatMap((c) => c.tools)
-        .filter((t): t is typeof t & { plugin: NonNullable<typeof t.plugin> } => !!t.plugin)
-        .map((t) => ({
-          id: t.plugin.id,
-          name: t.plugin.name || t.name,
-          version: t.plugin.version,
-          author: t.plugin.author || '',
-          category: t.category,
-          entry: t.plugin.entry,
-          risk: t.plugin.risk || t.risk,
-          permissions: t.plugin.permissions,
-          dir_rel: t.dir_rel,
-        }));
-      if (plugs.length === 0) return '工具箱里没有插件（目录内都没有 tool.plugin.json）。';
-      const lines = [`已安装插件（${plugs.length}）：`];
-      for (const p of plugs) {
+      const { installed } = await api.pluginListInstalled();
+      if (installed.length === 0) return '工具箱里没有插件（目录内都没有 tool.plugin.json）。';
+      const lines = [`已安装插件（${installed.length}）：`];
+      for (const p of installed) {
         lines.push(
           `- ${p.name}（v${p.version}）`,
-          `  id: ${p.id} · 分类: ${p.category} · 作者: ${p.author || '未知'} · 风险: ${p.risk}`,
-          `  入口: ${p.entry} · 权限: ${p.permissions.join('/') || '无'}`,
+          `  id: ${p.id} · 来源: ${p.source} · 签名: ${p.signer || '未知'} · 目录: ${p.dir_rel}`,
         );
       }
+      lines.push('（浏览器预览模式：演示插件清单，与插件管理页同源；真实插件需桌面端。）');
       return lines.join('\n');
     },
   },
@@ -904,10 +891,11 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'market_plugins',
-    description: '列出内置插件市场：toolbelt 收录的 CLI 工具哪些可插件化、哪些已插件化。用户问"有哪些工具可以变成插件/市场里有什么"时调用。',
+    description: '列出内置插件市场：toolbelt 收录的 CLI 工具哪些可插件化、哪些已插件化。用户问"有哪些工具可以变成插件/市场里有什么"时调用。浏览器预览模式下返回演示市场（与插件市场页同源）。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R287：浏览器预览放行——pluginMarket 有 mock 演示数据源（与插件
+    // 市场页同源），只读枚举无副作用。
     execute: async () => {
       const list = await api.pluginMarket();
       if (list.length === 0) return '市场为空（toolbelt 内置清单未收录任何工具）。';

@@ -473,6 +473,38 @@ describe('toolRegistry 硬件报告生成预览模式可用（R285）', () => {
   });
 });
 
+// R287：list_plugins / market_plugins 预览放行——pluginListInstalled /
+// pluginMarket 有 mock 演示数据源（与插件页/插件市场页同源），只读枚举
+// 无副作用；activate_plugin / uninstall_plugin / export_plugin（写文件）
+// 保持 tauriOnly。
+describe('toolRegistry 插件只读工具预览模式可用（R287）', () => {
+  const PREVIEW_PLUGIN_READONLY = ['list_plugins', 'market_plugins'];
+  const STILL_PLUGIN_TAURI_ONLY = ['activate_plugin', 'uninstall_plugin', 'export_plugin'];
+
+  for (const name of PREVIEW_PLUGIN_READONLY) {
+    it(`${name} 不带 tauriOnly（预览模式只读放行）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBeUndefined();
+      expect(typeof t.execute, name).toBe('function');
+    });
+  }
+
+  for (const name of STILL_PLUGIN_TAURI_ONLY) {
+    it(`${name} 仍带 tauriOnly（写文件/补清单，预览保持隐藏）`, () => {
+      const t = toolRegistry.find((x) => x.name === name)!;
+      expect(t, name).toBeTruthy();
+      expect(t.tauriOnly, name).toBe(true);
+    });
+  }
+
+  it('install_plugin 仍带 tauriOnly（下载安装写系统）', () => {
+    const t = toolRegistry.find((x) => x.name === 'install_plugin')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBe(true);
+  });
+});
+
 describe('mcpTool 写工具权限门（R265）', () => {
   beforeEach(() => {
     // node 测试环境无 window：stub localStorage 供 isPermEnabled 读。
@@ -544,6 +576,8 @@ describe('toolRegistry 只读工具预览支路执行可用（R280）', () => {
     { name: 'propose_cleanup_plan', args: { title: '演示清理', items: [{ path: 'C:\\Users\\me\\AppData\\Local\\Temp', what: '临时文件', purpose: '缓存', impact: '可重建', risk: 'safe' }] }, want: (s) => expect(s).toContain('确认') },
     { name: 'generate_hw_report', args: {}, want: (s) => expect(s).toContain('演示数据') },
     { name: 'generate_hw_report', args: { savePath: 'C:\\Users\\me\\report.md' }, want: (s) => expect(s).toContain('浏览器预览模式不支持写文件') },
+    { name: 'list_plugins', args: {}, want: (s) => expect(s).toContain('已安装插件') },
+    { name: 'market_plugins', args: {}, want: (s) => expect(s).toContain('内置插件市场') },
   ];
 
   for (const c of CASES) {

@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 插件只读工具预览放行：已装插件/市场盘点（R287）
+
+- 插件类工具里 list_plugins / market_plugins 是只读枚举（pluginListInstalled
+  / pluginMarket 都有 mock 演示数据源，与插件页/插件市场页同源），却仍
+  tauriOnly。预览下 AI 问「装了哪些插件/市场有什么」无工具可用；且
+  list_plugins 原 execute 走 toolbeltCatalog（演示目录无 plugin 字段），
+  预览会永远返回「没有插件」——改用 pluginListInstalled 拿到真实演示数据。
+- R287 修复：放行这两个只读枚举（预览返回演示插件清单，标注"与插件管理
+  页同源"）；activate_plugin / uninstall_plugin / export_plugin / install_plugin
+  （补写清单/写文件/下载安装）保持 tauriOnly。
+- 新增 8 测试（tools.test 71→79）：2 放行不带 tauriOnly + 4 写保持 +
+  2 执行层（已安装插件/内置市场）。
+  （**740 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 硬件报告预览权限门顺序修正：不误导开预览用不上的开关（R286）
 
 - R285 放行 generate_hw_report 时，带 savePath 的分支先查 L1 权限门再查
