@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 硬件报告预览权限门顺序修正：不误导开预览用不上的开关（R286）
+
+- R285 放行 generate_hw_report 时，带 savePath 的分支先查 L1 权限门再查
+  预览——预览下带 savePath 且权限未开，会返回「去设置→AI 权限中心开启
+  导出报告到文件」。可预览下开权限也没有后端可写文件，把用户引去开一个
+  预览用不上的开关是误导。
+- R286 修复：预览分支提前——非 Tauri 下带 savePath 直接返回「浏览器预览
+  模式不支持写文件：导出报告文件需桌面应用」；权限门只在桌面端生效。
+- 新增 1 测试（tools.test 70→71）：预览下带 savePath 拒绝且不提权限中心/
+  未授权。
+  （**732 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 硬件报告生成预览放行：只读正文演示（R285）
 
 - R277 放行 get_hardware_info / analyze_disk_health 时整体藏了 generate_hw_report。

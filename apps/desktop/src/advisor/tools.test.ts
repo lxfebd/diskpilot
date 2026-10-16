@@ -460,6 +460,17 @@ describe('toolRegistry 硬件报告生成预览模式可用（R285）', () => {
     expect(t.tauriOnly).toBeUndefined();
     expect(typeof t.execute).toBe('function');
   });
+
+  // R286：预览下带 savePath 直接拒绝，且不引导去权限中心——预览开权限也
+  // 没后端可写文件，原顺序（先查权限后查预览）会误导用户去开预览用不上
+  // 的开关。
+  it('预览下带 savePath 拒绝且不提权限中心', async () => {
+    const t = toolRegistry.find((x) => x.name === 'generate_hw_report')!;
+    const out = await t.execute({ savePath: 'C:\\Users\\me\\report.md' }, { user: 'test' });
+    expect(out).toContain('浏览器预览模式不支持写文件');
+    expect(out).not.toContain('权限中心');
+    expect(out).not.toContain('未授权');
+  });
 });
 
 describe('mcpTool 写工具权限门（R265）', () => {

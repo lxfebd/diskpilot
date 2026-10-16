@@ -733,9 +733,8 @@ export const toolRegistry: ToolDef[] = [
       const savePath = typeof args.savePath === 'string' && args.savePath.trim()
         ? args.savePath.trim()
         : undefined;
-      if (savePath && !isPermEnabled('hw.export')) {
-        return '导出报告到文件未授权：请前往「设置 → AI 权限中心」开启「导出报告到文件」后重试（不带 savePath 的预览不受影响）。';
-      }
+      // R286：预览下带 savePath 直接拒绝，不提权限中心——预览下开权限也
+      // 没后端可写文件，别把用户引去开一个预览用不上的开关。
       if (!isTauri) {
         if (savePath) {
           return '浏览器预览模式不支持写文件：导出报告文件需桌面应用（不带 savePath 可生成报告正文预览）。';
@@ -768,6 +767,9 @@ export const toolRegistry: ToolDef[] = [
           '—— 正文预览 ——',
           clip(body, 3000, '要完整正文可带 savePath 导出报告文件（桌面端）。'),
         ].join('\n');
+      }
+      if (savePath && !isPermEnabled('hw.export')) {
+        return '导出报告到文件未授权：请前往「设置 → AI 权限中心」开启「导出报告到文件」后重试（不带 savePath 的预览不受影响）。';
       }
       const out = await api.hwReport(fmt, savePath);
       return [
