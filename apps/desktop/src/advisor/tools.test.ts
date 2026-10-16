@@ -321,7 +321,7 @@ describe('toolRegistry 只读测量工具预览模式可用（R274）', () => {
 // 写操作类（run_cli_tool / adjust_fan_curve 等）保持 tauriOnly 藏着。
 describe('toolRegistry 只读汇总工具预览模式可用（R275）', () => {
   const PREVIEW_READONLY = ['get_cleanup_suggestions', 'get_steam_library_summary', 'get_fan_status'];
-  const STILL_TAURI_ONLY = ['run_system_probe', 'list_top_processes', 'get_disk_health',
+  const STILL_TAURI_ONLY = ['run_system_probe', 'list_top_processes',
     'run_cli_tool', 'adjust_fan_curve', 'get_cli_tool_usage', 'get_tool_manifest'];
 
   for (const name of PREVIEW_READONLY) {
@@ -340,6 +340,17 @@ describe('toolRegistry 只读汇总工具预览模式可用（R275）', () => {
       expect(t.tauriOnly, name).toBe(true);
     });
   }
+});
+
+// R276：get_disk_health 预览放行——listDrives 有 mock 演示数据源（与总览
+// 磁盘卡同源），只读枚举无副作用，桌面端仍走 agent-server MCP 单源。
+describe('toolRegistry get_disk_health 预览模式可用（R276）', () => {
+  it('get_disk_health 不带 tauriOnly', () => {
+    const t = toolRegistry.find((x) => x.name === 'get_disk_health')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBeUndefined();
+    expect(typeof t.execute).toBe('function');
+  });
 });
 
 describe('mcpTool 写工具权限门（R265）', () => {

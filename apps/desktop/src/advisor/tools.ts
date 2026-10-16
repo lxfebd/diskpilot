@@ -284,11 +284,22 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'get_disk_health',
-    description: '读取本机所有磁盘的实时容量与使用率（总/已用/可用）。回答磁盘空间、哪块盘快满了、该清哪里之前先调用本工具获取真实数据，不要凭记忆或猜测。',
+    description: '读取本机所有磁盘的实时容量与使用率（总/已用/可用）。回答磁盘空间、哪块盘快满了、该清哪里之前先调用本工具获取真实数据，不要凭记忆或猜测。浏览器预览模式下返回演示磁盘清单（与总览磁盘卡同源）。',
     properties: {},
     required: [],
-    tauriOnly: true,
+    // R276：浏览器预览放行——listDrives 有 mock 演示数据源（与总览磁盘卡
+    // 同源，used 随会话释放台账下降），只读枚举无副作用；桌面端仍走
+    // agent-server MCP disk_health 统一单源。
     execute: async () => {
+      if (!isTauri) {
+        const drives = await api.listDrives();
+        if (drives.length === 0) return '未读取到磁盘（预览环境演示数据缺失）。';
+        const lines = drives.map((d) => {
+          const pct = d.total_bytes > 0 ? (d.used_bytes / d.total_bytes) * 100 : 0;
+          return `- ${d.path}：总 ${formatBytes(d.total_bytes)} / 已用 ${formatBytes(d.used_bytes)} / 可用 ${formatBytes(d.free_bytes)}（${pct.toFixed(1)}%）${d.mapped_to ? `（映射到 ${d.mapped_to}）` : ''}`;
+        });
+        return lines.join('\n') + '\n（浏览器预览模式演示数据，与总览磁盘卡同源；桌面端返回真实磁盘。）';
+      }
       // 走 agent-server MCP disk_health（AI 工具统一单源），避免与 list_drives 双实现
       const r = await api.callTool('disk_health', {});
       if (r.is_error) return `（读取失败）${r.text}`;

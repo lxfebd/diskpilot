@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 磁盘健康工具预览放行：AI 可读演示磁盘清单（R276）
+
+- R274/R275 放行了测量与汇总只读工具，但 get_disk_health（问「哪块盘满
+  了/该清哪里」时 AI 必调的工具）仍 tauriOnly——现有实现走
+  api.callTool('disk_health')（预览 reject），预览模式 AI 答磁盘问题时
+  只能凭记忆猜，没有任何实时磁盘数据可用。
+- R276 修复：非 Tauri 分支用 listDrives mock（与总览磁盘卡同源，used 随
+  会话释放台账下降）拼只读磁盘清单文本，并明示「浏览器预览模式演示
+  数据」；桌面端仍走 agent-server MCP disk_health 统一单源（真实数据）。
+- 测试调整：get_disk_health 从 STILL_TAURI_ONLY 移入 R276 describe（+1
+  断言：不带 tauriOnly + execute 函数）。
+  （**700 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 只读汇总工具预览放行：清理建议/Steam 盘点/风扇状态（R275）
 
 - R274 只放行了 path_size / inspect_dir 两个测量工具，但其余只读汇总工具
