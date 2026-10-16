@@ -109,6 +109,20 @@ describe('recycle prune clears selection', () => {
     vi.clearAllMocks();
     data.clear();
     vi.stubGlobal('indexedDB', fakeFactory);
+    // R256：aiRecyclePaths 有 cleanup.execute 权限门（L2 默认关）——测试里
+    // 预置已开启，否则提前 return，剪枝与 bumpScanSeq 都不会发生。
+    const store = new Map<string, string>();
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => { store.set(k, v); },
+        removeItem: (k: string) => { store.delete(k); },
+      },
+    });
+    window.localStorage.setItem(
+      'diskpilot.perms.v1',
+      JSON.stringify({ enabled: { 'cleanup.execute': true } }),
+    );
     // 回滚回收路径返回真实条目（成功剪枝的前提）。
     (api.recyclePaths as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
       { source: 'C:\\Users', action: 'recycle' as const, reason: '手动回收', timestamp: '' },
@@ -145,6 +159,30 @@ describe('recycle prune clears selection', () => {
     // 持久化树里 C:\Users 已被剪掉——刷新后 takeDrive 不再复活它。
     const names = (saved.children ?? []).map((c) => c.name);
     expect(names).toEqual(['Windows']);
+  });
+
+  // R256：剪枝统一 bump scanSeq——三条清理写路径（右键回收 / AI 提案 /
+  // 清理页）都让依赖 scanSeq 的读者（脚本卡「上次清理」徽标、总览 loadClean）
+  // 收到台账已变信号。此前只有 pruneRecycled bump，右键/AI 路径静默。
+  it('R256：recyclePaths 成功剪枝后 scanSeq 递增（台账读者收到信号）', async () => {
+    const before = useStore.getState().scanSeq;
+    await useStore.getState().recyclePaths([{ path: 'C:\\Users' }], '手动回收');
+    expect(useStore.getState().scanSeq).toBe(before + 1);
+  });
+
+  it('R256：aiRecyclePaths 成功剪枝后 scanSeq 递增（AI 提案同信号）', async () => {
+    (api.executeAiPlan as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { source: 'C:\\Users', action: 'recycle' as const, reason: 'AI 清理', timestamp: '' },
+    ]);
+    const before = useStore.getState().scanSeq;
+    await useStore.getState().aiRecyclePaths([{ path: 'C:\\Users' }]);
+    expect(useStore.getState().scanSeq).toBe(before + 1);
+  });
+
+  it('R256：pruneRecycled 仍递增（清理页路径，回归）', () => {
+    const before = useStore.getState().scanSeq;
+    useStore.getState().pruneRecycled(['C:\\Users']);
+    expect(useStore.getState().scanSeq).toBe(before + 1);
   });
 });
 

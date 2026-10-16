@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 剪枝统一 bump scanSeq：右键回收 / AI 提案也刷新脚本卡徽标（R256）
+
+- 缺口：applyRecycledPrune（剪树）只在 pruneRecycled（清理页）路径后 bump
+  scanSeq；recyclePaths（右键回收）和 aiRecyclePaths（AI 提案执行）剪树后
+  不 bump——台账已追加记录，但依赖 scanSeq 的读者（清理页脚本卡「上次清理」
+  徽标 / 总览 loadClean）收不到信号，卡在旧状态。
+- R256 修复：bumpScanSeq 移进 applyRecycledPrune 内部——三条清理写路径
+  统一递增 scanSeq，信号全面覆盖。
+- 新增 3 测试（recyclePaths / aiRecyclePaths / pruneRecycled 剪枝后 scanSeq
+  递增；aiRecyclePaths 测试预置 cleanup.execute 权限 + stub window.localStorage）
+  （**670 总 / 43 files**）。
+
 ### 2026-10-16 清理页命中状态 chips 计数跟随筛选：不再与列表脱节（R255）
 
 - 缺口：chips（全部/已命中/未检测到）计数基于全量 cards——搜索「微信」后

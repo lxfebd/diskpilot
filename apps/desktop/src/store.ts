@@ -414,6 +414,11 @@ export const useStore = create<AppState>((set, get) => {
     // 命中旧缓存，已回收目录「复活」。真实后端无此问题（每次扫描走磁盘），
     // mock 演示必须一致：剪完立即持久化，刷新后不再出现已删目录。
     if (cacheChanged) void persistScanCacheIdb(prunedCache);
+    // R256：剪枝即 bump——所有清理写路径（recyclePaths 右键回收 / aiRecyclePaths
+    // AI 提案 / pruneRecycled 清理页）统一递增 scanSeq。此前只有 pruneRecycled
+    // bump，右键回收和 AI 提案执行后台账已追加记录，但依赖 scanSeq 的读者
+    // （清理页脚本卡「上次清理」徽标、总览 loadClean）收不到信号，卡在旧状态。
+    get().bumpScanSeq();
   };
 
   return {
@@ -619,10 +624,10 @@ export const useStore = create<AppState>((set, get) => {
   // 文件（executeScope 后端返回逐文件/目录 source）也有目录；applyRecycledPrune
   // 的 pruneMany 对「文件路径也是树节点路径」同样适用（节点匹配即移除，
   // 祖先聚合值自动减去）。全败/全取消时调用方不会传路径，这里空数组直接返回。
+  // R256：bumpScanSeq 已移进 applyRecycledPrune（三条写路径统一信号）。
   pruneRecycled: (paths) => {
     if (!paths || paths.length === 0) return;
     applyRecycledPrune(paths);
-    get().bumpScanSeq();
   },
 
   focusChatOn: (node, scaffoldId) =>
