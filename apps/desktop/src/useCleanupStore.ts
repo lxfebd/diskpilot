@@ -23,6 +23,7 @@ import {
   persistScopeDays,
   lastCleanByPath,
   sampleEntriesByBytes,
+  sanitizeRetentionDays,
   tallyDrive,
   type CoverageBreakdown,
   type DryRunPreview,
@@ -348,7 +349,8 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
   setDays: (scopeId, days) => {
     const cur = getCur();
     if (!cur) return;
-    const v = Number.isFinite(days) && days >= 0 ? Math.floor(days) : 0;
+    // R251：保留期上限 3650 天（10 年）——sanitize 拒绝脏值（见 model.ts）。
+    const v = sanitizeRetentionDays(days);
     const next = { ...cur.daysByScope, [scopeId]: v };
     persistScopeDays(cur.scaffold.id, next, cur.defaultDays);
     patchInSession(() => ({ daysByScope: next, msg: null }));

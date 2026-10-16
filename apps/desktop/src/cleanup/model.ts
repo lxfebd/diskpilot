@@ -140,6 +140,17 @@ export function scopeDayOverrides(
   return out;
 }
 
+/** R251：保留天数输入 sanitize——负值 → 0（立即全清语义），超过 3650 天
+ *  （10 年）→ 3650。拒绝脏值：超长保留期会污染持久化覆盖表（每次会话
+ *  默认被带偏），且「保留近 3650 天」算出的可清范围几乎为空（误导没得清）。
+ *  纯函数，输入非有限数按 0。 */
+export function sanitizeRetentionDays(days: number): number {
+  const raw = Number.isFinite(days) ? Math.floor(days) : 0;
+  if (raw < 0) return 0;
+  if (raw > 3650) return 3650;
+  return raw;
+}
+
 /** 默认天数 + 持久化覆盖：跨会话记住用户为每个脚本设的保留期。 */
 export function mergeScopeDays(
   scaffoldId: string,

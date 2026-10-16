@@ -15,6 +15,7 @@ import {
   latestCleanTs,
   sampleEntriesByBytes,
   samplePathsByBytes,
+  sanitizeRetentionDays,
   scopeDayOverrides,
   sortScopesByBytes,
   tallyDrive,
@@ -159,6 +160,36 @@ describe('defaultDaysFor', () => {
 
   it('undefined → 空表', () => {
     expect(defaultDaysFor(undefined)).toEqual({});
+  });
+});
+
+// R251：保留天数输入 sanitize——拒绝脏值（负值/超限/非数）
+describe('sanitizeRetentionDays（保留天数边界）', () => {
+  it('正常天数原样保留', () => {
+    expect(sanitizeRetentionDays(7)).toBe(7);
+    expect(sanitizeRetentionDays(30)).toBe(30);
+    expect(sanitizeRetentionDays(3650)).toBe(3650);
+  });
+
+  it('负值 → 0（立即全清语义）', () => {
+    expect(sanitizeRetentionDays(-1)).toBe(0);
+    expect(sanitizeRetentionDays(-365)).toBe(0);
+  });
+
+  it('超过 10 年（3650 天）→ 截断到 3650——拒绝污染持久化覆盖表', () => {
+    expect(sanitizeRetentionDays(999999)).toBe(3650);
+    expect(sanitizeRetentionDays(5000)).toBe(3650);
+  });
+
+  it('非有限数 → 0', () => {
+    expect(sanitizeRetentionDays(Number.NaN)).toBe(0);
+    expect(sanitizeRetentionDays(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(sanitizeRetentionDays(Number.NEGATIVE_INFINITY)).toBe(0);
+  });
+
+  it('小数向下取整', () => {
+    expect(sanitizeRetentionDays(7.9)).toBe(7);
+    expect(sanitizeRetentionDays(0.5)).toBe(0);
   });
 });
 
