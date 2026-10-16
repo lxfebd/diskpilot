@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 启动项启停/删除加执行时权限门：不只靠 UI 禁用（R261）
+
+- 缺口：StartupPanel.toggleStartup / removeStartup 只靠 UI 禁用（!startupPerm
+  时按钮 disabled）——执行函数本身无门。startup.manage 是 L2 高危（改注册表 /
+  删启动项），权限在列表加载后被关（或绕过 UI 调用）时仍能执行。
+- R261 修复：两个执行函数开头加 isPermEnabled('startup.manage')（复用
+  system.startup.permOff 文案）——执行时拦截，与 Studio.install /
+  api.system-ext（plugin.manage）同风格。
+- 盘点确认各 L2 写路径均带门：startup.manage（本修复）/ plugin.manage（api 层）
+  / scaffold.manage（Studio 执行时）/ mcp.manage（McpServers）/ fan.adjust、
+  fan.control（SystemTools + advisor）/ driver.check / power.plan（PowerPlanCard
+  + advisor）/ cli.run（advisor）。
+- 无新增测试（门为 4 行组件闭包逻辑，与 Studio.install 已覆盖模式同款；
+  tsc/eslint/build 把关）（**673 总 / 43 files**）。
+
 ### 2026-10-17 总览「立即清理」加权限门：cleanup.execute 关闭时拒绝（R260）
 
 - 缺口：AssetOverview.doClean（总览一键清理）直接 api.executeScope 真删——

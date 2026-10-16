@@ -117,6 +117,12 @@ export function StartupPanel() {
   };
 
   const toggleStartup = async (item: StartupItem, enable: boolean) => {
+    // R261：执行时权限门（不只靠 UI 禁用）——startup.manage 是 L2 高危，
+    // 关闭时任何入口（按钮/快捷键/脚本）都不许改启动项。
+    if (!isPermEnabled('startup.manage')) {
+      setStartupErr(t('system.startup.permOff'));
+      return;
+    }
     try {
       await api.setStartupItem(item.id, enable, true);
       flashMsg(t('system.startup.toastToggled', {
@@ -130,6 +136,11 @@ export function StartupPanel() {
   };
 
   const removeStartup = async (item: StartupItem) => {
+    // R261：执行时权限门（删除启动项是 L2 高危，UI 禁用之外执行函数也拦）。
+    if (!isPermEnabled('startup.manage')) {
+      setStartupErr(t('system.startup.permOff'));
+      return;
+    }
     try {
       const backup = await api.removeStartupItem(item.id, true);
       // 回收站接住的（路径为空）走系统回收站还原；没接住 / 注册表值走应用自己的备份，
