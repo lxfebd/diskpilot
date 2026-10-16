@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { RotateCcw, History, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import { restoreKind } from '../history/model';
+import { useStore } from '../store';
 import { useT } from '../i18n';
 import { formatBytes } from '../format';
 import type { UndoEntry } from '../types';
@@ -63,6 +64,10 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
     try {
       const restored = await api.undo(index, source);
       if (restored) {
+        // R242：还原成功 → 刷新磁盘卡/趋势（scanSeq 驱动 listDrives 重拉）。
+        // 真实后端隔离还原后空间回涨，reclaimedBytes 订阅已覆盖；即便种子
+        // 条目未入账（空间不变），也让磁盘卡反映「台账已变」的当前值。
+        useStore.getState().bumpScanSeq();
         setMsg(t('cleanup.restored', { path: restored.source }));
         refresh();
       } else {

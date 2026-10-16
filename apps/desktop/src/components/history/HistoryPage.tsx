@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { History, Loader2, RotateCcw, Search } from 'lucide-react';
 import { api } from '../../api';
+import { useStore } from '../../store';
 import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
 import type { UndoEntry } from '../../types';
@@ -90,6 +91,9 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
     try {
       const restored = await api.undo(index, source);
       if (restored) {
+        // R242：还原成功 → 刷新磁盘卡/趋势（scanSeq 驱动 listDrives 重拉）；
+        // 与 UndoPanel 同一语义，真实后端隔离还原后空间回涨由 reclaimedBytes 覆盖。
+        useStore.getState().bumpScanSeq();
         setMsg(t('cleanup.restored', { path: restored.source }));
         refresh();
       } else {
