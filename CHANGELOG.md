@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 只读测量工具预览模式放行：AI 可核实路径大小/内容（R274）
+
+- 缺口：advisor 的 path_size / inspect_dir（只读测量）标了 tauriOnly，在
+  浏览器预览模式被整体隐藏——但底层 api.estimateSize / api.inspect 都有
+  mock 演示数据支持。预览模式 AI 聊天里问「这个路径多大/里面有什么」
+  时 AI 没有任何工具可核实，只能凭记忆猜，与「预览模式 AI 建议可跑通」
+  的表达目标脱节。
+- R274 修复：去掉这两个只读工具的 tauriOnly，预览模式放行。诚实性：
+  它们是无副作用的只读测量（estimateSize mock 对树外返回 0、inspect mock
+  只返回样例子项），不是假装写成功；写操作类工具仍保持 tauriOnly 拒绝。
+- 新增 2 测试（tools.test 32→34）：path_size / inspect_dir 注册表不带
+  tauriOnly、按 path 参数执行。
+  （**690 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 清理页真删诚实化：root 下无命中目录不再假装删除成功（R273）
 
 - 缺口：mocks.executeScope 真删时若 rootPath 下没有该 scope 的命中目录

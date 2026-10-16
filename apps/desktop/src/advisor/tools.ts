@@ -222,10 +222,9 @@ export const toolRegistry: ToolDef[] = [
   },
   {
     name: 'path_size',
-    description: '实时测量本机某路径真实占用字节数（用户提供路径后用此核实，不要凭扫描缓存猜）。',
+    description: '实时测量本机某路径真实占用字节数（用户提供路径后用此核实，不要凭扫描缓存猜）。浏览器预览模式下用演示数据源（树内/已知文件表实测，树外返回 0）——只读测量，无副作用，预览可安全开放。',
     properties: { path: { type: 'string', description: '绝对路径，如 C:\\Users\\x\\Downloads' } },
     required: ['path'],
-    tauriOnly: true,
     execute: async (args) => {
       const p = String(args.path ?? '').trim();
       if (!p) return '路径为空';
@@ -236,11 +235,12 @@ export const toolRegistry: ToolDef[] = [
   {
     // 前端轻量版列目录（无 PathGuard）。MCP 版 `list_dir`（agent-server，带
     // 盘根/系统目录/主目录根守卫）才是 AI 的首选，本工具仅作 Web 预览降级。
+    // 浏览器预览模式放行：inspect mock 只返回演示样例（/sample_N.bin），
+    // 不带任何真实系统信息，只读无副作用——比隐藏工具让 AI 凭记忆猜更诚实。
     name: 'inspect_dir',
     description: '列出本机某目录下的直接子项（抽样路径），用于核实目录里到底有什么。',
     properties: { path: { type: 'string', description: '目录绝对路径' } },
     required: ['path'],
-    tauriOnly: true,
     execute: async (args) => {
       const p = String(args.path ?? '').trim();
       if (!p) return '路径为空';

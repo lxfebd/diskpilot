@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote } from './tools';
+import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote, toolRegistry } from './tools';
 import type { ToolManifestInvocation } from '../api';
 
 const inv = (over: Partial<ToolManifestInvocation> = {}): ToolManifestInvocation =>
@@ -291,6 +291,28 @@ describe('clip / listNote（截断必须自己说清楚）', () => {
     expect(listNote(8, 8)).toBe('');
     expect(listNote(6, 20)).toContain('共 20 条');
     expect(listNote(6, 20)).toContain('剩下 14 条未列出');
+  });
+});
+
+// R274：path_size / inspect_dir 只读测量工具在浏览器预览模式放行——
+// 底层（estimateSize / inspect）都有 mock 演示数据，隐藏工具让 AI 只能
+// 凭记忆猜路径大小/内容，与「预览模式 AI 建议可跑通」的目标脱节。
+// 它们是只读无副作用测量，不是写操作，预览开放是诚实的。
+describe('toolRegistry 只读测量工具预览模式可用（R274）', () => {
+  it('path_size 不带 tauriOnly（预览模式 AI 可核实路径大小）', () => {
+    const t = toolRegistry.find((x) => x.name === 'path_size')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBeUndefined();
+    expect(typeof t.execute).toBe('function');
+    expect(t.required).toEqual(['path']);
+  });
+
+  it('inspect_dir 不带 tauriOnly（预览模式 AI 可核实目录内容）', () => {
+    const t = toolRegistry.find((x) => x.name === 'inspect_dir')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBeUndefined();
+    expect(typeof t.execute).toBe('function');
+    expect(t.required).toEqual(['path']);
   });
 });
 
