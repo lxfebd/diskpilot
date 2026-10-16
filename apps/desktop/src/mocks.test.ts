@@ -598,4 +598,14 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(card!.matches.some((m) => /MSTeams_8wekyb3d8bbwe/i.test(m.path))).toBe(true);
     expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
   });
+
+  // R214：Discord——%APPDATA%\discord 真实常驻（Electron 缓存），
+  // 预览演示 Discord 缓存清理（与 Teams 同族但无 variant）。
+  it('discord 命中 discord 目录（R214 Discord 演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'discord');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /discord/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });

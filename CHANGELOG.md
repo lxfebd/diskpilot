@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「Discord」命中演示（R214）
+
+- 清理页 21 脚本命中升至 20/21（剩余：安全软件套装 / Zoom）。
+- MOCK_TREE 补 `AppData\Roaming\discord\{Cache,GPUCache,blob_storage,
+  Crashpad}`（discord，1.4 GB，Electron 缓存族）挂 scaffold_id 命中；
+  Roaming 体量 21.2→22.6 GB。
+- 新增 1 测试（mocks.test.ts）：discord 命中 discord 目录且 >1GB。
+  **610 总（+1）/ 42 files。**
+- 浏览器实测：列表「Discord 1.40 GB」，详情 5 个 scope 行（Chromium
+  缓存 178 MB / 代码缓存 / GPU 缓存 / Blob 存储 / 崩溃报告）可勾选
+  可预览。
+
 ### 2026-10-16 清理页补「Microsoft Teams」双变体命中演示（R213）
 
 - 清理页 21 脚本命中升至 19/21（剩余：安全软件套装 / Discord / Zoom）。

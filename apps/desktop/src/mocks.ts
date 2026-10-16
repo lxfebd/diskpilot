@@ -237,7 +237,7 @@ export const MOCK_TREE: Node = {
                   ],
                 },
                 {
-                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 21.2 * GB, file_count: 123_110,
+                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 22.6 * GB, file_count: 130_310,
                   scaffold_id: null, top_extensions: [], children: [
                     // R209：腾讯 QQ（经典版）——%APPDATA%\Tencent\QQ 是真实
                     // 常驻目录，预览演示 QQ 接收文件/图片/缓存清理。
@@ -315,6 +315,44 @@ export const MOCK_TREE: Node = {
                           children: [
                             file('2026-10-15 21-07-12.txt', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs\\2026-10-15 21-07-12.txt', 16 * 1024 * 1024),
                             file('2026-10-13 19-44-50.txt', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs\\2026-10-13 19-44-50.txt', 12 * 1024 * 1024),
+                          ],
+                        },
+                      ],
+                    },
+                    // R214：Discord——%APPDATA%\discord 真实常驻（Electron
+                    // 缓存：Cache/GPUCache/blob_storage/Crashpad），预览演示
+                    // Discord 缓存清理。
+                    {
+                      name: 'discord', path: 'C:\\Users\\90740\\AppData\\Roaming\\discord', is_dir: true,
+                      size: 1.4 * GB, file_count: 4_520, scaffold_id: 'discord', top_extensions: [],
+                      children: [
+                        {
+                          name: 'Cache', path: 'C:\\Users\\90740\\AppData\\Roaming\\discord\\Cache', is_dir: true,
+                          size: 0.6 * GB, file_count: 1_930, scaffold_id: 'discord', top_extensions: [],
+                          children: [
+                            file('f_0001C2.dat', 'C:\\Users\\90740\\AppData\\Roaming\\discord\\Cache\\f_0001C2.dat', 28 * 1024 * 1024),
+                            file('f_0001D4.dat', 'C:\\Users\\90740\\AppData\\Roaming\\discord\\Cache\\f_0001D4.dat', 22 * 1024 * 1024),
+                          ],
+                        },
+                        {
+                          name: 'GPUCache', path: 'C:\\Users\\90740\\AppData\\Roaming\\discord\\GPUCache', is_dir: true,
+                          size: 0.3 * GB, file_count: 620, scaffold_id: 'discord', top_extensions: [],
+                          children: [
+                            file('data_0', 'C:\\Users\\90740\\AppData\\Roaming\\discord\\GPUCache\\data_0', 14 * 1024 * 1024),
+                          ],
+                        },
+                        {
+                          name: 'blob_storage', path: 'C:\\Users\\90740\\AppData\\Roaming\\discord\\blob_storage', is_dir: true,
+                          size: 0.3 * GB, file_count: 1_270, scaffold_id: 'discord', top_extensions: [],
+                          children: [
+                            file('blob_20261015.bin', 'C:\\Users\\90740\\AppData\\Roaming\\discord\\blob_storage\\blob_20261015.bin', 18 * 1024 * 1024),
+                          ],
+                        },
+                        {
+                          name: 'Crashpad', path: 'C:\\Users\\90740\\AppData\\Roaming\\discord\\Crashpad', is_dir: true,
+                          size: 0.2 * GB, file_count: 700, scaffold_id: 'discord', top_extensions: [],
+                          children: [
+                            file('reports_20261014.dmp', 'C:\\Users\\90740\\AppData\\Roaming\\discord\\Crashpad\\reports_20261014.dmp', 16 * 1024 * 1024),
                           ],
                         },
                       ],
