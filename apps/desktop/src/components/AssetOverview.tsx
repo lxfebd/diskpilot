@@ -1195,14 +1195,22 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                     const pct = Math.max(3, Math.min(100, (bytes / max) * 100));
                     const reclaim = reclaimByScaffold.get(scaffold.id) ?? 0;
                     // R92: 行点击 → 工作台定位到该分类体量最大的目录（同盘已扫）。
+                    // R219: 该分类有可回收潜力时行点击 → 清理页预选该脚本（「可回收 X」
+                    // 才是这一行的主指引，去工作台定位还得再找清理入口）；
+                    // 没有可回收项的分类保持原样跳工作台。
                     const mainPath = scMainPaths.get(scaffold.id);
+                    const canClean = reclaim > 0;
                     return (
                       <button
                         key={scaffold.id}
                         type="button"
-                        className={'ao-bar-row' + (mainPath ? ' clickable' : '')}
-                        onClick={mainPath ? () => onGoWorkspace(mainPath) : undefined}
-                        title={mainPath ? `${t('overview.locateInWorkspace')} · ${mainPath}` : undefined}
+                        className={'ao-bar-row' + (canClean || mainPath ? ' clickable' : '')}
+                        onClick={canClean
+                          ? () => onOpenCleanup(scaffold.id)
+                          : mainPath ? () => onGoWorkspace(mainPath) : undefined}
+                        title={canClean
+                          ? t('overview.cat.gotoCleanup', { name: scaffold.name })
+                          : mainPath ? `${t('overview.locateInWorkspace')} · ${mainPath}` : undefined}
                       >
                         <span className="ao-bar-dot" style={{ background: color }} />
                         <span className="ao-bar-name">{scaffold.name}</span>

@@ -72,6 +72,8 @@ export const overview = {
     'overview.cat.reclaim': '可回收 {size}',
     'overview.cat.reclaimTip': '该分类在这些目录里可清理的预计空间（进系统回收站）',
     'overview.cat.reclaimNote': '{size} 可回收',
+    // R219：分类行有可回收潜力时点击直达清理页预选该脚本
+    'overview.cat.gotoCleanup': '在清理页预选「{name}」脚本',
 
     // 建议清理项目（两步确认 + 结果三态，措辞不许软化）
     'overview.clean.title': '建议清理项目',
@@ -255,6 +257,8 @@ export const overview = {
     'overview.cat.reclaim': '{size} reclaimable',
     'overview.cat.reclaimTip': 'Estimated space cleanable from this category via these folders (goes to the Recycle Bin)',
     'overview.cat.reclaimNote': '{size} reclaimable',
+    // R219: a row with reclaimable potential opens the cleanup page preselecting this script
+    'overview.cat.gotoCleanup': 'Preselect “{name}” on the cleanup page',
 
     // Suggested cleanup (two-step confirm + three-state result; wording must stay explicit)
     'overview.clean.title': 'Suggested cleanup',
