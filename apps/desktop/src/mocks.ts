@@ -2014,6 +2014,12 @@ export async function executeAiPlan(
     if (!dryRun) {
       UNDO_LEDGER.push(entry);
       _mockRecyclePath(p);
+      // R271：与 executeScope（R231-R233）/ recyclePaths（R270）记账同构——
+      // AI 提案确认执行后磁盘卡 used 与空间趋势「今天」也下降，不带
+      // 「清完了空间没回来」的观感脱节（此前只记台账不记账）。
+      const freed = entry.bytes_freed ?? 0;
+      sessionReclaimedBytes += freed;
+      reclaimedBySource.set(key, (reclaimedBySource.get(key) ?? 0) + freed);
     }
   }
   return hits;

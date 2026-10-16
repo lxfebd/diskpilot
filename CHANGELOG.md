@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 AI 提案执行记账补全：磁盘卡/空间趋势联动下降（R271）
+
+- 缺口：executeAiPlan mock（R267）真删只写台账 + 剪 mock 级回收台账，
+  不记 sessionReclaimedBytes / reclaimedBySource——executeScope（R231）
+  与 recyclePaths（R270）都有记账，AI 提案确认执行后磁盘卡 used 不下
+  降，「清完了空间没回来」的观感脱节。
+- R271 修复：executeAiPlan 真删时按实测 bytes_freed 累加会话台账 +
+  per-source 入账（与另两条执行路径记账完全同构），磁盘卡 used 与
+  空间趋势「今天」随 AI 提案确认执行下降；dry-run 不下账。
+- 新增 1 测试（mocks.test 80→81）：AI 提案真删 CrashDumps → 磁盘卡 used
+  下降该目录实测大小；再 dry-run 同路径不下账（used 不变）。
+  （**686 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 右键回收记账补全：磁盘卡/空间趋势联动下降（R270）
 
 - 缺口：recyclePaths mock（树右键「移入回收站」）只写台账 + 剪 mock 级

@@ -893,6 +893,23 @@ describe('mocks.executeAiPlan（R267 AI 提案执行）', () => {
     const root = await executeAiPlan(['C:\\'], true, true);
     expect(root.length).toBe(0);
   });
+
+  // R271：AI 提案真删后磁盘卡 used 下降（与 executeScope / recyclePaths
+  // 记账同构，不带「清完了空间没回来」脱节）。
+  it('R271：AI 提案真删后磁盘卡 used 下降（记账同构）', async () => {
+    const target = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    const before = await listDrives();
+    const entries = await executeAiPlan([target], true, false);
+    expect(entries.length).toBe(1);
+    expect(entries[0].bytes_freed).toBeGreaterThan(0);
+    const after = await listDrives();
+    expect(after[0].used_bytes).toBeLessThan(before[0].used_bytes);
+    expect(before[0].used_bytes - after[0].used_bytes).toBeGreaterThanOrEqual((entries[0].bytes_freed ?? 0) - 1);
+    // dry-run 不下账
+    await executeAiPlan([target], true, true);
+    const afterDry = await listDrives();
+    expect(afterDry[0].used_bytes).toBe(after[0].used_bytes);
+  });
 });
 
 describe('mocks.recyclePaths（R268 右键回收与建议同源收敛）', () => {
