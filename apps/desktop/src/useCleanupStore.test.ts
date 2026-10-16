@@ -11,12 +11,16 @@ import { useStore } from './store';
 import { setLang } from './i18n';
 import type { DryRunPreview } from './cleanup/model';
 
+const cleanupPreflight = api.cleanupPreflight as unknown as ReturnType<typeof vi.fn>;
+
 vi.mock('./api', () => ({
   api: {
     executeScope: vi.fn(),
     scopeSizesBatch: vi.fn(async () => []),
     listUndo: vi.fn(async () => []),
     listCondaEnvs: vi.fn(async () => []),
+    // R252：preflight 重跑可测——默认无占用进程。
+    cleanupPreflight: vi.fn(async () => ({ running_processes: [] as string[] })),
   },
 }));
 
@@ -198,5 +202,37 @@ describe('runRealDelete 实时进度与取消', () => {
     // 取消请求本身不清进度、不改 running——真正的收尾由 runRealDelete 在批次边界做。
     expect(s.progress).toEqual({ done: 0, total: 0, freedBytes: 0 });
     expect(s.running).toBe(false);
+  });
+});
+
+// R252：preflight 重跑——用户退出占用进程后手动刷新「先退出 X」横幅。
+describe('recheckPreflight（重跑占用进程检测）', () => {
+  it('重测中先收起旧横幅，回填新结果', async () => {
+    cleanupPreflight.mockResolvedValue({ running_processes: ['chrome.exe'] });
+    const session = makeSession(makePreview());
+    useCleanupStore.setState({ session: { ...session, blockedProcesses: ['chrome.exe'] } });
+
+    // 第二次检测：进程已退出 → 空列表 → 横幅消失。
+    cleanupPreflight.mockResolvedValue({ running_processes: [] });
+    const p = useCleanupStore.getState().recheckPreflight();
+    // 先同步收起旧的「先退出 chrome.exe」。
+    expect(useCleanupStore.getState().session!.blockedProcesses).toBeNull();
+    await p;
+    expect(useCleanupStore.getState().session!.blockedProcesses).toEqual([]);
+  });
+
+  it('占用进程仍在 → 重跑后横幅保留', async () => {
+    cleanupPreflight.mockResolvedValue({ running_processes: ['wechat.exe'] });
+    const session = makeSession(makePreview());
+    useCleanupStore.setState({ session: { ...session, blockedProcesses: ['wechat.exe'] } });
+
+    await useCleanupStore.getState().recheckPreflight();
+    expect(useCleanupStore.getState().session!.blockedProcesses).toEqual(['wechat.exe']);
+  });
+
+  it('无会话时不动作（不抛错）', async () => {
+    useCleanupStore.setState({ session: null });
+    await useCleanupStore.getState().recheckPreflight();
+    expect(useCleanupStore.getState().session).toBeNull();
   });
 });

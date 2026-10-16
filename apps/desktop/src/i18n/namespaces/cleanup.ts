@@ -176,6 +176,8 @@ export const cleanup = {
     'cleanup.retry': '重试',
     'cleanup.viewAll': '查看全部',
     'cleanup.preflightRunning': '以下进程还在运行，建议先退出再清理：{procs}',
+    // R252：退出进程后手动重跑 preflight，横幅不再残留到换脚本。
+    'cleanup.preflightRecheck': '重新检测',
     'cleanup.entriesCount': '{n} 条',
     'cleanup.bytesFreed': '释放 {size}',
     'cleanup.restoring': '恢复中…',
@@ -355,6 +357,7 @@ export const cleanup = {
     'cleanup.retry': 'Retry',
     'cleanup.viewAll': 'View all',
     'cleanup.preflightRunning': 'These processes are still running — quit them before cleaning: {procs}',
+    'cleanup.preflightRecheck': 'Re-check',
     'cleanup.entriesCount': '{n} entries',
     'cleanup.bytesFreed': 'freed {size}',
     'cleanup.restoring': 'Restoring…',

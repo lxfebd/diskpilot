@@ -202,7 +202,16 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
         <section className="cp-main">
           {session?.blockedProcesses && session.blockedProcesses.length > 0 && (
             <div className="cleanup-preflight-banner" role="status">
-              {t('cleanup.preflightRunning', { procs: session.blockedProcesses.join('、') })}
+              <span>{t('cleanup.preflightRunning', { procs: session.blockedProcesses.join('、') })}</span>
+              {/* R252：preflight 只在进脚本时跑一次——退出进程后点「重新检测」
+                  即时重跑，横幅不再残留到换脚本。 */}
+              <button
+                type="button"
+                className="ghost small cleanup-preflight-recheck"
+                onClick={() => useCleanupStore.getState().recheckPreflight()}
+              >
+                {t('cleanup.preflightRecheck')}
+              </button>
             </div>
           )}
           {cards.length === 0 ? (

@@ -91,6 +91,8 @@ interface CleanupStoreState {
   /** R178：请求取消正在进行的真删（批次边界生效）。 */
   cancelCleanup: () => void;
   refreshSizes: () => void;
+  /** R252：重跑 preflight（用户在外部退出占用进程后手动刷新「先退出 X」提示）。 */
+  recheckPreflight: () => void;
 }
 
 // ── 模块级定时器（会话只有一份，组件卸载不影响在飞的任务）────────────
@@ -407,6 +409,15 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
 
   refreshSizes: () => {
     fetchSizesNow();
+  },
+
+  // R252：preflight 只在进脚本时跑一次——用户在任务管理器退出占用进程后，
+  // 「先退出 X」横幅会一直残留到换脚本。手动重跑一次即可确认已释放。
+  recheckPreflight: () => {
+    const cur = getCur();
+    if (!cur) return;
+    patchInSession(() => ({ blockedProcesses: null })); // 重测中先收起，避免闪「旧的还在跑」
+    runPreflight(cur.scaffold.id);
   },
 
   // 三段语义：点 1 = 预备（5s 自动回退），点 2 = 第一次跑 dry-run 出预览窗，
