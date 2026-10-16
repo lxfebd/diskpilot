@@ -923,6 +923,35 @@ describe('mocks.recyclePaths（R268 右键回收与建议同源收敛）', () =>
     const dry = await executeAiPlan([target], true, true);
     expect(dry.length).toBe(0);
   });
+
+  // R270：右键回收与清理页记账同源——真回收树内目录后磁盘卡 used 下降
+  // （与 executeScope 一致），undoo 还原（该 source 的隔离条目）回涨。
+  it('R270：右键回收后磁盘卡 used 下降（与 executeScope 记账同源）', async () => {
+    const dir = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    const before = await listDrives();
+    const entries = await recyclePaths([dir], '右键回收');
+    expect(entries.length).toBe(1);
+    expect(entries[0].bytes_freed).toBeGreaterThan(0);
+    const after = await listDrives();
+    // used 下降 = 该目录真实大小
+    expect(after[0].used_bytes).toBeLessThan(before[0].used_bytes);
+    expect(before[0].used_bytes - after[0].used_bytes).toBeGreaterThanOrEqual((entries[0].bytes_freed ?? 0) - 1);
+    // 还原（注入同 source 隔离条目）→ used 回涨
+    _mockPushUndoEntry({
+      timestamp: new Date().toISOString(),
+      action: 'quarantine' as const,
+      source: dir,
+      reason: '还原回涨',
+      bytes_freed: entries[0].bytes_freed,
+    });
+    const list = await listUndo(500);
+    const idx = list.findIndex((e) => e.source === dir && e.action === 'quarantine');
+    expect(idx).toBeGreaterThanOrEqual(0);
+    await undo(idx, dir);
+    const restored = await listDrives();
+    expect(restored[0].used_bytes).toBeGreaterThan(after[0].used_bytes);
+    expect(restored[0].used_bytes).toBeLessThanOrEqual(before[0].used_bytes);
+  });
 });
 
 // R225：按路径在树里找节点（真删 source 必须对应树里的真实节点）。

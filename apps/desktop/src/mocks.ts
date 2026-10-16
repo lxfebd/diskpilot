@@ -1732,14 +1732,44 @@ export async function inspect(path: string, n: number): Promise<string[]> {
 
 export async function recyclePaths(paths: string[], reason: string): Promise<UndoEntry[]> {
   await wait(400);
-  const entries = paths.map((src) => ({
-    timestamp: new Date().toISOString(),
-    action: 'recycle' as const,
-    source: src,
-    destination: null,
-    reason,
-  }));
+  // R270：与 executeScope / executeAiPlan 记账同源——bytes_freed 取树内 /
+  // 已知文件表真实大小（prune 后取，已回收的路径自然取不到 → null），
+  // 真删累加 sessionReclaimedBytes + reclaimedBySource，磁盘卡 used 与
+  // 空间趋势「今天」随右键回收联动下降（此前只记台账不记账，右键清完
+  // 卡不降，与清理页真删后卡降的观感不一致）。
+  const tree = pruneRecycledFrom(structuredClone(MOCK_TREE));
+  const sizeOf = (p: string): number | null => {
+    const known = MOCK_KNOWN_FILES[p];
+    if (known !== undefined) return known;
+    const norm = (s: string) => s.replace(/[\\/]+$/, '').toLowerCase();
+    const target = norm(p);
+    let found: number | null = null;
+    const walk = (n: Node) => {
+      if (found !== null) return;
+      if (norm(n.path) === target) { found = n.size || 0; return; }
+      for (const c of n.children ?? []) walk(c);
+    };
+    walk(tree);
+    return found;
+  };
+  const entries = paths.map((src) => {
+    const bytes = sizeOf(src);
+    return {
+      timestamp: new Date().toISOString(),
+      action: 'recycle' as const,
+      source: src,
+      destination: null,
+      reason,
+      bytes_freed: bytes !== null && bytes > 0 ? bytes : null,
+    };
+  });
   UNDO_LEDGER.push(...entries);
+  for (const e of entries) {
+    const freed = e.bytes_freed ?? 0;
+    sessionReclaimedBytes += freed;
+    const key = e.source.replace(/[\\/]+$/, '').toLowerCase();
+    reclaimedBySource.set(key, (reclaimedBySource.get(key) ?? 0) + freed);
+  }
   // R268：与 executeScope（R225）/ executeAiPlan（R267）同一收敛语义——
   // 回收成功的路径也进 mock 级回收台账，后续 scan/cleanupSuggestions/
   // scopeSizesBatch 基于修剪后的树返回，总览「可清理」不会把刚右键回收

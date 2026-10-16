@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 右键回收记账补全：磁盘卡/空间趋势联动下降（R270）
+
+- 缺口：recyclePaths mock（树右键「移入回收站」）只写台账 + 剪 mock 级
+  回收台账（R268），不记 sessionReclaimedBytes / reclaimedBySource——
+  executeScope（R231-R233）真删后磁盘卡 used 与空间趋势「今天」下降，
+  右键回收后卡不降，「清完了空间没回来」的观感脱节。
+- R270 修复：recyclePaths 真删时按树内 / 已知文件表实测 bytes_freed 累加
+  会话台账 + per-source 入账（与 executeScope 同源），磁盘卡 used 与
+  空间趋势随右键回收下降；还原（该 source 隔离条目）撤回对应入账回涨。
+- 新增 1 测试（mocks.test 79→80）：右键回收 CrashDumps → 磁盘卡 used
+  下降该目录实测大小 → 注入隔离条目 undo 还原 → used 回涨。
+  （**685 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 确认窗逐项实测补树内真实大小：显示与执行记账同源（R269）
 
 - 缺口：estimateSize mock 只查 MOCK_KNOWN_FILES 已知文件表，树内真实
