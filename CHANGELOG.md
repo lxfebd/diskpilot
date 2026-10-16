@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 历史页搜索对脏数据防御：null source 不再整页崩（R253）
+
+- 缺口：filterUndoEntries 对 source/destination/reason 直接 .toLowerCase()——
+  后端若返回 null / 缺字段（JSON 边界脏数据），会抛 TypeError 让整个历史页崩。
+- R253 修复：搜索字段走 String() 兜底——非字符串按空串参与匹配，关键词
+  搜索只是过滤，不该因脏数据炸页面。
+- 新增 1 测试（null source / 缺 destination / 缺 reason 不抛 TypeError，
+  关键词照常命中干净项）（**659 总 / 43 files**）。
+
 ### 2026-10-16 清理页 preflight 横幅可手动重跑：退出进程后再点「重新检测」（R252）
 
 - 缺口：preflight（「以下进程还在运行，建议先退出再清理」横幅）只在进脚本

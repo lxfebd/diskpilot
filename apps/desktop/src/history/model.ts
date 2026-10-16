@@ -28,10 +28,13 @@ export function filterUndoEntries(entries: UndoEntry[], filter: UndoFilter): Und
   return entries.filter((e) => {
     if (filter.action !== 'all' && e.action !== filter.action) return false;
     if (!q) return true;
+    // R253：source/reason/destination 走 String() 兜底——后端脏数据
+    // （null / 缺字段）若直接 .toLowerCase() 会抛 TypeError 让整页崩；
+    // 关键词搜索只是过滤，遇到非字符串按空串参与匹配即可。
     return (
-      e.source.toLowerCase().includes(q) ||
-      (e.destination ?? '').toLowerCase().includes(q) ||
-      e.reason.toLowerCase().includes(q)
+      String(e.source ?? '').toLowerCase().includes(q) ||
+      String(e.destination ?? '').toLowerCase().includes(q) ||
+      String(e.reason ?? '').toLowerCase().includes(q)
     );
   });
 }

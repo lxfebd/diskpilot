@@ -48,6 +48,19 @@ describe('filterUndoEntries', () => {
     expect(filterUndoEntries(entries, { action: 'recycle', query: 'save' })).toHaveLength(0);
     expect(filterUndoEntries(entries, { action: 'recycle', query: 'x.tmp' })).toHaveLength(1);
   });
+
+  // R253：后端脏数据（null / 缺字段）不崩——关键词搜索只是过滤，非字符串按空串匹配。
+  it('脏数据（null source / 缺 destination / 缺 reason）不抛 TypeError', () => {
+    const dirty: UndoEntry[] = [
+      { timestamp: '2026-01-01T00:00:00.000Z', action: 'recycle', source: null as unknown as string, reason: 'x' },
+      { timestamp: '2026-01-02T00:00:00.000Z', action: 'delete', source: 'C:\\ok.log', destination: null, reason: '' },
+      { timestamp: '2026-01-03T00:00:00.000Z', action: 'quarantine', source: 'C:\\ok2.log', destination: undefined, reason: 'y' },
+    ];
+    // 关键词命中不了脏项；不崩即正确。
+    expect(filterUndoEntries(dirty, { action: 'all', query: 'C:\\ok2' })).toHaveLength(1);
+    expect(filterUndoEntries(dirty, { action: 'all', query: 'nonexistent' })).toHaveLength(0);
+    expect(filterUndoEntries(dirty, { action: 'all', query: '' })).toHaveLength(3);
+  });
 });
 
 describe('summarizeUndo', () => {
