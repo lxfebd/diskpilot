@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页执行后跨页同步剪树（R222）
+
+- 缺口：清理页 runRealDelete 成功后只重测当前脚本 scope 大小并记
+  「已回收」，**没有把成功回收的路径从 store.root / scanCache 剪掉**——
+  回总览/工作台时，分类占用、建议清理体量仍是旧值，看起来像「没清掉」。
+- 现在 runRealDelete 在批循环里收集成功条目的 source 路径，收尾调用
+  store 新增公开 action `pruneRecycled(paths)`（与 recyclePaths /
+  aiRecyclePaths 内部同一批 applyRecycledPrune 语义：root + 受影响缓存树
+  一次剪枝，并 bumpScanSeq 触发下游刷新）。全败/全取消不剪（没真删）。
+- 新增单测：runRealDelete 成功后 root / scanCache 不再含已删路径、
+  已回收按实测入账（**613 总 / 42 files**）。
+- 浏览器实测：清理页预览弹窗「确认删除」→「再点确认」两步执行链路
+  可用（既有交互，未改动）；剪枝确定性由单测锁定。
+
 ### 2026-10-16 清理脚本列表命中状态过滤（R221）
 
 - R220 搜索框之上叠加「命中状态」过滤 chips（全部 / 已命中 /

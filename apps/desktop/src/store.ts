@@ -344,6 +344,10 @@ interface AppState {
   setScaffolds: (s: Scaffold[]) => void;
   selectPath: (p: string | null, node?: Node | null) => void;
   addReclaimed: (n: number) => void;
+  // R222：清理页执行成功后跨页同步——把成功回收的路径一次性从 root 与
+  // 受影响缓存树剪掉，总览/工作台立即反映真实剩余体量（与 recyclePaths /
+  // aiRecyclePaths 内部剪枝同一批语义，供 useCleanupStore.runRealDelete 复用）。
+  pruneRecycled: (paths: string[]) => void;
 
   focusChatOn: (node: Node, scaffoldId: string | null) => void;
   pushChatTurn: (t: ChatTurn) => void;
@@ -605,6 +609,16 @@ export const useStore = create<AppState>((set, get) => {
       get().toast(t('errors.recycleFailed', { n: failed }), 'err');
     }
     return { done, failed, bytes };
+  },
+
+  // R222：清理页 runRealDelete 成功后的跨页同步剪枝。成功路径可能既有
+  // 文件（executeScope 后端返回逐文件/目录 source）也有目录；applyRecycledPrune
+  // 的 pruneMany 对「文件路径也是树节点路径」同样适用（节点匹配即移除，
+  // 祖先聚合值自动减去）。全败/全取消时调用方不会传路径，这里空数组直接返回。
+  pruneRecycled: (paths) => {
+    if (!paths || paths.length === 0) return;
+    applyRecycledPrune(paths);
+    get().bumpScanSeq();
   },
 
   focusChatOn: (node, scaffoldId) =>

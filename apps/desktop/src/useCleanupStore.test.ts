@@ -105,6 +105,30 @@ describe('runRealDelete 实时进度与取消', () => {
     expect(useStore.getState().reclaimedBytes).toBe(6000);
   });
 
+  it('R222：成功后把成功条目的 source 路径同步剪出 root/scanCache（跨页体量同步）', async () => {
+    // 预先放一棵小树：C:\Users\me\x 下有一个 delete-me（要被剪）。
+    type T = { name: string; path: string; is_dir: boolean; size: number; file_count: number; scaffold_id: string | null; top_extensions: string[]; children: T[] };
+    const mkNode = (name: string, path: string, size: number, children: T[] = []): T => ({
+      name, path, is_dir: true, size, file_count: 1, scaffold_id: null, top_extensions: [], children,
+    });
+    const leaf: T = { name: 'delete-me', path: 'C:\\Users\\me\\x\\delete-me', is_dir: false, size: 500, file_count: 1, scaffold_id: null, top_extensions: [], children: [] };
+    const tree = mkNode('C:', 'C:\\', 2000, [mkNode('Users', 'C:\\Users', 1500, [mkNode('me', 'C:\\Users\\me', 1000, [leaf])])]);
+    // Node 是结构化类型：直接以 setState 部分对象传入（大小/子节点字段齐全即合法）。
+    useStore.setState({ root: tree, scanCache: { 'C:\\': tree } } as unknown as Parameters<typeof useStore.setState>[0]);
+    // executeScope 返回 leaf.source——成功条目路径进入剪枝清单。
+    executeScope.mockImplementation(async () => [{ source: 'C:\\Users\\me\\x\\delete-me', bytes_freed: 500 }]);
+    useCleanupStore.setState({ session: makeSession(makePreview()) });
+
+    await useCleanupStore.getState().runRealDelete();
+
+    const st = useStore.getState();
+    // leaf 已被剪：root / scanCache 里都不再有 delete-me 路径。
+    expect(JSON.stringify(st.root)).not.toContain('delete-me');
+    expect(JSON.stringify(st.scanCache)).not.toContain('delete-me');
+    // 「已回收」按实测入账。
+    expect(st.reclaimedBytes).toBe(3000); // 6 任务 × 500
+  });
+
   it('取消：已交批次完成、后续批次不再提交，进度停在已清处', async () => {
     const pending: ((v: { source: string; bytes_freed: number }[]) => void)[] = [];
     executeScope.mockImplementation(() => new Promise((res) => pending.push(res)));

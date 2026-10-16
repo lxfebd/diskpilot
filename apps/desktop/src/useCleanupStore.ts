@@ -646,12 +646,12 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
                 `[diskpilot] executeScope ${s.scaffold.id}/${scopeId} on ${path} failed:`,
                 e,
               );
-              return { entries: [] as { bytes_freed?: number | null }[] };
+              return { entries: [] as { source: string; bytes_freed?: number | null }[] };
             },
           );
 
       // 先把所有任务描述收集成数组，再分批跑——这样取消时直接不再提交后续批次。
-      const taskList: (() => Promise<{ entries: { bytes_freed?: number | null }[] }>)[] = [];
+      const taskList: (() => Promise<{ entries: { source: string; bytes_freed?: number | null }[] }>)[] = [];
       if (preview.isCondaSnapshot) {
         // 用预览时点快照的 env 列表 + matches 路径，不用 runRealDelete 时的最新勾选/换盘。
         const envFilterArg = preview.envSnapshot;
@@ -684,6 +684,9 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       // 分批执行 + 批次边界取消检查 + 实时进度。
       const CONCURRENCY = 4;
       let done = 0;
+      // R222：成功回收条目的 source 路径收集——收尾一次性剪 root/scanCache，
+      // 总览/工作台跨页立即反映真实剩余体量（与 recyclePaths 同一批语义）。
+      const recycledPaths: string[] = [];
       patchInSession(() => ({ progress: { done: 0, total: taskList.length, freedBytes: 0 } }));
       for (let i = 0; i < taskList.length; i += CONCURRENCY) {
         if (getCur()?.cancelRequested) break;
@@ -691,7 +694,10 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
         const results = await Promise.all(slice.map((fn) => fn()));
         for (const r of results) {
           totalEntries += r.entries.length;
-          for (const e of r.entries) freedBytes += e.bytes_freed ?? 0;
+          for (const e of r.entries) {
+            freedBytes += e.bytes_freed ?? 0;
+            if (e.source) recycledPaths.push(e.source);
+          }
           done += 1;
         }
         patchInSession(() => ({ progress: { done, total: taskList.length, freedBytes } }));
@@ -717,6 +723,10 @@ export const useCleanupStore = create<CleanupStoreState>((set) => ({
       // 只有真清掉东西才累加「已回收」。字节数用后端实测（bytes_freed 累计），
       // 而非预览预估值——后端已返 actual，不再标「预估」。全败时不记账（失败不能算成功）。
       const allFailed = failures.length > 0 && totalEntries === 0;
+      // R222：成功回收跨页同步——只剪真删掉的（全败/全取消空路径不剪）。
+      if (!allFailed && recycledPaths.length > 0) {
+        useStore.getState().pruneRecycled(recycledPaths);
+      }
       if (!allFailed) useStore.getState().addReclaimed(freedBytes);
       if (cancelled) {
         // 中途取消：已交批次不可逆（回收站可达），按「清了一部分」如实报。
