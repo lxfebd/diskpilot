@@ -41,6 +41,7 @@ const TOOL_LABEL: Record<string, string> = {
   get_cleanup_suggestions: '清理建议读取',
   get_system_info: '系统信息读取',
   run_system_probe: '系统状态实时采集',
+  get_fan_status: '风扇控制状态读取',
   list_top_processes: '内存占用最高的进程',
   get_cli_tool_usage: '工具箱工具用法',
   get_tool_manifest: '读取工具能力说明书',
@@ -95,7 +96,7 @@ const TOOL_LABEL: Record<string, string> = {
 
 /** 工具名反查中文标签；未收录的 snake_case id 转成可读形式（get_foo_bar → foo bar），
  *  避免 60+ 新 MCP 工具在操作历史/trace 里直显裸 snake_case。 */
-function toolLabel(name: string): string {
+export function toolLabel(name: string): string {
   return TOOL_LABEL[name] ?? prettifyToolName(name);
 }
 

@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 AI 工具中文标签全覆盖：预览放行工具不直显裸名（R281）
+
+- 缺口：R275 放行的 get_fan_status 不在 agent.ts 的 TOOL_LABEL 表里，
+  AI 操作历史/trace 显示的是 prettify 兜底英文（"Fan Status"），与其余
+  工具的中文标签风格不一致；且没有任何测试保证「每个注册工具都有中文
+  标签」——以后再加工具漏标也不会被发现。
+- R281 修复：补 get_fan_status 的标签「风扇控制状态读取」；导出 toolLabel
+  并新增测试块：①所有 toolRegistry 工具标签非空且不含下划线（不直显
+  snake_case）②get_fan_status 有专门中文标签 ③未见过的工具优雅降级。
+- 新增 3 测试（agent.test 3→6）。
+  （**724 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 只读工具预览支路执行层测试：跑真数据验证放行非空转（R280）
 
 - R274-R279 放行了 12 个只读工具，但测试只断言「注册表不带 tauriOnly」——

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { healthRoutineSection } from './agent';
+import { healthRoutineSection, toolLabel } from './agent';
+import { toolRegistry } from './tools';
 
 describe('healthRoutineSection（周巡检编排）', () => {
   it('包含巡检工具顺序与只读声明', () => {
@@ -31,5 +32,27 @@ describe('healthRoutineSection（周巡检编排）', () => {
   it('要求结论标注数据是当前时刻实时采集', () => {
     expect(healthRoutineSection).toContain('当前时刻');
     expect(healthRoutineSection).toContain('不是预计算报表');
+  });
+});
+
+// R281：toolLabel 给所有注册工具提供中文标签——放行工具（含预览放行的
+// get_fan_status）不能被 prettify 兜底成英文裸名，trace/操作历史里要
+// 显示中文可读标签。
+describe('toolLabel（工具名中文标签）', () => {
+  it('每个 toolRegistry 工具都有非空标签（不直显 snake_case）', () => {
+    const labels = toolRegistry.map((t) => toolLabel(t.name));
+    for (let i = 0; i < toolRegistry.length; i++) {
+      const l = labels[i];
+      expect(l, toolRegistry[i].name).toBeTruthy();
+      expect(l.toLowerCase(), toolRegistry[i].name).not.toContain('_');
+    }
+  });
+
+  it('预览放行的 get_fan_status 有专门中文标签', () => {
+    expect(toolLabel('get_fan_status')).toBe('风扇控制状态读取');
+  });
+
+  it('未见过的工具名优雅降级为可读短语', () => {
+    expect(toolLabel('get_foo_bar')).toBe('FOO BAR');
   });
 });
