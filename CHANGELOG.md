@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理后脚本卡「上次清理」徽标即时刷新（R246）
+
+- 缺口：R241 脚本卡徽标只在挂载/allCards 变化时拉台账——用户清完一个
+  脚本，回清理页列表徽标不更新（要刷新页面才见「今天」）。
+- R246 修复：lastCleanTs effect 依赖加 store.scanSeq——清理执行成功后
+  store.pruneRecycled → bumpScanSeq（R222 链路），台账重拉，徽标即时
+  变「今天」。
+- 浏览器实测：清 Firefox 缓存后脚本卡即时显示「Firefox 717 MB 上次清理
+  今天」（1.20GB → 717MB），无需刷新。
+
 ### 2026-10-16 「一键智能清理」进清理页：点「清理」不再跳「浏览」（R245）
 
 - 缺口：总览快速操作「一键智能清理」（ai）此前只跳工作台——用户点

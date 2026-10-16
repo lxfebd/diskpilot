@@ -58,6 +58,10 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
   // 时刻（与清理页 scope 行的 lastCleanByPath 同一台账），用户扫一眼列表
   // 就知道哪些脚本刚清过（避免刚清完又清一遍），台账为空/读失败时无徽标。
   const [lastCleanTs, setLastCleanTs] = useState<Record<string, number> | null>(null);
+  // R246：清理执行成功后（store.pruneRecycled → bumpScanSeq）重拉台账——
+  // 刚清完的脚本卡徽标即时变「今天」，不必刷新页面。scanSeq 与 allCards
+  // 任一变化都重算；台账读失败保持 null（诚实）。
+  const scanSeq = useStore((s) => s.scanSeq);
   useEffect(() => {
     let cancelled = false;
     api
@@ -81,7 +85,7 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
     return () => {
       cancelled = true;
     };
-  }, [allCards]);
+  }, [allCards, scanSeq]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let out = cards;
