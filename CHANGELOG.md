@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 AI 写工具权限未开时给「未授权」指引：不再说成“用户取消”（R265）
+
+- 缺口：mcpTool 通用确认门把「权限未开」和「用户点取消」都回成「需要用户
+  确认后执行，已取消」——用户去点确认也无济于事（权限没开，确认卡根本
+  不弹）。fan_control / power_plan / cli.run 等专用路径早已区分。
+- R265 修复：mcpTool 门先查 isPermEnabled——未开时回「调用 X 未授权：请
+  前往「设置 → AI 权限中心」开启「控制系统状态」后重试」，不再误导。
+  已开时才弹确认卡，取消才回「已取消」。
+- 新增 3 测试（tools.test 29→32）：①process_kill 权限未开回「未授权」+
+  权限中心指引；②file_recycle 未开也走指引（不是“用户取消”）；③权限已开
+  时走确认门，取消回「已取消」且不含「未授权」。stub window.localStorage
+  供 isPermEnabled 读，用 resolveSessionConfirm 模拟确认卡。
+  （**676 总 / 43 files**）。
+
 ### 2026-10-17 电源计划切换加执行时权限门（R264）
 
 - 缺口：PowerPlanCard.apply 直接 api.powerPlan(scheme, true) 写电源计划——

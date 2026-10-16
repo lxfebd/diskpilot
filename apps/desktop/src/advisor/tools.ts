@@ -896,7 +896,9 @@ function mcpTool(
       // 写工具（process_kill / service_control 等）先过权限确认门；
       // confirmWhen 提供条件确认：只有满足条件（如 bench_disk 真跑）才弹确认，
       // 其余调用（如 dry-run 只出计划）无需打扰用户。
-      // 权限未开 / 用户没确认 → 直接返回取消说明，绝不把未确认的写请求发给后端。
+      // 权限未开 → 明确指引去权限中心（与 fan_control / power_plan / cli.run
+      // 同一口径，避免把「未授权」说成「用户取消」——用户去点确认也无济于事）。
+      // 权限已开但未确认 → 弹确认卡，取消则如实返回取消说明。
       if (confirmPerm && (!confirmWhen || confirmWhen(args))) {
         const permTitle =
           confirmPerm === 'file.recycle' ? '回收文件到回收站'
@@ -904,6 +906,9 @@ function mcpTool(
           : confirmPerm === 'hw.stress' ? '压力测试'
           : confirmPerm === 'fan.control' ? '风扇控制'
           : '控制系统状态';
+        if (!isPermEnabled(confirmPerm)) {
+          return `调用 ${name} 未授权：请前往「设置 → AI 权限中心」开启「${permTitle}」后重试。`;
+        }
         const g = await promptSessionConfirm(
           confirmPerm,
           permTitle,

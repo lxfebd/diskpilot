@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote } from './tools';
 import type { ToolManifestInvocation } from '../api';
 
@@ -291,5 +291,54 @@ describe('clip / listNote（截断必须自己说清楚）', () => {
     expect(listNote(8, 8)).toBe('');
     expect(listNote(6, 20)).toContain('共 20 条');
     expect(listNote(6, 20)).toContain('剩下 14 条未列出');
+  });
+});
+
+describe('mcpTool 写工具权限门（R265）', () => {
+  beforeEach(() => {
+    // node 测试环境无 window：stub localStorage 供 isPermEnabled 读。
+    // 默认 perms 全关（写工具 L2 默认不开）——构造与真机默认态一致。
+    const store = new Map<string, string>();
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => { store.set(k, v); },
+        removeItem: (k: string) => { store.delete(k); },
+      },
+    });
+    store.clear();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('写工具在权限未开时返回「未授权」指引，不弹确认、不发请求', async () => {
+    const kill = mcpToolRegistry.find((t) => t.name === 'process_kill')!;
+    const out = await kill.execute({ pid: 1234 }, { user: 'test' });
+    expect(out).toContain('未授权');
+    expect(out).toContain('AI 权限中心');
+    // sys.control 是默认关的 L2——未开权限时绝不把写请求发给后端。
+    expect(out).toContain('控制系统状态');
+  });
+
+  it('file_recycle 工具在权限未开时也走未授权指引（不是“用户取消”）', async () => {
+    const rec = mcpToolRegistry.find((t) => t.name === 'file_recycle')!;
+    const out = await rec.execute({ path: 'C:\\Users\\me\\Downloads\\x.tmp' }, { user: 'test' });
+    expect(out).toContain('未授权');
+    expect(out).toContain('回收文件到回收站');
+  });
+
+  it('写工具在权限已开时走确认门（取消则返回取消说明而非未授权）', async () => {
+    // 打开 sys.control（L2）→ isPermEnabled 通过 → promptSessionConfirm 等 UI。
+    const win = window as unknown as { localStorage: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } };
+    win.localStorage.setItem('diskpilot.perms.v1', JSON.stringify({ enabled: { 'sys.control': true } }));
+    const { resolveSessionConfirm } = await import('./tools');
+    const kill = mcpToolRegistry.find((t) => t.name === 'process_kill')!;
+    const p = kill.execute({ pid: 42 }, { user: 'test' }).then((out) => out);
+    // 权限已开 → 挂起在确认卡 → 模拟用户点「取消」。
+    resolveSessionConfirm({ run: false, remember: false });
+    const out = await p;
+    expect(out).toContain('已取消');
+    expect(out).not.toContain('未授权');
   });
 });
