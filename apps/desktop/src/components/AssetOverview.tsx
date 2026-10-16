@@ -9,6 +9,7 @@ import { useStore, type CleanupProposalItem } from '../store';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, type DriveEntry } from '../drives';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
+import { latestCleanTs, formatLastActive } from '../cleanup/model';
 import type { Node, Scaffold } from '../types';
 
 // SVG 渐变 id 的唯一序列源：每实例自增，保证跨 remount/多实例不撞。
@@ -487,6 +488,9 @@ interface CleanItem {
   /** scope.prompt.kind==='days' 的默认天数：预览与真实执行共用同一旋钮，
    *  预览显示的文件 = 执行会删的文件（诚实性口径一致）。 */
   days?: number;
+  /** R244：命中目录（cleanupSuggestions 返回的 path=hitPath）——预览的
+   *  「上次清理」用它匹配台账（dry-run 合成 source 匹配不到真实目录）。 */
+  path: string;
 }
 
 /** 勾选的建议项里是否含微信缓存（G-高3）：微信多账号必须去清理页按账号清，
@@ -577,7 +581,7 @@ export function sortPreviewItemsByBytes(
   });
 }
 
-function ScopePreview({ items }: { items: readonly { path: string; bytes: number | null }[] }) {
+function ScopePreview({ items, lastClean }: { items: readonly { path: string; bytes: number | null }[]; lastClean: number | null }) {
   const t = useT();
   // R128：按字节降序排序后再截断——大文件优先展示（PEEK_LIMIT 截断时
   // 留下的是占用最大的项，而不是后端返回顺序里的前几条）。
@@ -591,6 +595,11 @@ function ScopePreview({ items }: { items: readonly { path: string; bytes: number
     <div className="ao-clean-preview-box">
       <div className="ao-clean-preview-head">
         <span>{previewSummary(files.length, totalBytes, (o) => t('overview.clean.peekFiles', o))}</span>
+        {/* R244：上次清理徽标——与清理页 scope 行/脚本卡同台账同源；
+            台账读失败或无记录时不显示（读失败 ≠ 真没清过，诚实）。 */}
+        {lastClean != null && (
+          <span className="ao-clean-preview-lastclean">{t('overview.clean.peekLastClean', { age: formatLastActive(lastClean) })}</span>
+        )}
         <span className="muted small">{t('overview.clean.peekHint')}</span>
       </div>
       <ul className="ao-clean-preview-list">
@@ -795,7 +804,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   // （与执行同 olderThanDays 口径），每项带实测字节（bytes_freed，后端 dry-run
   // 分支逐文件实测返回）；err 单独记录——读失败 ≠ 空清单（诚实）。
   const [previewOpen, setPreviewOpen] = useState<Record<string, boolean>>({});
-  const [previews, setPreviews] = useState<Record<string, { items: { path: string; bytes: number | null }[]; err: string | null }>>({});
+  const [previews, setPreviews] = useState<Record<string, { items: { path: string; bytes: number | null }[]; err: string | null; lastClean: number | null }>>({});
   const [previewing, setPreviewing] = useState<Record<string, boolean>>({});
 
   // 展开一项：dry-run 拿将删文件明细。只读（dryRun=true），绝不落盘。
@@ -812,12 +821,22 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       });
       // dry-run 每条 UndoEntry.source = 匹配文件路径，bytes_freed = 实测字节——
       // 预览的每文件大小与执行口径一致（同一份后端返回，无需再次扫描）。
+      // R244：顺带拉台账聚合「上次清理」——用建议项命中目录 it.path 匹配
+      // ledger source（dry-run 返回的 source 是合成清单路径，匹配不到真实
+      // 目录台账；命中目录才是与清理页 scope 行/脚本卡同源的口径）。
+      let lastClean: number | null = null;
+      try {
+        const ledger = await api.listUndo(200);
+        lastClean = latestCleanTs(ledger, it.path);
+      } catch {
+        // 台账读失败：不显示徽标（与清理页同语义，读失败 ≠ 真没清过）。
+      }
       setPreviews((p) => ({
         ...p,
-        [it.key]: { items: entries.map((e) => ({ path: e.source, bytes: e.bytes_freed ?? null })), err: null },
+        [it.key]: { items: entries.map((e) => ({ path: e.source, bytes: e.bytes_freed ?? null })), err: null, lastClean },
       }));
     } catch (e) {
-      setPreviews((p) => ({ ...p, [it.key]: { items: [], err: String(e instanceof Error ? e.message : e) } }));
+      setPreviews((p) => ({ ...p, [it.key]: { items: [], err: String(e instanceof Error ? e.message : e), lastClean: null } }));
     } finally {
       setPreviewing((p) => ({ ...p, [it.key]: false }));
     }
@@ -856,6 +875,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             bytes: r.bytes,
             files: r.files,
             days,
+            path: r.path,
           };
         }),
       );
@@ -1313,6 +1333,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                           ) : (
                             <ScopePreview
                               items={previews[it.key]!.items}
+                              lastClean={previews[it.key]!.lastClean}
                             />
                           )}
                         </div>

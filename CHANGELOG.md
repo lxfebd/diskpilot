@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 总览预览弹窗「上次清理」徽标：刚清过的目录一眼可见（R244）
+
+- 缺口：总览建议项展开预览（ScopePreview）只显示文件清单/合计，没有
+  「这个目录上次清过多久」——清理页 scope 行有 lastCleanByPath，总览
+  预览没有，两处台账视角不一致。
+- R244 新增：建议项加 path 字段（cleanupSuggestions 的 hitPath 命中目录），
+  togglePreview 时用 latestCleanTs(台账, path) 聚合「上次清理时刻」，预览
+  头部显示「上次清理 今天/N 天前」（formatLastActive 同源文案）。台账
+  读失败或无记录不显示（诚实，读失败 ≠ 真没清过）。
+- 新增纯函数 latestCleanTs（model.ts）+ 3 测试（目录下最新时刻/目录本身
+  被清/无匹配 null）（**642 总 / 43 files**）。
+- 浏览器实测：未清过的建议项预览无徽标（诚实）；清过的建议项从列表
+  消失（R225 修剪语义）——总览建议项在预览模式清完即消失，徽标在真实
+  后端「部分清理后目录仍在建议项里」时显示。
+
 ### 2026-10-16 清理预览条目数与释放字节同源：进度不再与合计脱节（R243）
 
 - 缺口：executeScope 的 dry-run 分片量 n 用哈希 mockScopeBytes 兜底——

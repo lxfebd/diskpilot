@@ -345,8 +345,8 @@ describe('startupCheckState（启动项检查三态）', () => {
 
 // G-高3：微信缓存勾选判定（总览没有 wxid 选择器，勾到就引导去清理页）
 describe('微信项勾选 hasCheckedWechat', () => {
-  const wechatItem = { key: 'w1', scaffoldId: 'wechat-pc', scopeId: 'chat-media', label: '', desc: '', bytes: 100, files: 1 };
-  const otherItem = { key: 'n1', scaffoldId: 'browser', scopeId: 'cache', label: '', desc: '', bytes: 200, files: 2 };
+  const wechatItem = { key: 'w1', scaffoldId: 'wechat-pc', scopeId: 'chat-media', label: '', desc: '', bytes: 100, files: 1, path: 'C:\\WeChat Files' };
+  const otherItem = { key: 'n1', scaffoldId: 'browser', scopeId: 'cache', label: '', desc: '', bytes: 200, files: 2, path: 'C:\\Chrome' };
 
   it('未勾选微信项 → false', () => {
     expect(hasCheckedWechat([wechatItem, otherItem], { w1: false, n1: true })).toBe(false);
@@ -431,7 +431,7 @@ describe('R106 预览状态判定 previewState', () => {
 });
 
 describe('R126 建议清理排序 sortCleanItemsByBytes', () => {
-  const item = (key: string, bytes: number) => ({ key, scaffoldId: 's', scopeId: key, label: key, desc: '', bytes, files: 1 });
+  const item = (key: string, bytes: number) => ({ key, scaffoldId: 's', scopeId: key, label: key, desc: '', bytes, files: 1, path: 'C:\\Dir' });
   it('按可回收字节降序——最大收益排最前', () => {
     const sorted = sortCleanItemsByBytes([item('small', 100), item('big', 10_000), item('mid', 500)]);
     expect(sorted.map((s) => s.key)).toEqual(['big', 'mid', 'small']);

@@ -115,6 +115,7 @@ export const overview = {
     'overview.clean.peekEmpty': '该分类当前没有匹配到可清理文件（可能刚清理过）',
     'overview.clean.peekFiles': '{n} 个文件',
     'overview.clean.peekHint': '仅展示；与执行使用相同的保留天数口径',
+    'overview.clean.peekLastClean': '上次清理 {age}',
     'overview.clean.peekMore': '…另有 {n} 条',
     'overview.clean.wechatRedirect': '微信缓存涉及多账号，请到清理页勾选要清的账号后再清理，避免误清其他账号',
 
@@ -303,6 +304,7 @@ export const overview = {
     'overview.clean.peekEmpty': 'No matching files to clean in this category right now (may have been cleaned recently)',
     'overview.clean.peekFiles': '{n} file(s)',
     'overview.clean.peekHint': 'Preview only; uses the same retention days as execution',
+    'overview.clean.peekLastClean': 'Last cleaned {age}',
     'overview.clean.peekMore': '…{n} more',
     'overview.clean.wechatRedirect': 'WeChat cache spans multiple accounts — pick the accounts on the cleanup page before cleaning, so other accounts are not touched accidentally',
 

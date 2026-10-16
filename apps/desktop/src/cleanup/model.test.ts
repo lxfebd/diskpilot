@@ -12,6 +12,7 @@ import {
   driveBreakdown,
   cleanedHitStats,
   lastCleanByPath,
+  latestCleanTs,
   sampleEntriesByBytes,
   samplePathsByBytes,
   scopeDayOverrides,
@@ -442,6 +443,36 @@ describe('lastCleanByPath（上次清理时刻按目录聚合）', () => {
       ['C:\\App'],
     );
     expect(out).toEqual({});
+  });
+});
+
+// R244：单目录「上次清理时刻」——总览预览弹窗用命中目录匹配台账。
+describe('latestCleanTs（单目录上次清理时刻）', () => {
+  const iso = (secs: number) => new Date(secs * 1000).toISOString();
+
+  it('目录下有记录 → 取最新时刻', () => {
+    expect(
+      latestCleanTs(
+        [
+          { timestamp: iso(1000), source: 'C:\\Cache\\a.tmp' },
+          { timestamp: iso(2000), source: 'C:\\Cache\\sub\\b.tmp' },
+        ],
+        'C:\\Cache',
+      ),
+    ).toBe(2000);
+  });
+
+  it('目录本身被清过也计入', () => {
+    expect(
+      latestCleanTs([{ timestamp: iso(900), source: 'C:\\Cache' }], 'C:\\Cache'),
+    ).toBe(900);
+  });
+
+  it('无匹配 / 空台账 → null', () => {
+    expect(latestCleanTs([], 'C:\\Cache')).toBeNull();
+    expect(
+      latestCleanTs([{ timestamp: iso(100), source: 'D:\\Other\\x.tmp' }], 'C:\\Cache'),
+    ).toBeNull();
   });
 });
 

@@ -287,6 +287,17 @@ export function cleanedHitStats(
   return { cleaned, total, latestTs };
 }
 
+/** R244：单个目录的「上次清理时刻」——台账里匹配该目录（或其下文件）的
+ *  最新时间戳（秒）；无匹配返回 null。总览预览弹窗/脚本卡共用。 */
+export function latestCleanTs(
+  entries: readonly { timestamp: string; source: string }[],
+  matchPath: string,
+): number | null {
+  const by = lastCleanByPath(entries, [matchPath]);
+  const v = Object.values(by)[0];
+  return v ?? null;
+}
+
 export function formatLastActive(ts: number | null): string {
   if (ts === null) return t('cleanup.lastActiveNever');
   const now = Math.floor(Date.now() / 1000);

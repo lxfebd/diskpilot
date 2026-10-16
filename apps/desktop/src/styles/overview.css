@@ -483,6 +483,13 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   border-bottom: 1px dashed var(--border-strong);
   margin-bottom: 4px;
 }
+/* R244：总览预览「上次清理」徽标——刚清过的目录一眼可见（与清理页同源） */
+.ao-clean-preview-lastclean {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
 .ao-clean-preview-list {
   list-style: none;
   margin: 0;
