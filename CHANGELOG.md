@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 补 executeScope 执行路径天数联动测试（R216）
+
+- R212 的天数缩放只覆盖了 `scopeSizesBatch`（尺寸探测路径），
+  `executeScope`（dry-run/真删执行路径）的 `olderThanDays` 联动改了
+  但没测——补测试覆盖执行路径：天数越小 dry-run 清单条目数与总字节
+  越大（与尺寸探测同一语义，两条路径口径一致）。
+- 新增 1 测试（mocks.test.ts）。**612 总（+1）/ 42 files。**
+- 顺带验证：总览建议清理（6.40 GB）与工作台清理卡片已同步包含
+  R210–R215 全部新增命中（OBS / Teams / Unreal / Discord / Zoom），
+  两条独立链路（cleanupSuggestions + collectScaffoldCards）口径一致。
+
 ### 2026-10-16 清理页补「Zoom」命中演示，21 脚本全命中（R215）
 
 - 清理页 21 脚本命中升至 21/21（21 个检测项只剩「安全软件套装」因杀软

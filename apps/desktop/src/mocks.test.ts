@@ -457,6 +457,18 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     const entries = await executeScope('wechat-pc', 'received-files', 'C:\\Users\\a\\xwechat', true, {});
     expect(entries.length).toBeLessThanOrEqual(64);
   });
+
+  // R216：executeScope 的 olderThanDays 与 scopeSizesBatch 同口径联动——
+  // 天数越小可清越多，dry-run 清单条目数与总字节数越大（与 R212 的天数
+  // 缩放是同一语义，此处补执行路径的覆盖）。
+  it('olderThanDays 越小 dry-run 清单越大（R216 执行路径天数联动）', async () => {
+    const small = await executeScope('crash-dumps', 'dumps', 'C:\\Users\\a\\dumps', true, { olderThanDays: 1 });
+    const large = await executeScope('crash-dumps', 'dumps', 'C:\\Users\\a\\dumps', true, { olderThanDays: 30 });
+    const bytesOf = (rows: { bytes_freed?: number | null }[]) => rows.reduce((s, r) => s + (r.bytes_freed ?? 0), 0);
+    expect(small.length).toBeGreaterThanOrEqual(large.length);
+    expect(small.length).toBeGreaterThan(0);
+    expect(bytesOf(small)).toBeGreaterThan(bytesOf(large));
+  });
 });
 
 // R205：隐私清理页（tagFilter="privacy" 的 CleanupPage）命中 MOCK_TREE——
