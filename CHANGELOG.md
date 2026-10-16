@@ -5,6 +5,26 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「使用痕迹」分组，隐私 scope 可勾选可执行（R206）
+
+- R205 让隐私脚本命中扫描树后暴露下一个缺陷：CleanupBody 按 category 只
+  渲染 media / cache / backup 三组，而 privacy 脚本的全部 scope
+  （recent-items / thumbcache / inet-cache / chromium-history /
+  firefox-formhistory）category 全是 'privacy'——落不进任何组，勾选行
+  永不渲染。隐私清理页因此只有覆盖统计，没有可勾项，预览/执行无从谈起。
+- 修复：CleanupBody 补第四组 `<ScopeGroup label={t('cleanup.groupPrivacy')}
+  group={privacyScopes} />`（分组同样走 sortScopesByBytes 降序）；
+  i18n 补 `cleanup.groupPrivacy`：使用痕迹 / Usage traces（CN/EN 并行，
+  共 1 个新 key）。
+- 新增 1 测试（mocks.test.ts）：所有 tags 含 'privacy' 的脚本其全部 scope
+  的 category 必须是 'privacy'——把「隐私 scope 分组渲染」固化成数据不变量，
+  防止后续脚本改 category 时静默失去勾选行。594 总（+1）/ 42 files。
+- 浏览器实测全链路：隐私清理页 → Windows 活动与使用痕迹 →「使用痕迹」组
+  显示 3 行（Recent 511 MB · 174 文件 / thumbcache 384 MB · 4,550 文件 /
+  INetCache 637 MB · 456 文件）→ 全选（两段式防误触）→ 预览模态
+  68 个文件 · 1.50 GB · 进系统回收站可还原 · 「确认删除」可用——
+  隐私清理演示链路首次端到端打通。
+
 ### 2026-10-16 预览模式隐私清理命中演示数据（R205）
 
 - 隐私清理页（tagFilter="privacy" 的 CleanupPage）两脚本恒「未检测到」：

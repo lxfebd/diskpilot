@@ -465,4 +465,18 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(card!.matches.length).toBeGreaterThanOrEqual(2); // Edge User Data + Chrome
     expect(card!.totalSize).toBeGreaterThan(10 * 1024 ** 3);
   });
+
+  // R206：CleanupBody 按 category 分四组（media/cache/backup/privacy）渲染
+  // scope 勾选行。隐私脚本的 scope 必须全部带 category='privacy'，否则落不进
+  // 任何组导致勾选行不渲染（R206 修复前的缺陷：隐私页只有覆盖统计无可勾项）。
+  it('隐私脚本全部 scope 带 category=privacy（R206 分组渲染不变量）', () => {
+    const privacyScaffolds = SCAFFOLDS.filter((s) => s.tags?.includes('privacy'));
+    expect(privacyScaffolds.length).toBeGreaterThan(0);
+    for (const sc of privacyScaffolds) {
+      expect((sc.scopes ?? []).length).toBeGreaterThan(0);
+      for (const scope of sc.scopes ?? []) {
+        expect(scope.category).toBe('privacy');
+      }
+    }
+  });
 });

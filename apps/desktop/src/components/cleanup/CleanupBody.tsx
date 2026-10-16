@@ -174,9 +174,12 @@ export function CleanupBody() {
 
   // R177：三组不再各自内联排序——统一交给 ScopeGroup 按可清大小降序渲染，
   // 避免 media 排过、cache/backup 漏排导致顺序口径不一致。
+  // R206：privacy 组（浏览器历史 / 表单 / Recent / 缩略图 / INetCache）此前
+  // 落不进任何组导致勾选行不渲染——补第四组，让「隐私清理」页可勾可清。
   const mediaScopes = s.visibleScopes.filter((x) => x.category === 'media');
   const cacheScopes = s.visibleScopes.filter((x) => (x.category ?? 'cache') === 'cache');
   const backupScopes = s.visibleScopes.filter((x) => x.category === 'backup');
+  const privacyScopes = s.visibleScopes.filter((x) => x.category === 'privacy');
 
   const summary =
     total.count > 0
@@ -302,6 +305,7 @@ export function CleanupBody() {
               <ScopeGroup label={t('cleanup.groupMedia')} group={mediaScopes} />
               <ScopeGroup label={t('cleanup.groupCache')} group={cacheScopes} />
               <ScopeGroup label={t('cleanup.groupBackup')} group={backupScopes} />
+              <ScopeGroup label={t('cleanup.groupPrivacy')} group={privacyScopes} />
             </>
           )}
           {s.isConda && <ScopeGroup label={t('cleanup.groupPkgs')} group={cacheScopes} />}

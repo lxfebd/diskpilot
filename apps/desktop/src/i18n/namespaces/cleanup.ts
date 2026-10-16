@@ -25,6 +25,7 @@ export const cleanup = {
     'cleanup.groupMedia': '接收的媒体',
     'cleanup.groupCache': '缓存与临时数据',
     'cleanup.groupBackup': '聊天备份',
+    'cleanup.groupPrivacy': '使用痕迹',
     'cleanup.groupPkgs': '包缓存（pkgs/）',
 
     // ── CleanupModal：覆盖说明（为什么总量比 scope 加起来大） ──
@@ -191,6 +192,7 @@ export const cleanup = {
     'cleanup.groupMedia': 'Received media',
     'cleanup.groupCache': 'Cache & temporary data',
     'cleanup.groupBackup': 'Chat backups',
+    'cleanup.groupPrivacy': 'Usage traces',
     'cleanup.groupPkgs': 'Package cache (pkgs/)',
 
     // ── CleanupModal: coverage (why the folder is bigger than the scopes) ──
