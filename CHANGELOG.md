@@ -5,6 +5,28 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 修复变体脚本 scope 行不渲染 + 补 Unreal DDC 命中（R210）
+
+- 修复真实缺陷（与 R206 隐私分组同根因的另一变体）：`detectVariants`
+  只识别 WeChat 的 3.x/4.x 变体，而 engine-caches（unity/unreal/godot）
+  与 teams（1.x/2.x）的全部 scope 都带 `variant` 标记——变体不识别则
+  `visibleScopes` 过滤后为空，**勾选行一条不渲染**（列表有命中、有覆盖
+  统计、点开却无可勾项）。
+- `detectVariants` 补齐 5 个变体识别：UnrealEngine→unreal、
+  /Unity|UnityHub→unity、/Godot→godot、MSTeams 包→2.x、
+  Microsoft/Teams→1.x（MSTeams 优先于 1.x 判定）。
+- MOCK_TREE 补 `AppData\Local\UnrealEngine\Common\DerivedDataCache`
+  （engine-caches，5.1 GB，含 .udd 文件）挂 scaffold_id 命中。
+- 新增 5 测试：engine-caches 命中 UnrealEngine（+1，mocks.test.ts）；
+  detectVariants 识别 unreal/unity/godot/2.x/1.x（+4，model.test.ts）。
+  **605 总（+5）/ 42 files。**
+- 浏览器实测：清理页列表「游戏引擎缓存 5.1 GB」详情渲染 Unreal DDC
+  2 个 scope 行（DDC 289 MB · 4,014 文件 / DLC Partial 186 MB）——
+  修复前详情区只有覆盖统计、无任何勾选项。
+- 顺带验证：历史页隔离条目「恢复」链路正常（已恢复：…旧报告.docx，
+  条目从台账移除；`listUndo` 与 `undo` 同为 timestamp 降序，index 对齐
+  无错位风险）；总览页「重复文件查找」快速操作弹 CleanupProposalDialog。
+
 ### 2026-10-16 清理页补「腾讯 QQ（经典版）」命中演示（R209）
 
 - 清理页 21 脚本仍有 7 个未命中，腾讯 QQ 是中国 Windows 最常用 IM，

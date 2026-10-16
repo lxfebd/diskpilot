@@ -536,4 +536,16 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     // 命中目录含 FileRecv（接收的文件）——QQ 演示的核心可清内容
     expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
   });
+
+  // R210：Unreal 派生数据缓存（engine-caches）——%LOCALAPPDATA%\
+  // UnrealEngine\Common\DerivedDataCache 真实常驻大头，预览演示引擎缓存清理。
+  it('engine-caches 命中 UnrealEngine 目录（R210 游戏引擎缓存演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'engine-caches');
+    expect(card).toBeTruthy();
+    // visit 命中 scaffold_id 即不下钻：matches 是顶层 UnrealEngine 节点，
+    // 不是内部的 DerivedDataCache（与 R205 同一机制）。
+    expect(card!.matches.some((m) => /UnrealEngine/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });

@@ -82,6 +82,36 @@ describe('detectVariants', () => {
     ]);
     expect(v.size).toBe(2);
   });
+
+  // R210：engine-caches（unity/unreal/godot）与 teams（1.x/2.x）的 scope
+  // 全部带 variant——变体识别缺失会让 visibleScopes 过滤后为空、勾选行
+  // 一条不渲染（与 R206 隐私分组同根因）。补齐识别。
+  it('UnrealEngine 路径 → unreal 变体', () => {
+    const v = detectVariants([node({ path: 'C:\\Users\\x\\AppData\\Local\\UnrealEngine\\Common' })]);
+    expect(v.has('unreal')).toBe(true);
+  });
+
+  it('Unity 路径 → unity 变体', () => {
+    const v = detectVariants([node({ path: 'C:\\Users\\x\\AppData\\Local\\Unity\\cache' })]);
+    expect(v.has('unity')).toBe(true);
+  });
+
+  it('Godot 路径 → godot 变体', () => {
+    const v = detectVariants([node({ path: 'C:\\Users\\x\\AppData\\Roaming\\Godot\\editor_cache' })]);
+    expect(v.has('godot')).toBe(true);
+  });
+
+  it('Teams 2.x（MSTeams 包）→ 2.x 变体', () => {
+    const v = detectVariants([node({ path: 'C:\\Users\\x\\AppData\\Local\\Packages\\MSTeams_8wekyb3d8bbwe\\LocalCache' })]);
+    expect(v.has('2.x')).toBe(true);
+    expect(v.has('1.x')).toBe(false);
+  });
+
+  it('Teams 1.x（Microsoft\\Teams）→ 1.x 变体', () => {
+    const v = detectVariants([node({ path: 'C:\\Users\\x\\AppData\\Roaming\\Microsoft\\Teams\\Cache' })]);
+    expect(v.has('1.x')).toBe(true);
+    expect(v.has('2.x')).toBe(false);
+  });
 });
 
 describe('collectWxids', () => {

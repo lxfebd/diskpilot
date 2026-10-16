@@ -183,6 +183,14 @@ export function detectVariants(matches: Node[]): Set<string> {
     const p = m.path.replace(/\\/g, '/').toLowerCase();
     if (p.includes('xwechat_files') || p.includes('tencent/xwechat')) out.add('4.x');
     if (p.includes('wechat files') || p.includes('tencent/wechat')) out.add('3.x');
+    // R210：engine-caches（unity/unreal/godot）与 teams（1.x/2.x）的 scope
+    // 全部带 variant——这些变体不识别就全部过滤掉，勾选行一条不渲染
+    // （与 R206 隐私分组同根因：有 scope 却落不进任何渲染分支）。
+    if (p.includes('/unity/') || p.includes('/unityhub')) out.add('unity');
+    if (p.includes('unrealengine')) out.add('unreal');
+    if (p.includes('/godot')) out.add('godot');
+    if (p.includes('msteams_8wekyb3d8bbwe')) out.add('2.x');
+    else if (p.includes('microsoft/teams')) out.add('1.x');
   }
   return out;
 }

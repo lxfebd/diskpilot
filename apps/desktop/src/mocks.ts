@@ -161,6 +161,28 @@ export const MOCK_TREE: Node = {
                     leaf('pip', 'C:\\Users\\90740\\AppData\\Local\\pip', 2.1 * GB, 5_300, 'dev-caches'),
                     leaf('JetBrains', 'C:\\Users\\90740\\AppData\\Local\\JetBrains', 3.6 * GB, 88_900, 'ide-caches'),
                     leaf('Docker', 'C:\\Users\\90740\\AppData\\Local\\Docker', 5.2 * GB, 1_200, 'docker-buildx'),
+                    // R210：Unreal 派生数据缓存（engine-caches）——真实磁盘常驻
+                    // 的 DDC 大头，预览演示游戏引擎缓存清理。
+                    {
+                      name: 'UnrealEngine', path: 'C:\\Users\\90740\\AppData\\Local\\UnrealEngine', is_dir: true,
+                      size: 5.1 * GB, file_count: 18_600, scaffold_id: 'engine-caches', top_extensions: [],
+                      children: [
+                        {
+                          name: 'Common', path: 'C:\\Users\\90740\\AppData\\Local\\UnrealEngine\\Common', is_dir: true,
+                          size: 5.1 * GB, file_count: 18_590, scaffold_id: 'engine-caches', top_extensions: [],
+                          children: [
+                            {
+                              name: 'DerivedDataCache', path: 'C:\\Users\\90740\\AppData\\Local\\UnrealEngine\\Common\\DerivedDataCache', is_dir: true,
+                              size: 4.6 * GB, file_count: 14_200, scaffold_id: 'engine-caches', top_extensions: [],
+                              children: [
+                                file('ddc_0.udd', 'C:\\Users\\90740\\AppData\\Local\\UnrealEngine\\Common\\DerivedDataCache\\ddc_0.udd', 720 * 1024 * 1024),
+                                file('ddc_1.udd', 'C:\\Users\\90740\\AppData\\Local\\UnrealEngine\\Common\\DerivedDataCache\\ddc_1.udd', 640 * 1024 * 1024),
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
                     // R207：系统临时文件（system-temp）——每台 Windows 都有的
                     // %TEMP%，预览演示清理页不再恒「未检测到」。
                     {
