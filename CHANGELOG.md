@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 周报/提醒可清字节与建议同源：清理后周报环比如实下降（R235）
+
+- 缺口：周报与清理提醒的可清字节固定 2.91GB——清理后周报「全盘可清理
+  2.91GB」不变，环比 delta 失真（固定样例 vs 计算值）。
+- R235 修复：
+  - generateWeeklyReport / runReminderCheck 的可清字节 = cleanupSuggestions
+    建议合计（rootPath='C:\' 与总览选中盘一致）——清理后周报/提醒随之下降；
+  - getWeeklyReports 首次的上周样例也用建议基线——清理前 delta≈0，清理后
+    本周下降、delta = 本次清理量（不再「比上周多 130 GB」的失真环比）。
+- 测试更新：周报/提醒可清字节 === 建议合计（**627 总 / 42 files**）。
+- 浏览器实测：基线「全盘可清理约 144 GB」→ 清 CrashDumps 后生成周报
+  环比「可清理量比上周少 138 MB」，清理效果如实入账。
+
 ### 2026-10-16 空间外推联动磁盘：清理释放后「还能用 X 天」自动增大（R234）
 
 - 缺口（R231/R232 遗留）：checkSpaceForecast 恒定「112 天 / ok」——清理

@@ -1054,11 +1054,16 @@ export interface MockWeeklyReport {
   disks: { friendly: string; letters: string; health: string; grade: string }[];
 }
 
-function weeklyReportAt(ts: number): MockWeeklyReport {
+function weeklyReportAt(ts: number, suggestibleBytes?: number): MockWeeklyReport {
+  // R235：周报「C 盘可清字节」与总览可清理卡片同源（cleanupSuggestions
+  // 建议项 bytes 合计，days 默认缩放口径）——清理后生成的周报随之下降，
+  // 不再是固定 2.91GB 的死数字（真实后端周报从扫描建议汇总，清理后应减少）。
+  // 不传时保持 2.91GB 基线：历史样例用它，环比 delta 正好演示清理效果。
+  const bytes = suggestibleBytes ?? 2.91 * GB;
   return {
     ts,
-    drives: [{ path: 'C:\\', bytes: 2.91 * GB }],
-    total_bytes: 2.91 * GB,
+    drives: [{ path: 'C:\\', bytes }],
+    total_bytes: bytes,
     temp_max_c: 52,
     hw_snapshots: 2,
     hw_delta: ['CPU 最高温 52°C（上周 55°C）', '硬盘通电累计 +168 小时'],
@@ -1068,22 +1073,32 @@ function weeklyReportAt(ts: number): MockWeeklyReport {
 
 const WEEKLY_ARCHIVE: MockWeeklyReport[] = [];
 
-/** 生成一份新周报：写入演示归档（getWeeklyReports 立即能读到）。 */
+/** 生成一份新周报：写入演示归档（getWeeklyReports 立即能读到）。
+ *  R235：可清字节与 cleanupSuggestions 同源——刚生成的周报反映当前可清量
+ *  （清理后周报下降），历史样例用基线 2.91GB，环比 delta 演示清理效果。 */
 export async function generateWeeklyReport(): Promise<MockWeeklyReport> {
   await wait(150);
   const now = Math.floor(Date.now() / 1000);
-  const r = weeklyReportAt(now);
+  const suggestible = await cleanupSuggestions('C:\\', undefined, true).then((list) =>
+    Math.round(list.reduce((s, r) => s + r.bytes, 0)),
+  );
+  const r = weeklyReportAt(now, suggestible);
   WEEKLY_ARCHIVE.unshift(r);
   if (WEEKLY_ARCHIVE.length > 10) WEEKLY_ARCHIVE.pop();
   return r;
 }
 
-/** 最近 N 份周报（最新在前）。未生成过时先出一份上周的样例，让环比一开始可看。 */
+/** 最近 N 份周报（最新在前）。未生成过时先出一份上周的样例，让环比一开始可看。
+ *  R235：上周样例也用建议合计基线——与本周同源，清理前 delta≈0，清理后
+ *  本周下降、delta = 本次清理量（不再出现「比上周多 130 GB」的失真环比）。 */
 export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport[]> {
   await wait(40);
   if (WEEKLY_ARCHIVE.length === 0) {
     const now = Math.floor(Date.now() / 1000);
-    WEEKLY_ARCHIVE.push(weeklyReportAt(now - 7 * 86_400));
+    const suggestible = await cleanupSuggestions('C:\\', undefined, true).then((list) =>
+      Math.round(list.reduce((s, r) => s + r.bytes, 0)),
+    );
+    WEEKLY_ARCHIVE.push(weeklyReportAt(now - 7 * 86_400, suggestible));
   }
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
@@ -1419,9 +1434,15 @@ export async function runReminderCheck(): Promise<{
   ts: number;
 }> {
   await wait(70);
+  // R235：提醒负载「可清字节」与清理建议同源（cleanupSuggestions 合计）——
+  // 清理后提醒量随之下降，不再是固定 2.91GB 的死数字（真实后端提醒
+  // 从扫描建议汇总，清理后应减少）。rootPath='C:\' 与总览卡片选中盘一致。
+  const suggestible = await cleanupSuggestions('C:\\', undefined, true).then((list) =>
+    Math.round(list.reduce((s, r) => s + r.bytes, 0)),
+  );
   return {
-    drives: [{ path: 'C:\\', bytes: 2.91 * GB }],
-    total_bytes: 2.91 * GB,
+    drives: [{ path: 'C:\\', bytes: suggestible }],
+    total_bytes: suggestible,
     ts: Math.floor(Date.now() / 1000),
   };
 }

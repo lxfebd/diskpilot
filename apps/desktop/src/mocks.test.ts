@@ -120,12 +120,16 @@ describe('mocks.reminder（清理提醒开关/阈值 + 立即检查演示数据�
     await setReminderConfig({ enabled: false });
   });
 
-  it('runReminderCheck 返回 C 盘 2.91GB 提醒负载（与清理建议 mock 同源）', async () => {
+  it('runReminderCheck 返回 C 盘可清字节（与清理建议 mock 同源）', async () => {
     const p = await runReminderCheck();
     expect(p.drives.length).toBeGreaterThan(0);
     expect(p.drives[0].path).toBe('C:\\');
     expect(p.total_bytes).toBeGreaterThan(0);
     expect(p.ts).toBeGreaterThan(0);
+    // R235：提醒负载 = 清理建议合计（同源）
+    const sugs = await cleanupSuggestions('C:\\', undefined, true);
+    const sugTotal = Math.round(sugs.reduce((s, r) => s + r.bytes, 0));
+    expect(p.total_bytes).toBe(sugTotal);
   });
 });
 
@@ -236,6 +240,23 @@ describe('mocks 周报（历史页周体检卡演示数据）', () => {
     const b = await getWeeklyReports(10);
     expect(b.length).toBe(a.length + 1);
     expect(b[0].ts).toBe(gen.ts);
+  });
+
+  // R235：周报「C 盘可清字节」与总览可清理卡片同源——清理后生成的周报
+  // 随之下降，不再是固定 2.91GB 的死数字（真实后端周报从扫描建议汇总）。
+  it('R235：清理后生成的周报可清字节下降（与建议同源）', async () => {
+    const before = await generateWeeklyReport();
+    const sugs = await cleanupSuggestions('C:\\', undefined, true);
+    const sugTotal = Math.round(sugs.reduce((s, r) => s + r.bytes, 0));
+    expect(before.total_bytes).toBe(sugTotal);
+    // 真删 CrashDumps → 建议字节减少 → 周报随之下降
+    await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
+    const after = await generateWeeklyReport();
+    expect(after.total_bytes).toBeLessThan(before.total_bytes);
+    // 仍与建议同源（清完的周报 = 清完的可清量）
+    const sugs2 = await cleanupSuggestions('C:\\', undefined, true);
+    const sugTotal2 = Math.round(sugs2.reduce((s, r) => s + r.bytes, 0));
+    expect(after.total_bytes).toBe(sugTotal2);
   });
 });
 
