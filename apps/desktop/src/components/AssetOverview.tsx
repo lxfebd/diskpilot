@@ -1329,6 +1329,23 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
               <span className="ao-actionbar-info">
                 {t('overview.clean.selPrefix')} <b>{selCount}</b> {t('overview.clean.selSuffix')} <b>{formatBytes(selBytes)}</b>
               </span>
+              {/* R240：全选 / 清空 一键切换——逐项勾选或取消后不必逐个点，
+                  一个按钮在全选与清空间切换；微信项选中仍走底部微信引导。 */}
+              <button
+                type="button"
+                className="ghost small"
+                disabled={!cleanItems.length || cleaning}
+                onClick={() => {
+                  const allChecked = selCount === cleanItems.length;
+                  setChecked(Object.fromEntries(cleanItems.map((i) => [i.key, !allChecked])));
+                  setArmed(false);
+                  if (armTimeout.current) window.clearTimeout(armTimeout.current);
+                }}
+              >
+                {selCount === cleanItems.length && cleanItems.length > 0
+                  ? t('overview.clean.clearAll')
+                  : t('overview.clean.selectAll')}
+              </button>
               {armed && !cleaning && (
                 <button
                   className="ao-clean-btn ao-clean-btn-cancel"

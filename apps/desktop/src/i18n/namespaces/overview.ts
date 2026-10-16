@@ -98,6 +98,10 @@ export const overview = {
     'overview.clean.running': '清理中…',
     'overview.clean.confirmArmed': '确认清理 {n} 项（进回收站）',
     'overview.clean.now': '立即清理',
+    // R240：总览可清理卡底部「全选 / 清空」一键切换——逐项勾选或取消后
+    // 不必逐个点，一个按钮在全选与清空间切换（真实后端的批量勾选习惯）。
+    'overview.clean.selectAll': '全选',
+    'overview.clean.clearAll': '清空',
     'overview.clean.done': '已清理 {n} 项 · 释放约 {size}（已进回收站）',
     'overview.clean.someFailed': ' · {n} 项失败',
     'overview.clean.allFailed': '{n} 项清理失败：{err}（详见控制台）',
@@ -283,6 +287,9 @@ export const overview = {
     'overview.clean.running': 'Cleaning…',
     'overview.clean.confirmArmed': 'Clean {n} items (to Recycle Bin)',
     'overview.clean.now': 'Clean now',
+    // R240：overview cleanup card bottom "Select all / Clear" toggle.
+    'overview.clean.selectAll': 'Select all',
+    'overview.clean.clearAll': 'Clear',
     'overview.clean.done': 'Cleaned {n} items · about {size} freed (moved to Recycle Bin)',
     'overview.clean.someFailed': ' · {n} failed',
     'overview.clean.allFailed': 'Cleanup failed for {n} items: {err} (see console)',
