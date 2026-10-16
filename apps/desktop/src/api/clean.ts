@@ -69,7 +69,7 @@ export const cleanApi = {
           wxidFilter: wxidFilter ?? null,
           envFilter: envFilter ?? null,
         })
-      : mocks.scopeSizesBatch(scaffoldId, rootPaths),
+      : mocks.scopeSizesBatch(scaffoldId, rootPaths, scopeDays),
 
   cleanupSuggestions: (
     rootPath: string,

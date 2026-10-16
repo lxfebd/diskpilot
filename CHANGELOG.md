@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 保留天数选择与可清字节联动（R212）
+
+- 修复真实缺陷：预览模式里 scope 行的「保留最近 N 天」天数选择器改值
+  后「待清」字节纹丝不动——`scopeSizesBatch` mock 忽略 `scopeDays`
+  （真实后端按 mtime 过滤），演示上天数选择形同虚设。
+- `mockScopeBytes(scopeId, days)` 增加天数缩放：只有带 `prompt.days` 的
+  scope 受影响（无保留期的 scope 不受 scopeDays 影响，不误伤），天数
+  越大可清越少，封底 30%（0 天=全清，≥30 天=30%）。
+- `scopeSizesBatch` 接入 `scopeDays`（api 层已传，mock 此前丢弃）；
+  `executeScope` 的 `olderThanDays` 同步联动（dry-run 清单与真删台账
+  字节口径一致）；`cleanupSuggestions` 用默认天数，总览建议大小与
+  清理页 scope 行同口径。
+- 新增 2 测试（mocks.test.ts）：scopeDays 使可清字节随天数缩小（1 天
+  清得多、默认≈30 天、单调递减且为正）；无 prompt.days 的 scope 不
+  受 scopeDays 影响。**608 总（+2）/ 42 files。**
+- 浏览器实测：QQ「接收的文件」改 1 天 → 303 MB（几乎全清），改
+  60 天 → 92.9 MB（封底 30%），联动真实可见。
+
 ### 2026-10-16 清理页补「OBS Studio 缓存」命中演示（R211）
 
 - 清理页 21 脚本仍有 4 个未命中（安全软件/ Discord / Teams / Zoom），

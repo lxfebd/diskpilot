@@ -1545,9 +1545,16 @@ function hashString(s: string): number {
 }
 
 /** scope 的演示体量：50MB–2.5GB，按 id 哈希稳定。 */
-function mockScopeBytes(scopeId: string): number {
+function mockScopeBytes(scopeId: string, days?: number): number {
   const h = hashString(scopeId);
-  return (30 + ((h % 220) / 100)) * 10 * MB * 0.5 + (h % 170) * MB;
+  const base = (30 + ((h % 220) / 100)) * 10 * MB * 0.5 + (h % 170) * MB;
+  // R212：接保留天数联动——真实后端 scope_sizes_batch 带 scopeDays 时按
+  // mtime 过滤，天数越大可清越少。mock 线性缩放：0 天=全清，≥30 天封底
+  // 30%，让预览里调天数能看到「待清」字节真的变化（此前 mock 忽略
+  // scopeDays，改天数字节纹丝不动，演示上天数选择形同虚设）。
+  if (days === undefined || days === null || !Number.isFinite(days) || days <= 0) return base;
+  const ratio = Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7);
+  return Math.round(base * ratio);
 }
 
 function mockScopeFileCount(scopeId: string): number {
@@ -1555,8 +1562,8 @@ function mockScopeFileCount(scopeId: string): number {
 }
 
 /** dry-run / 真删的演示命中条目：路径拼在扫描命中目录下，文件名按 scope 稳定。 */
-function mockScopeEntries(scopeId: string, rootPath: string, n: number): UndoEntry[] {
-  const bytes = mockScopeBytes(scopeId);
+function mockScopeEntries(scopeId: string, rootPath: string, n: number, days?: number): UndoEntry[] {
+  const bytes = mockScopeBytes(scopeId, days);
   const per = Math.max(1, Math.floor(bytes / Math.max(1, n)));
   const stem = hashString(scopeId + ':stem');
   const out: UndoEntry[] = [];
@@ -1575,11 +1582,17 @@ function mockScopeEntries(scopeId: string, rootPath: string, n: number): UndoEnt
 export async function scopeSizesBatch(
   scaffoldId: string,
   rootPaths: string[],
+  scopeDays?: Record<string, number>,
 ): Promise<{ root_path: string; sizes: { scope_id: string; bytes: number; file_count: number; total_bytes: number; total_files: number }[] }[]> {
   await wait(50);
+  void scopeDays;
   const scaffold = SCAFFOLDS.find((s) => s.id === scaffoldId);
   const sizes = (scaffold?.scopes ?? []).map((sc) => {
-    const bytes = mockScopeBytes(sc.id);
+    // R212：接入保留天数——只有带 prompt.days 的 scope 按用户天数缩放可清字节
+    // （真实后端 scope_sizes_batch 带 scopeDays 时按 mtime 过滤；无保留期的
+    // scope 不受 scopeDays 影响）。天数越大可清越少，封底 30%。
+    const days = sc.prompt?.kind === 'days' ? (scopeDays?.[sc.id] ?? sc.prompt.default ?? 30) : undefined;
+    const bytes = mockScopeBytes(sc.id, days);
     const files = mockScopeFileCount(sc.id);
     return {
       scope_id: sc.id,
@@ -1601,10 +1614,9 @@ export async function executeScope(
   opts: { olderThanDays?: number | null; wxidFilter?: string[] | null; envFilter?: string[] | null; confirmed?: boolean | null } = {},
 ): Promise<UndoEntry[]> {
   void scaffoldId;
-  void opts;
   await wait(dryRun ? 60 : 120);
-  const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId) / (24 * MB))));
-  const entries = mockScopeEntries(scopeId, rootPath, n);
+  const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, opts.olderThanDays ?? undefined) / (24 * MB))));
+  const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined);
   if (!dryRun) {
     UNDO_LEDGER.push(...entries);
   }
@@ -1650,15 +1662,19 @@ export async function cleanupSuggestions(
       .filter((s) => (s.category === 'cache' || s.category === 'media') && s.prompt?.kind !== 'confirm')
       .slice(0, 2);
     for (const scope of picked) {
+      // R212：与清理页 scope 行同一口径——带 prompt.days 的 scope 用默认
+      // 保留天数缩放（总览建议的大小 = 进清理页勾选后真正清的大小）。
+      const days = scope.prompt?.kind === 'days' ? (scope.prompt.default ?? 30) : undefined;
+      const bytes = mockScopeBytes(scope.id, days);
       out.push({
         scaffold_id: sc.id,
         scope_id: scope.id,
         label: scope.label,
         desc: `${sc.name} · ${scope.category === 'media' ? '媒体' : '缓存'}`,
         path: hitPath,
-        bytes: mockScopeBytes(scope.id),
+        bytes,
         files: mockScopeFileCount(scope.id),
-        total_bytes: mockScopeBytes(scope.id),
+        total_bytes: bytes,
       });
     }
   }

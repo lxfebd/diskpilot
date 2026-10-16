@@ -396,6 +396,34 @@ describe('mocks.scopeSizesBatch（预览模式 scope 尺寸）', () => {
     const batch = await scopeSizesBatch('no-such-scaffold', ['C:\\']);
     expect(batch[0].sizes).toEqual([]);
   });
+
+  // R212：天数联动——带 prompt.days 的 scope 传 scopeDays 后字节应随天数
+  // 缩小（真实后端按 mtime 过滤，天数越大可清越少）。此前 mock 忽略
+  // scopeDays，改天数「待清」纹丝不动，预览演示上天数选择形同虚设。
+  it('scopeDays 使可清字节随天数缩小（R212 天数联动）', async () => {
+    const scaffold = SCAFFOLDS.find((s) => s.id === 'crash-dumps')!;
+    const daysScope = scaffold.scopes.find((sc) => sc.prompt?.kind === 'days')!;
+    const noDays = await scopeSizesBatch('crash-dumps', ['C:\\']);
+    const days1 = await scopeSizesBatch('crash-dumps', ['C:\\'], { [daysScope.id]: 1 });
+    const days30 = await scopeSizesBatch('crash-dumps', ['C:\\'], { [daysScope.id]: 30 });
+    const baseRow = noDays[0].sizes.find((r) => r.scope_id === daysScope.id)!;
+    const d1Row = days1[0].sizes.find((r) => r.scope_id === daysScope.id)!;
+    const d30Row = days30[0].sizes.find((r) => r.scope_id === daysScope.id)!;
+    // 1 天几乎全清（保留期最短）→ 比 30 天多；默认无 days 走 prompt.default（30 天）≈ 30 天
+    expect(d1Row.bytes).toBeGreaterThan(d30Row.bytes);
+    expect(baseRow.bytes).toBe(d30Row.bytes);
+    expect(d30Row.bytes).toBeGreaterThan(0);
+  });
+
+  it('无 prompt.days 的 scope 不受 scopeDays 影响（R212 不误伤）', async () => {
+    const scaffold = SCAFFOLDS.find((s) => s.id === 'browser-cache')!;
+    const noPrompt = scaffold.scopes.find((sc) => sc.prompt?.kind !== 'days')!;
+    const a = await scopeSizesBatch('browser-cache', ['C:\\'], { [noPrompt.id]: 7 });
+    const b = await scopeSizesBatch('browser-cache', ['C:\\']);
+    const ra = a[0].sizes.find((r) => r.scope_id === noPrompt.id)!;
+    const rb = b[0].sizes.find((r) => r.scope_id === noPrompt.id)!;
+    expect(ra.bytes).toBe(rb.bytes);
+  });
 });
 
 describe('mocks.executeScope（预览模式清理执行）', () => {
