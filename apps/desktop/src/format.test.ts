@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf } from './format';
+import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf, driveRootOf } from './format';
 
 describe('formatBytes', () => {
   it('bytes below 1 KiB stay in B', () => {
@@ -100,5 +100,26 @@ describe('extOf', () => {
     expect(extOf('folder.')).toBe('');
     expect(extOf('.gitignore')).toBe(''); // 点开头视为无扩展名（lastIndexOf 在 0）
     expect(extOf('.')).toBe('');
+  });
+});
+
+// R248：盘根提取——空间大头 Top 10 行点击定位到工作台时，从子目录路径
+// 还原盘根去扫描，扫完再 selectPath 回子目录。
+describe('driveRootOf（路径 → 盘根）', () => {
+  it('子目录取第一个分隔符后的盘根', () => {
+    expect(driveRootOf('C:\\Users\\AppData')).toBe('C:\\');
+    expect(driveRootOf('C:\\Users\\90740\\AppData\\Local')).toBe('C:\\');
+  });
+
+  it('盘根本身不变', () => {
+    expect(driveRootOf('C:\\')).toBe('C:\\');
+  });
+
+  it('UNC 路径取服务器根（近似）', () => {
+    expect(driveRootOf('\\\\server\\share\\dir')).toBe('\\\\server\\');
+  });
+
+  it('无分隔符路径原样返回', () => {
+    expect(driveRootOf('plainpath')).toBe('plainpath');
   });
 });

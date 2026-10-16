@@ -54,6 +54,19 @@ export function driveLetter(p: string): string {
   return p.replace(/\\$/, '').replace(/:$/, '');
 }
 
+/** R248：从任意路径取「盘根」（第一个分隔符之后）：`C:\Users\AppData` → `C:\`；
+ *  `C:\` 本身不变；UNC（`\\server\share`）取到服务器根 `\\server\`。 */
+export function driveRootOf(p: string): string {
+  if (p.startsWith('\\\\')) {
+    // UNC：开头就是分隔符，取到第二个分隔符之后（服务器名后）
+    const second = p.indexOf('\\', 2);
+    return second >= 0 ? p.slice(0, second + 1) : p;
+  }
+  const sep = p.indexOf('\\');
+  if (sep >= 0) return p.slice(0, sep + 1);
+  return p;
+}
+
 /** Date → `YYYY-MM-DD`（地区中立）。用于按天分组/展示日期，与 `toLocaleDateString` 时区语义一致。 */
 export function formatDateKey(d: Date): string {
   if (Number.isNaN(d.getTime())) return '';

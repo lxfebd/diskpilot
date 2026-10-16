@@ -1024,6 +1024,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     const total = base.size || sorted.reduce((s, n) => s + (n.size || 0), 0);
     return sorted.map((n) => ({
       name: n.name || n.path,
+      path: n.path, // R248：点行带目录定位到工作台（有 path 才能 scan 打开该目录）
       files: n.file_count || 0,
       size: n.size || 0,
       pct: total > 0 ? Math.round(((n.size || 0) / total) * 100) : 0,
@@ -1403,7 +1404,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           </h2>
           <div className="ao-toplist" style={{ marginTop: 4 }}>
             {topDirs.map((n, i) => (
-              <div key={i} className="ao-top-row" onClick={() => onGoWorkspace()} title={t('overview.locateInWorkspace')}>
+              <div key={i} className="ao-top-row" onClick={() => onGoWorkspace(n.path)} title={t('overview.locateInWorkspace')}>
                 <span className="ao-rank">{i + 1}</span>
                 <span className="ao-top-name">{n.name}</span>
                 <span className="ao-top-files">{t('overview.top.files', { count: n.files.toLocaleString() })}</span>

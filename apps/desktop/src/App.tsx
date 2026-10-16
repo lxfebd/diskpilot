@@ -16,7 +16,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CleanupProposalDialog } from './components/CleanupProposalDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import Disclaimer from './components/Disclaimer';
-import { formatBytes, ellipsizePath, normKey } from './format';
+import { formatBytes, ellipsizePath, normKey, driveRootOf } from './format';
 import { loadSettings, isConfigured } from './advisorClient';
 import { prefs } from './theme';
 import { APP_VERSION } from './version';
@@ -583,7 +583,25 @@ export default function App() {
                 onRefresh={(p) => scan([p], { force: true })}
                 // R91: 趋势行点击带盘路径 → 先打开该盘（缓存命中秒开）再切页，
                 // 用户从「C 盘曲线」进来就该落在 C 盘工作台，而不是默认视图。
-                onGoWorkspace={(p) => { if (p) scan([p]); setView('workspace'); }}
+                // R248：空间大头 Top 10 行也带路径——子目录路径时扫完盘根再
+                // selectPath 定位到该目录，工作台一进来就停在那个大头目录上
+                // （FileView 按 selectedPath 逐段下钻，无需节点引用）。
+                onGoWorkspace={async (p) => {
+                  if (!p) { setView('workspace'); return; }
+                  const isRoot = /^[A-Za-z]:[\\/]$/.test(p) || p === '全部磁盘'; // @i18n-keep 与 showTargets 的虚拟根稳定标识同源，不随语言变
+                  if (isRoot) {
+                    scan([p]);
+                    setView('workspace');
+                    return;
+                  }
+                  // 盘根 = 第一个分隔符之后（C:\Users\AppData → C:\）；见
+                  // format.driveRootOf（含 UNC 处理）。
+                  await scan([driveRootOf(p)]);
+                  if (useStore.getState().scanCache[normKey(driveRootOf(p))]) {
+                    useStore.getState().selectPath(p);
+                  }
+                  setView('workspace');
+                }}
                 onOpenCleanup={(scaffoldId?: string) => openCleanup(scaffoldId)}
                 onGoHardware={() => setView('tools')}
               />

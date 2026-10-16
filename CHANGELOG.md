@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 空间大头 Top 10 行点击定位到该目录（R248）
+
+- 缺口：总览底部「空间大头 Top 10」每行点击只跳工作台（onGoWorkspace()）
+  ——落在盘根，用户还得自己找那个大头目录在哪，定位价值为零。
+- R248 修复：Top 10 行带目录 path（topDirs 加 path 字段）；App 侧
+  onGoWorkspace 区分盘根/子目录——子目录时 `driveRootOf(p)` 还原盘根扫描，
+  扫完 `selectPath(p)` 定位（FileView 按 selectedPath 逐段下钻，无需节点
+  引用）。新增纯函数 driveRootOf（format.ts，含 UNC 处理）+ 4 测试
+  （**646 总 / 43 files**）。
+- 浏览器实测：点 Top10「Users」行 → 工作台树 Users 节点高亮选中
+  （67.0 GB / 402.3k），一点即达。
+
 ### 2026-10-16 筛选空态归因修复：空搜索词不再报「没有匹配「」的脚本」（R247）
 
 - 缺口：脚本列表的搜索与命中状态筛选叠加后，筛选（非搜索）导致空列表时
