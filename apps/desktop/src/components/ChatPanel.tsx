@@ -121,7 +121,6 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   const switchChat = useStore((s) => s.switchChat);
   const deleteChat = useStore((s) => s.deleteChat);
   const scaffolds = useStore((s) => s.scaffolds);
-  const addReclaimed = useStore((s) => s.addReclaimed);
   const studioRequest = useStore((s) => s.studioRequest);
   const consumeStudio = useStore((s) => s.consumeStudio);
   const setProposal = useStore((s) => s.setProposal);
@@ -559,10 +558,23 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
     setPendingRecycle(null);
     if (!target || !run) return;
     try {
-      // 后端返回实测 bytes_freed（回收前统计），记账用它；接口失败抛错时不记账。
-      const entries = (await api.recyclePaths([target.path], target.reason, true)) ?? [];
-      const freed = entries.reduce((s, e) => s + (e.bytes_freed ?? 0), 0);
-      addReclaimed(freed);
+      // R259：改走 store.recyclePaths——与右键/工具墙同一权限门（file.recycle）
+      // + 回收后剪树（applyRecycledPrune）+ bumpScanSeq，且本就实测 bytes_freed
+      // 记账。此前直接 api.recyclePaths：权限中心关掉后 AI 面板「确认回收」
+      // 仍能真删，且删完节点不从树里消失。
+      const res = await useStore.getState().recyclePaths(
+        [{ path: target.path, size_hint: target.size }],
+        target.reason,
+      );
+      if (res.done === 0) {
+        // 权限被拒 / 全部失败：提示原文（权限门 toast 已给指引，聊天里也回
+        // 一条——不能只弹 toast 就当聊天动作没发生过）。
+        pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycleFailed', { msg: t('errors.permExecuteMissing') }) });
+        return;
+      }
+      const freed = res.bytes;
+      // 记账（addReclaimed）已由 store.recyclePaths 内部完成——这里不再重复
+      // 加，否则一次回收翻倍计入「本次会话已回收」。
       // bytes 为 0 可能是「回收成功但没统计到实测大小」（mock 演示 / 后端未返回），
       // 也可能是真 0 字节文件——都不该显示「释放 0 B」误导，用兜底文案。
       pushTurn({
@@ -572,10 +584,13 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
           ? t('chat.sys.recycled', { path: target.path, size: formatBytes(freed) })
           : t('chat.sys.recycledNoBytes', { path: target.path }),
       });
+      if (res.failed > 0) {
+        pushTurn({ id: uid(), role: 'system', text: t('errors.recycleFailed', { n: res.failed }) });
+      }
     } catch (e) {
       pushTurn({ id: uid(), role: 'system', text: t('chat.sys.recycleFailed', { msg: String(e) }) });
     }
-  }, [addReclaimed, pendingRecycle, pushTurn, t]);
+  }, [pendingRecycle, pushTurn, t]);
 
   const empty = turns.length === 0;
 

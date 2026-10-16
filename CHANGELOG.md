@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 AI 面板回收走 store 权限门：file.recycle 关闭时拒绝（R259）
+
+- 缺口：ChatPanel.confirmRecycle 直接调 api.recyclePaths——绕过 store.
+  recyclePaths 的 file.recycle 权限门（权限中心关掉后 AI 面板「确认回收」仍
+  能真删），且删完不剪树（节点残留显示已删文件）、不 bumpScanSeq（台账读者
+  收不到信号）。
+- R259 修复：confirmRecycle 改走 store.recyclePaths（同一权限门 + 剪树 +
+  bump + 实测记账 + toast），聊天气泡保留回收结果文案；done=0（权限被拒/
+  全失败）时聊天里回 permExecuteMissing 原文，不假装成功。
+- 排查确认其余真删入口均已带门：TreeView/FileView/SteamInspector/App 都走
+  store.recyclePaths，清理页/AI 提案走 cleanup.execute 门（R257）。
+- 无新增测试（store 门 R256/R258 已覆盖；组件接线由 tsc/eslint/build 把关）
+  （**673 总 / 43 files**）。
+
 ### 2026-10-16 右键回收加权限门：file.recycle 关闭时拒绝（R258）
 
 - 缺口：recyclePaths（工作台右键「移入回收站」）直接 recycle_paths，没有
