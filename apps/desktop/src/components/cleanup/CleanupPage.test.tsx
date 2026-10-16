@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entriesScaffold } from './CleanupPage';
+import { chipCounts, entriesScaffold } from './CleanupPage';
 
 describe('entriesScaffold（R241：台账 source → 脚本卡归属）', () => {
   const cards = [
@@ -41,5 +41,26 @@ describe('entriesScaffold（R241：台账 source → 脚本卡归属）', () => 
 
   it('大小写/尾斜杠归一（Windows 路径不区分大小写）', () => {
     expect(entriesScaffold('c:\\users\\90740\\appdata\\local\\crashdumps\\', cards)).toBe('crash-dumps');
+  });
+});
+
+// R255：chips 计数跟随当前筛选集——计数与列表不脱节。
+describe('chipCounts（命中状态 chips 计数）', () => {
+  const mk = (n: number) => ({ matches: Array.from({ length: n }, (_, i) => ({ path: `p${i}` })) });
+
+  it('全命中：hit = 全部', () => {
+    expect(chipCounts([mk(2), mk(1)])).toEqual({ all: 2, hit: 2, miss: 0 });
+  });
+
+  it('混有未命中：hit + miss = all', () => {
+    expect(chipCounts([mk(1), mk(0), mk(3), mk(0)])).toEqual({ all: 4, hit: 2, miss: 2 });
+  });
+
+  it('全部未命中：miss = 全部', () => {
+    expect(chipCounts([mk(0), mk(0)])).toEqual({ all: 2, hit: 0, miss: 2 });
+  });
+
+  it('空列表 → 全 0', () => {
+    expect(chipCounts([])).toEqual({ all: 0, hit: 0, miss: 0 });
   });
 });

@@ -90,6 +90,13 @@ main.cleanup-page > .cleanup-page {
 }
 .cp-status-chip:hover { background: var(--accent-bg); }
 .cp-status-chip.active { background: var(--accent); color: var(--on-accent, var(--ink)); border-color: var(--accent); font-weight: 600; }
+/* R255：chips 计数跟随筛选集——与历史页 hp-chip-n 同款弱化数字 */
+.cp-status-chip-n {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10.5px;
+  opacity: 0.75;
+}
 /* R223：清理完成提示附「查看历史」入口 */
 .cleanup-msg-with-link {
   display: flex;

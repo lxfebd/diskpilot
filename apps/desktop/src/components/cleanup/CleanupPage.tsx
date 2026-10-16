@@ -37,6 +37,17 @@ export function entriesScaffold(
   return null;
 }
 
+/** R255：命中状态 chips 计数跟随当前筛选集（filtered）——搜索/状态筛选后
+ *  列表只剩子集，chips 的 N 也算子集，计数与列表不脱节。纯函数。 */
+export function chipCounts(cards: readonly { matches: readonly unknown[] }[]): {
+  all: number;
+  hit: number;
+  miss: number;
+} {
+  const hit = cards.filter((c) => c.matches.length > 0).length;
+  return { all: cards.length, hit, miss: cards.length - hit };
+}
+
 export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; onOpenHistory?: () => void }) {
   const t = useT();
   const root = useStore((s) => s.root);
@@ -148,18 +159,26 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
             aria-label={t('cleanup.scriptsSearch')}
           />
           <div className="cp-status-chips" role="group" aria-label={t('cleanup.scriptsStatus')}>
-            {(['all', 'hit', 'miss'] as const).map((st) => (
-              <button
-                key={st}
-                type="button"
-                className={'cp-status-chip' + (status === st ? ' active' : '')}
-                onClick={() => setStatus(st)}
-              >
-                {st === 'all' ? t('cleanup.scriptsStatusAll')
-                  : st === 'hit' ? t('cleanup.scriptsStatusHit')
-                  : t('cleanup.scriptsStatusMiss')}
-              </button>
-            ))}
+            {(['all', 'hit', 'miss'] as const).map((st) => {
+              // R255：chips 计数跟随当前筛选集（filtered）——搜索「微信」后
+              // 列表只剩 1 张卡，chips 的「已命中 N」也应算 filtered 子集，
+              // 否则计数与列表脱节（全量 N 让用户以为还有更多没显示）。
+              const n = st === 'all' ? filtered.length
+                : chipCounts(filtered)[st as 'hit' | 'miss'];
+              return (
+                <button
+                  key={st}
+                  type="button"
+                  className={'cp-status-chip' + (status === st ? ' active' : '')}
+                  onClick={() => setStatus(st)}
+                >
+                  {st === 'all' ? t('cleanup.scriptsStatusAll')
+                    : st === 'hit' ? t('cleanup.scriptsStatusHit')
+                    : t('cleanup.scriptsStatusMiss')}
+                  <span className="cp-status-chip-n">{n}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="cp-list-rows">
             {cards.length === 0 ? (
