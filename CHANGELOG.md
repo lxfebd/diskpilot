@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 释放入账按实际删除量：预览/释放/磁盘三处口径一致（R232）
+
+- 缺口（R231 遗留）：executeScope 不传 olderThanDays 时释放字节按全量
+  （0.9GB）入账，而清理页「待清」显示 days 缩放后 276MB——「预览 276MB、
+  磁盘却降 0.9GB」的口径错位。
+- R232 修复：
+  - executeScope 的 olderThanDays 未显式传时取 scope.prompt.default——
+    执行释放字节与清理页「待清」（scopeSizesBatch 同源缩放）一致；
+  - sessionReclaimedBytes 按执行条目 bytes_freed 和累加（= 实际删的量），
+    总览 toast「已释放 X」、空间趋势今天回落、磁盘卡下降三处同源。
+- 测试更新：空间趋势与 listDrives 断言改为「回落 ≈ 276MB（0.9GB×0.3），
+  远小于整目录全量」（**623 总 / 42 files**）。
+- 浏览器实测：预览「12 个文件 · 共 276 MB」→ 清理后磁盘卡 -276MB
+  （可用 39.0→39.5 GB），与预览释放量一致。
+
 ### 2026-10-16 清理释放入账磁盘：磁盘卡/空间趋势随清理同源下降（R231）
 
 - 缺口：空间历史曲线是固定脚本（14 天爬升 + 一次 2GB 回落），listDrives

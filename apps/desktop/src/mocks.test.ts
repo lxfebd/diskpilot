@@ -338,17 +338,20 @@ describe('mocks.getSpaceHistory（总览空间趋势演示数据）', () => {
     for (let i = 1; i < pts.length; i++) expect(pts[i].at).toBeGreaterThan(pts[i - 1].at);
   });
 
-  // R231：真删释放字节累加进会话台账——空间趋势卡今天末点回落与本次清理
-  // 同源（清完看曲线今天下降，不是固定脚本一动不动）。
-  it('R231：真删后空间趋势今天末点回落（释放字节同源下压）', async () => {
+  // R231/R232：真删释放字节累加进会话台账——空间趋势卡今天末点回落与本次
+  // 清理同源（清完看曲线今天下降，不是固定脚本一动不动）。R232：按执行
+  // 条目 bytes_freed 和累加（= days 过滤后实际删的量），与总览 toast 一致。
+  it('R231：真删后空间趋势今天末点回落（按实际释放字节下压）', async () => {
     const before = await getSpaceHistory();
     const beforeLast = before['C:\\'][before['C:\\'].length - 1].used_bytes;
-    // 真删 CrashDumps 目录（0.9GB 真实字节）
+    // 真删 CrashDumps 目录（30 天保留 → 实际释放 ≈0.9GB × 0.3 = 276MB）
     await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
     const after = await getSpaceHistory();
     const afterLast = after['C:\\'][after['C:\\'].length - 1].used_bytes;
-    // 回落 ≈ CrashDumps 真实 0.9GB（920MB 容差内）
-    expect(beforeLast - afterLast).toBeGreaterThan(0.8 * 1024 ** 3);
+    const dropped = beforeLast - afterLast;
+    // 实际释放 = entries bytes_freed 之和：在 0.9GB×0.3（276MB）附近，远小于全量 0.9GB
+    expect(dropped).toBeGreaterThan(0.25 * 1024 ** 3);
+    expect(dropped).toBeLessThan(0.5 * 1024 ** 3);
     // 今天末点仍是末点（时间升序保持）
     const pts = after['C:\\'];
     for (let i = 1; i < pts.length; i++) expect(pts[i].at).toBeGreaterThan(pts[i - 1].at);
@@ -366,15 +369,18 @@ describe('mocks.listDrives（总览磁盘详情演示数据）', () => {
     expect(c.free_bytes).toBe(c.total_bytes - c.used_bytes);
   });
 
-  // R231：真删释放后 listDrives 与空间趋势同源下压——工作台磁盘卡不再
-  // 「曲线回落了磁盘卡还满着」（清完再扫描，两处一起下降）。
+  // R231/R232：真删释放后 listDrives 与空间趋势同源下压——工作台磁盘卡
+  // 不再「曲线回落了磁盘卡还满着」（清完再扫描，两处一起下降）。R232：
+  // 按实际释放字节（days 过滤后），非整目录全量。
   it('R231：真删后磁盘卡 used 下降（与空间趋势同源）', async () => {
     const before = await listDrives();
     await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
     const after = await listDrives();
     const bUsed = before[0].used_bytes;
     const aUsed = after[0].used_bytes;
-    expect(bUsed - aUsed).toBeGreaterThan(0.8 * 1024 ** 3); // CrashDumps ≈0.9GB
+    const dropped = bUsed - aUsed;
+    expect(dropped).toBeGreaterThan(0.25 * 1024 ** 3); // ≈276MB（0.9GB×0.3）
+    expect(dropped).toBeLessThan(0.5 * 1024 ** 3); // 远小于整目录 0.9GB
     expect(after[0].free_bytes).toBe(after[0].total_bytes - aUsed);
   });
 });

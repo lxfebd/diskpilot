@@ -1965,7 +1965,15 @@ export async function executeScope(
 ): Promise<UndoEntry[]> {
   void scaffoldId;
   await wait(dryRun ? 60 : 120);
-  const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, opts.olderThanDays ?? undefined) / (24 * MB))));
+  // R232：olderThanDays 未显式传时取 scope 的 prompt.default——执行释放
+  // 字节与清理页「待清」（scopeSizesBatch 同源缩放）一致：真实后端执行
+  // 时用户保留天数就是 scope 的默认/面板设定，不是「不清除地全删」。
+  const days = (() => {
+    if (opts.olderThanDays !== undefined && opts.olderThanDays !== null) return opts.olderThanDays;
+    const sc = SCAFFOLDS.find((s) => s.id === scaffoldId)?.scopes.find((x) => x.id === scopeId);
+    return sc?.prompt?.kind === 'days' ? (sc.prompt.default ?? 30) : undefined;
+  })();
+  const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, days) / (24 * MB))));
   // R225：真删时收集真实树路径（dry-run 保持合成清单，预览不受影响）。
   // R229：只剪这个 scope 的目录（CrashDumps/WER/Minidump 各是各的），
   // 清 WER 不再把同 scaffold 的 CrashDumps/Minidump 一起剪掉。
@@ -1979,11 +1987,13 @@ export async function executeScope(
     // 同源），不做 rootPath 过滤。
     return sc ? scopeRealBytes(scaffoldId, scopeId, sc.glob) : null;
   })();
-  const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined, realPaths, realBytes);
+  const entries = mockScopeEntries(scopeId, rootPath, n, days, realPaths, realBytes);
   if (!dryRun) {
     UNDO_LEDGER.push(...entries);
     // R231：真删释放字节累加进会话台账——空间趋势卡今天回落与本次清理同源。
-    if (realBytes !== null && realBytes !== undefined) sessionReclaimedBytes += realBytes;
+    // R232：按执行条目 bytes_freed 和累加（= days 过滤后实际删的量），与
+    // 总览 toast「已释放 X」一致——清 276MB 就降 276MB，不是降整目录 0.9GB。
+    for (const e of entries) sessionReclaimedBytes += e.bytes_freed ?? 0;
     // R225：真删路径进 mock 级台账——后续 scan / cleanupSuggestions 从
     // 修剪后的树返回，演示里「清完再看」各处体量一致下降。
     if (realPaths) for (const p of realPaths) _mockRecyclePath(p);
