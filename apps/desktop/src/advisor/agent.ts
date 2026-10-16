@@ -100,6 +100,27 @@ export function toolLabel(name: string): string {
   return TOOL_LABEL[name] ?? prettifyToolName(name);
 }
 
+/**
+ * R282：浏览器预览模式数据诚实声明——预览下放行的只读工具（磁盘/硬件/
+ * 系统状态等）返回的是 mock 演示数据（与界面同源、已在返回值里标注），
+ * 必须让 AI 明确知道并如实告诉用户，绝不能把演示数据说成本机真实值。
+ * 桌面端（Tauri）返回真实数据，不需要此声明。
+ */
+export function previewSystemNote(): string {
+  const { isTauri } = requireIsTauri();
+  if (isTauri) return '';
+  return `
+## 浏览器预览模式声明（重要）
+当前运行在浏览器预览模式：本机磁盘/硬件/系统状态工具（get_disk_health、get_hardware_info、analyze_disk_health、get_system_info、run_system_probe、get_steam_library_summary、get_fan_status、get_cleanup_suggestions 等）返回的是演示数据，不是真实本机数据。
+- 必须把这些数据如实说成「演示数据 / 预览数据」，不得说成「你的电脑 / 本机真实」。
+- 用户问真实磁盘/硬件情况时，明确说明：真实数据需要桌面应用（Tauri 版）才能读取。
+- 清理建议、Steam 盘点、风扇状态同理为演示：可以演示功能流程，不能假装是本机真实结果。`;
+}
+
+function requireIsTauri(): { isTauri: boolean } {
+  return { isTauri: typeof window !== 'undefined' && typeof window.__TAURI_INTERNALS__ !== 'undefined' };
+}
+
 function prettifyToolName(name: string): string {
   if (!name) return name;
   const words = name
@@ -174,8 +195,8 @@ export async function agentChat(o: AgentOpts): Promise<string> {
 4. 不要编造硬件数据，所有数值必须来自工具返回值。
 5. 弱机（hwProfile=weak）上，不要主动建议烤机/压测/深度扫描这类长时高负载操作。`;
   const system = cliIndex
-    ? `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${healthRoutineSection}\n\n${cliIndex}\n\n工具使用规则：要用 run_cli_tool 执行某个 CLI 工具前，必须先调用 get_cli_tool_usage 查看该工具的绝对路径、参数表和示例，确认参数无误后才能调用 run_cli_tool；中/高风险工具会自动弹确认框，确认后才真正执行。`
-    : `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${healthRoutineSection}`;
+    ? `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${healthRoutineSection}\n\n${cliIndex}\n\n工具使用规则：要用 run_cli_tool 执行某个 CLI 工具前，必须先调用 get_cli_tool_usage 查看该工具的绝对路径、参数表和示例，确认参数无误后才能调用 run_cli_tool；中/高风险工具会自动弹确认框，确认后才真正执行。${previewSystemNote()}`
+    : `${baseSystem}\n\n${perfLine}\n\n${hwSection}\n\n${healthRoutineSection}${previewSystemNote()}`;
 
   let answer: string;
   if (settings.provider === 'anthropic') answer = await agentAnthropic(settings, system, o, tools.anthropic, emit, showThink);

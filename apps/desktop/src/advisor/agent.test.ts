@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { healthRoutineSection, toolLabel } from './agent';
+import { describe, it, expect, vi } from 'vitest';
+import { healthRoutineSection, toolLabel, previewSystemNote } from './agent';
 import { toolRegistry } from './tools';
 
 describe('healthRoutineSection（周巡检编排）', () => {
@@ -54,5 +54,26 @@ describe('toolLabel（工具名中文标签）', () => {
 
   it('未见过的工具名优雅降级为可读短语', () => {
     expect(toolLabel('get_foo_bar')).toBe('FOO BAR');
+  });
+});
+
+// R282：预览模式数据诚实声明——node 测试环境无 window → isTauri=false，
+// previewSystemNote 必须返回演示数据声明；桌面端（window.__TAURI_INTERNALS__
+// 存在）返回空（真实数据无需声明）。
+describe('previewSystemNote（预览模式数据声明）', () => {
+  it('非 Tauri（node 环境）返回演示数据声明', () => {
+    const note = previewSystemNote();
+    expect(note).toContain('浏览器预览模式');
+    expect(note).toContain('演示数据');
+    expect(note).toContain('不得说成');
+  });
+
+  it('Tauri 环境返回空（真实数据无需声明）', () => {
+    vi.stubGlobal('window', { __TAURI_INTERNALS__: { dummy: true } });
+    try {
+      expect(previewSystemNote()).toBe('');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

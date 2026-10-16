@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 预览模式 AI 数据诚实声明：演示数据不再说成本机真实（R282）
+
+- 缺口：R274-R281 批量放行只读工具（磁盘/硬件/系统状态/风扇/Steam/清理
+  建议），预览模式 AI 拿到的是 mock 演示数据。但 agentChat 的系统提示词
+  只强调「工具返回真实数据，不要编造」——AI 不知道当前在浏览器预览模式，
+  会把演示磁盘/硬件数值直接当成本机真实数据输出，误导用户。
+- R282 修复：新增 previewSystemNote()（非 Tauri 注入「浏览器预览模式声明」：
+  这些工具返回的是演示数据必须如实说是演示、不得说成本机真实、真实数据
+  需桌面端）拼进 agentChat system 尾部；i18n chat.hero.browserMode 文案同步
+  更新（原「AI 会走真实接口、硬件类工具需桌面端」已过时——硬件只读已
+  预览放行，改为「模拟数据 AI 工具会标注」）。
+- 新增 2 测试（agent.test 6→8）：非 Tauri 返回声明、Tauri 环境返回空。
+  （**726 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 AI 工具中文标签全覆盖：预览放行工具不直显裸名（R281）
 
 - 缺口：R275 放行的 get_fan_status 不在 agent.ts 的 TOOL_LABEL 表里，

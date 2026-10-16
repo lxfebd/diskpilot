@@ -75,7 +75,7 @@ export const chat = {
     'chat.hero.pcInfo': '查看电脑信息',
     'chat.hero.hwHealth': '查看硬件健康',
     'chat.hero.capabilities': '我能帮你做什么',
-    'chat.hero.browserMode': '浏览器预览模式：扫描数据是模拟的，但 AI 会走真实接口；硬件类工具需真实桌面端才生效。',
+    'chat.hero.browserMode': '浏览器预览模式：扫描与硬件数据是模拟的（AI 工具走演示数据源并会标注），写操作与真实系统读取需桌面端才生效。',
     // AI 未配置时的空态引导：主句 + 三个带人话说明的快捷按钮（仍可用：点下去会弹设置引导而非报错）
     'chat.hero.aiNotSetup': '还没有配置 AI 助手。配置后可以问它：',
     'chat.hero.aiNotSetupDesc': 'AI 需要自己的 API key（Anthropic / OpenAI / Gemini / Ollama 任选其一）。',
@@ -178,7 +178,7 @@ export const chat = {
     'chat.hero.pcInfo': 'See PC specs',
     'chat.hero.hwHealth': 'Check hardware health',
     'chat.hero.capabilities': 'What can you do?',
-    'chat.hero.browserMode': 'Browser preview mode: scan data is simulated, but AI calls are real. Hardware tools need the desktop app.',
+    'chat.hero.browserMode': 'Browser preview mode: scan & hardware data are simulated (AI tools use demo data and label it). Writes and real system reads need the desktop app.',
     'chat.hero.aiNotSetup': 'The AI assistant isn\'t configured yet. Once it is, you can ask it:',
     'chat.hero.aiNotSetupDesc': 'AI needs its own API key (pick Anthropic / OpenAI / Gemini / Ollama).',
     'chat.hero.aiGoSettings': 'Configure AI',
