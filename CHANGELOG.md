@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 MCP 服务器新增/JSON 导入加执行时权限门（R262）
+
+- 缺口：McpServers 的 update/remove 已有 manageOk 门，但 save（新增 addServer）
+  和 importJson（批量 JSON 导入）执行函数无门——mcp.manage 是 L2 高危
+  （新增服务器 = 授权外部连接），UI disabled 之外不拦。
+- R262 修复：save / importJson 开头加 isPermEnabled('mcp.manage')（复用
+  mcp.needPermTitle）——关闭时 setErr 拒绝写入。
+- 无新增测试（4 行组件闭包门，同 R261 模式；tsc/eslint/build 把关）
+  （**673 总 / 43 files**）。
+
 ### 2026-10-17 启动项启停/删除加执行时权限门：不只靠 UI 禁用（R261）
 
 - 缺口：StartupPanel.toggleStartup / removeStartup 只靠 UI 禁用（!startupPerm

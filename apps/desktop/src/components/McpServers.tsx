@@ -260,6 +260,12 @@ function McpServersInner() {
 
   const importJson = async () => {
     if (!parsedJson || parsedJson.length === 0) return;
+    // R262：执行时权限门（mcp.manage L2 高危）——新增 MCP 服务器 = 授权外部
+    // 连接；update/remove 已有门，add 此前漏网（UI disabled 之外不拦）。
+    if (!isPermEnabled('mcp.manage')) {
+      setJsonErr(t('mcp.needPermTitle'));
+      return;
+    }
     setJsonBusy(true);
     setJsonErr(null);
     try {
@@ -701,6 +707,12 @@ function ServerForm(props: {
   const save = async () => {
     const payload = buildPayload();
     if (!payload) return;
+    // R262：执行时权限门（新增/编辑都查）——编辑有 updateServer 门路径，
+    // 新增 addServer 此前无门；mcp.manage 关闭时一律拒绝写入。
+    if (!isPermEnabled('mcp.manage')) {
+      setErr(t('mcp.needPermTitle'));
+      return;
+    }
     setSaving(true);
     setErr(null);
     try {
