@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 确认窗逐项实测补树内真实大小：显示与执行记账同源（R269）
+
+- 缺口：estimateSize mock 只查 MOCK_KNOWN_FILES 已知文件表，树内真实
+  目录路径（如 AI 建议的 C:\Users\90740\AppData\Local\CrashDumps）返回
+  0——确认窗显示「约 0 B」，但 executeAiPlan 真删时用树内大小非 0，
+  「显示 0、执行释放 GB」脱节。
+- R269 修复：estimateSize 未命中表时查树内真实节点（目录/file 叶子）大小
+  ——与 executeAiPlan 记账（live 树）同源；已回收路径返回 0（刚清过再
+  实测就没有了，与后端一致）；树外未知路径仍返回 0（诚实「路径不存在」）。
+- 新增 2 测试（mocks.test 77→79）：①树内真实目录返回节点大小（显示 =
+  执行记账）；②已回收路径再实测返回 0。
+  （**684 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 右键回收与建议同源收敛：mock 级台账补齐（R268）
 
 - 缺口：mocks.recyclePaths（工作台树右键「移入回收站」）只写 UNDO_LEDGER

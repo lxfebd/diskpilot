@@ -1567,12 +1567,30 @@ const MOCK_KNOWN_FILES: Record<string, number> = {
 
 /**
  * R201：浏览器里没有真盘可实测，返回 mock 已知文件的大小；
- * 不在表里的路径返回 0（与后端「路径不存在/空」同语义——确认窗的
- * 「路径不存在」提示在预览模式同样诚实，只是 mock 数据本身能命中）。
+ * R269：树内真实路径（目录 / file() 叶子）也返回该节点真实大小——
+ * 与 executeAiPlan 记账（live 树）同源，确认窗「约 X」= 执行释放 X，
+ * 不出现「显示约 0 B、真删释放 1GB」的脱节。未命中表且不在树里返回 0
+ * （与后端「路径不存在/空」同语义）。已在回收台账里的路径返回 0
+ * （刚才清过 → 再实测就没有了，与后端一致）。
  */
 export async function estimateSize(path: string): Promise<number> {
   await wait(40);
-  return MOCK_KNOWN_FILES[path] ?? 0;
+  const known = MOCK_KNOWN_FILES[path];
+  if (known !== undefined) return known;
+  if (!path) return 0;
+  // 已回收 → 0（树被剪，节点不存在）。
+  if (recycledPaths.some((x) => samePath(x, path))) return 0;
+  const tree = pruneRecycledFrom(structuredClone(MOCK_TREE));
+  const norm = (s: string) => s.replace(/[\\/]+$/, '').toLowerCase();
+  const target = norm(path);
+  let found: number | null = null;
+  const walk = (n: Node) => {
+    if (found !== null) return;
+    if (norm(n.path) === target) { found = n.size || 0; return; }
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(tree);
+  return found ?? 0;
 }
 
 export async function scanDuplicateFiles(rootPath: string, _minSize?: number): Promise<MockDupGroup[]> {

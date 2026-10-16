@@ -231,6 +231,25 @@ describe('mocks.estimateSize（确认窗逐项实测大小演示数据）', () =
   it('不在已知表的路径返回 0（与后端「路径不存在/空」同语义）', async () => {
     await expect(estimateSize('C:\\不存在\\路径\\x.bin')).resolves.toBe(0);
   });
+
+  // R269：树内真实目录路径返回真实大小（与 executeAiPlan 记账同源）——
+  // 确认窗「约 X」= 执行释放 X，不出现「显示约 0 B、真删释放 1GB」脱节。
+  it('R269：树内真实目录返回该节点大小（显示 = 执行记账）', async () => {
+    const dir = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    const node = collectMatchingNode(MOCK_TREE, dir);
+    expect(node).not.toBeNull();
+    const sz = await estimateSize(dir);
+    expect(sz).toBe(node!.size);
+    expect(sz).toBeGreaterThan(0);
+  });
+
+  // R269：已回收的路径再实测返回 0（刚清过 → 再实测就没大小了，与后端一致）
+  it('R269：已回收路径再实测返回 0（清过 → 没有大小）', async () => {
+    const dir = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+    _mockRecyclePath(dir);
+    const sz = await estimateSize(dir);
+    expect(sz).toBe(0);
+  });
 });
 
 describe('mocks.mcpListServers（设置页 MCP tab 演示数据）', () => {
