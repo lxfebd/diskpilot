@@ -144,7 +144,13 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
                 <button
                   type="button"
                   className="ghost undo-restore"
-                  onClick={() => void api.openRecycleBin()}
+                  onClick={() => {
+                    setErr(null);
+                    setMsg(null);
+                    void api.openRecycleBin().catch((e2) => {
+                      setErr(t('cleanup.openRecycleBinFailed', { msg: String(e2) }));
+                    });
+                  }}
                 >
                   {t('cleanup.openRecycleBin')}
                 </button>

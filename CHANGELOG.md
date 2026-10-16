@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式 UndoPanel 回收站提示补 catch（R203）
+
+- R200 把 `api.openRecycleBin` 非 Tauri 改为 reject 后，HistoryPage 已补
+  `.catch`，但 Studio 侧栏的 UndoPanel（同样渲染「打开系统回收站」按钮）
+  仍是 `void api.openRecycleBin()` 无 catch——浏览器点击会未处理拒绝。
+- UndoPanel 改 `.catch` + 页面级 setErr（复用 `cleanup.openRecycleBinFailed`
+  i18n），点击显示与历史页同款诚实错误提示。
+- 顺带全库扫描 `void api.xxx()` 无 catch 调用：webviewHeartbeat /
+  cancelScan / revealInExplorer / scaffoldSource / stress_cancel 全部确认
+  安全（resolve 或带 catch），无其他未处理拒绝缺口。
+- 浏览器实测：Studio 最近清理面板 recycle 条目 → 点「打开系统回收站」→
+  `.undo-msg.error` 显示「打不开系统回收站：Error: open_recycle_bin 仅在
+  Tauri 环境可用…」。
+- 无新测试（catch 行为，与 R200 先例一致）；586 总 / 41 files。
+
 ### 2026-10-16 预览模式 Steam 打开动作真实打开网页（R202）
 
 - `api.openSteamUrl` 非 Tauri 分支原先 `Promise.resolve()` 静默——Steam
