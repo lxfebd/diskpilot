@@ -96,13 +96,16 @@ export const MOCK_TREE: Node = {
                     // R205：Firefox 配置文件（browser-privacy 命中）——真实磁盘
                     // 常驻的浏览痕迹目录；与 Chrome/Edge 的 User Data（已归 browser-cache）
                     // 互补，让「浏览器使用痕迹」脚本在预览可演示。
+                    // R207：同一 Firefox 树补 firefox-cache 命中——profiles 同级
+                    // 的 cache2 / startupCache / shader-cache 归缓存脚本，Profiles
+                    // 内只留浏览痕迹（visit 命中即不下钻，两者互不抢占）。
                     {
                       name: 'Mozilla', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla', is_dir: true,
-                      size: 0.9 * GB, file_count: 6_200, scaffold_id: null, top_extensions: [],
+                      size: 2.1 * GB, file_count: 8_600, scaffold_id: null, top_extensions: [],
                       children: [
                         {
                           name: 'Firefox', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox', is_dir: true,
-                          size: 0.9 * GB, file_count: 6_200, scaffold_id: 'browser-privacy', top_extensions: [],
+                          size: 2.1 * GB, file_count: 8_600, scaffold_id: null, top_extensions: [],
                           children: [
                             {
                               name: 'Profiles', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\Profiles', is_dir: true,
@@ -116,6 +119,22 @@ export const MOCK_TREE: Node = {
                                     file('places.sqlite', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\abc12345.default-release\\places.sqlite', 210 * 1024 * 1024),
                                   ],
                                 },
+                              ],
+                            },
+                            {
+                              name: 'cache2', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\cache2', is_dir: true,
+                              size: 0.7 * GB, file_count: 1_420, scaffold_id: 'firefox-cache', top_extensions: [],
+                              children: [
+                                file('entries_A1.dat', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\cache2\\entries_A1.dat', 96 * 1024 * 1024),
+                                file('entries_B2.dat', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\cache2\\entries_B2.dat', 48 * 1024 * 1024),
+                              ],
+                            },
+                            {
+                              name: 'shader-cache', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\shader-cache', is_dir: true,
+                              size: 0.5 * GB, file_count: 990, scaffold_id: 'firefox-cache', top_extensions: [],
+                              children: [
+                                file('shader_cache_0.bin', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\shader-cache\\shader_cache_0.bin', 128 * 1024 * 1024),
+                                file('shader_cache_1.bin', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\shader-cache\\shader_cache_1.bin', 64 * 1024 * 1024),
                               ],
                             },
                           ],
@@ -142,6 +161,27 @@ export const MOCK_TREE: Node = {
                     leaf('pip', 'C:\\Users\\90740\\AppData\\Local\\pip', 2.1 * GB, 5_300, 'dev-caches'),
                     leaf('JetBrains', 'C:\\Users\\90740\\AppData\\Local\\JetBrains', 3.6 * GB, 88_900, 'ide-caches'),
                     leaf('Docker', 'C:\\Users\\90740\\AppData\\Local\\Docker', 5.2 * GB, 1_200, 'docker-buildx'),
+                    // R207：系统临时文件（system-temp）——每台 Windows 都有的
+                    // %TEMP%，预览演示清理页不再恒「未检测到」。
+                    {
+                      name: 'Temp', path: 'C:\\Users\\90740\\AppData\\Local\\Temp', is_dir: true,
+                      size: 2.8 * GB, file_count: 12_600, scaffold_id: 'system-temp', top_extensions: [],
+                      children: [
+                        file('tmpA8F1.tmp', 'C:\\Users\\90740\\AppData\\Local\\Temp\\tmpA8F1.tmp', 96 * 1024 * 1024),
+                        file('tmpB2C3.tmp', 'C:\\Users\\90740\\AppData\\Local\\Temp\\tmpB2C3.tmp', 48 * 1024 * 1024),
+                        file('installer.log', 'C:\\Users\\90740\\AppData\\Local\\Temp\\installer.log', 12 * 1024 * 1024),
+                      ],
+                    },
+                    // R207：应用崩溃转储（crash-dumps）——CrashDumps / WER 真实
+                    // 常驻的目录，预览演示崩溃转储清理。
+                    {
+                      name: 'CrashDumps', path: 'C:\\Users\\90740\\AppData\\Local\\CrashDumps', is_dir: true,
+                      size: 0.9 * GB, file_count: 1_240, scaffold_id: 'crash-dumps', top_extensions: [],
+                      children: [
+                        file('notepad.exe.2026-10-12.dmp', 'C:\\Users\\90740\\AppData\\Local\\CrashDumps\\notepad.exe.2026-10-12.dmp', 64 * 1024 * 1024),
+                        file('explorer.exe.2026-10-14.dmp', 'C:\\Users\\90740\\AppData\\Local\\CrashDumps\\explorer.exe.2026-10-14.dmp', 128 * 1024 * 1024),
+                      ],
+                    },
                   ],
                 },
                 {

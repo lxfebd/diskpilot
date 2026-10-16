@@ -479,4 +479,36 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
       }
     }
   });
+
+  // R207：补齐真实 Windows 必有目录的演示命中——%TEMP%（system-temp）、
+  // CrashDumps（crash-dumps）、Firefox cache2/shader-cache（firefox-cache）。
+  // 同一 Firefox 树：Profiles 归 browser-privacy，cache2/shader-cache 归
+  // firefox-cache（visit 命中即不下钻，互不抢占）。
+  it('system-temp 命中 %TEMP%（R207 系统临时文件演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'system-temp');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /\\Temp$/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(0);
+  });
+
+  it('crash-dumps 命中 CrashDumps（R207 崩溃转储演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'crash-dumps');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /CrashDumps/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(0);
+  });
+
+  it('firefox-cache 命中 cache2 且不与 browser-privacy 抢 Profiles（R207）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const fc = cards.find((c) => c.scaffold.id === 'firefox-cache');
+    const bp = cards.find((c) => c.scaffold.id === 'browser-privacy');
+    expect(fc).toBeTruthy();
+    expect(fc!.matches.some((m) => /cache2|shader-cache/i.test(m.path))).toBe(true);
+    // firefox-cache 不得吞掉 Profiles（那是 browser-privacy 的命中点）
+    expect(fc!.matches.some((m) => /Profiles/i.test(m.path))).toBe(false);
+    expect(bp).toBeTruthy();
+    expect(bp!.matches.some((m) => /Profiles/i.test(m.path))).toBe(true);
+  });
 });

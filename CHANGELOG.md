@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补齐 3 个高频脚本命中演示（临时文件 / 崩溃转储 / Firefox 缓存）（R207）
+
+- 扫描 MOCK_TREE 对 21 个清理脚本的命中：11 个未命中（安全软件/崩溃转储/
+  QQ/系统临时/游戏引擎/Discord/Firefox 缓存/Teams/OBS/Windows 更新/Zoom）。
+  挑真实 Windows 必有、演示价值最高的 3 个补齐命中节点。
+- MOCK_TREE 补：`AppData\Local\Temp`（system-temp，2.8 GB）、`AppData\
+  Local\CrashDumps`（crash-dumps，0.9 GB，含 .dmp 文件）；Firefox 树重构
+  ——Profiles 保持归 browser-privacy，同级的 cache2 / shader-cache 归
+  firefox-cache（visit 命中 scaffold_id 即不下钻，两脚本互不抢占）。
+- 新增 3 测试（mocks.test.ts）：system-temp 命中 \Temp、crash-dumps 命中
+  CrashDumps、firefox-cache 命中 cache2/shader-cache 且不吞 Profiles
+  （browser-privacy 仍持 Profiles）。597 总（+3）/ 42 files。
+- 浏览器实测（删 IndexedDB 旧树缓存重扫）：清理页 21 脚本中 13 个命中——
+  列表新增 系统临时文件 2.80 GB / Firefox 浏览器缓存 1.20 GB / 崩溃转储
+  922 MB；Firefox 详情命中 cache2+shader-cache 两目录，3 个 scope 行
+  （网页缓存 641 MB / 着色器缓存 598 MB / 启动缓存 338 MB）可勾选可预览。
+
 ### 2026-10-16 清理页补「使用痕迹」分组，隐私 scope 可勾选可执行（R206）
 
 - R205 让隐私脚本命中扫描树后暴露下一个缺陷：CleanupBody 按 category 只
