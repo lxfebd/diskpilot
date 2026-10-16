@@ -121,6 +121,9 @@ export const cleanup = {
     // R220：脚本列表本地搜索（按脚本名/风险标签过滤，无需后端）
     'cleanup.scriptsSearch': '搜索脚本…',
     'cleanup.scriptsSearchEmpty': '没有匹配「{q}」的脚本',
+    // R247：筛选（未搜索）导致空列表时不说「没有匹配 {q}」——q 为空时
+    // 文案荒谬；区分「搜索空」与「筛选空」两种归因。
+    'cleanup.scriptsFilterEmpty': '当前筛选下没有脚本',
     // R221：命中状态过滤 chips
     'cleanup.scriptsStatus': '按命中状态过滤',
     'cleanup.scriptsStatusAll': '全部',
@@ -298,6 +301,7 @@ export const cleanup = {
     // R220: local script-list search (by name/risk tag, no backend)
     'cleanup.scriptsSearch': 'Search scripts…',
     'cleanup.scriptsSearchEmpty': 'No scripts match “{q}”',
+    'cleanup.scriptsFilterEmpty': 'No scripts under the current filter',
     // R221: hit-status filter chips
     'cleanup.scriptsStatus': 'Filter by detection status',
     'cleanup.scriptsStatusAll': 'All',

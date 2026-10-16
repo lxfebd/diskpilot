@@ -158,7 +158,12 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
             {cards.length === 0 ? (
               <div className="cp-empty">{emptyText}</div>
             ) : filtered.length === 0 ? (
-              <div className="cp-empty">{t('cleanup.scriptsSearchEmpty', { q: query.trim() })}</div>
+              // R247：q 非空 = 搜索导致空（搜索空文案）；q 空 = 状态筛选
+              // 导致空（筛选空文案）——两种归因不混淆，避免「没有匹配
+              // 「」的脚本」的荒谬提示。
+              <div className="cp-empty">
+                {query.trim() ? t('cleanup.scriptsSearchEmpty', { q: query.trim() }) : t('cleanup.scriptsFilterEmpty')}
+              </div>
             ) : (
               filtered.map((c) => {
                 const active = session?.scaffold.id === c.scaffold.id;
