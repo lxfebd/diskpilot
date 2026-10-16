@@ -144,6 +144,15 @@ main.cleanup-page > .cleanup-page {
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
+/* R241：脚本卡「上次清理」小字——刚清过的脚本一眼可见（避免刚清完又清） */
+.cp-script-lastclean {
+  font-size: 10.5px;
+  color: var(--ink-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 .cp-main {
   display: flex;
   flex-direction: column;

@@ -12,11 +12,30 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../store';
 import { useCleanupStore } from '../../useCleanupStore';
 import { collectScaffoldCards } from '../../cleanup/matches';
+import { formatLastActive } from '../../cleanup/model';
 import { SCRIPT_SEARCH_ALIASES } from '../../cleanup/searchAliases';
 import { formatBytes } from '../../format';
 import { RiskBadge } from './RiskBadge';
 import { CleanupBody } from './CleanupBody';
+import { api } from '../../api';
 import { useT } from '../../i18n';
+
+// R241：台账 source（被清文件/目录绝对路径）→ 归属脚本卡：该路径落在某个
+// 卡片任一命中目录之下（或与目录同源）。按目录前缀匹配（与 lastCleanByPath
+// 的按目录聚合同思路），路径取小写后规范化反斜杠比较。
+export function entriesScaffold(
+  source: string,
+  cards: { scaffold: { id: string }; matches: { path?: string }[] }[],
+): string | null {
+  const low = source.replace(/[\\/]+$/, '').toLowerCase();
+  for (const c of cards) {
+    for (const m of c.matches) {
+      const dir = (m.path ?? '').replace(/[\\/]+$/, '').toLowerCase();
+      if (dir && (low === dir || low.startsWith(dir + '\\') || low.startsWith(dir + '/'))) return c.scaffold.id;
+    }
+  }
+  return null;
+}
 
 export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; onOpenHistory?: () => void }) {
   const t = useT();
@@ -35,6 +54,34 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
     () => (tagFilter ? allCards.filter((c) => c.scaffold.tags?.includes(tagFilter)) : allCards),
     [allCards, tagFilter],
   );
+  // R241：脚本卡「上次清理」——从操作台账聚合每个脚本命中目录的最新清理
+  // 时刻（与清理页 scope 行的 lastCleanByPath 同一台账），用户扫一眼列表
+  // 就知道哪些脚本刚清过（避免刚清完又清一遍），台账为空/读失败时无徽标。
+  const [lastCleanTs, setLastCleanTs] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .listUndo(200)
+      .then((entries) => {
+        if (cancelled) return;
+        const byScaffold: Record<string, number> = {};
+        for (const e of entries) {
+          if (!e.source || e.timestamp == null) continue;
+          const ts = typeof e.timestamp === 'number' ? e.timestamp : Math.floor(Date.parse(String(e.timestamp)) / 1000);
+          if (!Number.isFinite(ts)) continue;
+          // 最近一条覆盖：台账按时间追加，后到的 ts 一定更大（同秒取同值无妨）
+          const sc = entriesScaffold(e.source, allCards);
+          if (sc && (byScaffold[sc] === undefined || ts > byScaffold[sc])) byScaffold[sc] = ts;
+        }
+        if (!cancelled) setLastCleanTs(byScaffold);
+      })
+      .catch(() => {
+        if (!cancelled) setLastCleanTs(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [allCards]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let out = cards;
@@ -112,6 +159,7 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
               filtered.map((c) => {
                 const active = session?.scaffold.id === c.scaffold.id;
                 const detected = c.matches.length > 0;
+                const lastTs = lastCleanTs?.[c.scaffold.id];
                 return (
                   <button
                     key={c.scaffold.id}
@@ -125,6 +173,10 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
                     <span className="cp-script-size">
                       {detected ? formatBytes(c.totalSize) : t('cleanup.notDetected')}
                     </span>
+                    {/* R241：上次清理——台账聚合，刚清过的脚本一眼可见 */}
+                    {lastTs !== undefined && (
+                      <span className="cp-script-lastclean">{t('cleanup.lastCleaned', { age: formatLastActive(lastTs) })}</span>
+                    )}
                   </button>
                 );
               })
