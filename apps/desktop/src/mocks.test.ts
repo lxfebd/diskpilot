@@ -545,32 +545,41 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
   // R225：真删条目 source 用 MOCK_TREE 真实命中节点路径（与扫描树同源）——
   // 前端 pruneRecycled 按 source 剪 root/scanCache，演示里执行后总览/工作台
   // 体量才真实下降。dry-run 保持合成清单（预览可读），真删才换真实路径。
+  // R229：scopeId 用真实 scope（crash-dumps-local = CrashDumps 目录）。
   it('R225：真删 source 取自扫描树真实命中节点（dry-run 仍是合成清单）', async () => {
-    const dry = await executeScope('crash-dumps', 'dumps', 'C:\\Users\\90740', true, {});
+    const dry = await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', true, {});
     for (const e of dry) {
       expect(e.source).toContain('mock_');
       expect(e.source).not.toContain('CrashDumps');
     }
-    const real = await executeScope('crash-dumps', 'dumps', 'C:\\Users\\90740', false, { confirmed: true });
+    const real = await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
     const realSet = new Set(real.map((e) => e.source));
     expect(realSet.size).toBeGreaterThan(0);
     for (const p of realSet) {
       const hit = collectMatchingNode(MOCK_TREE, p);
       expect(hit).not.toBeNull();
       expect(hit!.scaffold_id).toBe('crash-dumps');
+      // R229：真删路径必须是该 scope 的目录（CrashDumps），不是别的目录
+      expect(hit!.name).toBe('CrashDumps');
     }
   });
 
   // R225：真删路径进 mock 级台账后，cleanupSuggestions 不再建议已清目录
   // （总览「可清理」与工作台体量同源收敛——「清完再看」不再复活已删项）。
-  it('R225：真删后 cleanupSuggestions 不再建议已清掉的目录', async () => {
+  // R229：只清 crash-dumps-local（CrashDumps 目录），WER/Minidump 还在——
+  // 建议不再出现 CrashDumps 目录，但 crash-dumps 脚本因剩余目录仍被建议。
+  it('R225/R229：真删后建议随之变化（清一个目录，其余目录仍可清）', async () => {
     const before = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
     expect(before.some((r) => r.scaffold_id === 'crash-dumps')).toBe(true);
-    await executeScope('crash-dumps', 'dumps', 'C:\\Users\\90740', false, { confirmed: true });
+    await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
     const after = await cleanupSuggestions('C:\\Users\\90740', undefined, true);
-    expect(after.some((r) => r.scaffold_id === 'crash-dumps')).toBe(false);
     // 其他脚本建议不受影响
     expect(after.some((r) => r.scaffold_id === 'browser-cache')).toBe(true);
+    // crash-dumps 仍被建议（WER/Minidump 还在），但建议项不再包含 CrashDumps 路径
+    const crashSugs = after.filter((r) => r.scaffold_id === 'crash-dumps');
+    expect(crashSugs.length).toBeGreaterThan(0);
+    expect(crashSugs.some((r) => /CrashDumps/i.test(r.path))).toBe(false);
+    expect(crashSugs.some((r) => /WER|Minidump/i.test(r.path))).toBe(true);
   });
 });
 

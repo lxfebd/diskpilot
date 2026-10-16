@@ -1830,13 +1830,26 @@ function pruneRecycledFrom(tree: Node): Node {
  *  真删条目用这些路径做 source——R222/R224 的前端剪枝按 source 从 root/
  *  scanCache 剪掉，演示里执行后总览/工作台体量才能真实下降。
  *  只收集「位于 rootPath 之下」的命中，避免跨盘误剪（treeMayContain 前缀判定）。 */
-function mockRealScopePaths(scaffoldId: string, rootPath: string): string[] {
+/** 收集某 scope 在 rootPath 下的真实命中目录路径（执行时只剪这个 scope
+ *  的目录，不误伤同 scaffold 的其它 scope 目录——R229：清 WER 不该把
+ *  CrashDumps/Minidump 一起剪掉）。 */
+function mockRealScopePaths(scaffoldId: string, scopeId: string, rootPath: string): string[] {
   const root = rootPath.replace(/[\\/]+$/, '').toLowerCase();
+  const scope = SCAFFOLDS.find((s) => s.id === scaffoldId)?.scopes.find((x) => x.id === scopeId);
+  if (!scope) return [];
+  // scope.glob 里的目录名（CrashDumps/WER/Minidump）——该 scope 只剪这些目录。
+  const scopeDirs = scope.glob
+    .split(/[\\/]/)
+    .filter((seg) => seg && !seg.includes('*') && !seg.includes('{') && !seg.includes('}'))
+    .map((seg) => seg.toLowerCase());
   const out: string[] = [];
   const walk = (n: Node) => {
     if (n.path && n.scaffold_id === scaffoldId) {
       const p = n.path.replace(/[\\/]+$/, '').toLowerCase();
-      if (p === root || p.startsWith(root + '\\')) out.push(n.path);
+      if (p === root || p.startsWith(root + '\\')) {
+        // 目录名必须是该 scope 的 glob 目录之一（大小写不敏感）
+        if (scopeDirs.includes(n.name.toLowerCase())) out.push(n.path);
+      }
     }
     for (const c of n.children ?? []) walk(c);
   };
@@ -1925,7 +1938,9 @@ export async function executeScope(
   await wait(dryRun ? 60 : 120);
   const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, opts.olderThanDays ?? undefined) / (24 * MB))));
   // R225：真删时收集真实树路径（dry-run 保持合成清单，预览不受影响）。
-  const realPaths = dryRun ? undefined : mockRealScopePaths(scaffoldId, rootPath);
+  // R229：只剪这个 scope 的目录（CrashDumps/WER/Minidump 各是各的），
+  // 清 WER 不再把同 scaffold 的 CrashDumps/Minidump 一起剪掉。
+  const realPaths = dryRun ? undefined : mockRealScopePaths(scaffoldId, scopeId, rootPath);
   // R227：真删/预览的释放字节与扫描树同源（该 scope 目录真实可清量）。
   // R228：按 scope 的 glob 目录名取自己的真实字节（CrashDumps/WER/Minidump）。
   const realBytes = (() => {

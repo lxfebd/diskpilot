@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 执行只清所选 scope 目录：不误伤同脚本其它目录（R229）
+
+- 缺口（R228 遗留）：executeScope 真删剪枝用 mockRealScopePaths 收集
+  **整个 scaffold** 的命中目录（CrashDumps/WER/Minidump 全算），清
+  「应用崩溃转储」会把 WER / Minidump 一起剪掉——演示里执行一个
+  scope 目录，另外两个目录的字节也被清空。
+- R229 修复：mockRealScopePaths 按 scopeId 过滤，只收集该 scope glob
+  目录名匹配的节点（brace/通配段跳过）——清 WER 不再误伤
+  CrashDumps/Minidump；R225 相关测试改用真实 scopeId
+  （crash-dumps-local）并新增「清一个目录其余目录仍可清」断言。
+- 浏览器实测：清「应用崩溃转储」后该行显示「空」，WER（320MB）与
+  Minidump（140MB）两行字节不受影响（**620 总 / 42 files**）。
+
 ### 2026-10-16 多目录脚本每行真实字节：不翻倍不截断（R228）
 
 - 缺口（R227 遗留）：crash-dumps 的三个 scope 行此前共享同一总量
