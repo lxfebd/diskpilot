@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理脚本列表搜索（R220）
+
+- 清理页 21 个脚本此前只能滚动翻找；新增本地搜索框（输入即过滤，
+  无需后端）。空查询显示全部；无匹配显示「没有匹配」空态。
+- 中文别名表（cleanup/searchAliases.ts）：脚本名多为英文，中文用户
+  搜「微信」「直播」「会议」也能命中——微信→WeChat、直播→OBS、
+  会议→Teams + Zoom。别名表是搜索索引数据（非 UI 文案），仿 mocks.ts
+  先例不进 MIGRATED_FILES（i18n coverage 守卫不拦数据文件）。
+- 新增 i18n `cleanup.scriptsSearch` / `cleanup.scriptsSearchEmpty`（CN/EN）。
+- 浏览器实测：搜「微信」→ WeChat 1 项；「直播」→ OBS；「会议」→
+  Teams + Zoom 两项。
+- 无新测试（纯组件接线；现有 612 全绿）。**612 总 / 42 files。**
+
 ### 2026-10-16 总览分类占用行可直达清理页预选（R219）
 
 - 总览「文件分类占用」行此前点击跳工作台定位（R92）——有「可回收 X」

@@ -8,10 +8,11 @@
 // tagFilter（P4-3）：传 scaffold 级 tag（如 "privacy"）时只展示带该 tag 的
 // 脚本——隐私清理页复用同一个壳，只换过滤维度；select 仍按 id 全局查，
 // 切页后 effect 会因当前会话不在过滤集里而自动改选首个。
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../store';
 import { useCleanupStore } from '../../useCleanupStore';
 import { collectScaffoldCards } from '../../cleanup/matches';
+import { SCRIPT_SEARCH_ALIASES } from '../../cleanup/searchAliases';
 import { formatBytes } from '../../format';
 import { RiskBadge } from './RiskBadge';
 import { CleanupBody } from './CleanupBody';
@@ -23,12 +24,23 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
   const scaffolds = useStore((s) => s.scaffolds);
   const session = useCleanupStore((s) => s.session);
   const select = useCleanupStore((s) => s.select);
+  // R220：脚本列表本地搜索——输入即过滤，无需后端；空查询显示全部。
+  const [query, setQuery] = useState('');
 
   const allCards = useMemo(() => collectScaffoldCards(root, scaffolds), [root, scaffolds]);
   const cards = useMemo(
     () => (tagFilter ? allCards.filter((c) => c.scaffold.tags?.includes(tagFilter)) : allCards),
     [allCards, tagFilter],
   );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return cards;
+    const haystack = (c: { scaffold: { id: string; name: string; tags?: string[] } }) => {
+      const parts = [c.scaffold.name, ...(c.scaffold.tags ?? []), ...(SCRIPT_SEARCH_ALIASES[c.scaffold.id] ?? [])];
+      return parts.join(' ').toLowerCase();
+    };
+    return cards.filter((c) => haystack(c).includes(q));
+  }, [cards, query]);
   // 空态归因：没扫描树（root=null）时脚本无从匹配，引导先去扫描；有扫描树
   // 仍无卡片才是「没装脚本/没有该类脚本」。两种情况文案不同，避免误导。
   const emptyText = root === null ? t('cleanup.needScan') : t('cleanup.noScripts');
@@ -63,11 +75,21 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
             <span>{t('cleanup.scriptsTitle')}</span>
             <span className="muted small">{t('cleanup.scriptsCount', { n: cards.length })}</span>
           </div>
+          <input
+            className="cp-search"
+            type="search"
+            placeholder={t('cleanup.scriptsSearch')}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label={t('cleanup.scriptsSearch')}
+          />
           <div className="cp-list-rows">
             {cards.length === 0 ? (
               <div className="cp-empty">{emptyText}</div>
+            ) : filtered.length === 0 ? (
+              <div className="cp-empty">{t('cleanup.scriptsSearchEmpty', { q: query.trim() })}</div>
             ) : (
-              cards.map((c) => {
+              filtered.map((c) => {
                 const active = session?.scaffold.id === c.scaffold.id;
                 const detected = c.matches.length > 0;
                 return (

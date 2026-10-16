@@ -118,6 +118,9 @@ export const cleanup = {
     // ── 清理页整页壳（脚本列表 / 空态）──
     'cleanup.scriptsTitle': '清理脚本',
     'cleanup.scriptsCount': '{n} 个脚本',
+    // R220：脚本列表本地搜索（按脚本名/风险标签过滤，无需后端）
+    'cleanup.scriptsSearch': '搜索脚本…',
+    'cleanup.scriptsSearchEmpty': '没有匹配「{q}」的脚本',
     'cleanup.notDetected': '未检测到',
     'cleanup.pickScript': '在左侧选一个要清理的软件',
     'cleanup.noScripts': '还没有安装任何清理脚本',
@@ -285,6 +288,9 @@ export const cleanup = {
     // ── Cleanup page shell (script list / empty states) ──
     'cleanup.scriptsTitle': 'Cleanup scripts',
     'cleanup.scriptsCount': '{n} scripts',
+    // R220: local script-list search (by name/risk tag, no backend)
+    'cleanup.scriptsSearch': 'Search scripts…',
+    'cleanup.scriptsSearchEmpty': 'No scripts match “{q}”',
     'cleanup.notDetected': 'Not detected',
     'cleanup.pickScript': 'Pick an app on the left to start cleaning',
     'cleanup.noScripts': 'No cleanup scripts installed yet',

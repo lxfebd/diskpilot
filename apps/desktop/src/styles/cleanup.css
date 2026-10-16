@@ -55,6 +55,19 @@ main.cleanup-page > .cleanup-page {
   gap: 2px;
   padding: 6px;
 }
+/* R220：脚本列表本地搜索框（输入即过滤，无需后端） */
+.cp-search {
+  margin: 8px 10px 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  outline: none;
+}
+.cp-search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
+.cp-search::placeholder { color: var(--ink-3); }
 .cp-script {
   display: grid;
   grid-template-columns: 1fr auto auto;
