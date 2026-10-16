@@ -264,9 +264,13 @@ export default function App() {
   useEffect(() => { api.listScaffolds().then(setScaffolds).catch(() => {}); }, [setScaffolds]);
 
   // 启动即列出本机所有磁盘，长辈不用手动选文件夹。
+  // R231：跟随扫描完成信号重拉——每次扫描后磁盘条/趋势反映最新磁盘值；
+  // 缓存命中不 bump scanSeq（那是 ChatPanel 的语义），但清理后重扫同一盘
+  // 磁盘卡也要更新，所以用 reclaimedBytes 驱动（清理时它必变；L107 已订阅）。
+  const scanSeq = useStore((s) => s.scanSeq);
   useEffect(() => {
     api.listDrives().then(setDrives).catch(() => {});
-  }, []);
+  }, [scanSeq, reclaimedBytes]);
 
   // 托盘菜单文案：启动时按当前语言推一次（切语言时 Settings 会再推）。
   useEffect(() => {

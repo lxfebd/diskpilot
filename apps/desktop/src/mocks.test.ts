@@ -3,12 +3,14 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, undo } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, _mockResetReclaimed, undo } from './mocks';
 
 beforeEach(() => {
   // R225：mock 级回收台账在每条测试前复位，避免真删路径跨用例累积污染
   // 后续 scan / cleanupSuggestions 断言（UNDO_LEDGER 历史台账刻意保留累积）。
   _mockResetRecycled();
+  // R231：会话释放台账同样复位（空间趋势断言依赖干净起点）。
+  _mockResetReclaimed();
 });
 
 describe('mocks.listCondaEnvs（清理页 Conda 脚本环境区演示数据）', () => {
@@ -335,6 +337,22 @@ describe('mocks.getSpaceHistory（总览空间趋势演示数据）', () => {
     // 时间升序（趋势按序画线）
     for (let i = 1; i < pts.length; i++) expect(pts[i].at).toBeGreaterThan(pts[i - 1].at);
   });
+
+  // R231：真删释放字节累加进会话台账——空间趋势卡今天末点回落与本次清理
+  // 同源（清完看曲线今天下降，不是固定脚本一动不动）。
+  it('R231：真删后空间趋势今天末点回落（释放字节同源下压）', async () => {
+    const before = await getSpaceHistory();
+    const beforeLast = before['C:\\'][before['C:\\'].length - 1].used_bytes;
+    // 真删 CrashDumps 目录（0.9GB 真实字节）
+    await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
+    const after = await getSpaceHistory();
+    const afterLast = after['C:\\'][after['C:\\'].length - 1].used_bytes;
+    // 回落 ≈ CrashDumps 真实 0.9GB（920MB 容差内）
+    expect(beforeLast - afterLast).toBeGreaterThan(0.8 * 1024 ** 3);
+    // 今天末点仍是末点（时间升序保持）
+    const pts = after['C:\\'];
+    for (let i = 1; i < pts.length; i++) expect(pts[i].at).toBeGreaterThan(pts[i - 1].at);
+  });
 });
 
 describe('mocks.listDrives（总览磁盘详情演示数据）', () => {
@@ -346,6 +364,18 @@ describe('mocks.listDrives（总览磁盘详情演示数据）', () => {
     expect(c.total_bytes).toBeGreaterThan(0);
     expect(c.used_bytes).toBeGreaterThan(0);
     expect(c.free_bytes).toBe(c.total_bytes - c.used_bytes);
+  });
+
+  // R231：真删释放后 listDrives 与空间趋势同源下压——工作台磁盘卡不再
+  // 「曲线回落了磁盘卡还满着」（清完再扫描，两处一起下降）。
+  it('R231：真删后磁盘卡 used 下降（与空间趋势同源）', async () => {
+    const before = await listDrives();
+    await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
+    const after = await listDrives();
+    const bUsed = before[0].used_bytes;
+    const aUsed = after[0].used_bytes;
+    expect(bUsed - aUsed).toBeGreaterThan(0.8 * 1024 ** 3); // CrashDumps ≈0.9GB
+    expect(after[0].free_bytes).toBe(after[0].total_bytes - aUsed);
   });
 });
 

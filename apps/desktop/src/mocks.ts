@@ -851,7 +851,9 @@ export async function listDrives(): Promise<
 > {
   await wait(30);
   const total = 187.1 * GB;
-  const used = 148.1 * GB;
+  // R231：used 随会话释放台账下压——清完再扫描，工作台磁盘卡与空间趋势
+  // 曲线一起下降（同一块 C 盘同一口径，不会「曲线回落了磁盘卡还满着」）。
+  const used = Math.max(0, 148.1 * GB - sessionReclaimedBytes);
   return [{ total_bytes: total, used_bytes: used, free_bytes: total - used, path: 'C:\\', mapped_to: '' }];
 }
 
@@ -859,6 +861,16 @@ export async function listDrives(): Promise<
  *  与 listDrives 同一块 C 盘：近 14 天每日一采样，已用空间缓慢爬升（含
  *  R181/R182 演示清理时释放的一截回落，趋势卡能看到「清完下降」的增量）。
  *  采样 > 5 点 → 趋势卡判定 rich（可信），增量与耗尽预测都能展示。 */
+/** R231：本次会话（页面刷新即清零）真删累计释放字节——getSpaceHistory
+ *  今天末点用它下压，演示里「刚清完 276MB，空间趋势卡今天回落」与清理
+ *  页/历史页同源。与 UNDO_LEDGER 同生命周期：真删累加、dry-run 不动。 */
+let sessionReclaimedBytes = 0;
+
+/** R231：测试专用——复位会话释放台账（各 describe 互不污染）。 */
+export function _mockResetReclaimed(): void {
+  sessionReclaimedBytes = 0;
+}
+
 export async function getSpaceHistory(): Promise<
   Record<string, { root: string; total_bytes: number; used_bytes: number; at: number }[]>
 > {
@@ -876,7 +888,10 @@ export async function getSpaceHistory(): Promise<
     const growth = i === 0 ? 148.1 * GB : base + (13 - i) * 0.42 * GB - (i === 4 ? 2.0 * GB : 0);
     pts.push({ root: 'C:\\', total_bytes: total, used_bytes: Math.round(growth), at: at > now ? now : at });
   }
-  pts[pts.length - 1] = { root: 'C:\\', total_bytes: total, used_bytes: 148.1 * GB, at: now };
+  // R231：今天末点 = 刚扫描值 − 本次会话已释放字节——清理后曲线今天回落
+  // （真实后端每次清理记账并反映在后续采样；mock 用会话台账模拟同源口径）。
+  const today = 148.1 * GB - sessionReclaimedBytes;
+  pts[pts.length - 1] = { root: 'C:\\', total_bytes: total, used_bytes: Math.max(0, Math.round(today)), at: now };
   return { 'C:\\': pts };
 }
 
@@ -1967,6 +1982,8 @@ export async function executeScope(
   const entries = mockScopeEntries(scopeId, rootPath, n, opts.olderThanDays ?? undefined, realPaths, realBytes);
   if (!dryRun) {
     UNDO_LEDGER.push(...entries);
+    // R231：真删释放字节累加进会话台账——空间趋势卡今天回落与本次清理同源。
+    if (realBytes !== null && realBytes !== undefined) sessionReclaimedBytes += realBytes;
     // R225：真删路径进 mock 级台账——后续 scan / cleanupSuggestions 从
     // 修剪后的树返回，演示里「清完再看」各处体量一致下降。
     if (realPaths) for (const p of realPaths) _mockRecyclePath(p);

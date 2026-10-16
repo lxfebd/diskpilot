@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理释放入账磁盘：磁盘卡/空间趋势随清理同源下降（R231）
+
+- 缺口：空间历史曲线是固定脚本（14 天爬升 + 一次 2GB 回落），listDrives
+  只在挂载时拉一次——演示里「刚清完 276MB，磁盘卡与趋势纹丝不动」，
+  清理释放量没有入账到磁盘展示。
+- R231 修复：
+  - mock 模块持会话级释放台账 `sessionReclaimedBytes`：executeScope 真删
+    累加（dry-run 不动），`getSpaceHistory` 今天末点与 `listDrives` used
+    同源下压——曲线今天回落、磁盘卡下降，清完再看两处一致；
+  - `App.tsx` listDrives 跟随 `scanSeq + reclaimedBytes` 重拉：清理后自动
+    刷新磁盘条（缓存命中不 bump scanSeq，故用 reclaimedBytes 驱动）。
+- 新测试：真删后空间趋势今天末点回落 ≈0.9GB、listDrives used 下降
+  （**623 总 / 42 files**）。
+- 浏览器实测：清理 CrashDumps 前「可用 39.0 GB · 已用 148 GB」→ 清理后
+  自动变「可用 40.8 GB · 已用 146 GB」，无需手动重扫。
+
 ### 2026-10-16 还原回补扫描树：还原与清理互逆（R230）
 
 - 缺口（R225 遗留）：mock 级回收台账 `recycledPaths` 只进不出——真删
