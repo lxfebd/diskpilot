@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「腾讯 QQ（经典版）」命中演示（R209）
+
+- 清理页 21 脚本仍有 7 个未命中，腾讯 QQ 是中国 Windows 最常用 IM，
+  %APPDATA%\Tencent\QQ 真实常驻——补命中让 QQ 接收文件/图片/视频清理可演示。
+- MOCK_TREE 补 `AppData\Roaming\Tencent\QQ\<QQ号>\{FileRecv,ImageRecv}`
+  （qq-pc，3.6 GB，含 zip/pptx/png 接收文件）——挂 scaffold_id 直接命中；
+  Roaming 下 Tencent 从 leaf 扩成带 children 节点（体量 2.3→3.6 GB）。
+- 新增 1 测试（mocks.test.ts）：qq-pc 命中 Tencent\QQ 且体量 >1GB。
+  599 总（+1）/ 42 files。
+- 浏览器实测：清理页 21 脚本 15 个命中，列表新增「腾讯 QQ（经典版）
+  3.60 GB」；详情显示 5 个 scope 行（接收的文件 310 MB / 视频 278 MB /
+  图片 273 MB 等）分 media/cache 两组，可勾选可预览。
+- 顺带验证：总览页「重复文件查找」快速操作正常（弹 CleanupProposalDialog，
+  5 项谨慎级建议、默认未勾选、逐项核对路径与说明后才可勾选）——之前误判
+  为不跳转，实为按钮选择器问题，非缺陷。
+
 ### 2026-10-16 清理页补「Windows 更新缓存」命中演示（R208）
 
 - 清理页 21 脚本仍有 8 个未命中（安全软件/QQ/游戏引擎/Discord/Teams/OBS/

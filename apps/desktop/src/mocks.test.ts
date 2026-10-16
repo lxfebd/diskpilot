@@ -524,4 +524,16 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     // 会让「清理」失去意义，这里校验命中体量来自真实结构。
     expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
   });
+
+  // R209：腾讯 QQ（经典版）——%APPDATA%\Tencent\QQ 真实常驻，预览演示
+  // QQ 接收文件/图片清理（media 组可勾选）。
+  it('qq-pc 命中 Tencent\\QQ 接收文件（R209 QQ 演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'qq-pc');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /Tencent\\QQ/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(0);
+    // 命中目录含 FileRecv（接收的文件）——QQ 演示的核心可清内容
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });

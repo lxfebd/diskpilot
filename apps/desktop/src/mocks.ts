@@ -185,9 +185,43 @@ export const MOCK_TREE: Node = {
                   ],
                 },
                 {
-                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 17.9 * GB, file_count: 95_900,
+                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 19.2 * GB, file_count: 105_900,
                   scaffold_id: null, top_extensions: [], children: [
-                    leaf('Tencent', 'C:\\Users\\90740\\AppData\\Roaming\\Tencent', 2.3 * GB, 4_100, null),
+                    // R209：腾讯 QQ（经典版）——%APPDATA%\Tencent\QQ 是真实
+                    // 常驻目录，预览演示 QQ 接收文件/图片/缓存清理。
+                    {
+                      name: 'Tencent', path: 'C:\\Users\\90740\\AppData\\Roaming\\Tencent', is_dir: true,
+                      size: 3.6 * GB, file_count: 14_500, scaffold_id: null, top_extensions: [],
+                      children: [
+                        {
+                          name: 'QQ', path: 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ', is_dir: true,
+                          size: 3.6 * GB, file_count: 14_480, scaffold_id: 'qq-pc', top_extensions: [],
+                          children: [
+                            {
+                              name: '123456789', path: 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ\\123456789', is_dir: true,
+                              size: 3.6 * GB, file_count: 14_470, scaffold_id: 'qq-pc', top_extensions: [],
+                              children: [
+                                {
+                                  name: 'FileRecv', path: 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ\\123456789\\FileRecv', is_dir: true,
+                                  size: 2.1 * GB, file_count: 8_300, scaffold_id: 'qq-pc', top_extensions: [],
+                                  children: [
+                                    file('设计规范_v3.zip', 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ\\123456789\\FileRecv\\设计规范_v3.zip', 480 * 1024 * 1024),
+                                    file('产品原型_2026.pptx', 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ\\123456789\\FileRecv\\产品原型_2026.pptx', 320 * 1024 * 1024),
+                                  ],
+                                },
+                                {
+                                  name: 'ImageRecv', path: 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ\\123456789\\ImageRecv', is_dir: true,
+                                  size: 1.1 * GB, file_count: 5_100, scaffold_id: 'qq-pc', top_extensions: [],
+                                  children: [
+                                    file('screenshot_2026-10-15.png', 'C:\\Users\\90740\\AppData\\Roaming\\Tencent\\QQ\\123456789\\ImageRecv\\screenshot_2026-10-15.png', 64 * 1024 * 1024),
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
                     // R205：Windows Recent（最近打开文件列表，windows-privacy 命中）
                     {
                       name: 'Microsoft', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft', is_dir: true,
