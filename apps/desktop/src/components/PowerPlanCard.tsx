@@ -48,6 +48,11 @@ export function PowerPlanCard() {
   };
 
   const apply = async (scheme: string) => {
+    // R264：执行时权限门（power.plan L2 高危，切电源计划）——不只靠 UI 禁用。
+    if (!isPermEnabled('power.plan')) {
+      setErr(t('optimizer.power.permOff'));
+      return;
+    }
     try {
       setBusy(true);
       await api.powerPlan(scheme, true);

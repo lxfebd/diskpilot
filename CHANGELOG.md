@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 电源计划切换加执行时权限门（R264）
+
+- 缺口：PowerPlanCard.apply 直接 api.powerPlan(scheme, true) 写电源计划——
+  执行函数无 power.plan 权限门（只有 UI disabled + 无权限不加载）。
+- R264 修复：apply 开头加 isPermEnabled('power.plan')（复用
+  optimizer.power.permOff 文案）——关闭时 setErr 拒绝。
+- 无新增测试（4 行组件闭包门，同 R261-R263 模式；tsc/eslint/build 把关）
+  （**673 总 / 43 files**）。
+
 ### 2026-10-17 风扇控制/恢复默认/驱动检查加执行时权限门（R263）
 
 - 缺口：SystemTools.applyFanControl（写风扇档位）/ restoreDefaultFan（恢复
