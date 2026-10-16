@@ -5,6 +5,28 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式隐私清理命中演示数据（R205）
+
+- 隐私清理页（tagFilter="privacy" 的 CleanupPage）两脚本恒「未检测到」：
+  MOCK_TREE 里 `User Data` 已被 browser-cache 占用（DFS 命中即不下钻），
+  windows-privacy（Recent / thumbcache / INetCache）与 browser-privacy
+  （Firefox 配置）在树里无命中节点，fallbackByNameContains 又限深 4 层
+  够不到深目录 → 浏览器演示隐私清理永远是空态。
+- MOCK_TREE 补真实磁盘结构的隐私痕迹节点（scaffold_id 命中，visit 全树
+  不限深）：Local\Microsoft\Windows\Explorer（thumbcache_*.db /
+  iconcache_*.db）+ Local\Microsoft\Windows\INetCache + Roaming\
+  Microsoft\Windows\Recent（.lnk）+ Local\Mozilla\Firefox\Profiles\
+  *.default-release（formhistory.sqlite / places.sqlite）。同时把 Local\
+  Microsoft（原 leaf）扩成带 children 的节点、Roaming 补 Microsoft 子树。
+- 新增 3 测试（mocks.test.ts）：browser-privacy 命中 Firefox 配置、
+  windows-privacy 命中 ≥2 目录且总大小 >0、browser-cache 命中不受新增
+  节点影响（仍 ≥2 目录 / >10GB）。MOCK_TREE 改 export。
+- 593 总（+3）/ 42 files。
+- 浏览器实测（删 IndexedDB 旧树缓存后重扫）：隐私清理页显示 Windows 活动
+  与使用痕迹 2.60 GB（命中 Local\Microsoft\Windows 1.90GB + Roaming\
+  Microsoft 717MB，覆盖统计 清理脚本覆盖 1.50GB / 红线保护 1.10GB）+
+  浏览器使用痕迹 922 MB——不再「未检测到」，清理/预览按钮可用。
+
 ### 2026-10-16 Steam 打开动作 URL 映射提取为纯函数并补测试（R204）
 
 - R202 的 `openSteamUrl` 非 Tauri 分支把 URL 计算内联在方法里（依赖

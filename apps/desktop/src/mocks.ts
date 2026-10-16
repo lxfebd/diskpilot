@@ -31,7 +31,7 @@ function file(name: string, path: string, size: number): Node {
   };
 }
 
-const MOCK_TREE: Node = {
+export const MOCK_TREE: Node = {
   name: 'C:',
   path: 'C:\\',
   is_dir: true,
@@ -61,7 +61,67 @@ const MOCK_TREE: Node = {
                   name: 'Local', path: 'C:\\Users\\90740\\AppData\\Local', is_dir: true, size: 51 * GB, file_count: 280_110,
                   scaffold_id: null, top_extensions: [],
                   children: [
-                    leaf('Microsoft', 'C:\\Users\\90740\\AppData\\Local\\Microsoft', 14.8 * GB, 88_400, null),
+                    // R205：Windows 使用痕迹（windows-privacy 命中）——Recent /
+                    // 缩略图缓存 / INetCache 是真实磁盘上必然存在的隐私痕迹，
+                    // 预览模式也给出可演示数据（清理页「隐私清理」不再恒「未检测到」）。
+                    {
+                      name: 'Microsoft', path: 'C:\\Users\\90740\\AppData\\Local\\Microsoft', is_dir: true,
+                      size: 15.6 * GB, file_count: 95_120, scaffold_id: null, top_extensions: [],
+                      children: [
+                        {
+                          name: 'Windows', path: 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows', is_dir: true,
+                          size: 1.9 * GB, file_count: 6_720, scaffold_id: 'windows-privacy', top_extensions: [],
+                          children: [
+                            {
+                              name: 'Explorer', path: 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\Explorer', is_dir: true,
+                              size: 1.2 * GB, file_count: 3_100, scaffold_id: 'windows-privacy', top_extensions: [],
+                              children: [
+                                file('thumbcache_256.db', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_256.db', 180 * 1024 * 1024),
+                                file('thumbcache_1024.db', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_1024.db', 420 * 1024 * 1024),
+                                file('iconcache_32.db', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\Explorer\\iconcache_32.db', 96 * 1024 * 1024),
+                              ],
+                            },
+                            {
+                              name: 'INetCache', path: 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\INetCache', is_dir: true,
+                              size: 520 * MB, file_count: 2_610, scaffold_id: 'windows-privacy', top_extensions: [],
+                              children: [
+                                file('F0A1B2C3.dat', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\INetCache\\IE\\F0A1B2C3.dat', 48 * 1024 * 1024),
+                                file('D4E5F607.dat', 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Windows\\INetCache\\IE\\D4E5F607.dat', 96 * 1024 * 1024),
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    // R205：Firefox 配置文件（browser-privacy 命中）——真实磁盘
+                    // 常驻的浏览痕迹目录；与 Chrome/Edge 的 User Data（已归 browser-cache）
+                    // 互补，让「浏览器使用痕迹」脚本在预览可演示。
+                    {
+                      name: 'Mozilla', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla', is_dir: true,
+                      size: 0.9 * GB, file_count: 6_200, scaffold_id: null, top_extensions: [],
+                      children: [
+                        {
+                          name: 'Firefox', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox', is_dir: true,
+                          size: 0.9 * GB, file_count: 6_200, scaffold_id: 'browser-privacy', top_extensions: [],
+                          children: [
+                            {
+                              name: 'Profiles', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\Profiles', is_dir: true,
+                              size: 0.9 * GB, file_count: 6_190, scaffold_id: 'browser-privacy', top_extensions: [],
+                              children: [
+                                {
+                                  name: 'abc12345.default-release', path: 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\abc12345.default-release', is_dir: true,
+                                  size: 0.9 * GB, file_count: 6_180, scaffold_id: 'browser-privacy', top_extensions: [],
+                                  children: [
+                                    file('formhistory.sqlite', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\abc12345.default-release\\formhistory.sqlite', 28 * 1024 * 1024),
+                                    file('places.sqlite', 'C:\\Users\\90740\\AppData\\Local\\Mozilla\\Firefox\\Profiles\\abc12345.default-release\\places.sqlite', 210 * 1024 * 1024),
+                                  ],
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
                     {
                       name: 'Edge', path: 'C:\\Users\\90740\\AppData\\Local\\Microsoft\\Edge', is_dir: true,
                       size: 12.8 * GB, file_count: 41_320, scaffold_id: 'browser-cache',
@@ -85,9 +145,31 @@ const MOCK_TREE: Node = {
                   ],
                 },
                 {
-                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 17.7 * GB, file_count: 95_400,
+                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 17.9 * GB, file_count: 95_900,
                   scaffold_id: null, top_extensions: [], children: [
                     leaf('Tencent', 'C:\\Users\\90740\\AppData\\Roaming\\Tencent', 2.3 * GB, 4_100, null),
+                    // R205：Windows Recent（最近打开文件列表，windows-privacy 命中）
+                    {
+                      name: 'Microsoft', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft', is_dir: true,
+                      size: 0.7 * GB, file_count: 2_400, scaffold_id: 'windows-privacy', top_extensions: [],
+                      children: [
+                        {
+                          name: 'Windows', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Windows', is_dir: true,
+                          size: 0.7 * GB, file_count: 2_390, scaffold_id: 'windows-privacy', top_extensions: [],
+                          children: [
+                            {
+                              name: 'Recent', path: 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Windows\\Recent', is_dir: true,
+                              size: 0.7 * GB, file_count: 2_380, scaffold_id: 'windows-privacy', top_extensions: [],
+                              children: [
+                                file('report-final.docx.lnk', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\report-final.docx.lnk', 96 * 1024),
+                                file('meeting-2026-09.mp4.lnk', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\meeting-2026-09.mp4.lnk', 128 * 1024),
+                                file('installer_x64.exe.lnk', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\installer_x64.exe.lnk', 104 * 1024),
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
                   ],
                 },
                 leaf('LocalLow', 'C:\\Users\\90740\\AppData\\LocalLow', 2.1 * GB, 12_900, null),

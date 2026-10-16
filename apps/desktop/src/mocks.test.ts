@@ -3,7 +3,7 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE } from './mocks';
 
 describe('mocks.listCondaEnvs（清理页 Conda 脚本环境区演示数据）', () => {
   it('返回 base + ≥2 个用户环境，base 不可勾选、stale 环境默认勾选', async () => {
@@ -428,5 +428,41 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
   it('dry-run 条目数有限（demo 列表不无限膨胀）', async () => {
     const entries = await executeScope('wechat-pc', 'received-files', 'C:\\Users\\a\\xwechat', true, {});
     expect(entries.length).toBeLessThanOrEqual(64);
+  });
+});
+
+// R205：隐私清理页（tagFilter="privacy" 的 CleanupPage）命中 MOCK_TREE——
+// windows-privacy（Recent / thumbcache / INetCache）与 browser-privacy
+// （Firefox 配置）不再是恒「未检测到」，预览演示能看到真实痕迹体量。
+import { collectScaffoldCards } from './cleanup/matches';
+
+describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () => {
+  it('browser-privacy（浏览器使用痕迹）在 MOCK_TREE 命中 Firefox 配置', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'browser-privacy');
+    expect(card).toBeTruthy();
+    expect(card!.matches.length).toBeGreaterThan(0);
+    // 命中路径含 Firefox 配置（真实浏览痕迹目录）
+    expect(card!.matches.some((m) => /Firefox/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(0);
+  });
+
+  it('windows-privacy（Windows 活动与使用痕迹）命中 Recent / thumbcache', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'windows-privacy');
+    expect(card).toBeTruthy();
+    expect(card!.matches.length).toBeGreaterThan(0);
+    // visit 命中 scaffold_id 即收集不下钻：拿到的是命中目录本身
+    // （Recent / Explorer / INetCache 任一挂 scaffold_id 的顶层目录）。
+    expect(card!.matches.length).toBeGreaterThanOrEqual(2);
+    expect(card!.totalSize).toBeGreaterThan(0);
+  });
+
+  it('browser-cache（浏览器缓存）命中不受新增隐私节点影响', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'browser-cache');
+    expect(card).toBeTruthy();
+    expect(card!.matches.length).toBeGreaterThanOrEqual(2); // Edge User Data + Chrome
+    expect(card!.totalSize).toBeGreaterThan(10 * 1024 ** 3);
   });
 });
