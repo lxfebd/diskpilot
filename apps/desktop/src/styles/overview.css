@@ -412,6 +412,23 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   text-overflow: ellipsis;
 }
 .ao-clean-size { flex-shrink: 0; font-size: 13px; font-weight: 700; font-family: var(--font-mono); color: var(--risk-danger); }
+/* R217：建议项「去清理」按钮——直达清理页并预选该脚本（ghost 级轻按钮） */
+.ao-clean-goto {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ao-clean-goto:hover { color: var(--ink); border-color: var(--ink-3); background: var(--accent-bg); }
 /* R102：建议项逐文件预览（展开区）——外层包一层 div 让行与预览同进同出 */
 .ao-clean-item { display: flex; flex-direction: column; gap: 4px; }
 .ao-clean-peek {
