@@ -1025,7 +1025,17 @@ export async function checkSpaceForecast(): Promise<
   { path: string; days: number | null; reason: string; warn: boolean }[]
 > {
   await wait(60);
-  return [{ path: 'C:\\', days: 112, reason: 'ok', warn: false }];
+  // R234：外推天数与磁盘当前值同源——用 listDrives 同一口径（used 随会话
+  // 释放台账下压），按历史增速外推满盘天数。清理后磁盘降 → 天数增大，
+  // 清理提醒「还能用 112 天」不再是一成不变的死数字。
+  const total = 187.1 * GB;
+  const used = Math.max(0, 148.1 * GB - sessionReclaimedBytes);
+  const free = Math.max(0, total - used);
+  // 增速口径：近 14 天平均日增（趋势卡同源：0.42GB/天爬升，第 4 天回落
+  // 只影响那一天；外推取净爬升段 ≈0.42GB/天）。
+  const dailyGrowth = 0.42 * GB;
+  const days = dailyGrowth > 0 ? Math.floor(free / dailyGrowth) : null;
+  return [{ path: 'C:\\', days, reason: 'ok', warn: days !== null && days < 30 }];
 }
 
 // —— R187：预览模式的周体检简报演示数据 ——

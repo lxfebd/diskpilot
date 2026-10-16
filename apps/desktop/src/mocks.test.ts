@@ -249,6 +249,19 @@ describe('mocks.checkSpaceForecast（清理提醒/体检空间外推演示数据
     expect(c.reason).toBe('ok');
     expect(c.warn).toBe(false);
   });
+
+  // R234：外推天数与磁盘当前值同源——清理释放后磁盘降 → 剩余空间增大 →
+  // 满盘天数增大（「还能用 112 天」不再是一成不变的死数字）。
+  it('R234：真删后满盘天数增大（外推随磁盘当前值联动）', async () => {
+    const before = await checkSpaceForecast();
+    expect(before[0].days).not.toBeNull();
+    await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
+    const after = await checkSpaceForecast();
+    expect(after[0].days).not.toBeNull();
+    expect(after[0].days!).toBeGreaterThan(before[0].days!);
+    // 天数增加量与实际释放量成比例（释放 0.276GB / 日增 0.42GB ≈ +0.66 天）
+    expect(after[0].days! - before[0].days!).toBeGreaterThan(0);
+  });
 });
 
 describe('mocks.listInstalledDrivers（系统工具驱动检查演示数据）', () => {
