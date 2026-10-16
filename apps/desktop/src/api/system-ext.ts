@@ -26,6 +26,22 @@ function requireConfirmed(confirmed: boolean): Promise<void> {
     : Promise.reject(new Error(t('errors.confirmPluginWrite')));
 }
 
+/** Steam 打开动作的 URL 映射（R202/R204）：workshop 走公开 https 版，
+ * uninstall/rungameid/validate 走 steam:// 协议，nav 落商店页。
+ * 纯函数便于测试；openSteamUrl 非 Tauri 分支直接用它 window.open。 */
+export function steamUrlFor(
+  action: 'uninstall' | 'rungameid' | 'validate' | 'nav' | 'workshop_page',
+  appid: number,
+): string {
+  switch (action) {
+    case 'workshop_page': return `https://steamcommunity.com/sharedfiles/filedetails/?id=${appid}`;
+    case 'uninstall': return `steam://uninstall/${appid}`;
+    case 'rungameid': return `steam://rungameid/${appid}`;
+    case 'validate': return `steam://validate/${appid}`;
+    case 'nav': return `https://store.steampowered.com/app/${appid}`;
+  }
+}
+
 /**
  * 扩展域：Steam / 硬件压测 / 工具墙（图吧 + 插件）/ 更新 / 系统工具。
  * 这一域承载「生态」部分：市场 / 启停 / 导出 / 白名单 CLI 执行。
@@ -73,17 +89,7 @@ export const systemExtApi = {
     if (!isTauri) {
       // 浏览器预览：Steam 的 workshop 页有公开 https 版，能真实打开；
       // 其余动作走 steam:// 协议（浏览器会弹系统协议处理器）。不静默假成功。
-      const url =
-        action === 'workshop_page'
-          ? `https://steamcommunity.com/sharedfiles/filedetails/?id=${appid}`
-          : action === 'uninstall'
-            ? `steam://uninstall/${appid}`
-            : action === 'rungameid'
-              ? `steam://rungameid/${appid}`
-              : action === 'validate'
-                ? `steam://validate/${appid}`
-                : `https://store.steampowered.com/app/${appid}`;
-      window.open(url, '_blank', 'noopener');
+      window.open(steamUrlFor(action, appid), '_blank', 'noopener');
       return Promise.resolve();
     }
     return invoke<void>('open_steam_url', { action, appid });

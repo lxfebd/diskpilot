@@ -5,6 +5,25 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 Steam 打开动作 URL 映射提取为纯函数并补测试（R204）
+
+- R202 的 `openSteamUrl` 非 Tauri 分支把 URL 计算内联在方法里（依赖
+  window.open 副作用），无法直接测试；且与 Tauri 分支共享方法体，行为
+  验证只能靠浏览器。
+- 提取 `export function steamUrlFor(action, appid)` 纯函数（system-ext.ts
+  顶部）：workshop_page → steamcommunity 公开 https 版、uninstall /
+  rungameid / validate → steam:// 协议、nav → store 商店页。
+  `openSteamUrl` 非 Tauri 分支改为 `window.open(steamUrlFor(...))`。
+- 新增 `src/api/steamUrl.test.ts` 4 个测试：workshop https 版、steam://
+  三动作、nav 商店页、数字边界（appid 0 / 大数）——590 总（+4）/ 42 files。
+- 浏览器实测重构无回归：Steam 盘点 → 创意工坊 → 「在 Steam 中打开」→
+  window.open 仍捕获 `.../sharedfiles/filedetails/?id=3010099`。
+- 另验证本轮（无代码改动）：设置→通用 tab 完整（AI 联网/思考过程/并行
+  扫盘/硬件加速/托盘开关）、AI 权限中心 18 开关 localStorage 持久化
+  （点「调整电源计划」→ diskpilot.perms.v1 写入 + UI 即时 on）、清理页
+  conda 链路无回归（扫描后 13.1 GB 命中 + 环境列表 base/tf2/web + 包缓存
+  232 MB）。
+
 ### 2026-10-16 预览模式 UndoPanel 回收站提示补 catch（R203）
 
 - R200 把 `api.openRecycleBin` 非 Tauri 改为 reject 后，HistoryPage 已补
