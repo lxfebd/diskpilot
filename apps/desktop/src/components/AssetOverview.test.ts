@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -465,5 +465,31 @@ describe('R128 dry-run 预览排序 sortPreviewItemsByBytes', () => {
     const input = [mk('a', 2), mk('b', 1)];
     sortPreviewItemsByBytes(input);
     expect(input.map((i) => i.path)).toEqual(['a', 'b']);
+  });
+});
+
+// R249：预览缓存按存活 key 剪枝——清过的项消失后其 dry-run 明细/徽标作废。
+describe('pruneStalePreviews（陈旧预览剪枝）', () => {
+  const previews = { 'a:s1': { lastClean: 100 }, 'b:s2': { lastClean: 200 }, 'c:s3': { lastClean: null } };
+
+  it('剪掉不在存活集里的 key，保留仍在列表的', () => {
+    const out = pruneStalePreviews(previews, new Set(['a:s1', 'c:s3']));
+    expect(Object.keys(out).sort()).toEqual(['a:s1', 'c:s3']);
+    expect(out['a:s1']).toEqual({ lastClean: 100 });
+  });
+
+  it('全部存活 → 返回原对象（引用不变，免重渲染）', () => {
+    expect(pruneStalePreviews(previews, new Set(['a:s1', 'b:s2', 'c:s3']))).toBe(previews);
+  });
+
+  it('空缓存 → 原对象', () => {
+    const empty: Record<string, { lastClean: number | null }> = {};
+    expect(pruneStalePreviews(empty, new Set(['x']))).toBe(empty);
+    expect(Object.keys(pruneStalePreviews(empty, new Set()))).toHaveLength(0);
+  });
+
+  it('清过的项消失 → 其预览被剪；还原重现时重新拉取（不展示陈旧 dry-run）', () => {
+    const out = pruneStalePreviews(previews, new Set(['b:s2']));
+    expect(Object.keys(out)).toEqual(['b:s2']);
   });
 });

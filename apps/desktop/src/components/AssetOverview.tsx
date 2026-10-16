@@ -552,6 +552,20 @@ function peekBase(p: string): string {
   return i >= 0 ? p.slice(i + 1) : p;
 }
 
+/** R249：预览缓存按「仍然存活的建议项 key」剪枝——清过的项从建议列表
+ *  消失后，其 dry-run 明细与「上次清理」徽标一并作废；还原恢复重现时
+ *  重新拉取，绝不展示上一轮的陈旧预览。无变化时返回原对象（免重渲染）。 */
+export function pruneStalePreviews<T>(
+  previews: Record<string, T>,
+  liveKeys: ReadonlySet<string>,
+): Record<string, T> {
+  const keys = Object.keys(previews);
+  if (keys.length === 0 || keys.every((k) => liveKeys.has(k))) return previews;
+  const next: Record<string, T> = {};
+  for (const k of keys) if (liveKeys.has(k)) next[k] = previews[k];
+  return next;
+}
+
 /** R105：预览项合计字节。全部项 bytes 为 null（后端未统计）时返回 null，
  *  部分缺失则按已知求和（展示口径：有实测才算，缺的省略）。 */
 export function previewTotalBytes(items: readonly { bytes: number | null }[]): number | null {
@@ -881,6 +895,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       );
       setCleanItems(items);
       setChecked(Object.fromEntries(items.map((i) => [i.key, true])));
+      // R249：建议项重拉后剪掉已消失项的预览缓存（详见 pruneStalePreviews）。
+      const liveKeys = new Set(items.map((i) => i.key));
+      setPreviews((p) => pruneStalePreviews(p, liveKeys));
+      setPreviewOpen((p) => pruneStalePreviews(p, liveKeys));
     } catch (e) {
       // 后端统计失败不是「真没有」：记错误，让空态显示「没能读取」而不是
       // 「很干净」——读失败时说盘很干净是最误导的收尾。
