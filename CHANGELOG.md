@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 清理清单生成预览放行：AI 演示完整清理流程（R283）
+
+- R274-R282 放行了大批只读工具，但 propose_cleanup_plan（生成【待用户
+  确认】清理清单，是「AI 帮清理」的核心流程工具）仍 tauriOnly。它是纯出
+  清单：pendingProposal + UI 确认窗，本身零文件操作；确认后执行走清理页
+  mock 台账（R273-R281 已诚实化）——预览下 AI 完全可以演示「出清单→
+  用户逐项确认→执行回收」完整闭环，被 tauriOnly 藏起来反而让预览 AI
+  无法建议清理。
+- R283 修复：放行 propose_cleanup_plan（预览确认窗同桌面端，执行落 mock
+  台账）；previewSystemNote 声明补一句「生成的清理清单路径来自演示数据源，
+  可演示流程，不能假装清的是本机真实文件」。
+- 新增 2 测试（tools.test 65→67）：不带 tauriOnly + 执行层跑通（返回确认
+  文案）。
+  （**728 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 预览模式 AI 数据诚实声明：演示数据不再说成本机真实（R282）
 
 - 缺口：R274-R281 批量放行只读工具（磁盘/硬件/系统状态/风扇/Steam/清理

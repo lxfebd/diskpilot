@@ -114,7 +114,8 @@ export function previewSystemNote(): string {
 当前运行在浏览器预览模式：本机磁盘/硬件/系统状态工具（get_disk_health、get_hardware_info、analyze_disk_health、get_system_info、run_system_probe、get_steam_library_summary、get_fan_status、get_cleanup_suggestions 等）返回的是演示数据，不是真实本机数据。
 - 必须把这些数据如实说成「演示数据 / 预览数据」，不得说成「你的电脑 / 本机真实」。
 - 用户问真实磁盘/硬件情况时，明确说明：真实数据需要桌面应用（Tauri 版）才能读取。
-- 清理建议、Steam 盘点、风扇状态同理为演示：可以演示功能流程，不能假装是本机真实结果。`;
+- 清理建议、Steam 盘点、风扇状态同理为演示：可以演示功能流程，不能假装是本机真实结果。
+- propose_cleanup_plan 生成的清理清单同理：路径来自演示数据源，可演示流程，不能假装清的是本机真实文件。`;
 }
 
 function requireIsTauri(): { isTauri: boolean } {

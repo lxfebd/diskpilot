@@ -271,7 +271,9 @@ export const toolRegistry: ToolDef[] = [
       },
     },
     required: ['title', 'items'],
-    tauriOnly: true,
+    // R283：浏览器预览放行——纯出待确认清单（pendingProposal + UI 确认窗），
+    // 本身零文件操作；预览下 AI 可演示「出清单→用户确认→执行」完整流程，
+    // 确认窗同桌面端，只是执行落 mock 台账。写工具（真正删/回收）仍 tauriOnly。
     execute: async (args) => {
       // 纯出计划：AI 只生成待确认清单，绝不执行任何文件操作。清单交给 UI
       // 确认窗，由用户逐项勾选 + 确认后才真正移入回收站。兼容旧 wrapped 形态。

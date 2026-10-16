@@ -419,6 +419,19 @@ describe('toolRegistry 工具箱信息工具预览模式可用（R279）', () =>
   });
 });
 
+// R283：propose_cleanup_plan 预览放行——纯出待确认清单（pendingProposal +
+// UI 确认窗），零文件操作；预览下 AI 可演示完整清理流程。清理页真正执行
+// （移入回收站）的工具仍在桌面端。
+describe('toolRegistry 清理清单生成预览模式可用（R283）', () => {
+  it('propose_cleanup_plan 不带 tauriOnly（纯出清单，零文件操作）', () => {
+    const t = toolRegistry.find((x) => x.name === 'propose_cleanup_plan')!;
+    expect(t).toBeTruthy();
+    expect(t.tauriOnly).toBeUndefined();
+    expect(typeof t.execute).toBe('function');
+    expect(t.required).toEqual(['title', 'items']);
+  });
+});
+
 describe('mcpTool 写工具权限门（R265）', () => {
   beforeEach(() => {
     // node 测试环境无 window：stub localStorage 供 isPermEnabled 读。
@@ -487,6 +500,7 @@ describe('toolRegistry 只读工具预览支路执行可用（R280）', () => {
     { name: 'get_cli_tool_usage', args: { toolName: 'WizTree' }, want: (s) => expect(s).toContain('预览') },
     { name: 'get_tool_manifest', args: { toolName: 'CPU-Z' }, want: (s) => expect(s).toContain('预览') },
     { name: 'get_cli_tool_usage', args: { toolName: '不存在工具XYZ' }, want: (s) => expect(s).toContain('未收录') },
+    { name: 'propose_cleanup_plan', args: { title: '演示清理', items: [{ path: 'C:\\Users\\me\\AppData\\Local\\Temp', what: '临时文件', purpose: '缓存', impact: '可重建', risk: 'safe' }] }, want: (s) => expect(s).toContain('确认') },
   ];
 
   for (const c of CASES) {
