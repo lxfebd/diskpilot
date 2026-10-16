@@ -207,7 +207,7 @@ export const MOCK_TREE: Node = {
                   ],
                 },
                 {
-                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 19.2 * GB, file_count: 105_900,
+                  name: 'Roaming', path: 'C:\\Users\\90740\\AppData\\Roaming', is_dir: true, size: 20.3 * GB, file_count: 119_900,
                   scaffold_id: null, top_extensions: [], children: [
                     // R209：腾讯 QQ（经典版）——%APPDATA%\Tencent\QQ 是真实
                     // 常驻目录，预览演示 QQ 接收文件/图片/缓存清理。
@@ -262,6 +262,29 @@ export const MOCK_TREE: Node = {
                                 file('installer_x64.exe.lnk', 'C:\\Users\\90740\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\installer_x64.exe.lnk', 104 * 1024),
                               ],
                             },
+                          ],
+                        },
+                      ],
+                    },
+                    // R211：OBS Studio——%APPDATA%\obs-studio 真实常驻（直播/
+                    // 录屏用户高频），预览演示 OBS 崩溃转储/日志清理。
+                    {
+                      name: 'obs-studio', path: 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio', is_dir: true,
+                      size: 1.1 * GB, file_count: 1_890, scaffold_id: 'obs-cache', top_extensions: [],
+                      children: [
+                        {
+                          name: 'crash-dumps', path: 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\crash-dumps', is_dir: true,
+                          size: 0.6 * GB, file_count: 480, scaffold_id: 'obs-cache', top_extensions: [],
+                          children: [
+                            file('crash_2026-10-14_08-32-15.log', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\crash-dumps\\crash_2026-10-14_08-32-15.log', 48 * 1024 * 1024),
+                          ],
+                        },
+                        {
+                          name: 'logs', path: 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs', is_dir: true,
+                          size: 0.5 * GB, file_count: 1_400, scaffold_id: 'obs-cache', top_extensions: [],
+                          children: [
+                            file('2026-10-15 21-07-12.txt', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs\\2026-10-15 21-07-12.txt', 16 * 1024 * 1024),
+                            file('2026-10-13 19-44-50.txt', 'C:\\Users\\90740\\AppData\\Roaming\\obs-studio\\logs\\2026-10-13 19-44-50.txt', 12 * 1024 * 1024),
                           ],
                         },
                       ],

@@ -548,4 +548,14 @@ describe('mocks 隐私脚本命中（R205 隐私清理页演示数据）', () =>
     expect(card!.matches.some((m) => /UnrealEngine/i.test(m.path))).toBe(true);
     expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
   });
+
+  // R211：OBS Studio——%APPDATA%\obs-studio 真实常驻（直播/录屏用户高频），
+  // 预览演示 OBS 崩溃转储/日志清理。
+  it('obs-cache 命中 obs-studio（R211 OBS 演示）', () => {
+    const cards = collectScaffoldCards(MOCK_TREE, SCAFFOLDS);
+    const card = cards.find((c) => c.scaffold.id === 'obs-cache');
+    expect(card).toBeTruthy();
+    expect(card!.matches.some((m) => /obs-studio/i.test(m.path))).toBe(true);
+    expect(card!.totalSize).toBeGreaterThan(1024 ** 3);
+  });
 });

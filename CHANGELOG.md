@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 清理页补「OBS Studio 缓存」命中演示（R211）
+
+- 清理页 21 脚本仍有 4 个未命中（安全软件/ Discord / Teams / Zoom），
+  OBS 是直播/录屏用户高频软件，%APPDATA%\obs-studio 真实常驻——补命中。
+- MOCK_TREE 补 `AppData\Roaming\obs-studio\{crash-dumps,logs}`（obs-cache，
+  1.1 GB，含 .log/.txt 崩溃日志）挂 scaffold_id 命中；Roaming 体量
+  19.2→20.3 GB。
+- 新增 1 测试（mocks.test.ts）：obs-cache 命中 obs-studio 且 >1GB。
+  **606 总（+1）/ 42 files。**
+- 浏览器实测：清理页 21 脚本 17 个命中，列表新增「OBS Studio 缓存
+  1.10 GB」；详情 2 个 scope 行（OBS 崩溃转储 217 MB · 1,621 文件 /
+  OBS 运行日志）可勾选可预览。
+
 ### 2026-10-16 修复变体脚本 scope 行不渲染 + 补 Unreal DDC 命中（R210）
 
 - 修复真实缺陷（与 R206 隐私分组同根因的另一变体）：`detectVariants`
