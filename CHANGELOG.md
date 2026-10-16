@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 AI 提案执行补 mock：浏览器演示「AI 提案清理」真能清（R267）
+
+- 缺口：预览模式 executeAiPlan 恒返回空数组——总览「重复文件查找 → AI
+  提案确认窗」勾选后执行必全败（dry-run 恒空 → 逐项也空 → failed 全计），
+  树不剪、台账不记、toast 全败；与 executeScope/recyclePaths 两条执行
+  mock「真清了」不一致。
+- R267 修复：mocks.executeAiPlan——dry-run 只返回可回收条目（树内真实存
+  在 + MOCK_KNOWN_FILES 已知文件，剪过/已回收的排除）；真删写 UNDO_LEDGER
+  台账 + mock 级回收台账（后续 scan/cleanupSuggestions/scopeSizesBatch 与
+  前端剪树同源收敛），bytes_freed 用真实大小；未确认拒绝执行；危险路径
+  （盘根/Windows/Program Files）与后端同口径不放行。api/clean.ts 接上。
+- 新增 4 测试（mocks.test 71→75）：dry-run 不写台账；真删写台账 + 二次
+  执行不再重复入账；未确认拒绝；未知/危险路径不产生条目。
+  （**680 总 / 43 files**；tsc/eslint/build 关）。
+- 浏览器实测：重复文件查找提案勾 5 项执行 →「已按你的确认回收 5 项
+  （回收站可找回） · 约 1.19 GB」。
+
 ### 2026-10-17 总览「立即清理」记账改用实测字节：与清理页同口径（R266）
 
 - 缺口：总览 doClean 记账用预览预估 it.bytes，而清理页 runRealDelete 用

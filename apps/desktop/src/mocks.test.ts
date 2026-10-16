@@ -3,7 +3,7 @@
 // executeScope 的 dry-run 只出清单、真删才追加台账——保证浏览器里
 // 「勾选 → 预览 → 真删 → 历史页可见」整条 demo 链路成立。
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SCAFFOLDS, scopeSizesBatch, executeScope, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, _mockResetReclaimed, undo } from './mocks';
+import { SCAFFOLDS, scopeSizesBatch, executeScope, executeAiPlan, listUndo, cleanupSuggestions, listDrives, getSpaceHistory, listStartupItems, setStartupItem, removeStartupItem, listInstalledDrivers, checkSpaceForecast, generateWeeklyReport, getWeeklyReports, mcpListServers, mcpAuditTail, scanDuplicateFiles, estimateSize, fanCurveAdvice, hwInfo, hwDiskHealth, runReminderCheck, getReminderConfig, setReminderConfig, pluginMarket, pluginListInstalled, scaffoldRegistryList, powerPlan, listCondaEnvs, MOCK_TREE, _mockResetRecycled, _mockRecyclePath, _mockPushUndoEntry, _mockResetReclaimed, undo } from './mocks';
 
 beforeEach(() => {
   // R225：mock 级回收台账在每条测试前复位，避免真删路径跨用例累积污染
@@ -826,6 +826,53 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     await undo(idx, path);
     const after = await listDrives();
     expect(after[0].used_bytes).toBe(before[0].used_bytes);
+  });
+});
+
+describe('mocks.executeAiPlan（R267 AI 提案执行）', () => {
+  it('dry-run 返回可回收条目且不写台账、不剪树', async () => {
+    const before = await listUndo(500);
+    const known = 'C:\\Users\\90740\\Downloads\\installer_x64 (1).exe';
+    const dry = await executeAiPlan([known], true, true);
+    expect(dry.length).toBeGreaterThan(0);
+    expect(dry[0].source).toBe(known);
+    expect(dry[0].action).toBe('recycle');
+    expect((dry[0].bytes_freed ?? 0)).toBeGreaterThan(0);
+    const after = await listUndo(500);
+    expect(after.length).toBe(before.length);
+  });
+
+  it('真删写台账、记回收台账并返回实测字节，二次执行不再重复入账', async () => {
+    const known = 'C:\\Users\\90740\\Videos\\meeting-2026-09-copy.mp4';
+    const before = await listUndo(500);
+    const first = await executeAiPlan([known], true, false);
+    expect(first.length).toBe(1);
+    expect(first[0].bytes_freed).toBeGreaterThan(0);
+    const after = await listUndo(500);
+    expect(after.length).toBe(before.length + 1);
+    // 第二次再真删同路径 → 已回收，dry-run 与真删都空（同 重复文件查找
+    // 「再扫一次没得清」的语义，不会同一文件重复入账）。
+    const dry2 = await executeAiPlan([known], true, true);
+    expect(dry2.length).toBe(0);
+    const real2 = await executeAiPlan([known], true, false);
+    expect(real2.length).toBe(0);
+    const after2 = await listUndo(500);
+    expect(after2.length).toBe(after.length);
+  });
+
+  it('用户未确认 → 拒绝执行；空路径列表 → 空结果', async () => {
+    await expect(executeAiPlan(['C:\\Users\\90740\\Downloads\\installer_x64 (1).exe'], false, false))
+      .rejects.toBeTruthy();
+    expect(await executeAiPlan([], true, false)).toEqual([]);
+  });
+
+  it('未知/危险路径不产生条目（mock 不替后端放行）', async () => {
+    const unknown = await executeAiPlan(['E:\\不存在\\foo.tmp'], true, true);
+    expect(unknown.length).toBe(0);
+    const dangerous = await executeAiPlan(['C:\\Windows\\System32\\foo.dll'], true, true);
+    expect(dangerous.length).toBe(0);
+    const root = await executeAiPlan(['C:\\'], true, true);
+    expect(root.length).toBe(0);
   });
 });
 

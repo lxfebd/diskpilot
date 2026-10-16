@@ -1900,6 +1900,71 @@ export function _mockPushUndoEntry(e: import('./types').UndoEntry): void {
   UNDO_LEDGER.push(e);
 }
 
+/** R267：AI 提案执行（executeAiPlan）的 mock——浏览器演示里「AI 提案立即
+ *  清理」不再恒空数组必全败。语义对齐真实后端 execute_ai_plan：
+ *  - dryRun=true：只返回「可回收」条目（树内真实存在且未被剪过的路径），
+ *    不做任何破坏性动作——AI 确认窗先 dry-run 探测、整批可执行才继续。
+ *  - dryRun=false：每个可回收路径生成 recycle 台账条目 + 记入 mock 级
+ *    回收台账（后续 scan/cleanupSuggestions/scopeSizesBatch 基于修剪后的树
+ *    返回，与 executeScope/recyclePaths 同一收敛语义），bytes_freed 用树内
+ *    真实大小，未命中树/已剪过的路径返回空（与后端「路径不存在 → 无条目」
+ *    诚实一致，不编造释放字节）。
+ *  - 危险路径（盘根 / Windows / Program Files）与 AI 清单里被后端拦截的
+ *    路径一样不产生条目——mock 不替后端做拦截之外的放行。 */
+export async function executeAiPlan(
+  selectedPaths: string[],
+  userConfirmed: boolean,
+  dryRun: boolean,
+): Promise<UndoEntry[]> {
+  await wait(300);
+  if (!userConfirmed) return Promise.reject(new Error('AI 清理提案需要用户确认后才可执行'));
+  if (selectedPaths.length === 0) return [];
+  // 快照一份「当前可回收」集合：树内真实存在且未被剪过。树里只有目录 +
+  // 少量 file() 叶子，重复文件候选在 MOCK_KNOWN_FILES 表（只读扫描/
+  // estimateSize 同源）——两处都算「磁盘上真实存在的路径」，任一命中即可。
+  const tree = pruneRecycledFrom(structuredClone(MOCK_TREE));
+  const live = new Map<string, number>();
+  const walk = (n: Node) => {
+    live.set(n.path.replace(/[\\/]+$/, '').toLowerCase(), n.size || 0);
+    for (const c of n.children ?? []) walk(c);
+  };
+  walk(tree);
+  for (const [p, size] of Object.entries(MOCK_KNOWN_FILES)) {
+    live.set(p.replace(/[\\/]+$/, '').toLowerCase(), size);
+  }
+  // R267：已回收路径从 live 排除（重复文件执行一次后再执行，第二次 dry-run
+  // 就空——与「真清了，再次扫描没得清」一致，不会同一文件重复入账）。
+  for (const rp of recycledPaths) {
+    live.delete(rp.replace(/[\\/]+$/, '').toLowerCase());
+  }
+  const dangerous = /^(?:[a-z]:$|\\\\|.*[\\/](?:Windows|Program Files(?: \(x86\))?)(?:[\\/]|$))/i;
+  // 盘根单独判定：C:\（归一后 c:）是危险路径，C:\Users\... 不是。
+  const isRoot = /^[a-z]:[\\/]$/i;
+  const hits: UndoEntry[] = [];
+  for (const raw of selectedPaths) {
+    const p = String(raw ?? '').trim();
+    if (!p) continue;
+    if (isRoot.test(p) || dangerous.test(p)) continue; // 后端拦截高危路径，mock 同口径不放行
+    const key = p.replace(/[\\/]+$/, '').toLowerCase();
+    const bytes = live.get(key);
+    if (bytes === undefined) continue; // 树里没有 → 该路径不存在/已清，诚实跳过
+    const entry: UndoEntry = {
+      timestamp: new Date().toISOString(),
+      action: 'recycle',
+      source: p,
+      destination: null,
+      reason: 'AI 清理提案确认后回收',
+      bytes_freed: bytes > 0 ? bytes : null,
+    };
+    hits.push(entry);
+    if (!dryRun) {
+      UNDO_LEDGER.push(entry);
+      _mockRecyclePath(p);
+    }
+  }
+  return hits;
+}
+
 function samePath(a: string, b: string): boolean {
   return a.replace(/[\\/]+$/, '').toLowerCase() === b.replace(/[\\/]+$/, '').toLowerCase();
 }

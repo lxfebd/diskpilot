@@ -126,7 +126,7 @@ export const cleanApi = {
     }
     return isTauri
       ? invoke<UndoEntry[]>('execute_ai_plan', { paths: selectedPaths, userConfirmed, dryRun })
-      : Promise.resolve([] as UndoEntry[]);
+      : mocks.executeAiPlan(selectedPaths, userConfirmed, dryRun);
   },
 
   listUndo: (limit?: number) =>
