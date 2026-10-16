@@ -2052,7 +2052,16 @@ export async function executeScope(
     const sc = SCAFFOLDS.find((s) => s.id === scaffoldId)?.scopes.find((x) => x.id === scopeId);
     return sc?.prompt?.kind === 'days' ? (sc.prompt.default ?? 30) : undefined;
   })();
-  const n = Math.min(64, Math.max(4, Math.ceil(mockScopeBytes(scopeId, days) / (24 * MB))));
+  // R243：分片量 n 与「真正会释放的字节」同源（days 缩放后的真实字节）——
+  // 此前 n 用哈希 mockScopeBytes 兜底，12GB 目录也可能只分 4 条进度，
+  // 进度条「36/64 条」与预览合计脱节。现在按实际释放量换算：每 ~24MB 一条。
+  const effBytes = (() => {
+    const sc = SCAFFOLDS.find((s) => s.id === scaffoldId)?.scopes.find((x) => x.id === scopeId);
+    const real = sc ? scopeRealBytes(scaffoldId, scopeId, sc.glob) : null;
+    const raw = real ?? mockScopeBytes(scopeId);
+    return days === undefined ? raw : Math.round(raw * Math.max(0.3, 1 - Math.min(days, 30) / 30 * 0.7));
+  })();
+  const n = Math.min(64, Math.max(4, Math.ceil(effBytes / (24 * MB))));
   // R225：真删时收集真实树路径（dry-run 保持合成清单，预览不受影响）。
   // R229：只剪这个 scope 的目录（CrashDumps/WER/Minidump 各是各的），
   // 清 WER 不再把同 scaffold 的 CrashDumps/Minidump 一起剪掉。

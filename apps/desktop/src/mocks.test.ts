@@ -684,6 +684,23 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     expect(bytesOf(small)).toBeGreaterThan(bytesOf(large));
   });
 
+  // R243：dry-run 清单条目数与「真正会释放的字节」同源——按每 ~24MB 一条
+  // 换算（此前用哈希兜底，12GB 目录也可能只分 4 条进度，进度条与预览
+  // 合计脱节）。断言条目数与释放总量成比例（1~24MB 每条的合理区间）。
+  it('R243：dry-run 条目数与释放字节同源（每条约 24MB，不脱节）', async () => {
+    const entries = await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', true, {});
+    const total = entries.reduce((s, r) => s + (r.bytes_freed ?? 0), 0);
+    expect(entries.length).toBeGreaterThan(0);
+    // 每条 ≤ 24MB×1.5（ceil 余量），总条目数应能承载总字节
+    const perMax = 24 * 1024 * 1024;
+    for (const e of entries) {
+      expect(e.bytes_freed ?? 0).toBeGreaterThan(0);
+      expect(e.bytes_freed ?? 0).toBeLessThanOrEqual(Math.ceil(perMax * 1.5));
+    }
+    expect(entries.length).toBeGreaterThanOrEqual(Math.ceil(total / perMax) - 1);
+    expect(entries.length).toBeLessThanOrEqual(64);
+  });
+
   // R225：真删条目 source 用 MOCK_TREE 真实命中节点路径（与扫描树同源）——
   // 前端 pruneRecycled 按 source 剪 root/scanCache，演示里执行后总览/工作台
   // 体量才真实下降。dry-run 保持合成清单（预览可读），真删才换真实路径。
