@@ -1562,10 +1562,10 @@ export async function estimateSize(path: string): Promise<number> {
   return MOCK_KNOWN_FILES[path] ?? 0;
 }
 
-export async function scanDuplicateFiles(_rootPath: string, _minSize?: number): Promise<MockDupGroup[]> {
+export async function scanDuplicateFiles(rootPath: string, _minSize?: number): Promise<MockDupGroup[]> {
   await wait(120);
   const now = Math.floor(Date.now() / 1000);
-  return [
+  const groups: MockDupGroup[] = [
     {
       size: 486 * MB,
       files: [
@@ -1605,6 +1605,27 @@ export async function scanDuplicateFiles(_rootPath: string, _minSize?: number): 
       running: [],
     },
   ];
+  // R237：与真实后端同一语义——重复查找只扫选中盘（rootPath 前缀内的文件
+  // 才可能被看到），且与回收台账同源：已回收路径（含其目录下的文件）不再
+  // 出现在重复组里。剪完不足 2 份的组整组丢掉（只剩 1 份就不是重复）。
+  const root = rootPath.replace(/[\\/]+$/, '').toLowerCase();
+  const recycled = recycledPaths.map((p) => p.replace(/[\\/]+$/, '').toLowerCase());
+  const underRoot = (p: string) => p.toLowerCase().startsWith(root);
+  const recycledHere = (p: string) => {
+    const low = p.replace(/[\\/]+$/, '').toLowerCase();
+    return recycled.some((r) => low === r || low.startsWith(r + '\\') || low.startsWith(r + '/'));
+  };
+  const out: MockDupGroup[] = [];
+  for (const g of groups) {
+    const kept = g.files.filter((f) => underRoot(f.path) && !recycledHere(f.path));
+    if (kept.length < 2) continue;
+    const keptSet = new Set(kept.map((f) => f.path));
+    const keep = keptSet.has(g.keep) ? g.keep : kept[0].path;
+    const candidates = kept.filter((f) => f.path !== keep).map((f) => f.path);
+    if (candidates.length === 0) continue;
+    out.push({ ...g, files: kept, keep, recycle_candidates: candidates });
+  }
+  return out;
 }
 
 // —— R188：预览模式的 MCP 服务器演示数据 ——

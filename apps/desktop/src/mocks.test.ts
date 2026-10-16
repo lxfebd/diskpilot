@@ -182,6 +182,28 @@ describe('mocks.scanDuplicateFiles（总览重复文件查找演示数据）', (
       expect(g.running).toEqual([]);
     }
   });
+
+  // R237：重复查找与真实后端同一语义——只扫选中盘 rootPath 前缀内的文件，
+  // 且与回收台账同源：已回收路径（含其目录）不再出现在重复组里；剪完
+  // 不足 2 份的组整组丢掉。
+  it('R237：只扫选中盘：D 盘扫描不返回 C 盘重复组（不编造）', async () => {
+    const groups = await scanDuplicateFiles('D:\\');
+    expect(groups).toEqual([]);
+  });
+
+  it('R237：回收台账内的文件/目录不再出现在重复组（清完重扫不列已删文件）', async () => {
+    const before = await scanDuplicateFiles('C:\\');
+    const docGroup = before.find((g) => g.files.some((f) => f.path.includes('report-final')));
+    expect(docGroup).toBeTruthy();
+    // 把 report 组的候选文件「回收」（等价清理页清掉该文件所在目录）
+    for (const c of docGroup!.recycle_candidates) _mockRecyclePath(c);
+    const after = await scanDuplicateFiles('C:\\');
+    const docAfter = after.find((g) => g.files.some((f) => f.path.includes('report-final')));
+    // 只剩 keep 1 份 → 不足 2 份 → 整组消失
+    expect(docAfter).toBeUndefined();
+    // 其他组不受影响
+    expect(after.some((g) => g.files.some((f) => f.path.includes('installer_x64')))).toBe(true);
+  });
 });
 
 describe('mocks.estimateSize（确认窗逐项实测大小演示数据）', () => {
