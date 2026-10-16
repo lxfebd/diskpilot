@@ -863,12 +863,17 @@ export async function listDrives(): Promise<
  *  采样 > 5 点 → 趋势卡判定 rich（可信），增量与耗尽预测都能展示。 */
 /** R231：本次会话（页面刷新即清零）真删累计释放字节——getSpaceHistory
  *  今天末点用它下压，演示里「刚清完 276MB，空间趋势卡今天回落」与清理
- *  页/历史页同源。与 UNDO_LEDGER 同生命周期：真删累加、dry-run 不动。 */
+ *  页/历史页同源。与 UNDO_LEDGER 同生命周期：真删累加、dry-run 不动。
+ *  R233：per-source 入账台账——还原时只减回该 source 实际入账过的部分
+ *  （种子隔离条目从没入账，还原不回涨；避免 clamp 到 0 时把别的清理
+ *  释放也凭空回涨）。 */
 let sessionReclaimedBytes = 0;
+const reclaimedBySource = new Map<string, number>();
 
 /** R231：测试专用——复位会话释放台账（各 describe 互不污染）。 */
 export function _mockResetReclaimed(): void {
   sessionReclaimedBytes = 0;
+  reclaimedBySource.clear();
 }
 
 export async function getSpaceHistory(): Promise<
@@ -1704,6 +1709,15 @@ export async function undo(index: number, source: string): Promise<UndoEntry | n
   // R230：还原 = 文件回到原位，目录从回收台账回来（仅当该目录确实被清过）。
   const idx = recycledPaths.findIndex((p) => samePath(p, source));
   if (idx >= 0) recycledPaths.splice(idx, 1);
+  // R233：还原 = 空间回涨——只撤回该 source 实际入账过的释放字节（种子
+  // 隔离条目从没入账，还原不回涨；真实后端还原隔离文件后磁盘 used 增加，
+  // 演示不能「还原了但空间没回来」，也不能把别的清理释放凭空回涨）。
+  const key = e.source.replace(/[\\/]+$/, '').toLowerCase();
+  const accounted = reclaimedBySource.get(key) ?? 0;
+  if (accounted > 0) {
+    reclaimedBySource.delete(key);
+    sessionReclaimedBytes = Math.max(0, sessionReclaimedBytes - accounted);
+  }
   return e;
 }
 
@@ -1993,7 +2007,13 @@ export async function executeScope(
     // R231：真删释放字节累加进会话台账——空间趋势卡今天回落与本次清理同源。
     // R232：按执行条目 bytes_freed 和累加（= days 过滤后实际删的量），与
     // 总览 toast「已释放 X」一致——清 276MB 就降 276MB，不是降整目录 0.9GB。
-    for (const e of entries) sessionReclaimedBytes += e.bytes_freed ?? 0;
+    // R233：同时记 per-source 入账——还原时只撤回该 source 的部分。
+    for (const e of entries) {
+      const freed = e.bytes_freed ?? 0;
+      sessionReclaimedBytes += freed;
+      const key = e.source.replace(/[\\/]+$/, '').toLowerCase();
+      reclaimedBySource.set(key, (reclaimedBySource.get(key) ?? 0) + freed);
+    }
     // R225：真删路径进 mock 级台账——后续 scan / cleanupSuggestions 从
     // 修剪后的树返回，演示里「清完再看」各处体量一致下降。
     if (realPaths) for (const p of realPaths) _mockRecyclePath(p);

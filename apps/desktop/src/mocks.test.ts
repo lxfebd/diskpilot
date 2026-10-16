@@ -651,6 +651,59 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     expect(afterLocal).toBeTruthy();
     expect(afterLocal!.bytes).toBeGreaterThan(beforeLocal!.bytes);
   });
+
+  // R233：还原 = 空间回涨——隔离条目 undo 后**该 source 实际入账过的**释放
+  // 字节从会话台账撤回，磁盘卡与空间趋势回升（真实后端还原后 used 增加；
+  // 演示里不能「还原了但空间没回来」）。种子隔离条目从没入账，还原不回涨
+  // （不能把别的清理释放凭空回涨）。
+  it('R233：undo 还原后磁盘卡回涨（只撤回该 source 入账过的释放）', async () => {
+    const origin = await listDrives();
+    const originUsed = origin[0].used_bytes;
+    // 真删 CrashDumps（入账 reclaimedBySource[CrashDumps] ≈276MB）→ 磁盘降
+    const entries = await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
+    const accounted = entries.reduce((s, e) => s + (e.bytes_freed ?? 0), 0);
+    expect(accounted).toBeGreaterThan(0);
+    const cleaned = await listDrives();
+    expect(cleaned[0].used_bytes).toBeLessThan(originUsed);
+    const src = entries[0].source; // CrashDumps 真实目录路径
+    // 注入一条以该 source 为源的隔离条目（模拟后端隔离还原链路）
+    _mockPushUndoEntry({
+      timestamp: new Date().toISOString(),
+      action: 'quarantine' as const,
+      source: src,
+      reason: '隔离还原回涨',
+      bytes_freed: accounted,
+    });
+    const list = await listUndo(500);
+    const idx = list.findIndex((e) => e.source === src && e.action === 'quarantine');
+    expect(idx).toBeGreaterThanOrEqual(0);
+    await undo(idx, src);
+    // 还原撤回该 source 的入账 → 磁盘回涨 ≈accounted，回到清之前
+    const restored = await listDrives();
+    const restoredUsed = restored[0].used_bytes;
+    expect(restoredUsed - cleaned[0].used_bytes).toBeGreaterThanOrEqual(accounted - 1);
+    expect(restoredUsed).toBeLessThanOrEqual(originUsed);
+  });
+
+  // R233：种子隔离条目（从没入账过）还原不回涨——不能把别的清理释放凭空
+  // 加回（clamp 到 0 会让磁盘卡跳满）。
+  it('R233：未入账的隔离条目还原不改变磁盘（诚实：没清过不回涨）', async () => {
+    const before = await listDrives();
+    const path = 'C:\\Users\\demo\\Documents\\种子隔离.docx';
+    _mockPushUndoEntry({
+      timestamp: new Date().toISOString(),
+      action: 'quarantine' as const,
+      source: path,
+      reason: '种子条目',
+      bytes_freed: 3.2 * 1024 ** 3,
+    });
+    const list = await listUndo(500);
+    const idx = list.findIndex((e) => e.source === path);
+    expect(idx).toBeGreaterThanOrEqual(0);
+    await undo(idx, path);
+    const after = await listDrives();
+    expect(after[0].used_bytes).toBe(before[0].used_bytes);
+  });
 });
 
 // R225：按路径在树里找节点（真删 source 必须对应树里的真实节点）。
