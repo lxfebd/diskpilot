@@ -674,7 +674,10 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
 
   it('真删返回回收条目并追加到台账（历史页可见）', async () => {
     const before = await listUndo(500);
-    const entries = await executeScope('dev-caches', 'npm-cache', 'C:\\Users\\a\\npm', false, { confirmed: true });
+    // rootPath 用真实命中目录树根（CrashDumps 节点在 C:\Users\90740 之下，
+    // glob %LOCALAPPDATA%/CrashDumps 目录名可匹配），真删才有真实路径可
+    // 回收——虚拟路径不再退回合成条目（R273）。
+    const entries = await executeScope('crash-dumps', 'crash-dumps-local', 'C:\\Users\\90740', false, { confirmed: true });
     expect(entries.length).toBeGreaterThan(0);
     const after = await listUndo(500);
     expect(after.length).toBe(before.length + entries.length);
@@ -682,8 +685,26 @@ describe('mocks.executeScope（预览模式清理执行）', () => {
     const added = after.slice(0, entries.length);
     for (const e of added) {
       expect(e.action).toBe('recycle');
-      expect(e.source).toContain('C:\\Users\\a\\npm');
+      expect(e.source.startsWith('C:\\Users\\90740')).toBe(true);
     }
+  });
+
+  // R273：真删但 rootPath 下无该 scope 命中目录 → 返回空数组（与真实后端
+  // execute_scope 无匹配文件同一语义：nothingMatched，不假装「删了虚拟路径」），
+  // 不写台账、不动磁盘卡。dry-run 预览仍返回样例清单。
+  it('R273：真删无命中目录返回空数组（不假装删除成功）', async () => {
+    const ghostRoot = 'D:\\不存在盘\\AppData';
+    const beforeList = await listUndo(500);
+    const beforeDrives = await listDrives();
+    const real = await executeScope('crash-dumps', 'crash-dumps-local', ghostRoot, false, { confirmed: true });
+    expect(real.length).toBe(0);
+    const afterList = await listUndo(500);
+    expect(afterList.length).toBe(beforeList.length);
+    const afterDrives = await listDrives();
+    expect(afterDrives[0].used_bytes).toBe(beforeDrives[0].used_bytes);
+    // dry-run 不受影响：预览仍是样例清单（先看预览后执行才诚实）
+    const dry = await executeScope('crash-dumps', 'crash-dumps-local', ghostRoot, true, {});
+    expect(dry.length).toBeGreaterThan(0);
   });
 
   it('dry-run 条目数有限（demo 列表不无限膨胀）', async () => {

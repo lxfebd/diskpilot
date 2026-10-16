@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-17 清理页真删诚实化：root 下无命中目录不再假装删除成功（R273）
+
+- 缺口：mocks.executeScope 真删时若 rootPath 下没有该 scope 的命中目录
+  （清过的 scope 再执行 / root 不含该目录），mockRealScopePaths 返回空，
+  但 mockScopeEntries 会退回**合成路径**（`root\scope\mock_*`）——不存在的
+  路径被记入台账、计入释放字节、历史页显示「已回收虚拟路径」，与真实
+  后端 execute_scope 无匹配文件时返回空（nothingMatched）语义脱节。
+- R273 修复：真删且 realPaths 为空 → 直接返回空数组（调用方走
+  nothingMatched，不假装「删了虚拟路径」）；dry-run 预览不受影响（仍返回
+  样例清单，先看预览后执行才诚实）。重写 L677 冒烟测试改用真实命中
+  rootPath（C:\Users\90740 + crash-dumps-local），并新增 R273 测试。
+- 新增 1 测试（mocks.test 82→83）：真删无命中目录返回空数组（台账/
+  磁盘卡不受影响）+ dry-run 预览仍有清单。
+  （**688 总 / 43 files**；tsc/eslint/build 关）。
+
 ### 2026-10-17 右键回收诚实化：树外路径不假装删除成功（R272）
 
 - 缺口：mocks.recyclePaths（R270 后）对任意传入路径都返回回收成功条目

@@ -2196,6 +2196,13 @@ export async function executeScope(
   // R229：只剪这个 scope 的目录（CrashDumps/WER/Minidump 各是各的），
   // 清 WER 不再把同 scaffold 的 CrashDumps/Minidump 一起剪掉。
   const realPaths = dryRun ? undefined : mockRealScopePaths(scaffoldId, scopeId, rootPath);
+  // R273：真删但 rootPath 下没有该 scope 命中目录（清过的 scope 再执行 /
+  // root 不含该目录）→ 返回空数组，与真实后端 execute_scope 无匹配文件
+  // 时返回空同一语义（调用方走 nothingMatched，不假装「删了虚拟路径」）。
+  // dry-run 不受影响：预览清单仍是演示样例（用户先看预览，执行时才诚实）。
+  if (!dryRun && (!realPaths || realPaths.length === 0)) {
+    return [];
+  }
   // R227：真删/预览的释放字节与扫描树同源（该 scope 目录真实可清量）。
   // R228：按 scope 的 glob 目录名取自己的真实字节（CrashDumps/WER/Minidump）。
   const realBytes = (() => {
