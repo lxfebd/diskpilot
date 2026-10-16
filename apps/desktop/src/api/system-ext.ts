@@ -69,8 +69,25 @@ export const systemExtApi = {
   openSteamUrl: (
     action: 'uninstall' | 'rungameid' | 'validate' | 'nav' | 'workshop_page',
     appid: number,
-  ) =>
-    isTauri ? invoke<void>('open_steam_url', { action, appid }) : Promise.resolve(),
+  ) => {
+    if (!isTauri) {
+      // 浏览器预览：Steam 的 workshop 页有公开 https 版，能真实打开；
+      // 其余动作走 steam:// 协议（浏览器会弹系统协议处理器）。不静默假成功。
+      const url =
+        action === 'workshop_page'
+          ? `https://steamcommunity.com/sharedfiles/filedetails/?id=${appid}`
+          : action === 'uninstall'
+            ? `steam://uninstall/${appid}`
+            : action === 'rungameid'
+              ? `steam://rungameid/${appid}`
+              : action === 'validate'
+                ? `steam://validate/${appid}`
+                : `https://store.steampowered.com/app/${appid}`;
+      window.open(url, '_blank', 'noopener');
+      return Promise.resolve();
+    }
+    return invoke<void>('open_steam_url', { action, appid });
+  },
 
   // ── 系统探测 ──
   runSystemProbe: (sample = false) =>

@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 预览模式 Steam 打开动作真实打开网页（R202）
+
+- `api.openSteamUrl` 非 Tauri 分支原先 `Promise.resolve()` 静默——Steam
+  盘点详情「在 Steam 中打开」（workshop_page）点击无任何反馈，UninstallVia
+  Steam 的「正在启动 Steam 卸载」toast 也变成假成功。
+- 非 Tauri 改为 `window.open` 真实 URL：workshop_page →
+  `steamcommunity.com/sharedfiles/filedetails/?id=`（公开 https 版，能真
+  开），uninstall/rungameid/validate → steam:// 协议（浏览器弹系统协议
+  处理器），nav → store.steampowered.com/app/。不静默、不假拒绝——
+  纯前端能做到的打开动作在浏览器里真实生效。
+- 浏览器实测：Steam 盘点 → Counter-Strike 2 → 创意工坊（3 项 · 543 MB）
+  → 点「在 Steam 中打开」→ window.open 捕获
+  `https://steamcommunity.com/sharedfiles/filedetails/?id=3010099`。
+- 无新测试（纯前端打开动作，与 R197-R201 先例一致）；586 总 / 41 files。
+
 ### 2026-10-16 预览模式重复文件确认窗显示真实大小（R201）
 
 - 总览页「重复文件查找」→ CleanupProposalDialog 逐项实测
