@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -491,5 +491,29 @@ describe('pruneStalePreviews（陈旧预览剪枝）', () => {
   it('清过的项消失 → 其预览被剪；还原重现时重新拉取（不展示陈旧 dry-run）', () => {
     const out = pruneStalePreviews(previews, new Set(['b:s2']));
     expect(Object.keys(out)).toEqual(['b:s2']);
+  });
+});
+
+// R254：建议项重拉后合并勾选——新 key 默认勾选，已有 key 保留用户选择，
+// 不再每次强制全选（避免用户取消微信项后一次清理/重扫被全勾回来误清）。
+describe('mergeCheckedState（勾选状态跨重拉保留）', () => {
+  it('空勾选 + 新 items → 全部默认勾选', () => {
+    expect(mergeCheckedState({}, ['a:s1', 'b:s2'])).toEqual({ 'a:s1': true, 'b:s2': true });
+  });
+
+  it('已有 key 保留原选择（含手动取消的 false）', () => {
+    const out = mergeCheckedState({ 'a:s1': false, 'b:s2': true }, ['a:s1', 'b:s2', 'c:s3']);
+    expect(out).toEqual({ 'a:s1': false, 'b:s2': true, 'c:s3': true });
+  });
+
+  it('消失的 key 不再出现在新状态', () => {
+    const out = mergeCheckedState({ 'a:s1': false, 'z:gone': true }, ['a:s1']);
+    expect(out).toEqual({ 'a:s1': false });
+  });
+
+  it('不修改原对象（纯函数）', () => {
+    const input = { 'a:s1': false };
+    mergeCheckedState(input, ['a:s1', 'b:s2']);
+    expect(input).toEqual({ 'a:s1': false });
   });
 });

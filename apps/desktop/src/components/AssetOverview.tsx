@@ -566,6 +566,18 @@ export function pruneStalePreviews<T>(
   return next;
 }
 
+/** R254：建议项重拉后合并勾选状态——新出现的 key 默认勾选，已有 key 保留
+ *  用户原选择（不再每次强制全选，避免用户取消微信项后被一次清理/重扫全勾回
+ *  来误清）。纯函数：原 checked 不改动。 */
+export function mergeCheckedState(
+  checked: Record<string, boolean>,
+  keys: readonly string[],
+): Record<string, boolean> {
+  const next: Record<string, boolean> = {};
+  for (const k of keys) next[k] = checked[k] ?? true;
+  return next;
+}
+
 /** R105：预览项合计字节。全部项 bytes 为 null（后端未统计）时返回 null，
  *  部分缺失则按已知求和（展示口径：有实测才算，缺的省略）。 */
 export function previewTotalBytes(items: readonly { bytes: number | null }[]): number | null {
@@ -894,7 +906,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         }),
       );
       setCleanItems(items);
-      setChecked(Object.fromEntries(items.map((i) => [i.key, true])));
+      // R254：重拉后保留用户已有的勾选选择——之前每次 loadClean 都强制全选，
+      // 用户手动取消微信项后，清理/切盘/重扫一次就全勾回来（可能误清）。
+      // 新出现的 key 默认勾选；已有 key 保留原状态；消失的 key 自然失效。
+      setChecked((c) => mergeCheckedState(c, items.map((i) => i.key)));
       // R249：建议项重拉后剪掉已消失项的预览缓存（详见 pruneStalePreviews）。
       const liveKeys = new Set(items.map((i) => i.key));
       setPreviews((p) => pruneStalePreviews(p, liveKeys));

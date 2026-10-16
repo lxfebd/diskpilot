@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 总览建议清理勾选跨重拉保留：取消的项不再被全勾回来（R254）
+
+- 缺口：总览每次 loadClean 都 setChecked(全 true)——用户手动取消某建议项
+  （如微信）后，清理/切盘/重扫一次就全勾回来，可能误清用户主动排除的项。
+- R254 修复：mergeCheckedState 合并勾选——重拉后新 key 默认勾选、已有 key
+  保留原选择、消失的 key 自然失效（与清理页 cancelPreview 保留勾选的语义
+  对齐）。
+- 新增 4 测试（空勾选全勾 / 保留手动取消 / 消失 key 移除 / 纯函数不改原对象）
+  （**663 总 / 43 files**）。
+- 浏览器实测：17 行全勾 → 取消 1 → 16 勾；重扫后仍 16 勾（之前恢复 17 全选）。
+
 ### 2026-10-16 历史页搜索对脏数据防御：null source 不再整页崩（R253）
 
 - 缺口：filterUndoEntries 对 source/destination/reason 直接 .toLowerCase()——
