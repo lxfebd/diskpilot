@@ -3,7 +3,7 @@
 //
 // 三段执行语义（预览 → 预备 → 真删）由 store.execute 驱动，本组件只画按钮；
 // DryRunPreviewDialog 在 preview !== null 时挂在 body 末尾（zIndex:60 盖住行动条）。
-import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, Trash2, AlertTriangle, History } from 'lucide-react';
 import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage, computeAllCleanableBytes } from '../../useCleanupStore';
 import { formatBytes } from '../../format';
 import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive, sortScopesByBytes } from '../../cleanup/model';
@@ -153,7 +153,7 @@ function ScopeGroup({ label, group }: { label: string; group: Scope[] }) {
   );
 }
 
-export function CleanupBody() {
+export function CleanupBody({ onOpenHistory }: { onOpenHistory?: () => void }) {
   const t = useT();
   const s = useCleanupStore((st) => st.session);
   const execute = useCleanupStore((st) => st.execute);
@@ -314,7 +314,21 @@ export function CleanupBody() {
             <AlertTriangle size={12} /> {sc.disclaimer}
           </p>
 
-          {s.msg && <div className="ok">{s.msg}</div>}
+          {s.msg && (
+            <div className="ok cleanup-msg-with-link">
+              <span>{s.msg}</span>
+              {onOpenHistory && (
+                <button
+                  type="button"
+                  className="ghost cleanup-goto-history"
+                  onClick={onOpenHistory}
+                  title={t('cleanup.gotoHistory')}
+                >
+                  <History size={12} /> {t('cleanup.gotoHistory')}
+                </button>
+              )}
+            </div>
+          )}
           {s.err && <div className="error">{s.err}</div>}
         </>
       )}

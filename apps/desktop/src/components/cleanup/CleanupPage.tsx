@@ -18,7 +18,7 @@ import { RiskBadge } from './RiskBadge';
 import { CleanupBody } from './CleanupBody';
 import { useT } from '../../i18n';
 
-export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
+export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; onOpenHistory?: () => void }) {
   const t = useT();
   const root = useStore((s) => s.root);
   const scaffolds = useStore((s) => s.scaffolds);
@@ -140,7 +140,7 @@ export function CleanupPage({ tagFilter }: { tagFilter?: string }) {
           {cards.length === 0 ? (
             <div className="cp-empty">{emptyText}</div>
           ) : session ? (
-            <CleanupBody />
+            <CleanupBody onOpenHistory={onOpenHistory} />
           ) : (
             <div className="cp-empty">{t('cleanup.pickScript')}</div>
           )}

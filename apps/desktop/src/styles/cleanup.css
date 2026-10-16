@@ -90,6 +90,27 @@ main.cleanup-page > .cleanup-page {
 }
 .cp-status-chip:hover { background: var(--accent-bg); }
 .cp-status-chip.active { background: var(--accent); color: var(--on-accent, var(--ink)); border-color: var(--accent); font-weight: 600; }
+/* R223：清理完成提示附「查看历史」入口 */
+.cleanup-msg-with-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cleanup-goto-history {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cleanup-goto-history:hover { background: var(--accent-bg); }
 .cp-script {
   display: grid;
   grid-template-columns: 1fr auto auto;

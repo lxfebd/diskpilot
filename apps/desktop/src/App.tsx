@@ -603,7 +603,7 @@ export default function App() {
         <main className="cleanup-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
             <Suspense fallback={<PageFallback />}>
-              <CleanupPage />
+              <CleanupPage onOpenHistory={openHistory} />
             </Suspense>
           </ErrorBoundary>
         </main>
@@ -611,7 +611,7 @@ export default function App() {
         <main className="cleanup-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
             <Suspense fallback={<PageFallback />}>
-              <CleanupPage tagFilter="privacy" />
+              <CleanupPage tagFilter="privacy" onOpenHistory={openHistory} />
             </Suspense>
           </ErrorBoundary>
         </main>

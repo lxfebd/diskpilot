@@ -126,6 +126,8 @@ export const cleanup = {
     'cleanup.scriptsStatusAll': '全部',
     'cleanup.scriptsStatusHit': '已命中',
     'cleanup.scriptsStatusMiss': '未检测到',
+    // R223：清理完成提示附「查看历史」入口（误删还原直达）
+    'cleanup.gotoHistory': '查看历史',
     'cleanup.notDetected': '未检测到',
     'cleanup.pickScript': '在左侧选一个要清理的软件',
     'cleanup.noScripts': '还没有安装任何清理脚本',
@@ -301,6 +303,8 @@ export const cleanup = {
     'cleanup.scriptsStatusAll': 'All',
     'cleanup.scriptsStatusHit': 'Detected',
     'cleanup.scriptsStatusMiss': 'Not detected',
+    // R223: link to the history page after a successful cleanup (restore entry point)
+    'cleanup.gotoHistory': 'View history',
     'cleanup.notDetected': 'Not detected',
     'cleanup.pickScript': 'Pick an app on the left to start cleaning',
     'cleanup.noScripts': 'No cleanup scripts installed yet',
