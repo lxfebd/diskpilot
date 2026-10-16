@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-16 总览页「立即清理」后跨页同步剪树（R224）
+
+- R222 只补了清理页 runRealDelete——总览页 doClean「立即清理」执行成功后
+  同样只加 reclaimed、不剪 root/scanCache，工作台/分类占用仍旧值。
+- 现在 doClean 在批循环里收集成功条目的 source 路径，执行后调
+  `useStore.getState().pruneRecycled(paths)`（与 R222 同一批剪枝语义）。
+- 无新测试（复用 R222 的 pruneRecycled 测试；现有 **613 全绿**）。
+
 ### 2026-10-16 清理完成提示附「查看历史」入口（R223）
 
 - 清理页执行成功后，成功提示区附「查看历史」按钮——清理完想还原误删

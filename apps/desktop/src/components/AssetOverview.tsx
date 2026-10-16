@@ -920,6 +920,9 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       let cleaned = 0;
       let failed = 0;
       let firstError = '';
+      // R224：成功回收条目的 source 路径收集——执行后一次性剪 root/scanCache，
+      // 工作台/分类占用跨页立即反映真实剩余体量（与清理页 R222 同一语义）。
+      const recycledPaths: string[] = [];
       for (const it of sel) {
         try {
           // 返回实际操作的条目列表：空数组 = 该 scope 没匹配到文件（可能已清过），
@@ -933,6 +936,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           if (entries.length > 0) {
             bytes += it.bytes;
             cleaned += 1;
+            for (const e of entries) if (e.source) recycledPaths.push(e.source);
           }
         } catch (e) {
           failed += 1;
@@ -941,6 +945,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         }
       }
       addReclaimed(bytes);
+      // R224：成功回收跨页同步剪树（root + 受影响缓存树）。
+      if (recycledPaths.length > 0) useStore.getState().pruneRecycled(recycledPaths);
       if (cleaned > 0) {
         toast(
           t('overview.clean.done', { n: cleaned, size: formatBytes(bytes) })
