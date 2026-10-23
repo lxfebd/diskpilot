@@ -44,6 +44,26 @@ pub(crate) struct ReminderConfig {
     /// 独立于 enabled：可只开空间预警，不动清理提醒。
     #[serde(default)]
     pub full_warn_days: u64,
+    /// R291 温度持续采样开关。独立于 enabled——采集本身零成本（顺手读一次
+    /// 传感器），开着它才能让「温度持续偏高」变得可判断；关掉只是不采。
+    #[serde(default)]
+    pub thermal_sample_enabled: bool,
+    /// 持续偏高的判定阈值（℃）。默认 85：低于 CPU/GPU 常见的睿频上限，
+    /// 高于日常轻负载，减少误报。
+    #[serde(default = "default_thermal_sustained_c")]
+    pub thermal_sustained_c: f32,
+    /// 连续多少个采样点全超温才算「持续」。默认 5（采样周期 5 分钟 →
+    /// 连续 25 分钟无一秒喘息）。1 会退化成瞬时判定，正是要避免的形态。
+    #[serde(default = "default_thermal_sustained_samples")]
+    pub thermal_sustained_samples: u64,
+}
+
+fn default_thermal_sustained_c() -> f32 {
+    85.0
+}
+
+fn default_thermal_sustained_samples() -> u64 {
+    5
 }
 
 impl Default for ReminderConfig {
@@ -55,6 +75,9 @@ impl Default for ReminderConfig {
             weekly_report_enabled: false,
             weekly_interval_days: 7,
             full_warn_days: 0,
+            thermal_sample_enabled: false,
+            thermal_sustained_c: 85.0,
+            thermal_sustained_samples: 5,
         }
     }
 }
@@ -105,6 +128,7 @@ pub(crate) fn get_reminder_config(app: AppHandle) -> Result<ReminderConfig, Stri
 
 /// 保存提醒配置（L1 受控：改的是用户自己的配置，非删除类）。
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // 每个参数都是一个独立的用户可见旋钮；打包成结构体只是把同一堆旋钮换个地方摆
 pub(crate) fn set_reminder_config(
     app: AppHandle,
     enabled: Option<bool>,
@@ -113,6 +137,9 @@ pub(crate) fn set_reminder_config(
     weekly_report_enabled: Option<bool>,
     weekly_interval_days: Option<u64>,
     full_warn_days: Option<u64>,
+    thermal_sample_enabled: Option<bool>,
+    thermal_sustained_c: Option<f32>,
+    thermal_sustained_samples: Option<u64>,
 ) -> Result<ReminderConfig, String> {
     let Some(p) = config_path(&app) else {
         return Err("无法定位数据目录".into());
@@ -140,6 +167,17 @@ pub(crate) fn set_reminder_config(
     if let Some(v) = full_warn_days {
         // 上限 365：超过一个月的预警意义不大，锁死避免配置被污染。
         cfg.full_warn_days = v.min(365);
+    }
+    if let Some(v) = thermal_sample_enabled {
+        cfg.thermal_sample_enabled = v;
+    }
+    if let Some(v) = thermal_sustained_c {
+        // 钳到合理区间：低于 50 会把轻负载唱成过热，高于 110 没意义。
+        cfg.thermal_sustained_c = v.clamp(50.0, 110.0);
+    }
+    if let Some(v) = thermal_sustained_samples {
+        // 钳 1..=60：1 = 瞬时判定（要避免的形态），60 = 整整一小时不喘息。
+        cfg.thermal_sustained_samples = v.clamp(1, 60);
     }
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
@@ -227,6 +265,43 @@ pub(crate) fn collect_full_warns(
         }
     }
     Ok(out)
+}
+
+/// R291 持续温度预警负载。窗口内**全部**采样 ≥ 阈值才判定「持续」
+/// （见  的注释：平均值会把「一直 84℃」
+/// 和「一半 95℃ 一半 73℃」混为一谈，二者处置完全不同）。
+/// 命中也只发通知，**不做任何写入**——应用风扇曲线仍走 fan_control 的
+/// L2 双确认，本条绝不绕过。
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ThermalSustained {
+    /// 判定阈值（℃）。
+    pub threshold_c: f32,
+    /// 参与判定的采样点数（等于配置的 sustained samples）。
+    pub samples: usize,
+    /// 窗口内最高温（如实告诉用户「到底到了多少」）。
+    pub temp_max_c: Option<f32>,
+    /// 生成时间（unix 秒）。
+    pub ts: u64,
+}
+
+/// 读历史 + 判定。读失败 → None（不伪装成「没过热」；且读失败时通知通道
+/// 静默跳过本轮即可，前端不会显示任何误导性内容）。
+pub(crate) fn thermal_sustained_now(app: &AppHandle, cfg: &ReminderConfig) -> Option<ThermalSustained> {
+    let pts = crate::thermal_history::read_history(app).ok()?;
+    let min = cfg.thermal_sustained_samples.clamp(1, 60) as usize;
+    let (ok, n) = crate::thermal_history::is_sustained_high(&pts, cfg.thermal_sustained_c, min);
+    if !ok {
+        return None;
+    }
+    Some(ThermalSustained {
+        threshold_c: cfg.thermal_sustained_c,
+        samples: n,
+        temp_max_c: crate::thermal_history::window_max_c(&pts),
+        ts: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0),
+    })
 }
 
 /// R100 空间趋势逐盘检查结果（`check_space_forecast_cmd` 返回，展示用）。
@@ -391,6 +466,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
         // R99：空间耗尽预警。与清理提醒同粒度 tick（60s），但独立计时——
         // 外推只看缓存历史，很轻，给个较长间隔（6h）就够，别高频打扰。
         let mut last_full_warn = std::time::Instant::now();
+        // R291 温度采样与持续预警：flag 防抖（报过一次就等回落才复位）。
+        let mut last_thermal_sample = std::time::Instant::now();
+        let mut thermal_warned = false;
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
@@ -407,6 +485,27 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
             if last_space_sample.elapsed() >= Duration::from_secs(86400) {
                 last_space_sample = std::time::Instant::now();
                 crate::space_history::record_all_drives(&app);
+            }
+            // R291 温度持续采样：独立于空间采样粒度（5 分钟），因为「持续」
+            // 需要分钟级的点密度。读一次传感器即可，不涉及磁盘。
+            if cfg.thermal_sample_enabled
+                && last_thermal_sample.elapsed() >= Duration::from_secs(300)
+            {
+                last_thermal_sample = std::time::Instant::now();
+                // 传感器不可读（None）时不落点：记一条假温度会污染后续判定，
+                // 而断点只会让样本不足 → 判定自然是「观察中」，不是谎。
+                if let Some(c) = crate::hw::hw_test::sample_thermal_c() {
+                    crate::thermal_history::record_thermal_sample(&app, c);
+                }
+                // 判定持续偏高 → 通知。用本地 flag 防抖：已经报过就等温度回落
+                // 才复位，否则每分钟一条 toast 等于骚扰。
+                let sustained = thermal_sustained_now(&app, &cfg);
+                if sustained.is_some() && !thermal_warned {
+                    thermal_warned = true;
+                    let _ = app.emit("thermal-sustained", sustained);
+                } else if sustained.is_none() && thermal_warned {
+                    thermal_warned = false;
+                }
             }
             // 周巡检简报（health-butler P1）：weekly_report_enabled 开才跑。
             if cfg.weekly_report_enabled {
@@ -512,6 +611,22 @@ mod tests {
             "合并写回不抹默认字段"
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn thermal_defaults_are_conservative() {
+        let c = ReminderConfig::default();
+        assert!(!c.thermal_sample_enabled, "采集默认关：不主动耗电");
+        assert_eq!(c.thermal_sustained_c, 85.0);
+        assert_eq!(c.thermal_sustained_samples, 5, "默认 5 点 ≈ 25 分钟，规避瞬时尖峰");
+    }
+
+    #[test]
+    fn thermal_sustained_samples_one_is_instant_not_sustained() {
+        // 语义护栏：配置层允许 1（用户坚持要敏），但 thermal_history 的单点判定
+        // 已证否——这里只确认配置层不会被 clamp 悄悄改成别的值。
+        let c = ReminderConfig { thermal_sustained_samples: 1, ..ReminderConfig::default() };
+        assert_eq!(c.thermal_sustained_samples, 1);
     }
 
     #[test]

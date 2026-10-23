@@ -29,6 +29,7 @@ mod space_history;
 pub(crate) mod startup;
 pub(crate) mod steam;
 mod suggestion_history;
+mod thermal_history;
 pub(crate) mod system;
 pub(crate) mod toolbelt;
 pub(crate) mod updates;
