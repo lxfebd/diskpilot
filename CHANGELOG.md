@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 聊天会话列表能用键盘切换了（R323）
+
+侧栏的会话列表每行是纯 `div` 点击：Tab 跳不过去，回车没反应，键盘用户没法切会话；
+行里还嵌着一个删除 `<button>`，直接给容器加 `role="button"` 会变成按钮嵌按钮。
+
+- 行结构拆成「图标+标题的真 `<button class="chat-session-main">` + 同级的删除 `<button>`」，
+  行本身退回非交互容器；删除按钮不再需要 `stopPropagation`；
+- `chat.css`：把整行的内边距挪到 `.chat-session-main`（点行内任意位置仍然能切会话），
+  补 `:focus-visible` 描边，并让 `:focus-within` 也把删除 X 显形（否则 Tab 到一个看不见的按钮）；
 ### 2026-10-24 扩展名过滤行能用键盘选；盘卡片不再嵌一个假按钮（R322）
 
 两处无障碍欠债：文件视图顶部的「按扩展名过滤」行是纯 div 点击，Tab 跳不过去、回车没反应；

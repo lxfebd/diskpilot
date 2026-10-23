@@ -646,15 +646,22 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
               <div
                 key={sess.id}
                 className={'chat-session-item' + (sess.id === activeChatId ? ' active' : '')}
-                onClick={() => { clearSessionAuths(); switchChat(sess.id); }}
-                title={sess.title}
               >
-                <MessageSquare size={11} className="chat-session-icon" />
-                <span className="chat-session-title">{sess.title || t('chat.sessions.untitled')}</span>
+                {/* R323：切换会话是这里最常用的操作，原来是纯 div 点击——Tab 跳不过去、
+                    回车没反应。拆成「真按钮（图标+标题）+ 同级删除按钮」，
+                    既可用键盘，也避免出现按钮嵌按钮。 */}
+                <button
+                  className="chat-session-main"
+                  onClick={() => { clearSessionAuths(); switchChat(sess.id); }}
+                  title={sess.title}
+                >
+                  <MessageSquare size={11} className="chat-session-icon" />
+                  <span className="chat-session-title">{sess.title || t('chat.sessions.untitled')}</span>
+                </button>
                 <button
                   className="ghost icon chat-session-del"
                   title={t('chat.sessions.deleteTitle')}
-                  onClick={(e) => { e.stopPropagation(); deleteChat(sess.id); }}
+                  onClick={() => deleteChat(sess.id)}
                 >
                   <X size={10} />
                 </button>

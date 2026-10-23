@@ -53,13 +53,28 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 8px;
+  padding: 0 4px;
   border-radius: var(--radius-sm);
-  cursor: pointer;
   font-size: 12px;
   color: var(--ink-2);
   max-width: 100%;
 }
+/* R323：整行可点的能力从 div 挪到这个真按钮上（键盘可达），行本身不再是交互元素。 */
+.chat-session-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 5px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-session-main:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; border-radius: var(--radius-sm); }
 .chat-session-item:hover { background: var(--paper-2); color: var(--ink); }
 .chat-session-item.active { background: var(--accent-bg); color: var(--accent-strong); }
 .chat-session-icon { flex-shrink: 0; opacity: .7; }
@@ -71,7 +86,8 @@
   white-space: nowrap;
 }
 .chat-session-del { opacity: 0; transition: opacity .12s; flex-shrink: 0; }
-.chat-session-item:hover .chat-session-del { opacity: 1; }
+/* 键盘走到该行时也要让删除 X 露出来，否则 Tab 到一个看不见的按钮。 */
+.chat-session-item:hover .chat-session-del, .chat-session-item:focus-within .chat-session-del { opacity: 1; }
 .chat-head > svg { color: var(--accent-strong); }
 .chat-title {
   font-family: var(--font-mono);
