@@ -34,6 +34,22 @@ export function formatStartupDelta(
  * 覆写 = 调用方持有完整规则集；添加按 id 排序（多规则命中同 scaffold 取
  * 更低阈值，后端 should_auto_list 已保证）；删除按 scaffold_id 过滤。
  */
+/** R302：把自动进清单的命中项组织成可渲染行（纯函数，可单测）。
+ *  auto_list_hits 是后端 (scaffold_id, bytes) 对；scaffolds 是本机已安装清理项
+ *  清单，用来把 id 翻译成可读名字。未知 id（规则指向已卸载项）不猜名字，
+ *  原样显示 id——与规则列表 unknown_scaffold 的展示口径一致。
+ *  返回 { key, label, bytes } 行，key 恒为 scaffold_id。 */
+export function hitRows(
+  hits: [string, number][] | null | undefined,
+  scaffolds: { id: string; name: string }[],
+): { key: string; label: string; bytes: number }[] {
+  if (!hits || hits.length === 0) return [];
+  return hits.map(([id, bytes]) => {
+    const sc = scaffolds.find((s) => s.id === id);
+    return { key: id, label: sc ? sc.name : id, bytes };
+  });
+}
+
 export function withRule(
   rules: AutoListRule[],
   op: 'add' | 'remove',
@@ -172,6 +188,8 @@ export function ReminderSettings() {
   };
 
   const addable = scaffolds.filter((s) => !autoList?.rules.some((r) => r.scaffold_id === s.id));
+  // R302：手动检查结果里的自动进清单命中项（一次算出，渲染时不再重复查找）。
+  const lastHits = lastPayload ? hitRows(lastPayload.auto_list_hits, scaffolds) : [];
 
   const save = async (patch: Partial<ReminderConfig>) => {
     setSaving(true);
@@ -533,6 +551,16 @@ export function ReminderSettings() {
               {d.path} · {formatBytes(d.bytes)}
             </div>
           ))}
+          {lastHits.length > 0 && (
+            <div className="muted small" style={{ marginTop: 6 }}>
+              {t('system.reminder.autoListHits', { items: lastHits.length })}
+              {lastHits.map((row) => (
+                <div key={row.key} style={{ marginTop: 2 }}>
+                  {row.label} · {formatBytes(row.bytes)}
+                </div>
+              ))}
+            </div>
+          )}
           {cfg.enabled && t('system.reminder.notified')}
         </div>
       )}

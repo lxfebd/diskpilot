@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { withRule, normalizeReminderCfg, formatStartupDelta } from './ReminderSettings';
+import { withRule, normalizeReminderCfg, formatStartupDelta, hitRows } from './ReminderSettings';
 import type { AutoListRule } from '../api';
 
 // R298：热管理与启动项监听的 5 个旋钮此前只有后端、前端零入口。
@@ -156,3 +156,33 @@ describe('formatStartupDelta（R300 启动项对比四态判定）', () => {
     expect(s.gap).toBe(3);
   });
 });
+// R302：手动检查「立即检查」结果此前只显示总字节与每盘明细，后端已经
+// 在 payload 里带回 auto_list_hits（R295 起），设置页却不渲染——用户在
+// 设置页看不到哪几项按授权进了清单。hitRows 把 (id,bytes) 翻译成可读行。
+describe('hitRows（按项授权命中项渲染行）', () => {
+  it('已知 scaffold 用本机名字，未知 id 原样显示（不猜名字）', () => {
+    const rows = hitRows([['cache', 1024], ['ghost', 2048]], [
+      { id: 'cache', name: '缓存文件' },
+      { id: 'logs', name: '日志文件' },
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual({ key: 'cache', label: '缓存文件', bytes: 1024 });
+    expect(rows[1]).toEqual({ key: 'ghost', label: 'ghost', bytes: 2048 });
+  });
+
+  it('null / undefined / 空数组 → 空行（不报「命中 0 项」当消息）', () => {
+    expect(hitRows(null, [{ id: 'a', name: 'A' }])).toEqual([]);
+    expect(hitRows(undefined, [{ id: 'a', name: 'A' }])).toEqual([]);
+    expect(hitRows([], [{ id: 'a', name: 'A' }])).toEqual([]);
+  });
+
+  it('scaffolds 为空集时全部回退为 id（列表未加载完也不崩）', () => {
+    expect(hitRows([['x', 7]], [])).toEqual([{ key: 'x', label: 'x', bytes: 7 }]);
+  });
+
+  it('保持后端给的顺序，不重排（命中顺序来自引擎扫描）', () => {
+    const rows = hitRows([['b', 1], ['a', 2]], []);
+    expect(rows.map((r) => r.key)).toEqual(['b', 'a']);
+  });
+});
+
