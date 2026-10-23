@@ -14,6 +14,7 @@ import { SteamInspectorModal } from './SteamInspectorModal';
 import { UndoPanel } from './UndoPanel';
 import { copyPathWithToast } from '../clipboard';
 import { revealWithToast } from '../reveal';
+import { useEscapeKey } from '../escapeKey';
 
 const FEATURED_IDS = [
   'wechat-pc',
@@ -281,6 +282,8 @@ function InstallScaffoldModal({
   const [toml, setToml] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // R320：Esc 关闭（与点遮罩 / 右上角 X 一致）。
+  useEscapeKey(onClose);
 
   const install = async () => {
     if (!toml.trim()) {

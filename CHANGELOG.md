@@ -16,6 +16,17 @@ toast 是这个应用的主要反馈通道（清理完成、打不开文件夹�
   → `role="status"` + `aria-label={t('common.loading')}`；`common` 表补 `common.close` /
   `common.loading` 两键；
 - `a11y.test.ts` 加守卫：源码里不许出现字面量 `aria-label="…"`，必须走文案表。
+
+### 2026-10-24 三个弹窗支持 Esc 取消（R320）
+
+R315 给通用 `ConfirmDialog` 与烤机确认加了 Esc，但另有三个自家手写的 `modal-bg` 弹窗漏掉了：
+清理提案对话框、插件安装对话框、插件市场的两步确认框。它们的关闭方式只有点遮罩或右上角 X。
+
+- 三处都改为 `useEscapeKey(…)`（enabled 与弹窗可见性绑定，没开就不吃键）：
+  清理提案 `CleanupProposalDialog`、安装脚本 `Studio` 的 `InstallScaffoldModal`、
+  `toolbelt/market.tsx` 的 `confirmAsk`；
+- 设置面板与 Studio 主面板暂不改：它们内部还会渲染子弹窗（市场确认框、卸载确认框等），
+  Esc 会同时打到父子两层——要做得先给 hook 加「子层优先」，不在这次范围内。
 ### 2026-10-24 纯图标按钮补上可访问名字（R318）
 
 读屏软件读到的是一串空按钮：全仓有 7 个「只有图标、既没有 aria-label 也没有 title」的按钮，

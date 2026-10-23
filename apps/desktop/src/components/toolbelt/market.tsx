@@ -15,6 +15,7 @@ import { formatBytes } from '../../format';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
 import { APP_VERSION } from '../../version';
+import { useEscapeKey } from '../../escapeKey';
 
 /** 索引是否"全占位"：有条目但无一提供下载地址（发布者填 URL 前展示引导）。 */
 export function communityComingSoon(community: readonly RegistryPlugin[], indexed: boolean): boolean {
@@ -111,6 +112,9 @@ export function MarketPanel() {
     body: string;
     onConfirm: () => void;
   }>(null);
+
+  // R320：确认框 Esc = 取消（与点遮罩 / X / 取消按钮一致）。
+  useEscapeKey(() => setConfirmAsk(null), confirmAsk !== null);
 
   const refresh = useCallback(() => {
     // 安装/卸载/激活插件后工具集变化，AI 侧 toolbelt 索引缓存必须作废重拉。

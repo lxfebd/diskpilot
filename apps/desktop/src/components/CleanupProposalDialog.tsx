@@ -8,6 +8,7 @@ import { driveAliasesOf, pathsOnRiskyDrives } from '../diskHealth';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
 import { RISK_META, RISK_ORDER } from './cleanup/RiskBadge';
+import { useEscapeKey } from '../escapeKey';
 
 // 高危项解锁口令：参与逐字比较的数据常量，不随语言翻译（提示语里原样显示）。
 const DANGER_WORD = '确认'; // @i18n-keep
@@ -94,6 +95,9 @@ export function CleanupProposalDialog() {
       cancelled = true;
     };
   }, [proposal]);
+
+  // R320：Esc = 取消（与点遮罩、右上角 X 同口径）；执行中也能关，和 X 一致。
+  useEscapeKey(() => setProposal(null), proposal !== null);
 
   if (!proposal) return null;
 
