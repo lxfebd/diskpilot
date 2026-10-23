@@ -265,14 +265,6 @@ export const cleanApi = {
       : mocks.suggestionDiff(root),
 
   // ── 按项授权自动进清单（health-butler P2-1，后端 auto_list.rs）──
-  /** 读授权规则集（只读）。缺文件 = 空规则集（真空态诚实）。 */
-  getAutoListConfig: () =>
-    isTauri
-      ? invoke<AutoListConfigView>('get_auto_list_config_with_status', {
-          knownScaffolds: [] as string[],
-        })
-      : mocks.getAutoListConfig(),
-
   /** 读授权规则集，并让后端按本机真实 scaffolds 标注每条规则的生效状态
    *  （ok / unknown_scaffold）。`knownScaffolds` 由调用方从 list_scaffolds 传入，
    *  后端不反向依赖 scaffold 加载路径。 */

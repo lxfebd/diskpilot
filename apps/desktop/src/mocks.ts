@@ -1528,11 +1528,6 @@ function autoListView(known: string[]): MockAutoListConfigView {
   };
 }
 
-export async function getAutoListConfig(): Promise<MockAutoListConfigView> {
-  await wait(20);
-  return autoListView([]);
-}
-
 export async function getAutoListConfigWithStatus(known: string[]): Promise<MockAutoListConfigView> {
   await wait(20);
   return autoListView(known);

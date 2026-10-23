@@ -100,6 +100,9 @@ UI_HANDOFF.md
 .mimosa/
 .workbuddy/
 
+# DSH browser 工具截图产物（browser_screenshot 默认输出目录），不入库
+browser-screenshots/
+
 # 图吧工具箱工具集：从 E:\图吧工具箱202601\tools 整目录拷入仓库根 Tools/，
 # 随安装包一起分发（bundle.resources 打进去），工具版权归各自作者。
 # 注意必须锚定仓库根（/Tools/）：不带前导斜杠会匹配任意层级同名目录，
