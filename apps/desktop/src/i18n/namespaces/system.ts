@@ -178,8 +178,6 @@ export const system = {
     'system.reminder.startupNoHistory': '还没有两份快照可比（首次快照已记下，下一份出来才能对比）',
     'system.reminder.startupSame': '与上一份快照一致，没有变化',
     'system.reminder.startupDelta': '自 {days} 天前的快照：新增 {add} 项、消失 {gone} 项',
-    'system.reminder.startupAdded': '新增（{n}）',
-    'system.reminder.startupGone': '消失（{n}）',
     'system.reminder.startupDeltaHint': '只说「新出现/消失」，不判断是谁做的。对比本身只读，不改任何启动项。',
 
     // ── R297 扫描时效提醒阈值 ──
@@ -388,8 +386,6 @@ export const system = {
     'system.reminder.startupNoHistory': 'Only one snapshot so far (the first one is recorded; a comparison needs the next one)',
     'system.reminder.startupSame': 'Identical to the previous snapshot — no changes',
     'system.reminder.startupDelta': 'Since the snapshot {days} days ago: {add} added, {gone} gone',
-    'system.reminder.startupAdded': 'Added ({n})',
-    'system.reminder.startupGone': 'Gone ({n})',
     'system.reminder.startupDeltaHint': 'This only reports what appeared or disappeared; it does not attribute the change. The comparison is read-only and never touches startup items.',
 
     // ── R297 scan-staleness reminder threshold ──

@@ -692,6 +692,9 @@ function ThermalHistoryCard() {
           </span>
         </div>
       )}
+      {/* R301：这段说明此前只存在于词条里（写了没人渲染）——采样开关不在本卡上，
+          不写清用户会以为曲线是从这里开出来的。 */}
+      <div className="ao-thermal-hint">{t('overview.thermal.hint')}</div>
     </section>
   );
 }

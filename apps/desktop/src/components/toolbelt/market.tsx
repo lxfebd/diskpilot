@@ -497,6 +497,9 @@ export function MarketPanel() {
             </button>
           ) : (
             <>
+          {/* R301：进阶区说明词条（advancedSub）此前只定义没人渲染；折叠按钮展开
+              后补一行说明，用户才知道索引 URL 是干什么的。 */}
+          <p className="muted small" style={{ marginTop: 8 }}>{t('toolbelt.mkt.advancedSub')}</p>
           <div className="toolbelt-market-head" style={{ marginTop: 8 }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
               <input

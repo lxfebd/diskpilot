@@ -195,3 +195,6 @@
 - 性能：管家首屏新增数据全部来自缓存/历史文件，**不为展示新造全盘 walk**（低配红线）。
 - 一致性：预检、清单、通知的口径共用 `cleanup_suggestions` 单一数据源，杜绝两处数字打架。
 - 回归：`pnpm -C apps/desktop check` + `cargo test --workspace` 全绿；新增纯逻辑必须配单测。
+- 词条卫生（R301）：i18n 死键审计口径——`perm.${id}`、`toolbelt.healthRating.${rating}`、
+  `DistributionBar` 的 `ns` 参数等**动态拼键**不算死键；静态可解析却零引用的词条要么接线、
+  要么删除，不留「写了没人看」的孤儿文案。

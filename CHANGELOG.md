@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 写好了却没人渲染的说明补上，真死键清掉（R301）
+
+一次 i18n 死键审计（1964 个词条 × 1747 处静态调用）发现两类问题——都不是翻译错，
+是**「文案写了但界面没接」**与**「功能迭代后留下的孤儿词条」**：
+
+- **补接线 3 处**（词条有、UI 没渲染，用户看不到原本写好的解释）：
+  - 总览「温度采样」卡底部补 `overview.thermal.hint`——采样开关在设置页、不在卡上，
+    不写清用户会以为曲线是从这里开出来的。
+  - 设置 → 清理提醒的阈值下拉前补 `system.reminder.autoListThreshold`，那个数字
+    此前没有任何标签。
+  - 插件市场「进阶：社区索引」展开后补 `toolbelt.mkt.advancedSub` 一行说明。
+- **删 6 个真死键**（zh/en 各 3）：`system.reminder.startupAdded`、`startupGone`
+  （R300 改成整句 `startupDelta` 后遗留）、`toolbelt.mkt.installableCount`
+  （被 `communityAllComingSoon` 取代）。
+- 审计口径写进注释：`perm.${id}`、`toolbelt.healthRating.${rating}`、
+  `DistributionBar` 的 `ns` 参数这类**动态拼键**不能算死键——剩下的 65 个都是它们。
+
 ### 2026-10-24 启动项变化可以主动对比了（R300）
 
 R292 的后端早就有 `check_startup_delta_cmd`——注释里明写着「设置页立即检查按钮」，

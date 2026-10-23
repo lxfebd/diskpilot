@@ -603,6 +603,9 @@ export function ReminderSettings() {
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
+              {/* R301：阈值下拉没标签，用户不知道这个数字是干什么的——
+                  词条 autoListThreshold 写了没人用。 */}
+              <span className="muted small">{t('system.reminder.autoListThreshold')}</span>
               <select
                 className="field"
                 value={pickMb}
