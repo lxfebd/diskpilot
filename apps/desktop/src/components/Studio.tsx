@@ -12,6 +12,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { collectScaffoldCards, type ScaffoldCard } from '../cleanup/matches';
 import { SteamInspectorModal } from './SteamInspectorModal';
 import { UndoPanel } from './UndoPanel';
+import { copyPathWithToast } from '../clipboard';
 
 const FEATURED_IDS = [
   'wechat-pc',
@@ -536,7 +537,8 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
         {
           label: t('studio.copyPath'),
           icon: <Copy size={12} />,
-          onClick: () => { navigator.clipboard?.writeText(p).catch(() => { /* ignore */ }); },
+          // R316：复制要给回音（成功/失败都 toast），不再静默吞掉。
+          onClick: () => { void copyPathWithToast(p); },
         },
       ],
     });

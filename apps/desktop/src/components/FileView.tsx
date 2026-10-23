@@ -8,6 +8,7 @@ import { api } from '../api';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { activateOnKey } from '../a11y';
+import { copyPathWithToast } from '../clipboard';
 
 type Props = {
   /** 从 root 出发选中的目录（不含该目录自身，只收集其子树内的文件节点） */
@@ -196,7 +197,8 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
                   {
                     label: t('overview.fileview.menuCopy'),
                     icon: <Copy size={12} />,
-                    onClick: () => { navigator.clipboard?.writeText(f.path).catch(() => { /* ignore */ }); },
+                    // R316：复制要给回音（成功/失败都 toast），不再静默吞掉。
+                    onClick: () => { void copyPathWithToast(f.path); },
                   },
                   {
                     label: t('overview.fileview.menuRecycle'),

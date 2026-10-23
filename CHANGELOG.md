@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 复制路径有回音了（R316）
+
+三处右键菜单的「复制路径」（扫描树 / 工具树 / Studio 卡片）此前写的是
+`navigator.clipboard?.writeText(p).catch(() => {})`：成功没有任何提示；环境里没有 clipboard API
+时可选链直接短路，连 catch 都不进——用户以为复制了，其实什么也没发生。Steam 安装路径与跑分报告
+早就有 toast 回音，这次把口径补齐并收敛成一处：
+
+- 新增 `src/clipboard.ts` 的 `copyPathWithToast(text)`：复制成功 toast「已复制路径」，
+  失败 toast「复制失败：{原因}」（不再静默吞 catch），返回是否成功。配 3 条单测
+  （成功 / 剪贴板拒绝 / 环境无 clipboard API）。
+- 三处菜单改调该函数；`common` 表补 `common.copiedPath` / `common.copyFailed` 两键。
 ### 2026-10-24 破坏性确认与压测确认都能 Esc 取消（R315）
 
 `ConfirmDialog`（回收 / 删除 / 卸载的两步确认，全仓 5 处调用）与压测的 `StressConfirmPanel`
