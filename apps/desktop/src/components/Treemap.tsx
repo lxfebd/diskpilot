@@ -34,6 +34,22 @@ function colorForDir(name: string): string {
   return DIR_COLORS[Math.abs(h) % DIR_COLORS.length];
 }
 
+// R312：空间图不是全量视图——根只布局前 300 个子项，后端还会把过深目录折叠
+// （children_truncated>0 表示这层 children 不完整）。两处都会让用户以为「图里没有 =
+// 不存在」，所以在图上落一行说明，把「去看树视图」的出口点出来。
+export function treeIsTruncated(node: Node | null | undefined, maxChildren = 300): boolean {
+  if (!node) return false;
+  if ((node.children?.length ?? 0) > maxChildren) return true;
+  const stack: (Node | undefined)[] = [node];
+  while (stack.length > 0) {
+    const cur = stack.pop();
+    if (!cur) continue;
+    if ((cur.children_truncated ?? 0) > 0) return true;
+    if (cur.children) for (const c of cur.children) stack.push(c);
+  }
+  return false;
+}
+
 export const Treemap = memo(function Treemap({ node, width, height, onSelect, selectedPath }: Props) {
   const t = useT();
   // layout 只依赖树数据与像素尺寸：选中态（selectedPath）变化不该重算
@@ -98,6 +114,17 @@ export const Treemap = memo(function Treemap({ node, width, height, onSelect, se
           </g>
         );
       })}
+      {treeIsTruncated(node) && (
+        <text
+          x={8}
+          y={height - 6}
+          fill="rgba(22,12,18,0.75)"
+          fontSize={10}
+          style={{ pointerEvents: 'none' }}
+        >
+          {t('overview.treemap.folded')}
+        </text>
+      )}
     </svg>
   );
 });

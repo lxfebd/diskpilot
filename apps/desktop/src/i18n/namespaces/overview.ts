@@ -227,6 +227,8 @@ export const overview = {
 
     // 矩形树图悬浮提示
     'overview.treemap.tip': '{path}\n{size} · {share}% of 父级',
+    // R312：空间图只画根的前 300 个子项，折叠目录也没展开——说出来并指向树视图
+    'overview.treemap.folded': '只画前 300 项、折叠目录未展开 · 完整清单见树视图',
 
     // 文件列表
     'overview.fileview.search': '搜索文件… 支持 *  ?  通配符',
@@ -459,6 +461,8 @@ export const overview = {
 
     // Treemap hover tooltip
     'overview.treemap.tip': '{path}\n{size} · {share}% of parent',
+    // R312: the map lays out only the first 300 top-level items and folded folders stay collapsed
+    'overview.treemap.folded': 'Top 300 items only, folded folders collapsed · see Tree view for all',
 
     // File list
     'overview.fileview.search': 'Search files… * and ? wildcards work',

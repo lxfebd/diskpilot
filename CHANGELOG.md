@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 空间图说出自己不是全量（R312）
+
+空间图（矩形树图）只布局根的前 300 个子项，后端对过深目录还会折叠（`children_truncated`），
+但图上没有任何说明——用户容易把「图里没有」当成「盘里没有」。本条在图上落一行脚注：
+
+- 新增导出纯函数 `treeIsTruncated(node, maxChildren = 300)`：根的子项数超上限、或任意层
+  `children_truncated > 0` 即判为截断（显式栈迭代，不递归爆栈）。配 5 条单测。
+- 判为截断时在 svg 底部画一行「只画前 300 项、折叠目录未展开 · 完整清单见树视图」，
+  字号/颜色与既有尺寸标签同档（10px、rgba(22,12,18,0.75)），`pointerEvents:'none'` 不挡点击。
+- i18n：`overview.treemap.folded`（zh/en 各一条）。
 ### 2026-10-24 Steam 卸载残留清单不再悄悄只画前 12 条（R311）
 
 残留卡头部写的是全量「N 处 · 大小」，表格却硬编码 `residueItems.slice(0, 12)`——
