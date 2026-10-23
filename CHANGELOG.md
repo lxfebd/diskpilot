@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 破坏性确认与压测确认都能 Esc 取消（R315）
+
+`ConfirmDialog`（回收 / 删除 / 卸载的两步确认，全仓 5 处调用）与压测的 `StressConfirmPanel`
+此前只能点遮罩或按钮关窗：键盘用户按 Esc 没反应，而同一套 Esc 关窗口径 `useEscapeKey`
+早已在抽屉、工具详情、预览对话框里落地（R141 收敛的）。本条补齐这两处：
+
+- `ConfirmDialog` 加 `useEscapeKey(onCancel)`——Esc 走取消（破坏性确认里取消永远是安全方向），
+  同时把挂载后的焦点先放到「取消」按钮，避免一路 Tab / 回车误触确认。
+- `StressConfirmPanel` 加 `useEscapeKey(onClose)`——Esc 与点遮罩、点右上角 X 同义，压测不会因此启动。
+- 弹窗内有输入框也照常（Esc 仍是关窗），不额外拦键。
 ### 2026-10-24 列表行能用键盘选了（R314）
 
 此前全仓只有侧栏写了 `:focus-visible`，列表行（树视图行、文件列表行、空间大头行、页脚重扫）

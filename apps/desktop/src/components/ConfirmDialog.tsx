@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { t } from '../i18n';
+import { useEscapeKey } from '../escapeKey';
 
 // 破坏性命令的两步确认面板（铁律 6：禁 window.confirm，必须界面内二次确认）。
 // 轻量实现：遮罩 + 卡片，复用 chat 的 cli-confirm 样式。默认文案走 common 表，
@@ -15,6 +16,13 @@ type Props = {
 };
 
 export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfirm, onCancel }: Props) {
+  // R315：Esc = 取消（破坏性确认里取消永远是安全方向）；焦点先落到取消按钮，
+  // 免得用户一路 Tab 或回车时误触「确认」。
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
+  useEscapeKey(onCancel);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
   return (
     <div className="confirm-dialog-mask" role="alertdialog" aria-modal="true" aria-label={title}>
       <div className="cli-confirm">
@@ -22,7 +30,7 @@ export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfir
         <div className="cli-confirm-body">{body}</div>
         <div className="cli-confirm-actions">
           <div className="grow" />
-          <button className="ghost" onClick={onCancel}>{cancelLabel ?? t('common.confirm.cancel')}</button>
+          <button ref={cancelRef} className="ghost" onClick={onCancel}>{cancelLabel ?? t('common.confirm.cancel')}</button>
           <button className="primary" onClick={onConfirm}>{confirmLabel ?? t('common.confirm.ok')}</button>
         </div>
       </div>

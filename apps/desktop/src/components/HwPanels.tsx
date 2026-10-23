@@ -7,6 +7,7 @@ import { LEVEL_COLORS } from '../colors';
 import { driveLettersOf, gradeDiskHealth } from '../diskHealth';
 import { t, useT } from '../i18n';
 import type { HwInfo, HwDiskHealth, HwSnapshotMeta, HwCompareOut, HwSeriesPoint } from '../api';
+import { useEscapeKey } from '../escapeKey';
 
 /// 硬件报告 GPU 实时行来源标签：按 `gpu_live.name` 判定厂商（desktop 端 AMD ADL
 /// 兜底时 name 以「AMD 显卡（…」开头，NVIDIA 则 nvidia-smi）。无 live → 空串。
@@ -287,6 +288,8 @@ export function StressConfirmPanel({ t: stress, onClose, onConfirm }: { t: Stres
   const [input, setInput] = useState('');
   const [remember, setRemember] = useState(false);
   const ok = input.trim() === STRESS_CONFIRM_WORD;
+  // R315：Esc = 取消（与点遮罩/右上角 X 同义，压测不会因此启动）。
+  useEscapeKey(onClose);
 
   return (
     <div className="modal-bg" onClick={onClose}>
