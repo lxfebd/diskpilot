@@ -162,17 +162,33 @@ pub(crate) fn scan_staleness_cmd(
 ) -> Result<ScanStalenessOut, String> {
     let stamps = read_stamps(&app)?;
     let now = now_secs();
-    let out = match scan_staleness(&stamps, &root, now) {
+    // 查询侧必须与写入侧同口径归一化。写入走 `norm_path_key`（小写 + 正斜杠，
+    // `C:\\` → `c:/`）；若这里拿原样 `C:\\` 去比对，一条都匹配不上，
+    // 会把「天天扫」的盘误报成「从未扫过」——正好与 Never 的语义相反。
+    let key = norm_query_root(&root);
+    let out = match scan_staleness(&stamps, &key, now) {
         ScanStaleness::Never => ScanStalenessOut { never: true, clock_skew: false, days: None, last_at: None },
         ScanStaleness::ClockSkew => ScanStalenessOut { never: false, clock_skew: true, days: None, last_at: None },
         ScanStaleness::Days(d) => ScanStalenessOut {
             never: false,
             clock_skew: false,
             days: Some(d),
-            last_at: latest_stamp(&stamps, &root),
+            last_at: latest_stamp(&stamps, &key),
         },
     };
     Ok(out)
+}
+
+/// 归一化查询用的盘根，与写入侧 `cleanup_logic::norm_path_key` 同口径
+/// （小写 + 正斜杠）。额外把裸盘符 `c:` 补成 `c:/`——前端传 `C:`、
+/// 传 `C:/`、传 `C:` 都应命中同一条记录，盘根只差一个分隔符不该判成两块盘。
+pub(crate) fn norm_query_root(root: &str) -> String {
+    let s = root.replace('\\', "/").to_lowercase();
+    // 裸盘符（`c:`）补齐尾斜杠；更深的路径原样（它是具体的扫描根，不猜）。
+    if s.len() == 2 && s.ends_with(':') {
+        return format!("{s}/");
+    }
+    s
 }
 
 /// `scan_staleness_cmd` 的返回形状。三个态必须可区分——`Option<u64>` 一种
@@ -274,6 +290,32 @@ mod tests {
         // 但不依赖这个假设——外部可能重排文件）。
         let stamps = vec![st("c:/", 1_700_000_100), st("c:/", 1_700_000_000), st("c:/", 1_700_000_200)];
         assert_eq!(latest_stamp(&stamps, "c:/"), Some(1_700_000_200));
+    }
+
+    #[test]
+    fn norm_query_root_matches_write_side_casing_and_slash() {
+        // 查询侧归一化必须与写入侧（norm_path_key：小写 + 正斜杠）同口径，
+        // 否则 scan_staleness_cmd("C:\\") 对不上写入的 c:/，天天扫的盘
+        // 会误报成从未扫过（Never 的语义恰好相反）。
+        let stamps = vec![st("c:/", 1_700_000_000)];
+        let now = 1_700_000_000 + 5 * 86400;
+        // 前端可能传 C:\（总览 DriveInfo.path）、C:/、c:\、c:/，都该命中同一条记录
+        for q in ["C:\\", "C:/", "c:\\", "c:/"] {
+            assert_eq!(
+                scan_staleness(&stamps, &norm_query_root(q), now),
+                ScanStaleness::Days(5),
+                "查询 {q:?} 应命中写入的 c:/"
+            );
+        }
+    }
+
+    #[test]
+    fn norm_query_root_bare_letter_gets_trailing_slash() {
+        // 裸盘符 c: 补成 c:/——盘根只差一个分隔符不该判成两块盘。
+        assert_eq!(norm_query_root("C:"), "c:/");
+        assert_eq!(norm_query_root("c:"), "c:/");
+        // 具体的目录路径原样归一化（它本来就是扫描根，不猜）
+        assert_eq!(norm_query_root("C:\\Users\\x"), "c:/users/x");
     }
 
     #[test]

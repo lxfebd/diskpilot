@@ -163,6 +163,15 @@ export const overview = {
     'overview.checkup.diskPartial': '{good} 块健康 · {unknown} 块未上报',
     'overview.checkup.diskNone': '硬盘健康未读到',
     'overview.checkup.goHardware': '查看硬盘健康',
+    // R293 扫描时效：三态措辞必须分开（never ≠ 很久没扫 ≠ 未读到）
+    'overview.checkup.scanAgeNever': '{n} 块盘还没扫描过',
+    'overview.checkup.scanAgeStale': '{n} 块盘超过 {days} 天没扫了',
+    'overview.checkup.scanAgeStaleDays': '最久 {days} 天没扫',
+    'overview.checkup.scanAgeSkew': '扫描时间戳晚于当前时刻（时钟异常），天数不可信',
+    'overview.checkup.scanAgeSkewShort': '扫描时间异常',
+    'overview.checkup.scanAgeUnread': '{n} 块盘的扫描记录未读到（不代表没扫过）',
+    'overview.checkup.scanAgeUnreadAll': '扫描记录未读到',
+    'overview.checkup.scanAgeOk': '扫描记录较新',
 
     // 重复文件查找 → 清理提案（提案四件套：是什么 / 干什么用 / 删了影响）
     'overview.dup.noneFound': '未发现 ≥1MB 的重复文件（按大小 + 头部哈希）',
@@ -363,6 +372,15 @@ export const overview = {
     'overview.checkup.diskPartial': '{good} healthy · {unknown} not reported',
     'overview.checkup.diskNone': 'Drive health not read',
     'overview.checkup.goHardware': 'See drive health',
+    // R293 scan staleness: three states must read differently (never ≠ stale ≠ unread)
+    'overview.checkup.scanAgeNever': '{n} drive(s) never scanned',
+    'overview.checkup.scanAgeStale': '{n} drive(s) not scanned for over {days} day(s)',
+    'overview.checkup.scanAgeStaleDays': 'last scan {days} day(s) ago',
+    'overview.checkup.scanAgeSkew': 'Scan timestamps are ahead of the clock (time skew); day counts are unreliable',
+    'overview.checkup.scanAgeSkewShort': 'Scan time looks wrong',
+    'overview.checkup.scanAgeUnread': '{n} drive(s) with unread scan history (that does not mean never scanned)',
+    'overview.checkup.scanAgeUnreadAll': 'Scan history not read',
+    'overview.checkup.scanAgeOk': 'Scan history is recent',
 
     // Duplicate scan → cleanup proposal (what / purpose / impact)
     'overview.dup.noneFound': 'No duplicates ≥1MB found (by size + header hash)',

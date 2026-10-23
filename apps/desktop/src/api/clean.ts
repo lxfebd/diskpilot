@@ -200,6 +200,12 @@ export const cleanApi = {
       : mocks.scanDuplicateFiles(rootPath, minSize),
 
   // ── 清理提醒（R3）──
+  /** R293 主动查询某盘「多久没扫」：只读 scan-stamps.jsonl，零磁盘扫描。
+   *  root 传任意路径都行，后端按盘根归一化匹配（C:\\ / C:/ / c: 同一条记录）。
+   *  三态必须可区分：never=还没扫过、clock_skew=时间戳异常、days=距上次天数。 */
+  scanStaleness: (root: string): Promise<ScanStaleness | null> =>
+    isTauri ? invoke<ScanStaleness>('scan_staleness_cmd', { root }) : Promise.resolve(null),
+
   getReminderConfig: () =>
     isTauri
       ? invoke<ReminderConfig>('get_reminder_config')
@@ -391,6 +397,22 @@ export interface AutoListConfigView {
 export interface SpaceFullWarn {
   path: string;
   days: number;
+}
+
+/** scan_staleness_cmd 的返回形状（R293 主动查询）。三个态必须可区分——
+ *  never = 从未扫过（说「还没扫过」，不是说「扫了很久」）；
+ *  clock_skew = 时间戳晚于当前（时钟被改/回拨，此刻任何天数都不可信）；
+ *  days = 距上次扫描天数（null = never 或 clock_skew；0 = 一天内刚扫过）。
+ *  与后端 ScanStalenessOut 一一对应；调用侧不必再猜。 */
+export interface ScanStaleness {
+  /** 该盘从未有过扫描记录（真空态）。 */
+  never: boolean;
+  /** 记录时间晚于当前时刻（时钟回拨 / 时间戳异常）。 */
+  clock_skew: boolean;
+  /** 距上次扫描的天数；null = never 或 clock_skew。 */
+  days: number | null;
+  /** 上次扫描的 unix 秒（展示「上次扫于 X」用）；null = 无有效记录。 */
+  last_at: number | null;
 }
 
 /** R293 扫描久未提醒（scan-stale 负载，逐盘）。只通知「多久没扫」，

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, ChevronDown, ChevronUp, File, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, History, ChevronDown, ChevronUp, File, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
@@ -336,6 +336,64 @@ export function startupCheckState(
   if (startup) return 'ok';
   if (startupErr) return 'unread';
   return 'none';
+}
+
+// ── 扫描时效（R293）：某盘「多久没扫」的三个态必须分开说 ──
+// 后端 `scan_staleness_cmd` 只读 scan-stamps.jsonl（真实扫描落点），零磁盘扫描。
+// 三态措辞不可混用：`never`（还没扫过）≠ `clock_skew`（时间戳异常，此刻任何
+// 天数都不可信）≠ `days`（距上次多久）。把 never 说成「扫了很久」，或把
+// 读失败说成「刚扫过」，都是编造。
+
+export type ScanAgeState = 'unread' | 'never' | 'stale' | 'skew' | 'ok';
+
+/** 单盘扫描时效读数：staleness == null 表示读失败（未读到，不是刚扫过）。 */
+export interface ScanAgeRow {
+  root: string;
+  staleness: { never: boolean; clock_skew: boolean; days: number | null } | null;
+}
+
+export interface ScanAgeSummary {
+  state: ScanAgeState;
+  /** 最该处理的盘根（never 优先，其次最久未扫）；null = 无需展示是哪块。 */
+  worstRoot: string | null;
+  /** 最久未扫的天数（state==='stale' 时有值）。 */
+  worstDays: number | null;
+  /** 从未扫过的盘数。 */
+  neverCount: number;
+  /** 达到阈值的盘数（不含 never）。 */
+  staleCount: number;
+  /** 读数失败（null）的盘数——「未读到」不是「刚扫过」。 */
+  unreadCount: number;
+}
+
+/** 汇总各盘扫描时效（纯函数，可单测）。
+ *  优先级：unread（全是未读到）> never（最该动手）> stale > skew > ok。
+ *  部分盘读数失败时仍按已知盘判定，unreadCount 单独提示，不静默吞掉。 */
+export function summarizeScanAge(
+  rows: readonly { root: string; staleness: { never: boolean; clock_skew: boolean; days: number | null } | null }[],
+  warnDays: number,
+): ScanAgeSummary {
+  const unread = rows.filter((r) => r.staleness == null);
+  const read = rows.filter((r) => r.staleness != null);
+  const never = read.filter((r) => r.staleness!.never);
+  const skew = read.filter((r) => !r.staleness!.never && r.staleness!.clock_skew);
+  const stale = read
+    .filter((r) => !r.staleness!.never && !r.staleness!.clock_skew && r.staleness!.days != null && r.staleness!.days >= warnDays)
+    .sort((a, b) => (b.staleness!.days ?? 0) - (a.staleness!.days ?? 0));
+  const base = { neverCount: never.length, staleCount: stale.length, unreadCount: unread.length };
+  if (read.length === 0) {
+    return { state: 'unread', worstRoot: null, worstDays: null, ...base };
+  }
+  if (never.length > 0) {
+    return { state: 'never', worstRoot: never[0].root, worstDays: null, ...base };
+  }
+  if (stale.length > 0) {
+    return { state: 'stale', worstRoot: stale[0].root, worstDays: stale[0].staleness!.days, ...base };
+  }
+  if (skew.length > 0) {
+    return { state: 'skew', worstRoot: skew[0].root, worstDays: null, ...base };
+  }
+  return { state: 'ok', worstRoot: null, worstDays: null, ...base };
 }
 
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
@@ -681,6 +739,9 @@ function ScopePreview({ items, lastClean }: { items: readonly { path: string; by
 // 温度走 fanCurveAdvice().temp_max_c（后端已归一化最高温，一次调用），
 // 启动项走 listStartupItems。不为展示新造任何磁盘扫描。
 const TEMP_WARN_C = 80;
+// 扫描时效阈值：与后端 collect_scan_stale 的默认值同口径（21 天）。
+// 展示用阈值——不写配置，只是「这格怎么说」的分界线。
+const SCAN_STALE_WARN_DAYS = 21;
 
 function HealthCheckupCard({
   drives,
@@ -707,12 +768,21 @@ function HealthCheckupCard({
   // startup 读失败单独记：失败 ≠「未检测」（真空语义），≠「无启动项」。
   const [startupErr, setStartupErr] = useState<string | null>(null);
   const [diskHealth, setDiskHealth] = useState<HwDiskHealth | null>(null);
+  // 扫描时效（R293）：每盘只读一次时间戳（scan_staleness_cmd 读 jsonl，零磁盘扫描）。
+  // 单个失败 → null（计入 unread，单独提示，不静默吞掉）；整体与温度同级：非关键路径。
+  const [scanAgeRows, setScanAgeRows] = useState<ScanAgeRow[] | null>(null);
+  // 体检卡只在挂载时拉一次，drives 后续变化不回拉（与温度/启动项同策略）；
+  // 刻意不把 drives 放进依赖——进总览就拉，drives 是展示输入不是查询输入。
   useEffect(() => {
     let alive = true;
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
     api.listStartupItems().then((r) => { if (alive) { setStartup(r); setStartupErr(null); } }).catch((e) => { if (alive) { setStartup(null); setStartupErr(String(e instanceof Error ? e.message : e)); } });
     ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
+    Promise.all(physicalDrives(drives).map((d) => api.scanStaleness(d.path).then((s) => ({ root: d.path, staleness: s }))))
+      .then((rows) => { if (alive) setScanAgeRows(rows); })
+      .catch(() => {});
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 刻意不把 drives 放进依赖（见上方注释）
   }, []);
 
   // 红盘按物理卷数：映射盘（D: 是 J:\D 的 subst）不是第二块盘，
@@ -723,6 +793,9 @@ function HealthCheckupCard({
   const redUnknownCount = physicalDrives(drives).length - knownDrives.length;
   const disabledCount = disabledStartupCount(startup);
   const tempHigh = isTempHigh(tempC, TEMP_WARN_C);
+  // 扫描时效一格：阈值与后端 collect_scan_stale 的默认值同口径（21 天）。
+  // 没盘（如浏览器演示无 drives）就整格不渲染——不拿空集合唱「未读到」。
+  const scanAge = scanAgeRows && scanAgeRows.length > 0 ? summarizeScanAge(scanAgeRows, SCAN_STALE_WARN_DAYS) : null;
 
   // 硬盘健康一格：读不到就说读不到，Unknown 不等于坏（第 26 轮的教训）。
   const hwDisks = diskHealth?.disks ?? [];
@@ -764,6 +837,36 @@ function HealthCheckupCard({
           <Thermometer size={14} />
           <span>{tempC != null ? t('overview.checkup.temp', { temp: Math.round(tempC) }) : t('overview.checkup.tempNone')}</span>
         </div>
+        {/* 扫描时效：多久没扫。只在有盘时出现；three 态措辞分开（R293） */}
+        {scanAge && (
+          <div
+            className={'ao-checkup-item' + (scanAge.state === 'never' || scanAge.state === 'stale' ? ' danger' : scanAge.state === 'skew' ? ' caution' : '')}
+            title={
+              scanAge.state === 'never'
+                ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
+                : scanAge.state === 'stale'
+                  ? t('overview.checkup.scanAgeStale', { n: scanAge.staleCount, days: scanAge.worstDays ?? 0 })
+                  : scanAge.state === 'skew'
+                    ? t('overview.checkup.scanAgeSkew')
+                    : scanAge.unreadCount > 0
+                      ? t('overview.checkup.scanAgeUnread', { n: scanAge.unreadCount })
+                      : undefined
+            }
+          >
+            <History size={14} />
+            <span>
+              {scanAge.state === 'unread'
+                ? t('overview.checkup.scanAgeUnreadAll')
+                : scanAge.state === 'never'
+                  ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
+                  : scanAge.state === 'stale'
+                    ? t('overview.checkup.scanAgeStaleDays', { days: scanAge.worstDays ?? 0 })
+                    : scanAge.state === 'skew'
+                      ? t('overview.checkup.scanAgeSkewShort')
+                      : t('overview.checkup.scanAgeOk')}
+            </span>
+          </div>
+        )}
         {/* 启动项 */}
         <div className="ao-checkup-item">
           <Rocket size={14} />

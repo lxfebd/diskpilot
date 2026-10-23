@@ -1544,6 +1544,14 @@ export async function setAutoListConfig(config: {
   return { enabled: autoListCfg.enabled, rules: autoListCfg.rules.map((r) => ({ ...r })) };
 }
 
+/** R293 扫描时效：浏览器里没有 scan-stamps.jsonl，也没有真实扫描记录，
+ *  返回 null = 「未读到」——不编造「刚扫过」或「从没扫过」两种都不成立的
+ *  结论（与 checkSpaceForecast 空列表同口径：没数据就说没数据）。 */
+export async function scanStaleness(_root: string): Promise<null> {
+  await wait(10);
+  return null;
+}
+
 export async function runReminderCheck(): Promise<{
   drives: { path: string; bytes: number }[];
   total_bytes: number;
