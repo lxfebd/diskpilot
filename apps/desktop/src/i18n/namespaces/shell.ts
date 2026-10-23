@@ -85,6 +85,8 @@ export const shell = {
     // R103 通知 toast 操作按钮（点击直达对应页面）
     'shell.toast.actionOverview': '去总览',
     'shell.toast.actionHistory': '查看周报',
+    // R294 温度持续偏高 → 去应用散热曲线（只导航；写入仍走 L2 双确认）
+    'shell.toast.actionFanCurve': '去调散热',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': '目录树',
@@ -259,6 +261,8 @@ export const shell = {
     // R103 notification toast action buttons (jump straight to the relevant page)
     'shell.toast.actionOverview': 'Go to Overview',
     'shell.toast.actionHistory': 'View report',
+    // R294 sustained high temp -> go adjust cooling (navigation only; writes still require L2 double-confirm)
+    'shell.toast.actionFanCurve': 'Adjust cooling',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': 'Tree',

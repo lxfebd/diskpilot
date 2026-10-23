@@ -345,9 +345,11 @@ export default function App() {
     return () => { unlisten.then((u) => u()); };
   }, [t]);
 
-  // R291 温度持续偏高（只通知；调速写入仍走 L2 双确认，本条不含任何写路径）。
-  // 文案说「检测到…持续偏高」而不是「有人把机器弄过热了」：后端给的是采样事实，
-  // 归因超出数据能力，不替它下结论。
+  // R291 温度持续偏高 → 提示去应用散热曲线（health-butler P2-2）。
+  // **只导航，不代写**：写入调速通道仍走 fan_control 的 confirmed + 权限中心
+  // 双确认；本条不绕过、也不自动应用任何曲线。
+  // 动作直达「设置 → 系统工具」的风扇控制区，而不是总览——风扇控制在那边，
+  // 跳总览等于让用户自己再找一遍（R294 修正此前跳 Overview 的误导）。
   useEffect(() => {
     if (!isTauri) return;
     const unlisten = listen<import('./api').ThermalSustained>('thermal-sustained', (e) => {
@@ -360,7 +362,10 @@ export default function App() {
           samples: String(p.samples),
         }),
         'warn',
-        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
+        {
+          label: t('shell.toast.actionFanCurve'),
+          run: () => { setSettingsTab('system'); setShowSettings(true); },
+        },
       );
     });
     return () => { unlisten.then((u) => u()); };
