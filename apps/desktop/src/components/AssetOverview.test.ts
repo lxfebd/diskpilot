@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -239,6 +239,40 @@ describe('红盘救援阈值（低配救援横幅）', () => {
     expect(isDriveCritical(849, 1000)).toBe(false); // 84.9%
     expect(isDriveCritical(60, 100)).toBe(false);
     expect(isDriveCritical(100, 0)).toBe(false); // 无容量数据不误报
+  });
+});
+
+// R305：体检条红盘格点下去该选中「最满的那块红盘」，不是开始全盘扫描。
+describe('红盘格落点（pickWorstRedDrive）', () => {
+  const d = (path: string, used: number, total: number) => ({
+    path,
+    used_bytes: used,
+    total_bytes: total,
+    free_bytes: total - used,
+  });
+
+  it('多块红盘取使用率最高的那块（不是第一块）', () => {
+    const worst = pickWorstRedDrive([d('C:\\', 80, 100), d('D:\\', 95, 100), d('E:\\', 88, 100)]);
+    expect(worst?.path).toBe('D:\\');
+  });
+
+  it('没有红盘返回 null；84.9% 不算红盘', () => {
+    expect(pickWorstRedDrive([d('C:\\', 60, 100), d('D:\\', 849, 1000)])).toBeNull();
+    expect(pickWorstRedDrive([])).toBeNull();
+  });
+
+  it('容量没读到的盘不参与排序（不能拿 0 当最满，也不能当红盘）', () => {
+    expect(pickWorstRedDrive([d('C:\\', 0, 0), d('D:\\', 90, 100)])?.path).toBe('D:\\');
+    expect(pickWorstRedDrive([d('C:\\', 999, 0)])).toBeNull();
+  });
+
+  it('映射盘按物理卷去重：D: 是 J:\\D 的 subst 时只算 J:（与红盘计数同口径）', () => {
+    const drives = [
+      { ...d('D:\\', 96, 100), mapped_to: 'J:\\D' },
+      d('J:\\', 90, 100),
+    ];
+    // 映射盘挂在目标卷上，真正那块盘是 J:
+    expect(pickWorstRedDrive(drives)?.path).toBe('J:\\');
   });
 });
 

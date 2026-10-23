@@ -68,6 +68,28 @@ export function capacityKnown(totalBytes: number): boolean {
   return totalBytes > 0;
 }
 
+/**
+ * 最该处理的那块红盘：已知容量的物理盘里使用率最高、且 >=85% 的那块；没有红盘返回 null。
+ *
+ * R305：体检条红盘格的 title 写着「查看红盘」，onClick 却是「扫描全部」——
+ * 点下去开始扫描，用户看不到是哪块盘红了。这里给它一个明确落点：
+ * 选中该盘（右侧详情卡 + 低配救援横幅都跟着它走）。
+ * 映射盘按物理卷去重（与红盘计数同口径），容量没读到的盘不参与排序（不能拿 0 当最满）。
+ */
+export function pickWorstRedDrive(drives: readonly DriveInfo[]): DriveInfo | null {
+  let worst: DriveInfo | null = null;
+  let worstPct = -1;
+  for (const d of physicalDrives(drives)) {
+    if (!capacityKnown(d.total_bytes) || !isDriveCritical(d.used_bytes, d.total_bytes)) continue;
+    const pct = driveUsagePct(d.used_bytes, d.total_bytes);
+    if (pct > worstPct) {
+      worstPct = pct;
+      worst = d;
+    }
+  }
+  return worst;
+}
+
 // 单盘使用率环形图：中心显示百分比；容量没读到时显示「未读到」而不是 0%。
 function DriveGauge({ usedBytes, totalBytes }: { usedBytes: number; totalBytes: number }) {
   const t = useT();
@@ -895,6 +917,7 @@ function HealthCheckupCard({
   onGoCleanup,
   onGoHardware,
   onGoStartup,
+  onGoRedDrive,
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
@@ -904,6 +927,8 @@ function HealthCheckupCard({
   onGoCleanup: () => void;
   onGoHardware?: () => void;
   onGoStartup?: () => void;
+  /** 选中指定的红盘（体检条红盘格用）：右侧详情卡与低配救援横幅都跟着这块盘走。 */
+  onGoRedDrive?: (path: string) => void;
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
@@ -948,6 +973,11 @@ function HealthCheckupCard({
   // 这里同步整格不渲染）。scanAgeRows 空 → null，不拿空集合唱「未读到」。
   const scanAge = scanStaleDays > 0 && scanAgeRows && scanAgeRows.length > 0 ? summarizeScanAge(scanAgeRows, scanStaleDays) : null;
 
+  // R305：红盘格该带去「那块红盘」而不是开始全盘扫描（title 一直写着「查看红盘」，
+  // 点下去却和下方「扫描全部」做同一件事，用户看不到是哪块盘红了）。
+  // 有红盘 → 选中最满的那块；没有红盘（含容量未读到）→ 退化为重新扫描读取容量。
+  const worstRed = pickWorstRedDrive(drives);
+
   // 硬盘健康一格：读不到就说读不到，Unknown 不等于坏（第 26 轮的教训）。
   const hwDisks = diskHealth?.disks ?? [];
   const hwSummary = summarizeDiskHealth(hwDisks);
@@ -961,8 +991,19 @@ function HealthCheckupCard({
         <span className="muted small">{t('overview.checkup.subtitle')}</span>
       </div>
       <div className="ao-checkup-grid">
-        {/* 红盘 */}
-        <button className={'ao-checkup-item' + (redCount > 0 ? ' danger' : '')} onClick={onScanAll} disabled={scanning} title={t('overview.checkup.goRescue')}>
+        {/* 红盘：有红盘 → 选中它（右侧详情 + 救援横幅），没有 → 重新扫描读容量 */}
+        <button
+          className={'ao-checkup-item' + (redCount > 0 ? ' danger' : '')}
+          onClick={() => {
+            if (worstRed && onGoRedDrive) {
+              onGoRedDrive(worstRed.path);
+              return;
+            }
+            onScanAll();
+          }}
+          disabled={scanning}
+          title={worstRed ? t('overview.checkup.goRescue') : t('overview.checkup.goRescanCapacity')}
+        >
           <HardDrive size={14} />
           <span>
             {redCount > 0
@@ -1369,6 +1410,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     resqHintRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  // R305：体检条红盘格「查看红盘」的落点 = 选中那块最满的红盘并滚到盘条
+  // （救援横幅与右侧详情卡都跟着选中盘走，用户能直接看到是哪块盘红了）。
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const goRedDrive = (path: string) => {
+    setSelPath(path);
+    stripRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
   const cap: [string, string, string] = selDrive
     ? formatBytesTriple(selDrive.total_bytes, selDrive.used_bytes, selDrive.free_bytes)
     : ['-', '-', '-'];
@@ -1481,19 +1530,22 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         onGoCleanup={onOpenCleanup}
         onGoHardware={onGoHardware}
         onGoStartup={onGoStartup}
+        onGoRedDrive={goRedDrive}
       />
 
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}
       {drives.length > 0 && (
-        <DriveStrip
-          drives={drives}
-          scanning={scanning}
-          onScanAll={onScanAll}
-          onScanDrive={onScanDrive}
-          onRefresh={onRefresh}
-          selPath={selPath}
-          onSelect={setSelPath}
-        />
+        <div ref={stripRef}>
+          <DriveStrip
+            drives={drives}
+            scanning={scanning}
+            onScanAll={onScanAll}
+            onScanDrive={onScanDrive}
+            onRefresh={onRefresh}
+            selPath={selPath}
+            onSelect={setSelPath}
+          />
+        </div>
       )}
 
       {/* ---- 低配救援横幅：选中盘使用率 >=85% 时出现 ---- */}
