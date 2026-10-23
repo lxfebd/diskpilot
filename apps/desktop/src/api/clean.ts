@@ -342,6 +342,17 @@ export interface SpaceFullWarn {
   days: number;
 }
 
+/** R293 扫描久未提醒（scan-stale 负载，逐盘）。只通知「多久没扫」，
+ *  不推测用户为什么没扫。 */
+export interface ScanStaleWarn {
+  /** 归一化盘根（c:/）。 */
+  path: string;
+  /** 距上次扫描天数；从未扫过时为 null。 */
+  days: number | null;
+  /** true = 该盘从未有过扫描记录。 */
+  never: boolean;
+}
+
 /** R291 温度持续偏高（thermal-sustained 负载）。只通知，不含任何写路径。 */
 export interface ThermalSustained {
   /** 判定阈值（℃）。 */

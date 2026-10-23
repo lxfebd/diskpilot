@@ -78,6 +78,10 @@ export const shell = {
     'shell.toast.startupChanged': '启动项有变化：新增 {added} 项{gone}（相对于 {days} 天前的快照）',
     'shell.toast.startupGone': '、减少 {gone} 项',
     'shell.toast.startupNoGap': '上次快照',
+    // R293 扫描久未（只通知「多久没扫」，不推测用户为什么没扫）
+    'shell.toast.scanStale': '{path} 已经 {days} 天没扫描了——扫一次更新数据',
+    'shell.toast.scanStaleNever': '{path} 还没扫描过——扫一次才能看清占用',
+    'shell.toast.scanStaleMore': '，另有 {n} 块盘也久未扫描',
     // R103 通知 toast 操作按钮（点击直达对应页面）
     'shell.toast.actionOverview': '去总览',
     'shell.toast.actionHistory': '查看周报',
@@ -248,6 +252,10 @@ export const shell = {
     'shell.toast.startupChanged': 'Startup items changed: {added} added{gone} (vs. a snapshot from {days} day(s) ago)',
     'shell.toast.startupGone': ', {gone} removed',
     'shell.toast.startupNoGap': 'last snapshot',
+    // R293 stale scan (notification only; never speculates why the user did not scan)
+    'shell.toast.scanStale': '{path} has not been scanned for {days} day(s) — scan to refresh',
+    'shell.toast.scanStaleNever': '{path} has never been scanned — scan once to see usage',
+    'shell.toast.scanStaleMore': ', {n} more drive(s) also stale',
     // R103 notification toast action buttons (jump straight to the relevant page)
     'shell.toast.actionOverview': 'Go to Overview',
     'shell.toast.actionHistory': 'View report',

@@ -65,6 +65,10 @@ pub(crate) struct ReminderConfig {
     /// 枚举成本（一次 PowerShell + 两个目录列举）远低于它的价值。
     #[serde(default = "default_startup_watch_minutes")]
     pub startup_watch_minutes: u64,
+    /// R293 扫描久未提醒阈值（天）。某盘距上次真实扫描超过这么多天 → 通知。
+    /// 0 = 关闭。用「从未扫过」也触发（那正是最该提醒的情形）。
+    #[serde(default)]
+    pub scan_stale_days: u64,
 }
 
 fn default_startup_watch_minutes() -> u64 {
@@ -93,6 +97,7 @@ impl Default for ReminderConfig {
             thermal_sustained_samples: 5,
             startup_watch_enabled: false,
             startup_watch_minutes: 60,
+            scan_stale_days: 21,
         }
     }
 }
@@ -157,6 +162,7 @@ pub(crate) fn set_reminder_config(
     thermal_sustained_samples: Option<u64>,
     startup_watch_enabled: Option<bool>,
     startup_watch_minutes: Option<u64>,
+    scan_stale_days: Option<u64>,
 ) -> Result<ReminderConfig, String> {
     let Some(p) = config_path(&app) else {
         return Err("无法定位数据目录".into());
@@ -202,6 +208,10 @@ pub(crate) fn set_reminder_config(
     if let Some(v) = startup_watch_minutes {
         // 钳 1..=1440（1 天）：低于 1 分钟会变成 PowerShell 进程风暴。
         cfg.startup_watch_minutes = v.clamp(1, 1440);
+    }
+    if let Some(v) = scan_stale_days {
+        // 钳 1..=3650（10 年）：超过 36.5 天的预警意义有限，锁死避免配置污染。
+        cfg.scan_stale_days = v.min(3650);
     }
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
@@ -356,6 +366,59 @@ pub(crate) fn startup_delta_now(app: &AppHandle) -> Option<StartupChanged> {
         gap_days: d.gap_days,
         prev_at: d.prev_at,
     })
+}
+
+/// R293 扫描久未提醒负载（emit 给前端）。只说「多久没扫」，
+/// **不推测用户为什么没扫**（可能是主动不需要、也可能机器换了盘）。
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ScanStaleWarn {
+    /// 归一化盘根（`c:/`）。
+    pub path: String,
+    /// 距上次扫描天数；从未扫过时为 None。
+    pub days: Option<u64>,
+    /// true = 该盘从未有过扫描记录。
+    pub never: bool,
+}
+
+/// 收集久未扫描的盘。只读 scan-stamps.jsonl，零磁盘扫描。
+/// `never`（从未扫过）也算命中——那正是最该提醒的情形；但必须单独标出，
+/// 因为 UI 措辞是「还没扫过」而不是「已经 N 天没扫」。
+pub(crate) fn collect_scan_stale(app: &AppHandle, cfg: &ReminderConfig) -> Vec<ScanStaleWarn> {
+    if cfg.scan_stale_days == 0 {
+        return Vec::new();
+    }
+    let Ok(stamps) = crate::scan_stamp::read_stamps(app) else {
+        // 读失败 → 空列表（通知通道：跳过即不发），不入日志刷屏。
+        return Vec::new();
+    };
+    let now = crate::scan_stamp::now_secs_pub();
+    let mut out: Vec<ScanStaleWarn> = Vec::new();
+    for root in distinct_scan_roots(&stamps) {
+        match crate::scan_stamp::scan_staleness(&stamps, root, now) {
+            crate::scan_stamp::ScanStaleness::Never => {
+                out.push(ScanStaleWarn { path: root.clone(), days: None, never: true });
+            }
+            crate::scan_stamp::ScanStaleness::ClockSkew => {
+                // 时钟异常不作为预警：此刻任何天数都不可信，报出来是噪音。
+            }
+            crate::scan_stamp::ScanStaleness::Days(d) if d >= cfg.scan_stale_days => {
+                out.push(ScanStaleWarn { path: root.clone(), days: Some(d), never: false });
+            }
+            crate::scan_stamp::ScanStaleness::Days(_) => {}
+        }
+    }
+    // 排序保证同输入同输出（测试/日志可复现）。
+    out.sort_by(|a, b| a.path.cmp(&b.path));
+    out
+}
+
+/// 只从**已有记录**的 root 里取候选——不能凭空枚举盘符：那会得到一堆
+/// 从未扫过也从未被记录的空洞盘，把提醒变成噪音。
+fn distinct_scan_roots(stamps: &[crate::scan_stamp::ScanStamp]) -> Vec<&String> {
+    let mut v: Vec<&String> = stamps.iter().map(|s| &s.root).collect();
+    v.sort();
+    v.dedup();
+    v
 }
 
 /// 主动查询一次（设置页「立即检查」按钮）：区分真空态与读失败。
@@ -538,6 +601,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
         // R292 启动项变化监听：flag 防抖同 thermal（报过一次就等集合回落才复位）。
         let mut last_startup_snapshot = std::time::Instant::now();
         let mut startup_warned = false;
+        // R293 扫描久未提醒：6h 一次，与其它通知解耦（它只读一个小 jsonl）。
+        let mut last_scan_stale = std::time::Instant::now();
+        let mut scan_stale_warned = false;
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
@@ -614,6 +680,18 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                 if last_weekly.elapsed() >= interval {
                     last_weekly = std::time::Instant::now();
                     let _ = crate::weekly_report::run_weekly_report(&app);
+                }
+            }
+            // R293 扫描久未提醒：scan_stale_days > 0 才检查；6h 一次。
+            if cfg.scan_stale_days > 0 && last_scan_stale.elapsed() >= Duration::from_secs(21600) {
+                last_scan_stale = std::time::Instant::now();
+                let stale = collect_scan_stale(&app, &cfg);
+                if !stale.is_empty() && !scan_stale_warned {
+                    scan_stale_warned = true;
+                    let _ = app.emit("scan-stale", stale);
+                } else if stale.is_empty() && scan_stale_warned {
+                    // 有盘被扫过 → 复位防抖（否则同一个陈旧状态会反复响）。
+                    scan_stale_warned = false;
                 }
             }
             // 空间耗尽预警（R99）：full_warn_days > 0 才检查；6h 一次。
@@ -733,6 +811,12 @@ mod tests {
         let c = ReminderConfig::default();
         assert!(!c.startup_watch_enabled, "监听默认关：不主动跑 PowerShell");
         assert_eq!(c.startup_watch_minutes, 60, "一小时一次：启动项不常变");
+    }
+
+    #[test]
+    fn scan_stale_defaults_conservative() {
+        let c = ReminderConfig::default();
+        assert_eq!(c.scan_stale_days, 21, "默认三周：短于这个周期的提醒是噪音");
     }
 
     #[test]

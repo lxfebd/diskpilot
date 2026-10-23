@@ -393,6 +393,33 @@ export default function App() {
     return () => { unlisten.then((u) => u()); };
   }, [t]);
 
+  // R293 扫描久未（只通知「多久没扫」，不推测用户为什么没扫——可能是主动
+  // 不需要、也可能换了盘。归因超出数据能力）。
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = listen<import('./api').ScanStaleWarn[]>('scan-stale', (e) => {
+      const warns = e.payload;
+      if (!Array.isArray(warns) || warns.length === 0) return;
+      const first = warns[0];
+      // 从未扫过与「很久没扫」是两回事，措辞必须分开。
+      const body = first.never
+        ? t('shell.toast.scanStaleNever', { path: first.path })
+        : t('shell.toast.scanStale', {
+            path: first.path,
+            days: first.days != null ? String(first.days) : '?',
+          });
+      useStore.getState().toast(
+        body
+          + (warns.length > 1
+            ? t('shell.toast.scanStaleMore', { n: warns.length - 1 })
+            : ''),
+        'warn',
+        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
+      );
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [t]);
+
   const pickDirectory = async () => {
     if (!isTauri) {
       // 提示语走文案表；默认值 'C:\\' 是数据，保持原样。

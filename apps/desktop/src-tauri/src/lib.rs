@@ -25,6 +25,7 @@ mod reminder;
 mod scaffold_cmds;
 mod scaffold_registry;
 mod scan;
+mod scan_stamp;
 mod space_history;
 pub(crate) mod startup;
 mod startup_history;
@@ -246,6 +247,7 @@ pub fn run() {
             reminder::set_reminder_config,
             reminder::run_reminder_check_cmd,
             reminder::check_startup_delta_cmd,
+            scan_stamp::scan_staleness_cmd,
             reminder::check_space_forecast_cmd,
             auto_list::get_auto_list_config,
             auto_list::set_auto_list_config,

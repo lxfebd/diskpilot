@@ -355,6 +355,12 @@ async fn commit_scan(
     }
     crate::suggestion_history::record_suggestion_point(&app, key, suggestion_total, &by_scaffold);
 
+    // health-butler P0-3「这块盘多久没扫」：commit_scan 是唯一真实的用户扫描
+    // 落点，在这里补一条时间戳。刻意不用 space_history 的采样时间冒充——那是
+    // 趋势采样（每日一次、未扫过的盘也采），拿它算会把从没扫过的盘说成
+    // 「昨天刚扫」。静默失败，不影响扫描主流程。
+    crate::scan_stamp::record_scan_stamp_now(&app, key);
+
     // 建议统计与完整树：cleanup_suggestions / AI 总览 / dry_run 目录匹配都从
     // 内存树秒算，替代每次切页都重新全盘 walk。
     if let Ok(mut cache) = state.cleanup_cache.lock() {
