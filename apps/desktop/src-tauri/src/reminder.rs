@@ -153,6 +153,10 @@ pub(crate) struct ReminderPayload {
     pub drives: Vec<DriveCleanup>,
     /// 全部盘合计可清字节。
     pub total_bytes: u64,
+    /// health-butler P2-1 按项授权命中项：(scaffold_id, 可清字节)。
+    /// 只用于「免去想起来要看」的主动告知；旧前端不读此字段，向前兼容。
+    #[serde(default)]
+    pub auto_list_hits: Vec<(String, u64)>,
     /// 生成时间（unix 秒）。
     pub ts: u64,
 }
@@ -297,7 +301,7 @@ pub(crate) fn run_reminder_check(app: &AppHandle) -> Result<Option<ReminderPaylo
         return Ok(None);
     }
     let state = app.state::<AppState>();
-    let payload = compute_reminder(state, &cfg)?;
+    let payload = compute_reminder(state, app, &cfg)?;
     if let Some(p) = &payload {
         let _ = app.emit("cleanup-reminder", p);
     }
@@ -312,12 +316,16 @@ pub(crate) fn run_reminder_check(app: &AppHandle) -> Result<Option<ReminderPaylo
 /// 包一层——cleanup_suggestions 内部有 spawn_blocking await。
 fn compute_reminder(
     state: State<'_, AppState>,
+    app: &AppHandle,
     cfg: &ReminderConfig,
 ) -> Result<Option<ReminderPayload>, String> {
     // 枚举所有盘（复用 lib.rs list_drives 语义：C..=Z 中可读的盘）。
     let substs = crate::drives::collect_substs();
     let mut drives: Vec<DriveCleanup> = Vec::new();
     let mut total: u64 = 0;
+    // P2-1：顺便在本轮已算出的 suggs 里按 scaffold 累计——**不额外跑一遍**
+    // cleanup_suggestions（铁律：不为展示新造磁盘扫描）。
+    let mut by_scaffold: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
     for letter in b'C'..=b'Z' {
         let root = format!("{}:\\", letter as char);
         if crate::drives::volume_info(root.clone()).is_err() {
@@ -336,18 +344,28 @@ fn compute_reminder(
             None,
             Some(true),
         ))?;
+        for s in &suggs {
+            *by_scaffold.entry(s.scaffold_id.clone()).or_insert(0) += s.bytes;
+        }
         let bytes: u64 = suggs.iter().map(|s| s.bytes).sum();
         if bytes > 0 {
             drives.push(DriveCleanup { path: root, bytes });
             total = total.saturating_add(bytes);
         }
     }
+    // P2-1 判定：用本轮已累计的 scaffold 小计，零额外 IO。
+    let auto_cfg = crate::auto_list::config_at(app);
+    let hits = crate::auto_list::tripped_rules(
+        &by_scaffold.into_iter().collect::<Vec<_>>(),
+        &auto_cfg,
+    );
     if total < cfg.min_bytes {
         return Ok(None);
     }
     Ok(Some(ReminderPayload {
         drives,
         total_bytes: total,
+        auto_list_hits: hits,
         ts: std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())

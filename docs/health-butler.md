@@ -106,9 +106,13 @@
 ### P2 — 主动干预（谨慎，逐项过安全评审）
 - 允许用户**按项授权**：「以后微信缓存超 5GB 自动进清单」仍是出清单，只是免去「想起来要看」；
   任何自动**删除**依旧不做（铁律）。
-  **未落地（截至 2026-10-23）**：`grep auto_add / per_item / item_authorize` 在本仓库
-  代码中零命中（`authorize` 仅命中 i18n 的权限错误文案）。需要新建"按 scaffold 的
-  授权规则"配置与消费点，且必须过安全评审——授权范围仍限"自动进清单"，不得扩到执行。
+  **已落地（R290）**：新增 `auto_list.rs`——按 scaffold 的授权规则（阈值触发），
+  持久化到 `app_data_dir()/auto-list.json`。命中判定只决定"该不该主动告知用户"，
+  **不产生任何执行计划**：真执行仍只有 `execute_ai_plan(user_confirmed)` 一条路。
+  接线在 `reminder::compute_reminder` 的本轮循环内顺手累计 scaffold 小计
+  （**零额外磁盘扫描**，守住 P0 门禁），命中项随 `ReminderPayload.auto_list_hits`
+  下发。规则点名的 scaffold 本机不存在 → `rule_status` 报 `unknown_scaffold`
+  并闲置（不猜近似 id）。
 - 风扇曲线托管：温度持续 > 阈值时提示应用一条预设风扇曲线（写操作，L2 每次确认不变）。
   **未落地（截至 2026-10-23）**：`hw_fan::fan_control` 已有 `temp_breaker_c` 参数
   （写入调速通道时的温度熔断守护），但那是"应用曲线后的超温回退"，不是"持续超温时

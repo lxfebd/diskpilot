@@ -5,6 +5,34 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-23 按 scaffold 授权自动进清单：免去「想起来要看」（R290）
+
+health-butler P2-1。用户可给某个 scaffold 配一条阈值规则（如「微信缓存
+≥5GB 时提醒我」），命中即在既有清理提醒的节奏里主动告知。**授权范围严格限
+于「自动进清单/主动告知」，不触碰执行**——真执行仍只有用户逐项确认后的
+`execute_ai_plan(user_confirmed)` 一条路，铁律不变。
+
+- 新增 `auto_list.rs`：规则模型（scaffold_id + min_bytes）与三个纯函数
+  （`should_auto_list` / `rule_status` / `tripped_rules`），全部可单测；
+  配置持久化到 `app_data_dir()/auto-list.json`，读→合并→写，缺文件=空规则集
+  （真空态诚实），读失败静默 default（增强功能不阻塞扫描/提醒主流程）。
+- 三条判定约定值得单独说：
+  ① **总开关关 = 一律不自动**（规则再匹配也不生效），与 `reminder.enabled` 同语义；
+  ② **同一 scaffold 多条规则取最低阈值**——用户既已授权，取更低的阈值才不会让
+     「配了 5GB 却因另一条 1GB 规则没生效」这种意外发生；
+  ③ **规则点名的 scaffold 本机不存在 → 报 `unknown_scaffold` 并闲置**，绝不悄悄
+     用一个近似 id 顶上（拼错要被看见，不是被猜中）。
+- 接线在 `reminder::compute_reminder` 的本轮循环内随手累计 scaffold 小计，
+  **零额外磁盘扫描**——P0 门禁「不为展示新造磁盘扫描」是硬约束，特意没有另起
+  一遍 `cleanup_suggestions`。命中项随 `ReminderPayload.auto_list_hits` 下发
+  （`#[serde(default)]`，旧前端不读此字段，向前兼容）。
+- 三个 Tauri 命令：`get_auto_list_config` / `set_auto_list_config` /
+  `get_auto_list_config_with_status`（后者把每条规则连同其生效状态一起返回，
+  UI 才能明示「这条规则指向的 scaffold 本机没有」）。
+- 新增 8 个 Rust 单测：开关语义 / 无规则不触发 / 阈值含边界 / 阈值为 0 /
+  多规则取最低阈值 / 未知 scaffold 不猜 / `tripped_rules` 过滤与定序 / 关开关
+  时 `tripped_rules` 返回空。
+
 ### 2026-10-23 AI 清理预演工具：自己核实清单，不把幻觉路径交给用户（R289）
 
 - 此前 AI 出清理清单只能"凭猜"：`propose_cleanup_plan` 纯出清单、从不校验

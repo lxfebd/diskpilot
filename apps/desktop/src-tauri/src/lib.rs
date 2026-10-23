@@ -2,6 +2,7 @@ use std::collections::HashMap;
 pub(crate) mod agent;
 pub(crate) mod ai;
 mod ai_net;
+mod auto_list;
 mod cleanup;
 mod cleanup_logic;
 mod conda;
@@ -243,6 +244,9 @@ pub fn run() {
             reminder::set_reminder_config,
             reminder::run_reminder_check_cmd,
             reminder::check_space_forecast_cmd,
+            auto_list::get_auto_list_config,
+            auto_list::set_auto_list_config,
+            auto_list::get_auto_list_config_with_status,
             weekly_report::generate_weekly_report_cmd,
             weekly_report::get_weekly_reports,
             space_history::get_space_history,
