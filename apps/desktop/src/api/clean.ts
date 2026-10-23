@@ -263,6 +263,32 @@ export const cleanApi = {
     isTauri
       ? invoke<SuggestionDiff | null>('suggestion_diff', { rootPath: root })
       : mocks.suggestionDiff(root),
+
+  // ── 按项授权自动进清单（health-butler P2-1，后端 auto_list.rs）──
+  /** 读授权规则集（只读）。缺文件 = 空规则集（真空态诚实）。 */
+  getAutoListConfig: () =>
+    isTauri
+      ? invoke<AutoListConfigView>('get_auto_list_config_with_status', {
+          knownScaffolds: [] as string[],
+        })
+      : mocks.getAutoListConfig(),
+
+  /** 读授权规则集，并让后端按本机真实 scaffolds 标注每条规则的生效状态
+   *  （ok / unknown_scaffold）。`knownScaffolds` 由调用方从 list_scaffolds 传入，
+   *  后端不反向依赖 scaffold 加载路径。 */
+  getAutoListConfigWithStatus: (knownScaffolds: string[]) =>
+    isTauri
+      ? invoke<AutoListConfigView>('get_auto_list_config_with_status', { knownScaffolds })
+      : mocks.getAutoListConfigWithStatus(knownScaffolds),
+
+  /** 覆写整套授权规则集（设置页持有的就是完整规则集）。
+   *  **只影响「该不该主动告知」，不产生任何执行计划**——真执行仍只有
+   *  `executeAiPlan(userConfirmed)` 一条路。不需要 confirm 参数：它写的是
+   *  规则配置，不是文件删除。 */
+  setAutoListConfig: (config: AutoListConfig): Promise<AutoListConfig> =>
+    isTauri
+      ? invoke<AutoListConfig>('set_auto_list_config', { config })
+      : mocks.setAutoListConfig(config),
 };
 
 // 清理域内部类型（节点正由 types.ts 提供；此处为本域独立形状，语义同 rust 端
@@ -333,7 +359,40 @@ export interface DriveCleanup {
 export interface ReminderPayload {
   drives: DriveCleanup[];
   total_bytes: number;
+  /** health-butler P2-1 按项授权命中项：(scaffold_id, 可清字节)。
+   *  只用于「免去想起来要看」的主动告知，不含任何执行计划。
+   *  旧后端可能不带此字段 → 缺省空数组（向前兼容，不当作「没命中」以外的含义）。 */
+  auto_list_hits: [string, number][];
   ts: number;
+}
+
+/** 一条按项授权规则：某 scaffold 可清量达到 `min_bytes` 时自动进清单。
+ *  **只影响清单**，不触碰执行——真执行仍只有用户逐项确认后的
+ *  `execute_ai_plan(user_confirmed)` 一条路。 */
+export interface AutoListRule {
+  /** scaffold id（如 `wechat`）。必须能在本机 scaffolds 里找到，否则闲置。 */
+  scaffold_id: string;
+  /** 触发阈值（字节）。达到即自动进清单，0 = 一有可清量就进。 */
+  min_bytes: number;
+}
+
+/** 规则 + 其在本机 scaffolds 下的生效状态（UI 用它明示闲置原因）。 */
+export interface AutoListRuleView extends AutoListRule {
+  /** ok / unknown_scaffold：id 不在本机 scaffolds 中 → 规则闲置，不猜近似 id。 */
+  status: 'ok' | 'unknown_scaffold';
+}
+
+/** 规则集（set_auto_list_config 的入参/返回值形状；不带生效状态）。 */
+export interface AutoListConfig {
+  /** 总开关。false = 任何规则都不生效（与 reminder.enabled 同语义）。 */
+  enabled: boolean;
+  rules: AutoListRule[];
+}
+
+/** 规则集 + 每条规则的状态（get_auto_list_config_with_status 返回形状）。 */
+export interface AutoListConfigView {
+  enabled: boolean;
+  rules: AutoListRuleView[];
 }
 
 /** R99 空间耗尽预警（space-full-reminder 负载，逐盘）：days=0 表示已满。 */

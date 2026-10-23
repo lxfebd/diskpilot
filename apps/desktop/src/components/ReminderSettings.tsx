@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Play, BellOff, TrendingUp } from 'lucide-react';
+import { Play, BellOff, TrendingUp, ListPlus, Trash2, AlertTriangle } from 'lucide-react';
 import { api } from '../api';
-import type { ReminderConfig, ReminderPayload, SpaceForecast } from '../api';
+import type { ReminderConfig, ReminderPayload, SpaceForecast, AutoListConfigView, AutoListRule } from '../api';
 import { formatBytes } from '../format';
 import { useStore } from '../store';
 import { useT } from '../i18n';
@@ -13,6 +13,8 @@ import { useT } from '../i18n';
  */
 export function ReminderSettings() {
   const t = useT();
+  // 本机已安装清理项（规则候选 + 生效状态判定用）。来自总览的 listScaffolds 缓存。
+  const scaffolds = useStore((s) => s.scaffolds);
   const [cfg, setCfg] = useState<ReminderConfig | null>(null);
   // 配置读失败单独记：失败 ≠ 加载中（R79），绝不永久转圈。
   const [cfgErr, setCfgErr] = useState<string | null>(null);
@@ -23,6 +25,12 @@ export function ReminderSettings() {
   const [forecastBusy, setForecastBusy] = useState(false);
   const [forecast, setForecast] = useState<SpaceForecast[] | null>(null);
   const [forecastErr, setForecastErr] = useState<string | null>(null);
+  // health-butler P2-1 按项授权：规则集（含每条生效状态）+ 待添加的 scaffold + 阈值。
+  const [autoList, setAutoList] = useState<AutoListConfigView | null>(null);
+  const [autoListErr, setAutoListErr] = useState<string | null>(null);
+  const [autoListBusy, setAutoListBusy] = useState(false);
+  const [pickId, setPickId] = useState('');
+  const [pickMb, setPickMb] = useState(0);
 
   // 打开时同步后端配置
   useEffect(() => {
@@ -37,6 +45,57 @@ export function ReminderSettings() {
       cancelled = true;
     };
   }, []);
+
+  // health-butler P2-1：读取授权规则集（带每条规则的生效状态，按真实 scaffolds 标注）。
+  useEffect(() => {
+    let cancelled = false;
+    api.getAutoListConfigWithStatus(scaffolds.map((s) => s.id)).then((v) => {
+      if (!cancelled) { setAutoList(v); setAutoListErr(null); }
+    }).catch((e) => {
+      // 读失败 ≠ 加载中：记录原因展示（R79 同一口径）。
+      if (!cancelled) setAutoListErr(String(e instanceof Error ? e.message : e));
+    });
+    return () => { cancelled = true; };
+    // scaffolds 变化（安装/卸载清理项后）时重取状态标注。
+  }, [scaffolds]);
+
+  const persistAutoList = async (next: { enabled: boolean; rules: AutoListRule[] }) => {
+    setAutoListBusy(true);
+    try {
+      // 后端覆写语义：调用方持有的就是完整规则集。status 由下次带已知列表的加载补上。
+      await api.setAutoListConfig(next);
+      const v = await api.getAutoListConfigWithStatus(scaffolds.map((s) => s.id));
+      setAutoList(v);
+    } catch (e) {
+      useStore.getState().toast(t('system.reminder.toastSaveFailed', { err: String(e instanceof Error ? e.message : e) }), 'err');
+    } finally {
+      setAutoListBusy(false);
+    }
+  };
+
+  const addAutoListRule = async () => {
+    if (!autoList || !pickId) return;
+    const target = scaffolds.find((s) => s.id === pickId);
+    if (!target) return;
+    // 与后端同语义：多规则命中同一 scaffold 取最低阈值——重复授权同一项时
+    // 取更小阈值，避免「配了 5GB 却因另一条规则门槛更高没生效」的意外。
+    const next = [...autoList.rules.map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes }))];
+    next.push({ scaffold_id: pickId, min_bytes: pickMb * 1024 * 1024 });
+    next.sort((a, b) => a.scaffold_id.localeCompare(b.scaffold_id));
+    await persistAutoList({ enabled: autoList.enabled, rules: next });
+    setPickId('');
+    setPickMb(0);
+  };
+
+  const removeAutoListRule = async (scaffoldId: string) => {
+    if (!autoList) return;
+    const next = autoList.rules
+      .filter((r) => r.scaffold_id !== scaffoldId)
+      .map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes }));
+    await persistAutoList({ enabled: autoList.enabled, rules: next });
+  };
+
+  const addable = scaffolds.filter((s) => !autoList?.rules.some((r) => r.scaffold_id === s.id));
 
   const save = async (patch: Partial<ReminderConfig>) => {
     setSaving(true);
@@ -256,6 +315,90 @@ export function ReminderSettings() {
         </div>
       )}
       {saving && <div className="muted small" style={{ marginTop: 6 }}>{t('system.reminder.saving')}</div>}
+
+      {/* health-butler P2-1 按项授权：给清理项设阈值规则，达标自动进总览清单 */}
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.autoListTitle')}</div>
+      <div className="muted small" style={{ marginTop: 2 }}>
+        {t('system.reminder.autoListDescA')}
+        <b> {t('system.reminder.autoListDescB')}</b>
+      </div>
+
+      {autoListErr ? (
+        <div className="muted small err" style={{ marginTop: 8 }}>{autoListErr}</div>
+      ) : !autoList ? (
+        <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.loading')}</div>
+      ) : (
+        <>
+          <div className="switch-row" style={{ marginTop: 10 }}>
+            <div>
+              <div className="switch-label">{t('system.reminder.enabledLabel')}</div>
+              <div className="switch-desc">{t('system.reminder.autoListDescB')}</div>
+            </div>
+            <input
+              type="checkbox"
+              className="switch"
+              checked={autoList.enabled}
+              disabled={autoListBusy}
+              onChange={(e) => void persistAutoList({ enabled: e.target.checked, rules: autoList.rules.map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes })) })}
+            />
+          </div>
+
+          {autoList.rules.length === 0 ? (
+            <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.autoListEmpty')}</div>
+          ) : (
+            <div style={{ marginTop: 8 }}>
+              {autoList.rules.map((r) => {
+                const sc = scaffolds.find((s) => s.id === r.scaffold_id);
+                return (
+                  <div key={r.scaffold_id} className="rule-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                    <AlertTriangle size={13} style={{ flexShrink: 0 }} color={r.status === 'unknown_scaffold' ? '#b45309' : undefined} />
+                    <span style={{ flex: 1 }}>{sc ? sc.name : r.scaffold_id}</span>
+                    <span className="muted small">
+                      {r.min_bytes === 0 ? t('system.reminder.autoListAny') : formatBytes(r.min_bytes)}
+                    </span>
+                    {r.status === 'unknown_scaffold' && (
+                      <span className="muted xsmall" style={{ color: '#b45309' }}>{t('system.reminder.autoListIdle')}</span>
+                    )}
+                    <button className="ghost icon" aria-label={t('system.reminder.autoListDelete')} disabled={autoListBusy} onClick={() => void removeAutoListRule(r.scaffold_id)}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {addable.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                className="field"
+                value={pickId}
+                onChange={(e) => setPickId(e.target.value)}
+                style={{ maxWidth: 220 }}
+              >
+                <option value="">{t('system.reminder.autoListPick')}</option>
+                {addable.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              <select
+                className="field"
+                value={pickMb}
+                onChange={(e) => setPickMb(Number(e.target.value))}
+                style={{ maxWidth: 150 }}
+              >
+                <option value={0}>{t('system.reminder.autoListAny')}</option>
+                {[50, 100, 200, 500, 1024, 2048].map((mb) => (
+                  <option key={mb} value={mb}>{formatBytes(mb * 1024 * 1024)}</option>
+                ))}
+              </select>
+              <button className="ghost" disabled={autoListBusy || !pickId} onClick={() => void addAutoListRule()}>
+                <ListPlus size={13} /> {t('system.reminder.autoListAdd')}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

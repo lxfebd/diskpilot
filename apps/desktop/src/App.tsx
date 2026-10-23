@@ -296,8 +296,13 @@ export default function App() {
     if (!isTauri) return;
     const unlisten = listen<import('./api').ReminderPayload>('cleanup-reminder', (e) => {
       const p = e.payload;
+      // health-butler P2-1：有规则命中的话在通知里点出（旧后端无该字段则跳过）。
+      const hitN = p.auto_list_hits?.length ?? 0;
+      const body = hitN > 0
+        ? t('shell.toast.cleanupReminder', { size: formatBytes(p.total_bytes), n: p.drives.length }) + ' · ' + t('system.reminder.autoListHits', { items: hitN })
+        : t('shell.toast.cleanupReminder', { size: formatBytes(p.total_bytes), n: p.drives.length });
       useStore.getState().toast(
-        t('shell.toast.cleanupReminder', { size: formatBytes(p.total_bytes), n: p.drives.length }),
+        body,
         'ok',
         // R103：点击直达总览建议清理区（那里仍是唯一执行入口）。
         { label: t('shell.toast.actionOverview'), run: () => setView('overview') },

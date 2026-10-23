@@ -168,6 +168,19 @@ export const system = {
     'system.reminder.forecastNotEnough': '记录不足（需至少两次采样）',
     'system.reminder.forecastReleasing': '释放中/持平（无需预警）',
     'system.reminder.forecastWarn': ' ⚠ 预警中',
+
+    // ── 按项授权自动进清单（health-butler P2-1，R290 + R295 前端接线）──
+    'system.reminder.autoListTitle': '按项授权自动进清单',
+    'system.reminder.autoListDescA': '给某个清理项设一条规则：可清量达到阈值时自动进总览清单，免去「想起来要看」。',
+    'system.reminder.autoListDescB': '只出清单，绝不自动删除',
+    'system.reminder.autoListEmpty': '还没有授权规则——从下面选一个清理项添加。',
+    'system.reminder.autoListPick': '选择清理项…',
+    'system.reminder.autoListAdd': '添加规则',
+    'system.reminder.autoListThreshold': '阈值',
+    'system.reminder.autoListAny': '一有就进',
+    'system.reminder.autoListIdle': '本机没有该清理项，规则闲置（不会用近似项顶上）',
+    'system.reminder.autoListDelete': '删除这条授权规则',
+    'system.reminder.autoListHits': '其中 {items} 已按你的授权规则进清单',
   },
   en: {
     // ── Shared short words ──
@@ -334,5 +347,18 @@ export const system = {
     'system.reminder.forecastNotEnough': 'Not enough samples (need at least two)',
     'system.reminder.forecastReleasing': 'Releasing / flat (no warning needed)',
     'system.reminder.forecastWarn': ' ⚠ warning',
+
+    // ── Per-item authorized auto-listing (health-butler P2-1, R290 + R295) ──
+    'system.reminder.autoListTitle': 'Auto-list on your terms',
+    'system.reminder.autoListDescA': 'Set a rule per cleanup item: once its reclaimable size reaches the threshold it goes straight into the Overview list, so you never have to remember to check.',
+    'system.reminder.autoListDescB': 'List only — never deletes anything automatically',
+    'system.reminder.autoListEmpty': 'No rules yet — pick a cleanup item below to add one.',
+    'system.reminder.autoListPick': 'Pick a cleanup item…',
+    'system.reminder.autoListAdd': 'Add rule',
+    'system.reminder.autoListThreshold': 'Threshold',
+    'system.reminder.autoListAny': 'Any amount',
+    'system.reminder.autoListIdle': 'This cleanup item is not on this machine — the rule stays idle (no near-match substitution)',
+    'system.reminder.autoListDelete': 'Remove this authorization rule',
+    'system.reminder.autoListHits': '{items} made it into the list under your authorization rule(s)',
   },
 };

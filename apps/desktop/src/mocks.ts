@@ -1492,9 +1492,68 @@ export async function setReminderConfig(patch: Partial<MockReminderConfig>): Pro
   return { ...reminderCfg };
 }
 
+// —— health-butler P2-1：按项授权自动进清单（演示态内存规则集）——
+// 真实桌面端持久化到 app_data_dir()/auto-list.json，命中判定在 reminder 循环里
+// 顺手累计 scaffold 小计（零额外磁盘扫描）。浏览器里没有真实规则配置文件，
+// 用模块级状态模拟，让设置页的规则管理在本会话内可真实增删/切换。
+// 语义铁律不变：命中「自动进清单」只影响主动告知，不产生任何执行计划。
+
+export interface MockAutoListRule {
+  scaffold_id: string;
+  min_bytes: number;
+}
+
+export interface MockAutoListRuleView extends MockAutoListRule {
+  status: 'ok' | 'unknown_scaffold';
+}
+
+export interface MockAutoListConfigView {
+  enabled: boolean;
+  rules: MockAutoListRuleView[];
+}
+
+let autoListCfg: { enabled: boolean; rules: MockAutoListRule[] } = {
+  enabled: false,
+  rules: [],
+};
+
+/** 把规则映射成带状态视图：id 不在已知 scaffolds 中 → unknown_scaffold（不猜近似 id）。 */
+function autoListView(known: string[]): MockAutoListConfigView {
+  return {
+    enabled: autoListCfg.enabled,
+    rules: autoListCfg.rules.map((r) => ({
+      ...r,
+      status: known.includes(r.scaffold_id) ? 'ok' : 'unknown_scaffold',
+    })),
+  };
+}
+
+export async function getAutoListConfig(): Promise<MockAutoListConfigView> {
+  await wait(20);
+  return autoListView([]);
+}
+
+export async function getAutoListConfigWithStatus(known: string[]): Promise<MockAutoListConfigView> {
+  await wait(20);
+  return autoListView(known);
+}
+
+export async function setAutoListConfig(config: {
+  enabled: boolean;
+  rules: MockAutoListRule[];
+}): Promise<{ enabled: boolean; rules: MockAutoListRule[] }> {
+  await wait(20);
+  // 覆写语义与后端一致：调用方持有的就是完整规则集；status 由下一次
+  // 带已知 scaffold 列表的加载（getAutoListConfigWithStatus）补上。
+  autoListCfg = { enabled: config.enabled, rules: config.rules.map((r) => ({ ...r })) };
+  return { enabled: autoListCfg.enabled, rules: autoListCfg.rules.map((r) => ({ ...r })) };
+}
+
 export async function runReminderCheck(): Promise<{
   drives: { path: string; bytes: number }[];
   total_bytes: number;
+  /** health-butler P2-1 命中项：(scaffold_id, 字节)。演示模式给空（没有真实规则）。 */
+  auto_list_hits: [string, number][];
   ts: number;
 }> {
   await wait(70);
@@ -1507,6 +1566,7 @@ export async function runReminderCheck(): Promise<{
   return {
     drives: [{ path: 'C:\\', bytes: suggestible }],
     total_bytes: suggestible,
+    auto_list_hits: [],
     ts: Math.floor(Date.now() / 1000),
   };
 }
