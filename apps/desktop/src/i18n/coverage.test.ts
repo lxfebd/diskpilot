@@ -82,4 +82,25 @@ describe('i18n 文案表', () => {
     }
     expect(dirty).toEqual([]);
   });
+
+  // R313：键集一致只保证「有这个键」，不保证英文句子还用得上参数。zh 写了 {n}、
+  // en 忘了 {n} 时，英文界面会静默丢掉那个数字（反之会漏出裸 {n}）。占位符集合
+  // 必须逐键一致——这是文案层最容易在翻译/改词时丢掉的一层。
+  it('同一键的 zh / en 占位符集合一致', () => {
+    const placeholderOf = (s: string): string[] =>
+      [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    const drift: string[] = [];
+    for (const ns of NAMESPACES) {
+      for (const [k, zhText] of Object.entries(ns.zh) as [string, string][]) {
+        const enText = (ns.en as Record<string, string>)[k];
+        if (typeof enText !== 'string') continue; // 键缺失由上一条用例负责
+        const zh = placeholderOf(zhText);
+        const en = placeholderOf(enText);
+        if (zh.join(',') !== en.join(',')) {
+          drift.push(`${k}：zh [${zh.join(',')}] vs en [${en.join(',')}]`);
+        }
+      }
+    }
+    expect(drift).toEqual([]);
+  });
 });

@@ -9,7 +9,6 @@ export const cleanup = {
   ns: 'cleanup',
   zh: {
     // ── CleanupModal：标题与 scope 行 ──
-    'cleanup.title': '清理 · {name}',
     'cleanup.scanning': '扫描中…',
     'cleanup.empty': '空',
     'cleanup.withinRetention': '共 {size} · {files} 文件 · 全部在保留期内（不会清）',
@@ -191,7 +190,6 @@ export const cleanup = {
   },
   en: {
     // ── CleanupModal: title and scope rows ──
-    'cleanup.title': 'Clean · {name}',
     'cleanup.scanning': 'Measuring…',
     'cleanup.empty': 'Empty',
     'cleanup.withinRetention': '{size} total · {files} files · all within retention (nothing to clean)',
