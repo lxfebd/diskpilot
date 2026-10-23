@@ -1470,6 +1470,8 @@ export interface MockReminderConfig {
   weekly_report_enabled: boolean;
   weekly_interval_days: number;
   full_warn_days: number;
+  /** R297：多久没扫阈值（默认 21，与后端 ReminderConfig 默认同口径） */
+  scan_stale_days: number;
 }
 
 let reminderCfg: MockReminderConfig = {
@@ -1479,6 +1481,7 @@ let reminderCfg: MockReminderConfig = {
   weekly_report_enabled: false,
   weekly_interval_days: 7,
   full_warn_days: 0,
+  scan_stale_days: 21,
 };
 
 export async function getReminderConfig(): Promise<MockReminderConfig> {

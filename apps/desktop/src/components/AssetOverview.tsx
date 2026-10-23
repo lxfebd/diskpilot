@@ -771,10 +771,14 @@ function HealthCheckupCard({
   // 扫描时效（R293）：每盘只读一次时间戳（scan_staleness_cmd 读 jsonl，零磁盘扫描）。
   // 单个失败 → null（计入 unread，单独提示，不静默吞掉）；整体与温度同级：非关键路径。
   const [scanAgeRows, setScanAgeRows] = useState<ScanAgeRow[] | null>(null);
+  // 阈值与提醒设置同源：用户在设置里改「多久没扫」天数，体检格跟着改；
+  // 设为 0（关闭提醒）时整格不渲染——与后端 collect_scan_stale 的 off 语义一致。
+  const [scanStaleDays, setScanStaleDays] = useState<number>(SCAN_STALE_WARN_DAYS);
   // 体检卡只在挂载时拉一次，drives 后续变化不回拉（与温度/启动项同策略）；
   // 刻意不把 drives 放进依赖——进总览就拉，drives 是展示输入不是查询输入。
   useEffect(() => {
     let alive = true;
+    api.getReminderConfig().then((c) => { if (alive && c?.scan_stale_days != null) setScanStaleDays(c.scan_stale_days); }).catch(() => {});
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
     api.listStartupItems().then((r) => { if (alive) { setStartup(r); setStartupErr(null); } }).catch((e) => { if (alive) { setStartup(null); setStartupErr(String(e instanceof Error ? e.message : e)); } });
     ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
@@ -795,7 +799,9 @@ function HealthCheckupCard({
   const tempHigh = isTempHigh(tempC, TEMP_WARN_C);
   // 扫描时效一格：阈值与后端 collect_scan_stale 的默认值同口径（21 天）。
   // 没盘（如浏览器演示无 drives）就整格不渲染——不拿空集合唱「未读到」。
-  const scanAge = scanAgeRows && scanAgeRows.length > 0 ? summarizeScanAge(scanAgeRows, SCAN_STALE_WARN_DAYS) : null;
+  // 阈值默认 21；配置读到就用配置的（0 = 关闭：后端 collect_scan_stale 对 0 返回空，
+  // 这里同步整格不渲染）。scanAgeRows 空 → null，不拿空集合唱「未读到」。
+  const scanAge = scanStaleDays > 0 && scanAgeRows && scanAgeRows.length > 0 ? summarizeScanAge(scanAgeRows, scanStaleDays) : null;
 
   // 硬盘健康一格：读不到就说读不到，Unknown 不等于坏（第 26 轮的教训）。
   const hwDisks = diskHealth?.disks ?? [];

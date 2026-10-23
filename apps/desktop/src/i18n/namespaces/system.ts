@@ -157,6 +157,12 @@ export const system = {
     'system.reminder.fullWarnDays': '{n} 天',
     'system.reminder.fullWarnHint': '需要至少两次扫描记录才有趋势；清理或卸载后释放空间，预警会自动解除。',
 
+    // ── R297 扫描时效提醒阈值 ──
+    'system.reminder.scanStaleLabel': '扫描时效提醒',
+    'system.reminder.scanStaleDescA': '超过阈值天数没扫描的盘，会在后台提醒「这块盘多久没扫」。同阈值也用于今日体检的扫描时效格。',
+    'system.reminder.scanStaleDescB': '只读时间戳，绝不自动扫描',
+    'system.reminder.scanStaleHint': '「从未扫过」的盘也会提醒；0 = 关闭该提醒。',
+
     // ── R100 空间趋势逐盘检查 ──
     'system.reminder.forecastTitle': '各盘空间趋势',
     'system.reminder.forecastCheck': '检查趋势',
@@ -335,6 +341,12 @@ export const system = {
     'system.reminder.fullWarnOff': 'Off',
     'system.reminder.fullWarnDays': '{n} days',
     'system.reminder.fullWarnHint': 'Needs at least two scan samples to have a trend; freeing space by cleaning or uninstalling clears the warning automatically.',
+
+    // ── R297 scan-staleness reminder threshold ──
+    'system.reminder.scanStaleLabel': 'Scan staleness reminder',
+    'system.reminder.scanStaleDescA': 'Drives not scanned within the threshold get a background "how long since last scan" reminder. The same threshold also drives the scan-age tile on the daily health checkup.',
+    'system.reminder.scanStaleDescB': 'Read-only timestamps — never auto-scans',
+    'system.reminder.scanStaleHint': 'Never-scanned drives are also reminded; 0 turns this reminder off.',
 
     // ── R100 per-drive space trend check ──
     'system.reminder.forecastTitle': 'Space trend per drive',

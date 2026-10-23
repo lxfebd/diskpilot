@@ -280,6 +280,27 @@ export function ReminderSettings() {
         {t('system.reminder.fullWarnHint')}
       </div>
 
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.scanStaleLabel')}</div>
+      <div className="switch-desc">
+        {t('system.reminder.scanStaleDescA')}
+        <b>{t('system.reminder.scanStaleDescB')}</b>
+      </div>
+      <div className="seg seg-5 auto" style={{ marginTop: 8 }}>
+        {[0, 7, 14, 21, 30, 60].map((d) => (
+          <button
+            key={d}
+            type="button"
+            className={`seg-opt${cfg.scan_stale_days === d ? ' active' : ''}`}
+            onClick={() => save({ scan_stale_days: d })}
+          >
+            {d === 0 ? t('system.reminder.fullWarnOff') : t('system.reminder.fullWarnDays', { n: d })}
+          </button>
+        ))}
+      </div>
+      <div className="muted small" style={{ marginTop: 6 }}>
+        {t('system.reminder.scanStaleHint')}
+      </div>
+
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.forecastTitle')}</div>
       <button className="ghost" onClick={checkForecast} disabled={forecastBusy}>
         <TrendingUp size={13} /> {forecastBusy ? t('system.reminder.forecastChecking') : t('system.reminder.forecastCheck')}

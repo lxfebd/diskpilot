@@ -1045,7 +1045,8 @@ footer {
 .seg-5 .seg-opt { padding: 8px 4px; font-size: 11.5px; text-align: center; }
 /* 选项较多/标签较长时（如清理提醒的间隔秒数）四列均分会把文字压出省略号，
    改用内容自适应列宽 + 允许换行，保证每个选项完整可读 */
-.seg-4.auto {
+.seg-4.auto,
+.seg-5.auto {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -1054,7 +1055,8 @@ footer {
   box-shadow: none;
   overflow: visible;
 }
-.seg-4.auto .seg-opt {
+.seg-4.auto .seg-opt,
+.seg-5.auto .seg-opt {
   flex: 1 1 auto;
   min-width: 52px;
   white-space: normal;

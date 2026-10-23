@@ -218,6 +218,8 @@ export const cleanApi = {
     weekly_report_enabled?: boolean;
     weekly_interval_days?: number;
     full_warn_days?: number;
+    /** R297 「这块盘多久没扫」阈值（天）；0 = 关闭该提醒。后端钳 ≤3650。 */
+    scan_stale_days?: number;
   }) =>
     isTauri
       ? invoke<ReminderConfig>('set_reminder_config', {
@@ -227,6 +229,7 @@ export const cleanApi = {
           weeklyReportEnabled: patch.weekly_report_enabled ?? null,
           weeklyIntervalDays: patch.weekly_interval_days ?? null,
           fullWarnDays: patch.full_warn_days ?? null,
+          scanStaleDays: patch.scan_stale_days ?? null,
         })
       : mocks.setReminderConfig(patch),
 
@@ -345,6 +348,9 @@ export interface ReminderConfig {
   weekly_interval_days: number;
   /** 空间耗尽预警阈值天数（R99，默认 0=关）：按趋势外推 ≤N 天满的盘会提醒 */
   full_warn_days: number;
+  /** 「多久没扫」提醒阈值天（R293，默认 21；0 = 关闭该提醒）。
+   *  今日体检「扫描时效」格与它同口径：设置里改，体检跟着改。 */
+  scan_stale_days: number;
 }
 
 /** 单盘可清字节（只读统计） */

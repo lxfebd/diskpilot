@@ -59,4 +59,13 @@ describe('扫描时效汇总（R293：never / stale / skew / unread 四态分开
     // 0 = 一天内刚扫过，必须是 ok
     expect(summarizeScanAge([row('C:\\', 0)], 21).state).toBe('ok');
   });
+
+  it('阈值随设置变（R297）：同一天数在不同阈值下判定不同', () => {
+    // 用户在设置里把「多久没扫」从 21 天改成 7 天，同一块 10 天没扫的盘
+    // 必须从 ok 变成 stale——阈值是配置不是常量。
+    expect(summarizeScanAge([row('C:\\', 10)], 21).state).toBe('ok');
+    expect(summarizeScanAge([row('C:\\', 10)], 7).state).toBe('stale');
+    // 阈值放宽到 30 天，14 天没扫的盘回到 ok
+    expect(summarizeScanAge([row('C:\\', 14)], 30).state).toBe('ok');
+  });
 });
