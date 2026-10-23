@@ -26,6 +26,9 @@ export const history = {
     'history.empty': '还没有清理记录。执行清理后，每次操作（回收站 / 隔离 / 删除）都会记录在这里。',
     'history.emptyFiltered': '没有匹配的记录，换个条件试试。',
     'history.viewAll': '查看全部',
+    // R310：台账条数够到拉取上限时明说——「共 N 条 / 最早日期」都只是已加载部分
+    'history.truncated': '记录较多，只显示最近 {n} 条（更早的未加载）',
+    'history.viewAllTitle': '放宽上限重新加载全部台账（最多 5000 条）',
 
     // 周巡检简报（health-butler P1）：历史页顶部的只读健康快照卡
     'history.weekly.title': '周巡检简报',
@@ -88,6 +91,8 @@ export const history = {
     'history.empty': 'No cleanup history yet. Every operation (recycle / quarantine / delete) will be logged here.',
     'history.emptyFiltered': 'No matching entries — try different filters.',
     'history.viewAll': 'View all',
+    'history.truncated': 'Many entries — showing the latest {n} only (earlier ones not loaded)',
+    'history.viewAllTitle': 'Reload the whole ledger with a higher cap (up to 5000)',
 
     'history.weekly.title': 'Weekly health report',
     'history.weekly.subtitle': 'A read-only weekly health snapshot: scan suggestions + temperature + hardware changes. Nothing it generates deletes any files.',

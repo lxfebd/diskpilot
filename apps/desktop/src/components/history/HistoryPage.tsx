@@ -20,6 +20,15 @@ import {
 
 // 后端 list_undo 在 take 上限内尽量多取；undo.jsonl 自带裁剪，正常远小于此。
 const LOAD_LIMIT = 500;
+// R310：台账条数够到上限时，页面此前把 500 当成「共 N 条」——更早的记录既看不见也
+// 不说没加载。点「查看全部」按更大上限重拉一次（后端本来就是读整个 jsonl 再 take，
+// 多要几百条不产生额外磁盘扫描）；仍够到上限就只提示、不再给按钮。
+const ALL_LIMIT = 5000;
+
+/** R310：是否可能被拉取上限截断——恰好等量时保守视为可能还有更早记录（无 total 可查）。 */
+export function historyTruncated(entries: readonly unknown[] | null, limit: number): boolean {
+  return entries != null && limit > 0 && entries.length >= limit;
+}
 
 /** R149：时间戳 → 本地日期（YYYY-MM-DD）——台账范围文案用，不显示时刻。 */
 function fmtDay(iso: string): string {
@@ -59,18 +68,21 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [action, setAction] = useState<UndoActionFilter>('all');
   const [query, setQuery] = useState('');
+  // R310：拉取上限可放宽（「查看全部」），默认 LOAD_LIMIT。
+  const [limit, setLimit] = useState<number>(LOAD_LIMIT);
   const [busy, setBusy] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setLoadErr(null);
-    api.listUndo(LOAD_LIMIT).then(setEntries).catch((e) => {
+    api.listUndo(limit).then(setEntries).catch((e) => {
       setEntries([]);
       setLoadErr(t('history.loadFailed', { msg: String(e) }));
     });
-  }, [t]);
+  }, [t, limit]);
 
+  // limit 放宽 → refresh 身份变化 → 自动重拉一次（无需额外按钮状态机）。
   useEffect(() => { refresh(); }, [refresh]);
 
   const summary = useMemo(() => summarizeUndo(entries ?? []), [entries]);
@@ -165,6 +177,19 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
       </div>
 
       {loadErr && <div className="error hp-msg">{loadErr}</div>}
+
+      {/* R310：条数够到拉取上限时明说——「共 N 条 / 最早日期」都只是已加载部分，
+          不让人把 500 当全量台账。有“查看全部”→ 放宽上限重拉一次。 */}
+      {historyTruncated(entries, limit) && (
+        <div className="hp-truncated muted small">
+          <span>{t('history.truncated', { n: limit })}</span>
+          {limit < ALL_LIMIT && (
+            <button type="button" className="ghost small" onClick={() => setLimit(ALL_LIMIT)} title={t('history.viewAllTitle')}>
+              {t('history.viewAll')}
+            </button>
+          )}
+        </div>
+      )}
 
       {historyListState(entries, loadErr) === 'loading' ? (
         <div className="hp-empty"><Loader2 size={14} className="spin" /></div>

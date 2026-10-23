@@ -134,6 +134,16 @@
   font-size: 12px;
 }
 
+/* R310：台账被拉取上限截断时的一行说明 + 「查看全部」 */
+.hp-truncated {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 2px 0 6px;
+  color: var(--muted);
+}
+
 /* ── 周巡检简报卡（health-butler P1）──────────────────────────────── */
 /* 历史页顶部的只读健康快照：配色全走 tokens.css 变量（守卫禁止硬编码色值）。 */
 .wh-card {
