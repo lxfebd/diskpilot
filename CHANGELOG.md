@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 补跑 rustfmt：CI 的 `cargo fmt --all -- --check` 门此前是红的（R332）
+
+- CI `lint-rust` 的第一道门是 `cargo fmt --all -- --check`（三平台都跑），但 R290–R331 期间
+  新写/改动的 Rust 代码有 8 个文件没过 rustfmt（`auto_list.rs`、`reminder.rs`、`scan_stamp.rs`、
+  `startup_history.rs`、`suggestion_history.rs`、`thermal_history.rs`、`exec_aiplan.rs`、`lib.rs`），
+  本地只跑了 `cargo test` 没跑 `cargo fmt`，于是推进得越远、这道门越一直是红的；
+- 本次 `cargo fmt --all` 收口（9 文件 236+/87-，全部是换行/缩进/结构体字面量展开，无语义变化），
+  `cargo fmt --all -- --check` 退出码 0；
+- 回归：`cargo test --workspace --no-fail-fast`（`DISKPILOT_NO_ADMIN=1`）46 个测试二进制
+  490 条全过；`cargo test -p diskpilot-scaffold` 49 条全过（含 R331 新增的 4 条）。
+
 ### 2026-10-24 新三份 Windows 隐私脚本补上安全测试 + 「TOML 必有测试」守卫（R331）
 
 - `scaffolds/` 实际有 21 份脚本，其中 `browser-privacy` / `windows-privacy` / `windows-update`

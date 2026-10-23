@@ -43,7 +43,10 @@ const DEDUP_SECS: u64 = 60;
 const MAX_PER_ROOT: usize = 30;
 
 fn history_path(app: &tauri::AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|d| d.join("scan-stamps.jsonl"))
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|d| d.join("scan-stamps.jsonl"))
 }
 
 fn now_secs() -> u64 {
@@ -78,7 +81,10 @@ pub(crate) fn record_scan_stamp(app: &tauri::AppHandle, root: &str, at: u64) -> 
             return false;
         }
     }
-    stamps.push(ScanStamp { root: root.to_string(), at });
+    stamps.push(ScanStamp {
+        root: root.to_string(),
+        at,
+    });
     // 裁剪：每 root 只留最近 MAX_PER_ROOT 条。
     let mut kept: Vec<ScanStamp> = Vec::with_capacity(stamps.len());
     for root_key in distinct_roots(&stamps) {
@@ -109,7 +115,12 @@ fn distinct_roots(stamps: &[ScanStamp]) -> Vec<&String> {
 /// 静默失败。
 fn write_stamps(p: &Path, stamps: &[ScanStamp]) -> bool {
     let tmp = p.with_extension("jsonl.tmp");
-    let Ok(mut out) = OpenOptions::new().create(true).write(true).truncate(true).open(&tmp) else {
+    let Ok(mut out) = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&tmp)
+    else {
         return false;
     };
     for s in stamps {
@@ -136,8 +147,8 @@ pub(crate) fn read_stamps_at(p: &Path) -> Result<Vec<ScanStamp>, String> {
         if line.is_empty() {
             continue;
         }
-        let s: ScanStamp = serde_json::from_str(line)
-            .map_err(|e| format!("扫描时间戳存在损坏行: {e}"))?;
+        let s: ScanStamp =
+            serde_json::from_str(line).map_err(|e| format!("扫描时间戳存在损坏行: {e}"))?;
         out.push(s);
     }
     Ok(out)
@@ -156,10 +167,7 @@ pub(crate) fn read_stamps(app: &tauri::AppHandle) -> Result<Vec<ScanStamp>, Stri
 /// - 读失败 → Err（前端说「未读到」，绝不显示成「刚扫过」——那会让该提醒时
 ///   完全不提醒）。
 #[tauri::command]
-pub(crate) fn scan_staleness_cmd(
-    app: AppHandle,
-    root: String,
-) -> Result<ScanStalenessOut, String> {
+pub(crate) fn scan_staleness_cmd(app: AppHandle, root: String) -> Result<ScanStalenessOut, String> {
     let stamps = read_stamps(&app)?;
     let now = now_secs();
     // 查询侧必须与写入侧同口径归一化。写入走 `norm_path_key`（小写 + 正斜杠，
@@ -167,8 +175,18 @@ pub(crate) fn scan_staleness_cmd(
     // 会把「天天扫」的盘误报成「从未扫过」——正好与 Never 的语义相反。
     let key = norm_query_root(&root);
     let out = match scan_staleness(&stamps, &key, now) {
-        ScanStaleness::Never => ScanStalenessOut { never: true, clock_skew: false, days: None, last_at: None },
-        ScanStaleness::ClockSkew => ScanStalenessOut { never: false, clock_skew: true, days: None, last_at: None },
+        ScanStaleness::Never => ScanStalenessOut {
+            never: true,
+            clock_skew: false,
+            days: None,
+            last_at: None,
+        },
+        ScanStaleness::ClockSkew => ScanStalenessOut {
+            never: false,
+            clock_skew: true,
+            days: None,
+            last_at: None,
+        },
         ScanStaleness::Days(d) => ScanStalenessOut {
             never: false,
             clock_skew: false,
@@ -229,11 +247,7 @@ pub(crate) enum ScanStaleness {
     Days(u64),
 }
 
-pub(crate) fn scan_staleness(
-    stamps: &[ScanStamp],
-    root: &str,
-    now: u64,
-) -> ScanStaleness {
+pub(crate) fn scan_staleness(stamps: &[ScanStamp], root: &str, now: u64) -> ScanStaleness {
     let Some(at) = latest_stamp(stamps, root) else {
         return ScanStaleness::Never;
     };
@@ -248,23 +262,38 @@ mod tests {
     use super::*;
 
     fn st(root: &str, at: u64) -> ScanStamp {
-        ScanStamp { root: root.to_string(), at }
+        ScanStamp {
+            root: root.to_string(),
+            at,
+        }
     }
 
     #[test]
     fn no_record_is_never_not_zero_days() {
         // 从未扫过必须与「0 天前扫过」分开：前者该说「还没扫过」。
-        assert_eq!(scan_staleness(&[], "c:/", 1_700_000_000), ScanStaleness::Never);
+        assert_eq!(
+            scan_staleness(&[], "c:/", 1_700_000_000),
+            ScanStaleness::Never
+        );
         // 有其它盘的记录也不算：按 root 精确匹配，不拿别人的扫描冒充。
         let other = vec![st("d:/", 1_700_000_000)];
-        assert_eq!(scan_staleness(&other, "c:/", 1_700_000_000), ScanStaleness::Never);
+        assert_eq!(
+            scan_staleness(&other, "c:/", 1_700_000_000),
+            ScanStaleness::Never
+        );
     }
 
     #[test]
     fn days_floor_and_boundaries() {
         let stamps = vec![st("c:/", 1_700_000_000)];
-        assert_eq!(scan_staleness(&stamps, "c:/", 1_700_000_000), ScanStaleness::Days(0));
-        assert_eq!(scan_staleness(&stamps, "c:/", 1_700_000_001), ScanStaleness::Days(0));
+        assert_eq!(
+            scan_staleness(&stamps, "c:/", 1_700_000_000),
+            ScanStaleness::Days(0)
+        );
+        assert_eq!(
+            scan_staleness(&stamps, "c:/", 1_700_000_001),
+            ScanStaleness::Days(0)
+        );
         assert_eq!(
             scan_staleness(&stamps, "c:/", 1_700_000_000 + 20 * 86400),
             ScanStaleness::Days(20)
@@ -281,14 +310,21 @@ mod tests {
         // 时间戳晚于 now：时钟回拨或外部篡改。不得算出「负数天」，
         // 也不得当成「刚扫过」而不报——单独成态，让调用方能说明缘由。
         let stamps = vec![st("c:/", 1_700_000_000 + 86400)];
-        assert_eq!(scan_staleness(&stamps, "c:/", 1_700_000_000), ScanStaleness::ClockSkew);
+        assert_eq!(
+            scan_staleness(&stamps, "c:/", 1_700_000_000),
+            ScanStaleness::ClockSkew
+        );
     }
 
     #[test]
     fn latest_stamp_takes_the_max_not_the_last_row() {
         // 多次扫描：取最大 at，而不是数组最后一行（写入顺序通常有序，
         // 但不依赖这个假设——外部可能重排文件）。
-        let stamps = vec![st("c:/", 1_700_000_100), st("c:/", 1_700_000_000), st("c:/", 1_700_000_200)];
+        let stamps = vec![
+            st("c:/", 1_700_000_100),
+            st("c:/", 1_700_000_000),
+            st("c:/", 1_700_000_200),
+        ];
         assert_eq!(latest_stamp(&stamps, "c:/"), Some(1_700_000_200));
     }
 
@@ -352,7 +388,11 @@ mod tests {
         let p = dir.join("scan-stamps.jsonl");
         for i in 0..(MAX_PER_ROOT as u64 + 5) {
             writeln!(
-                OpenOptions::new().create(true).append(true).open(&p).unwrap(),
+                OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&p)
+                    .unwrap(),
                 "{}",
                 serde_json::to_string(&st("c:/", 1_700_000_000 + i)).unwrap()
             )
@@ -366,7 +406,10 @@ mod tests {
         let keep = &rows[rows.len() - MAX_PER_ROOT..];
         assert_eq!(keep.len(), MAX_PER_ROOT);
         assert_eq!(keep[0].at, 1_700_000_000 + 5, "裁掉的是最旧 5 条");
-        assert_eq!(keep[keep.len() - 1].at, 1_700_000_000 + MAX_PER_ROOT as u64 + 4);
+        assert_eq!(
+            keep[keep.len() - 1].at,
+            1_700_000_000 + MAX_PER_ROOT as u64 + 4
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

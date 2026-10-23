@@ -20,8 +20,8 @@ fn workspace_root() -> PathBuf {
 /// 扫描目录里符合后缀的文件主名（不含扩展名）。
 fn stems_in(dir: &std::path::Path, ext: &str) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
-    let entries = std::fs::read_dir(dir)
-        .unwrap_or_else(|e| panic!("read_dir {}: {e}", dir.display()));
+    let entries =
+        std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read_dir {}: {e}", dir.display()));
     for entry in entries {
         let entry = entry.expect("dir entry");
         let path = entry.path();
@@ -75,11 +75,21 @@ fn every_scaffold_has_a_safety_test() {
 
     let missing: Vec<String> = toml_ids
         .difference(&test_ids)
-        .map(|id| format!("crates/scaffold/tests/{}_safety.rs（对应 scaffolds/{id}.toml）", id.replace('-', "_")))
+        .map(|id| {
+            format!(
+                "crates/scaffold/tests/{}_safety.rs（对应 scaffolds/{id}.toml）",
+                id.replace('-', "_")
+            )
+        })
         .collect();
     let extra: Vec<String> = test_ids
         .difference(&toml_ids)
-        .map(|id| format!("crates/scaffold/tests/{}_safety.rs 找不到对应的 scaffolds/{id}.toml", id.replace('-', "_")))
+        .map(|id| {
+            format!(
+                "crates/scaffold/tests/{}_safety.rs 找不到对应的 scaffolds/{id}.toml",
+                id.replace('-', "_")
+            )
+        })
         .collect();
 
     let mut problems = Vec::new();
@@ -90,7 +100,10 @@ fn every_scaffold_has_a_safety_test() {
         problems.push(format!("孤儿安全测试：\n  {}", extra.join("\n  ")));
     }
     if !mismatched.is_empty() {
-        problems.push(format!("文件名与 id 不一致：\n  {}", mismatched.join("\n  ")));
+        problems.push(format!(
+            "文件名与 id 不一致：\n  {}",
+            mismatched.join("\n  ")
+        ));
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 

@@ -37,7 +37,10 @@ const DEDUP_SECS: u64 = 60;
 const MAX_SAMPLES: usize = 3000;
 
 fn history_path(app: &tauri::AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|d| d.join("thermal-history.jsonl"))
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|d| d.join("thermal-history.jsonl"))
 }
 
 fn now_secs() -> u64 {
@@ -110,7 +113,12 @@ fn prune_samples(p: &Path) {
     }
     let keep: Vec<ThermalPoint> = valid.split_off(valid.len() - MAX_SAMPLES);
     let tmp = p.with_extension("jsonl.tmp");
-    let Ok(mut out) = OpenOptions::new().create(true).write(true).truncate(true).open(&tmp) else {
+    let Ok(mut out) = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&tmp)
+    else {
         return;
     };
     for pt in &keep {
@@ -191,10 +199,12 @@ pub(crate) fn is_sustained_high(
 
 /// 窗口内的最高温（展示用：告诉用户"到底到了多少"）。空窗口 → None。
 pub(crate) fn window_max_c(pts: &[ThermalPoint]) -> Option<f32> {
-    pts.iter().map(|p| p.temp_max_c).fold(None, |acc, c| match acc {
-        Some(m) if m >= c => Some(m),
-        _ => Some(c),
-    })
+    pts.iter()
+        .map(|p| p.temp_max_c)
+        .fold(None, |acc, c| match acc {
+            Some(m) if m >= c => Some(m),
+            _ => Some(c),
+        })
 }
 
 #[cfg(test)]
@@ -242,7 +252,10 @@ mod tests {
         // 前面一堆低温，只有最近 3 点全高 → 持续（看最近窗口）。
         let mut pts = vec![tp(40.0, 1), tp(45.0, 2), tp(50.0, 3)];
         pts.extend([tp(81.0, 4), tp(82.0, 5), tp(84.0, 6)]);
-        assert!(is_sustained_high(&pts, 80.0, 3).0, "只看最近 min_samples 条");
+        assert!(
+            is_sustained_high(&pts, 80.0, 3).0,
+            "只看最近 min_samples 条"
+        );
         // 反过来：最近 3 点里含低温 → 否，较早的高温不给现在的低温洗白
         let mut pts2 = vec![tp(95.0, 1), tp(95.0, 2), tp(95.0, 3)];
         pts2.extend([tp(81.0, 4), tp(70.0, 5), tp(82.0, 6)]);
@@ -251,7 +264,10 @@ mod tests {
 
     #[test]
     fn window_max_reports_peak() {
-        assert_eq!(window_max_c(&[tp(70.0, 1), tp(88.5, 2), tp(80.0, 3)]), Some(88.5));
+        assert_eq!(
+            window_max_c(&[tp(70.0, 1), tp(88.5, 2), tp(80.0, 3)]),
+            Some(88.5)
+        );
         assert_eq!(window_max_c(&[]), None, "空窗口返回 None，不报 0℃");
     }
 
@@ -288,7 +304,11 @@ mod tests {
         // 直接手工写 3 条（绕过 dedup 的时间门槛），验证 read 与裁剪语义。
         for (c, at) in [(50.0f32, 10u64), (60.0, 20), (70.0, 30)] {
             writeln!(
-                OpenOptions::new().create(true).append(true).open(&p).unwrap(),
+                OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&p)
+                    .unwrap(),
                 "{}",
                 serde_json::to_string(&tp(c, at)).unwrap()
             )

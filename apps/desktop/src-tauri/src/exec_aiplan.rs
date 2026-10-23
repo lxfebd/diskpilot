@@ -79,7 +79,11 @@ pub(crate) async fn execute_ai_plan(
         paths: paths.into_iter().map(PathBuf::from).collect(),
         // 预演与真执行在台账 reason 上可区分（dry-run 分支本就不落盘，这里
         // 只是让日志字段自描述）。
-        reason: if dry_run { "AI 清理预演（只读）".into() } else { "AI 清理（用户已确认）".into() },
+        reason: if dry_run {
+            "AI 清理预演（只读）".into()
+        } else {
+            "AI 清理（用户已确认）".into()
+        },
     };
     let invalidate_roots: Vec<PathBuf> = safe_plan.paths.clone();
     let undo_log = state.undo_log.clone();

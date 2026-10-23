@@ -355,9 +355,9 @@ mod tests {
         .into_iter()
         .collect();
         assert!(
-            map.contains_key(
-                &crate::cleanup_logic::norm_path_key(std::path::Path::new("C:\\"))
-            ),
+            map.contains_key(&crate::cleanup_logic::norm_path_key(std::path::Path::new(
+                "C:\\"
+            ))),
             "原始盘符查询必须命中 norm 形状的 key"
         );
         // 反向：以未归一化的原始形状直接查（旧实现的写法）确实查不到，

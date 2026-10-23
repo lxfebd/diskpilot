@@ -54,7 +54,10 @@ const DEDUP_SECS: u64 = 60;
 const MAX_SNAPSHOTS: usize = 600;
 
 fn history_path(app: &tauri::AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|d| d.join("startup-history.jsonl"))
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|d| d.join("startup-history.jsonl"))
 }
 
 fn now_secs() -> u64 {
@@ -108,7 +111,10 @@ pub(crate) fn record_startup_snapshot(
             }
         }
     }
-    let line = match serde_json::to_string(&StartupSnapshot { keys: keys.clone(), at }) {
+    let line = match serde_json::to_string(&StartupSnapshot {
+        keys: keys.clone(),
+        at,
+    }) {
         Ok(l) => l,
         Err(_) => return false,
     };
@@ -140,7 +146,12 @@ fn prune_snapshots(p: &Path) {
     }
     let keep: Vec<StartupSnapshot> = valid.split_off(valid.len() - MAX_SNAPSHOTS);
     let tmp = p.with_extension("jsonl.tmp");
-    let Ok(mut out) = OpenOptions::new().create(true).write(true).truncate(true).open(&tmp) else {
+    let Ok(mut out) = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(&tmp)
+    else {
         return;
     };
     for sn in &keep {
@@ -201,16 +212,13 @@ pub(crate) struct StartupDelta {
     pub prev_at: u64,
 }
 
-pub(crate) fn diff_snapshots(
-    snaps: &[StartupSnapshot],
-) -> Result<StartupDelta, String> {
+pub(crate) fn diff_snapshots(snaps: &[StartupSnapshot]) -> Result<StartupDelta, String> {
     match snaps.len() {
         0 | 1 => Err("no_history".into()),
         n => {
             let prev = &snaps[n - 2];
             let cur = &snaps[n - 1];
-            let added: Vec<String> =
-                cur.keys.difference(&prev.keys).cloned().collect();
+            let added: Vec<String> = cur.keys.difference(&prev.keys).cloned().collect();
             let gone: Vec<String> = prev.keys.difference(&cur.keys).cloned().collect();
             let span = cur.at.saturating_sub(prev.at);
             // added/gone 均为空 = 没变化。这不是错误，调用方据此说"无变化"。
@@ -249,7 +257,10 @@ mod tests {
     #[test]
     fn key_is_content_based_not_sequence_based() {
         // 本模块存在的理由：同一 (location, name) 永远同一键，与枚举顺序无关。
-        assert_eq!(startup_key("registry_hkcu", "OneDrive"), "registry_hkcu\u{1f}OneDrive");
+        assert_eq!(
+            startup_key("registry_hkcu", "OneDrive"),
+            "registry_hkcu\u{1f}OneDrive"
+        );
         assert_eq!(
             startup_key("registry_hkcu", "OneDrive"),
             startup_key("registry_hkcu", "OneDrive")
@@ -275,7 +286,10 @@ mod tests {
             startup_key("registry_hkcu", "B"),
             startup_key("registry_hkcu", "C"),
         ];
-        let after = [startup_key("registry_hkcu", "A"), startup_key("registry_hkcu", "C")];
+        let after = [
+            startup_key("registry_hkcu", "A"),
+            startup_key("registry_hkcu", "C"),
+        ];
         let snaps = vec![sn(&before, 1_700_000_000), sn(&after, 1_700_086_400)];
         let d = diff_snapshots(&snaps).expect("两份应能 diff");
         assert!(d.added.is_empty(), "删一项不得报出任何新增");
@@ -294,8 +308,14 @@ mod tests {
 
     #[test]
     fn added_and_gone_are_both_reported() {
-        let prev = [startup_key("registry_hkcu", "Old"), startup_key("registry_hkcu", "Keep")];
-        let cur = [startup_key("registry_hkcu", "Keep"), startup_key("registry_hkcu", "New")];
+        let prev = [
+            startup_key("registry_hkcu", "Old"),
+            startup_key("registry_hkcu", "Keep"),
+        ];
+        let cur = [
+            startup_key("registry_hkcu", "Keep"),
+            startup_key("registry_hkcu", "New"),
+        ];
         let snaps = vec![sn(&prev, 1_700_000_000), sn(&cur, 1_700_086_400)];
         let d = diff_snapshots(&snaps).unwrap();
         assert_eq!(d.added, vec![startup_key("registry_hkcu", "New")]);
@@ -305,7 +325,10 @@ mod tests {
 
     #[test]
     fn identical_sets_give_empty_delta_not_error() {
-        let k = [startup_key("registry_hkcu", "A"), startup_key("registry_hkcu", "B")];
+        let k = [
+            startup_key("registry_hkcu", "A"),
+            startup_key("registry_hkcu", "B"),
+        ];
         let snaps = vec![sn(&k, 1_700_000_000), sn(&k, 1_700_086_400)];
         let d = diff_snapshots(&snaps).expect("两份相同集合仍应给出 diff");
         assert!(d.added.is_empty() && d.gone.is_empty(), "没变化 = 两侧皆空");

@@ -320,7 +320,10 @@ pub(crate) struct ThermalSustained {
 
 /// 读历史 + 判定。读失败 → None（不伪装成「没过热」；且读失败时通知通道
 /// 静默跳过本轮即可，前端不会显示任何误导性内容）。
-pub(crate) fn thermal_sustained_now(app: &AppHandle, cfg: &ReminderConfig) -> Option<ThermalSustained> {
+pub(crate) fn thermal_sustained_now(
+    app: &AppHandle,
+    cfg: &ReminderConfig,
+) -> Option<ThermalSustained> {
     let pts = crate::thermal_history::read_history(app).ok()?;
     let min = cfg.thermal_sustained_samples.clamp(1, 60) as usize;
     let (ok, n) = crate::thermal_history::is_sustained_high(&pts, cfg.thermal_sustained_c, min);
@@ -396,13 +399,21 @@ pub(crate) fn collect_scan_stale(app: &AppHandle, cfg: &ReminderConfig) -> Vec<S
     for root in distinct_scan_roots(&stamps) {
         match crate::scan_stamp::scan_staleness(&stamps, root, now) {
             crate::scan_stamp::ScanStaleness::Never => {
-                out.push(ScanStaleWarn { path: root.clone(), days: None, never: true });
+                out.push(ScanStaleWarn {
+                    path: root.clone(),
+                    days: None,
+                    never: true,
+                });
             }
             crate::scan_stamp::ScanStaleness::ClockSkew => {
                 // 时钟异常不作为预警：此刻任何天数都不可信，报出来是噪音。
             }
             crate::scan_stamp::ScanStaleness::Days(d) if d >= cfg.scan_stale_days => {
-                out.push(ScanStaleWarn { path: root.clone(), days: Some(d), never: false });
+                out.push(ScanStaleWarn {
+                    path: root.clone(),
+                    days: Some(d),
+                    never: false,
+                });
             }
             crate::scan_stamp::ScanStaleness::Days(_) => {}
         }
@@ -559,10 +570,8 @@ fn compute_reminder(
     }
     // P2-1 判定：用本轮已累计的 scaffold 小计，零额外 IO。
     let auto_cfg = crate::auto_list::config_at(app);
-    let hits = crate::auto_list::tripped_rules(
-        &by_scaffold.into_iter().collect::<Vec<_>>(),
-        &auto_cfg,
-    );
+    let hits =
+        crate::auto_list::tripped_rules(&by_scaffold.into_iter().collect::<Vec<_>>(), &auto_cfg);
     if total < cfg.min_bytes {
         return Ok(None);
     }
@@ -651,9 +660,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                     >= Duration::from_secs(cfg.startup_watch_minutes.clamp(1, 1440) * 60)
             {
                 last_startup_snapshot = std::time::Instant::now();
-                if let Ok(items) = tauri::async_runtime::block_on(
-                    crate::startup::list_startup_items(),
-                ) {
+                if let Ok(items) =
+                    tauri::async_runtime::block_on(crate::startup::list_startup_items())
+                {
                     // 用内容键（location + name）而非 StartupItem.id：id 是
                     // 单次枚举的自增序号，删一项会让其后所有 id 错位，拿它
                     // diff 会产出大量虚假的新增/消失。
@@ -664,7 +673,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                     crate::startup_history::record_startup_snapshot(&app, &keys);
                 }
                 let delta = startup_delta_now(&app);
-                let changed = delta.as_ref().is_some_and(|d| !d.added.is_empty() || !d.gone.is_empty());
+                let changed = delta
+                    .as_ref()
+                    .is_some_and(|d| !d.added.is_empty() || !d.gone.is_empty());
                 if changed && !startup_warned {
                     startup_warned = true;
                     let _ = app.emit("startup-changed", delta);
@@ -795,14 +806,20 @@ mod tests {
         let c = ReminderConfig::default();
         assert!(!c.thermal_sample_enabled, "采集默认关：不主动耗电");
         assert_eq!(c.thermal_sustained_c, 85.0);
-        assert_eq!(c.thermal_sustained_samples, 5, "默认 5 点 ≈ 25 分钟，规避瞬时尖峰");
+        assert_eq!(
+            c.thermal_sustained_samples, 5,
+            "默认 5 点 ≈ 25 分钟，规避瞬时尖峰"
+        );
     }
 
     #[test]
     fn thermal_sustained_samples_one_is_instant_not_sustained() {
         // 语义护栏：配置层允许 1（用户坚持要敏），但 thermal_history 的单点判定
         // 已证否——这里只确认配置层不会被 clamp 悄悄改成别的值。
-        let c = ReminderConfig { thermal_sustained_samples: 1, ..ReminderConfig::default() };
+        let c = ReminderConfig {
+            thermal_sustained_samples: 1,
+            ..ReminderConfig::default()
+        };
         assert_eq!(c.thermal_sustained_samples, 1);
     }
 

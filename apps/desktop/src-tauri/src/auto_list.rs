@@ -36,7 +36,10 @@ pub(crate) struct AutoListConfig {
 }
 
 fn config_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|d| d.join("auto-list.json"))
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|d| d.join("auto-list.json"))
 }
 
 /// 读配置。缺文件 = 从未设置 → 空配置（真空态诚实）；文件存在但读失败/解析失败 →
@@ -104,7 +107,10 @@ pub(crate) fn get_auto_list_config_with_status(
             rule: r.clone(),
         })
         .collect();
-    AutoListConfigView { enabled: cfg.enabled, rules }
+    AutoListConfigView {
+        enabled: cfg.enabled,
+        rules,
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -145,11 +151,7 @@ pub(crate) fn rule_status(rule: &AutoListRule, known: &[String]) -> &'static str
 /// - 无规则命中 → false；
 /// - 多规则命中同一 scaffold 取**最低阈值**（更宽松者优先：用户既已授权，取更低的
 ///   阈值才不会让"配了 5GB 却因为另一条 1GB 规则没生效"这种意外发生）。
-pub(crate) fn should_auto_list(
-    scaffold_id: &str,
-    bytes: u64,
-    cfg: &AutoListConfig,
-) -> bool {
+pub(crate) fn should_auto_list(scaffold_id: &str, bytes: u64, cfg: &AutoListConfig) -> bool {
     if !cfg.enabled {
         return false;
     }
@@ -170,7 +172,10 @@ mod tests {
             enabled,
             rules: rules
                 .into_iter()
-                .map(|(id, b)| AutoListRule { scaffold_id: id.into(), min_bytes: b })
+                .map(|(id, b)| AutoListRule {
+                    scaffold_id: id.into(),
+                    min_bytes: b,
+                })
                 .collect(),
         }
     }
@@ -178,26 +183,41 @@ mod tests {
     #[test]
     fn disabled_config_never_auto_lists_even_when_rule_matches() {
         let c = cfg(false, vec![("wechat", 0)]);
-        assert!(!should_auto_list("wechat", 999_999, &c), "总开关关 = 一律不自动");
+        assert!(
+            !should_auto_list("wechat", 999_999, &c),
+            "总开关关 = 一律不自动"
+        );
     }
 
     #[test]
     fn no_rule_means_no_auto_list() {
         let c = cfg(true, vec![("wechat", 0)]);
-        assert!(!should_auto_list("chrome", 500, &c), "没授权过的 scaffold 不自动进");
+        assert!(
+            !should_auto_list("chrome", 500, &c),
+            "没授权过的 scaffold 不自动进"
+        );
     }
 
     #[test]
     fn threshold_is_inclusive() {
         let c = cfg(true, vec![("wechat", 5 * 1024 * 1024)]);
-        assert!(!should_auto_list("wechat", 5 * 1024 * 1024 - 1, &c), "差 1 字节不触发");
-        assert!(should_auto_list("wechat", 5 * 1024 * 1024, &c), "达到即触发");
+        assert!(
+            !should_auto_list("wechat", 5 * 1024 * 1024 - 1, &c),
+            "差 1 字节不触发"
+        );
+        assert!(
+            should_auto_list("wechat", 5 * 1024 * 1024, &c),
+            "达到即触发"
+        );
     }
 
     #[test]
     fn zero_threshold_fires_on_any_bytes() {
         let c = cfg(true, vec![("wechat", 0)]);
-        assert!(should_auto_list("wechat", 1, &c), "阈值为 0 = 一有可清量就进");
+        assert!(
+            should_auto_list("wechat", 1, &c),
+            "阈值为 0 = 一有可清量就进"
+        );
     }
 
     #[test]
@@ -211,8 +231,14 @@ mod tests {
     #[test]
     fn rule_status_flags_unknown_scaffold_instead_of_guessing() {
         let known = vec!["wechat".to_string()];
-        let ok = AutoListRule { scaffold_id: "wechat".into(), min_bytes: 0 };
-        let ghost = AutoListRule { scaffold_id: "wei-chat".into(), min_bytes: 0 };
+        let ok = AutoListRule {
+            scaffold_id: "wechat".into(),
+            min_bytes: 0,
+        };
+        let ghost = AutoListRule {
+            scaffold_id: "wei-chat".into(),
+            min_bytes: 0,
+        };
         assert_eq!(rule_status(&ok, &known), "ok");
         // 拼错/不存在的 id 必须报 unknown_scaffold，不许悄悄近似匹配。
         assert_eq!(rule_status(&ghost, &known), "unknown_scaffold");
@@ -228,10 +254,13 @@ mod tests {
         assert!(tripped_rules(&sugg, &c).is_empty(), "没命中就不该报");
 
         let sugg2 = vec![
-            ("wechat".to_string(), 7u64),  // 命中
+            ("wechat".to_string(), 7u64),   // 命中
             ("chrome".to_string(), 999u64), // 剔除
         ];
-        assert_eq!(tripped_rules(&sugg2, &c), vec![("wechat".to_string(), 7u64)]);
+        assert_eq!(
+            tripped_rules(&sugg2, &c),
+            vec![("wechat".to_string(), 7u64)]
+        );
     }
 
     #[test]
