@@ -66,6 +66,9 @@
 ### P0 — 管家首屏（把散点编排成一页）
 - 总览顶部加「今日体检」条：一条横幅汇总（红盘告警 / 可回收合计 / 温度是否异常 / 启动项变化），
   每项可点进对应流程。红盘救援横幅（≥85%）已验证过这个交互，横向扩即可。
+  **已落地**：`AssetOverview.tsx` 的「今日体检」横幅，全只读汇总「红盘 / 可回收 /
+  温度 / 启动项 / 硬盘健康」；温度走后端一次归一化的 `temp_max_c`、启动项走
+  `listStartupItems`，**不为展示新造任何磁盘扫描**（P0 门禁：低配红线）。
 - 「建议清理」卡与「分类占用」卡已同源对齐（按选中盘），补**跨次对比**：
   "比上次多出 X GB" —— 用 `cleanup_suggestions` 快照 diff。
   **已落地（R288）**：新增 `suggestion_history.rs`，`commit_scan` 时记录 root
@@ -75,13 +78,26 @@
   无比值，不造假环比。
 - 清理提醒（已有）升级成**管家通知**：文案从「可清理空间超阈值」扩到
   「温度持续偏高 / C 盘三周没扫 / 启动项悄悄加了两个」。
+  **部分落地（截至 2026-10-23）**：三条信号中两条已有只读数据源——
+  温度走 `hw_fan::fan_curve_advice().temp_max_c`，启动项走
+  `startup::list_startup_items()`。**「C 盘三周没扫」缺数据源**：扫描只发生在
+  内存（`AppState.cleanup_cache` 与 Node 树缓存均为进程内 `Mutex`，不落盘），
+  全仓库无 `last_scan_at` 类持久化；`space_history` 的采样时间是趋势采样、
+  不是扫描，拿它说「三周没扫」属编造。要补需先新建 scan 时间持久化机制。
 
 ### P1 — 例行巡检（让管家有节奏）
-- 周巡检任务：一次只读打包体检（扫盘 + 建议 + 硬件快照 + 温度均值），结果进历史台账，
-  出一张「本周健康简报」。复用现有 `cleanup_reminder` 的调度与通知管道，不新建机制。
-- 简报里的每一条都可下钻到既有清单/确认窗——**巡检本身永远只读**。
-- AI 入口：对话里说「帮我看看这周怎么样」→ agent 依次调只读 MCP 工具（`disk_usage` /
-  `hw_report` / `sensor_*` / `cleanup_suggestions`）汇总作答。工具已在，缺的是这段编排提示词。
+- ~~周巡检任务：一次只读打包体检（扫盘 + 建议 + 硬件快照 + 温度均值），结果进历史台
+  账，出一张「本周健康简报」。复用现有 `cleanup_reminder` 的调度与通知管道，不新建机制。~~
+  **已落地**：`weekly_report::run_weekly_report` 由 reminder 后台线程按
+  `weekly_interval_days` 调度（独立开关，不动清理提醒）；结果进历史台账。
+- ~~简报里的每一条都可下钻到既有清单/确认窗——**巡检本身永远只读**。~~
+  **已落地**：`WeeklyHealthCard.tsx` 的 `onOpenCleanup(scaffoldId?)` 下钻到既有清单；
+  巡检全程只读。
+- ~~AI 入口：对话里说「帮我看看这周怎么样」→ agent 依次调只读 MCP 工具（`disk_usage` /
+  `hw_report` / `sensor_*` / `cleanup_suggestions`）汇总作答。工具已在，缺的是这段编排提示词。~~
+  **已落地**：`agent.ts:150 healthRoutineSection`——规定触发语、六步只读工具顺序
+  （disk_health / hw_sensors / hw_temperature / sys_boot_items / cleanup_suggestions /
+  system_report）、逐级降级、禁止写类工具与 `propose_cleanup_plan`。
 
 ### P2 — 主动干预（谨慎，逐项过安全评审）
 - 允许用户**按项授权**：「以后微信缓存超 5GB 自动进清单」仍是出清单，只是免去「想起来要看」；
