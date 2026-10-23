@@ -16,7 +16,7 @@ cargo run -p agent-server          # 启动后通过 stdin/stdout 走 MCP 协议
 ## 已注册工具
 
 共 **75 个**（2026-09-20）：64 只读 + 11 写操作（含 AIDA64 复刻基准/压测/报告/趋势/告警、信息补全、蓝屏/内存检测）。完整清单与每工具参数见
-[`docs/tools-agent/TOOL_CATALOG.md`](../../docs/tools-agent/TOOL_CATALOG.md)。
+[`docs/mcp-tools.md`](../../docs/mcp-tools.md)。
 
 | 领域 | 工具 | 风险 | 说明 |
 |---|---|---|---|

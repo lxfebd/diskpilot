@@ -13,7 +13,7 @@
 
 ## New scaffold checklist
 
-新增/重写 scaffold 请按 [development.md](../development.md) 的 14-phase 工作流走全流程，逐项确认：
+新增/重写 scaffold 请按 [docs/scaffold-authoring.md](../docs/scaffold-authoring.md) 的流程走全流程，逐项确认：
 
 - [ ] **Phase 0**: 已读 `crates/scaffold/src/lib.rs`、`apps/desktop/src/components/Studio.tsx`、`types.ts`，UI 边界已确认
 - [ ] **Phase 1-2**: `docs/scaffold-requirements/<category>.md` 含本 app 的范围 / L1-L2-L3 分级 / 红线

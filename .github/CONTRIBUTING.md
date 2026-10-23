@@ -26,7 +26,7 @@ cargo fmt --all -- --check
 
 ## Writing a scaffold
 
-See [docs/SCAFFOLD-AUTHORING.md](docs/SCAFFOLD-AUTHORING.md). The PR template asks for:
+See [docs/scaffold-authoring.md](../docs/scaffold-authoring.md). The PR template asks for:
 
 - detection paths
 - risk classification (`low` / `medium` / `high`)

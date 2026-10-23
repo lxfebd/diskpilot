@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 文档链接不再指向不存在的文件（R330）
+
+- 文档索引里 4 条相对链接是坏的：`docs/README.md` 列了从未存在的 `PROJECT_FUNCTION_MAP.md`；
+  `.github/CONTRIBUTING.md` 指向 `docs/SCAFFOLD-AUTHORING.md`（大小写不符、还漏了 `../`）；
+  `crates/agent-server/README.md` 指向 `docs/tools-agent/TOOL_CATALOG.md`（真实文档是 `docs/mcp-tools.md`）；
+  `.github/PULL_REQUEST_TEMPLATE.md` 指向不存在的 `development.md`（现指 `docs/scaffold-authoring.md`）；
+- 新增 `scripts/check-docs-links.mjs`（`pnpm check:docs`）：扫仓库根 `*.md`、`docs/`、`.github/`、
+  `crates/*/README.md` 里的全部相对链接，指向不存在的文件就报「文件:行号 → 目标」并非零退出；
+  跳过 http(s) / mailto / 页内锚点 / 占位符，`file.md#section` 只校验文件不校验标题 slug；
+- CI 的 frontend job 增加同一条检查，索引再漂成坏链会直接红。
+
 ### 2026-10-24 时间显示统一走应用语言，不再跟随系统地区（R329）
 
 - R324 只修掉了 Steam 报表里写死 `zh-CN` 的那一处；仓库里还有 9 处 `toLocaleTimeString` /
