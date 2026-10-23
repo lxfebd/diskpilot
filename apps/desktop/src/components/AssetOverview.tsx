@@ -439,6 +439,9 @@ export interface ThermalHistorySummary {
   peakC: number | null;
   /** 最新一点温度（有有效点时才有值）。 */
   latestC: number | null;
+  /** 最新有效采样点的 unix 秒（R306：卡片要说「最新采样于什么时候」，
+   *  此前只给首末跨度，采样开关关了一周也看不出来）。 */
+  latestAt: number | null;
   /** 首末两点的时间跨度（分钟，向下取整）；不足两点为 null。 */
   spanMinutes: number | null;
   /** 有效采样点数（NaN/Inf 与时间戳倒挂的点已剔除）。 */
@@ -453,24 +456,43 @@ export interface ThermalHistorySummary {
 export function summarizeThermalHistory(
   pts: readonly { temp_max_c: number; at: number }[] | null,
 ): ThermalHistorySummary {
-  const none: ThermalHistorySummary = { state: 'unread', peakC: null, latestC: null, spanMinutes: null, count: 0 };
+  const none: ThermalHistorySummary = { state: 'unread', peakC: null, latestC: null, latestAt: null, spanMinutes: null, count: 0 };
   if (pts == null) return none;
   const valid = pts
     .filter((p) => Number.isFinite(p.temp_max_c) && Number.isFinite(p.at))
     .slice()
     .sort((a, b) => a.at - b.at);
-  if (valid.length === 0) return { state: 'empty', peakC: null, latestC: null, spanMinutes: null, count: 0 };
+  if (valid.length === 0) return { state: 'empty', peakC: null, latestC: null, latestAt: null, spanMinutes: null, count: 0 };
   const peakC = Math.max(...valid.map((p) => p.temp_max_c));
-  const latestC = valid[valid.length - 1].temp_max_c;
-  if (valid.length === 1) return { state: 'single', peakC, latestC, spanMinutes: 0, count: 1 };
-  const spanSecs = valid[valid.length - 1].at - valid[0].at;
+  const latest = valid[valid.length - 1];
+  const latestC = latest.temp_max_c;
+  const latestAt = latest.at;
+  if (valid.length === 1) return { state: 'single', peakC, latestC, latestAt, spanMinutes: 0, count: 1 };
+  const spanSecs = latest.at - valid[0].at;
   return {
     state: 'ok',
     peakC,
     latestC,
+    latestAt,
     spanMinutes: spanSecs > 0 ? Math.floor(spanSecs / 60) : 0,
     count: valid.length,
   };
+}
+
+/** 采样点「多久以前」（R306，只给展示用，单位最小到分钟）：
+ *  <60 分钟 → min；<48 小时 → hour；再往上 → day。
+ *  时钟回拨/未来点（now < at）按 0 分钟算，不显示负时间；
+ *  at 缺失或非法返回 null（没时间可说，不编一个）。 */
+export function sampleAge(
+  nowSec: number,
+  at: number | null,
+): { unit: 'min' | 'hour' | 'day'; n: number } | null {
+  if (at == null || !Number.isFinite(at) || !Number.isFinite(nowSec)) return null;
+  const mins = Math.max(0, Math.floor((nowSec - at) / 60));
+  if (mins < 60) return { unit: 'min', n: mins };
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return { unit: 'hour', n: hours };
+  return { unit: 'day', n: Math.floor(hours / 24) };
 }
 
 /** 温度火花线 path：与空间趋势同一画法（120×34，归一化到自身 min/max，
@@ -687,6 +709,16 @@ function ThermalHistoryCard() {
   const sum = summarizeThermalHistory(err ? null : pts);
   const hotspot = sum.peakC != null && isTempHigh(sum.peakC, TEMP_WARN_C);
   const line = pts && sum.state === 'ok' ? thermalSparkPath(pts) : '';
+  // R306：开关关了多久，卡片上看不出来——补一行「最新采样于 X」。相对时间够用，
+  // 绝对日期放 title：数据是三天前的还是三分钟前的，是两种完全不同的可信度。
+  const age = sum.latestAt != null ? sampleAge(Date.now() / 1000, sum.latestAt) : null;
+  const ageText = age == null
+    ? null
+    : age.unit === 'min'
+      ? t('overview.thermal.ageMin', { n: age.n })
+      : age.unit === 'hour'
+        ? t('overview.thermal.ageHour', { n: age.n })
+        : t('overview.thermal.ageDay', { n: age.n });
 
   return (
     <section className="ao-card ao-thermal-card">
@@ -719,6 +751,14 @@ function ThermalHistoryCard() {
               </small>
             )}
           </span>
+        </div>
+      )}
+      {ageText && sum.latestAt != null && (
+        <div
+          className="ao-thermal-age muted small"
+          title={t('overview.thermal.latestOn', { date: formatDateKey(new Date(sum.latestAt * 1000)) })}
+        >
+          {t('overview.thermal.latestAt', { when: ageText })}
         </div>
       )}
       {/* R301：这段说明此前只存在于词条里（写了没人渲染）——采样开关不在本卡上，

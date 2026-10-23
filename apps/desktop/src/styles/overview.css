@@ -153,6 +153,8 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 .ao-thermal-meta small { color: var(--text-3); font-weight: 600; font-family: var(--font-mono); }
 .ao-thermal-meta small.hot { color: var(--risk-caution); }
 .ao-thermal-hint { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+/* R306 最新采样行：回答「这份数据有多新」，与提示行同字号但更靠上 */
+.ao-thermal-age { margin-top: 6px; font-size: 11.5px; line-height: 1.5; }
 
 /* ── 低配救援横幅：红盘时提示一键救急 ── */
 .ao-rescue {
