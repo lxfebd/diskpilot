@@ -159,6 +159,8 @@ export const overview = {
     'overview.checkup.goRescue': '查看红盘',
     'overview.checkup.goRescanCapacity': '重新扫描读取容量',
     'overview.checkup.goStaleDrive': '选中这块盘看详情（要扫它点盘卡片）',
+    // R308 温度格落点：最高温是结论，明细（采样点/区间峰值/最新采样时间）在温度采样卡
+    'overview.checkup.goThermal': '滚到温度采样历史看明细',
     'overview.checkup.goClean': '去清理',
     'overview.checkup.diskAllGood': '{n} 块硬盘健康',
     'overview.checkup.diskRisky': '{n} 块硬盘 SMART 告警',
@@ -389,6 +391,8 @@ export const overview = {
     'overview.checkup.goRescue': 'See drives',
     'overview.checkup.goRescanCapacity': 'Rescan to read capacity',
     'overview.checkup.goStaleDrive': 'Select this drive to inspect (click its card to scan)',
+    // R308 temperature cell target: the peak is the verdict, the details live in the thermal card
+    'overview.checkup.goThermal': 'Jump to temperature sampling history',
     'overview.checkup.goClean': 'Clean up',
     'overview.checkup.diskAllGood': '{n} drives healthy',
     'overview.checkup.diskRisky': '{n} drives with SMART warnings',

@@ -959,6 +959,7 @@ function HealthCheckupCard({
   onGoStartup,
   onGoRedDrive,
   onGoStaleDrive,
+  onGoThermal,
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
@@ -972,6 +973,8 @@ function HealthCheckupCard({
   onGoRedDrive?: (path: string) => void;
   /** 选中「最久没扫」的那块盘并滚到盘条（扫描时效格用，R307）。 */
   onGoStaleDrive?: (path: string) => void;
+  /** 滚到本页「温度采样历史」卡（温度格用，R308）。 */
+  onGoThermal?: () => void;
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
@@ -1107,11 +1110,17 @@ function HealthCheckupCard({
                 : t('overview.checkup.reclaimableNone')}
           </span>
         </button>
-        {/* 温度 */}
-        <div className={'ao-checkup-item' + (tempHigh ? ' danger' : '')} title={tempHigh ? t('overview.checkup.tempHigh', { warn: TEMP_WARN_C }) : undefined}>
+        {/* 温度（R308）：点下去滚到本页「温度采样历史」卡——那里有采样点、区间峰值
+            和「最新采样于 X」。此前这是不可点的 div，说「最高温 71℃」却不给任何去向。 */}
+        <button
+          className={'ao-checkup-item' + (tempHigh ? ' danger' : '')}
+          onClick={onGoThermal}
+          disabled={!onGoThermal}
+          title={(tempHigh ? t('overview.checkup.tempHigh', { warn: TEMP_WARN_C }) + ' · ' : '') + t('overview.checkup.goThermal')}
+        >
           <Thermometer size={14} />
           <span>{tempC != null ? t('overview.checkup.temp', { temp: Math.round(tempC) }) : t('overview.checkup.tempNone')}</span>
-        </div>
+        </button>
         {/* 扫描时效：多久没扫。只在有盘时出现；three 态措辞分开（R293）。
             R307：有落点（哪块盘最久没扫）→ 按钮点下去选中它；没有 → 维持不可点 div。 */}
         {scanAge && (
@@ -1485,6 +1494,12 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     stripRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  // R308：体检条温度格的落点 = 本页「温度采样历史」卡。这一格原本是不可点的 div，
+  // 说了最高温却不给任何去向；现在与红盘格/扫描时效格同口径——点了就把用户带到能看
+  // 明细的地方（采样点、区间峰值、最新采样时间），不新造任何磁盘/温度扫描。
+  const thermalRef = useRef<HTMLDivElement | null>(null);
+  const goThermal = () => thermalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
   const cap: [string, string, string] = selDrive
     ? formatBytesTriple(selDrive.total_bytes, selDrive.used_bytes, selDrive.free_bytes)
     : ['-', '-', '-'];
@@ -1599,6 +1614,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         onGoStartup={onGoStartup}
         onGoRedDrive={goDrive}
         onGoStaleDrive={goDrive}
+        onGoThermal={goThermal}
       />
 
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}
@@ -1671,8 +1687,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           {/* 磁盘空间趋势（R6）：扫描历史曲线 + 近期增量 */}
           <SpaceTrendCard selPath={selPath} drives={drives} onGoWorkspace={onGoWorkspace} />
 
-          {/* 温度采样历史（R299）：只读回看已采到的点，不写入、不改频率 */}
-          <ThermalHistoryCard />
+          {/* 温度采样历史（R299）：只读回看已采到的点，不写入、不改频率。
+              R308：体检条温度格滚到这里（ref 挂在包裹层上——卡片加载中会返回 null）。 */}
+          <div ref={thermalRef}>
+            <ThermalHistoryCard />
+          </div>
 
           {/* 快速操作按钮区 */}
           <section className="ao-card">
