@@ -31,6 +31,32 @@ export function withRule(
 }
 
 /**
+ * R298：把后端返回的配置归一化成完整形状。
+ * 旧版后端（R291/R292 之前）返回的 reminder.json 没有 thermal_* 与
+ * startup_watch_* 字段
+ * 字段——直接用 undefined 绑到 <input type="checkbox"> 会让 React 把它当成
+ * 非受控组件（切换一次就成了半受控，控制台告警且行为不可预测）。这里按字段
+ * 补默认值，默认值取后端 ReminderConfig::default() 的同一口径。
+ * 注意：只补缺字段，不覆盖后端已有的值——用户配过的就是配过的。
+ */
+export function normalizeReminderCfg(raw: Partial<ReminderConfig> | null | undefined): ReminderConfig | null {
+  if (!raw) return null;
+  return {
+    enabled: raw.enabled ?? false,
+    interval_hours: raw.interval_hours ?? 24,
+    min_bytes: raw.min_bytes ?? 200 * 1024 * 1024,
+    weekly_report_enabled: raw.weekly_report_enabled ?? false,
+    weekly_interval_days: raw.weekly_interval_days ?? 7,
+    full_warn_days: raw.full_warn_days ?? 0,
+    scan_stale_days: raw.scan_stale_days ?? 21,
+    thermal_sample_enabled: raw.thermal_sample_enabled ?? false,
+    thermal_sustained_c: raw.thermal_sustained_c ?? 85,
+    thermal_sustained_samples: raw.thermal_sustained_samples ?? 5,
+    startup_watch_enabled: raw.startup_watch_enabled ?? false,
+    startup_watch_minutes: raw.startup_watch_minutes ?? 60,
+  };
+}
+/**
  * 清理提醒设置（R3）：开关 + 间隔 + 阈值 + 手动检查一次。
  * 铁律：只出清单 + 通知，绝不自动清理——检查按钮也只跑引擎真算并发通知，
  * 清理仍走总览页确认窗（execute_ai_plan user_confirmed）。
@@ -60,7 +86,8 @@ export function ReminderSettings() {
   useEffect(() => {
     let cancelled = false;
     api.getReminderConfig().then((c) => {
-      if (!cancelled) { setCfg(c); setCfgErr(null); }
+      // R298：归一化补缺字段（旧后端没有 thermal_*/startup_watch_*）。
+      if (!cancelled) { setCfg(normalizeReminderCfg(c)); setCfgErr(null); }
     }).catch((e) => {
       // 读失败 ≠ 加载中：记录原因，别让「加载中…」永远转圈（R79）。
       if (!cancelled) setCfgErr(String(e instanceof Error ? e.message : e));
@@ -122,7 +149,7 @@ export function ReminderSettings() {
     setSaving(true);
     try {
       const next = await api.setReminderConfig(patch);
-      setCfg(next);
+      setCfg(normalizeReminderCfg(next));
     } catch (e) {
       useStore.getState().toast(t('system.reminder.toastSaveFailed', { err: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
@@ -301,6 +328,90 @@ export function ReminderSettings() {
         {t('system.reminder.scanStaleHint')}
       </div>
 
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.thermalTitle')}</div>
+      <div className="switch-row">
+        <div>
+          <div className="switch-label">{t('system.reminder.thermalTitle')}</div>
+          <div className="switch-desc">
+            {t('system.reminder.thermalDescA')}
+            <b>{t('system.reminder.thermalDescB')}</b>
+          </div>
+        </div>
+        <input
+          type="checkbox"
+          className="switch"
+          checked={cfg.thermal_sample_enabled}
+          onChange={(e) => save({ thermal_sample_enabled: e.target.checked })}
+        />
+      </div>
+      <label className="field" style={{ marginTop: 10 }}>
+        <span>{t('system.reminder.thermalThreshold')}</span>
+        <div className="seg seg-5 auto">
+          {[75, 80, 85, 90, 95].map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`seg-opt${cfg.thermal_sustained_c === c ? ' active' : ''}`}
+              onClick={() => save({ thermal_sustained_c: c })}
+            >
+              {t('system.reminder.thermalC', { c })}
+            </button>
+          ))}
+        </div>
+      </label>
+      <label className="field" style={{ marginTop: 10 }}>
+        <span>{t('system.reminder.thermalSamplesLabel')}</span>
+        <div className="seg seg-5 auto">
+          {[1, 3, 5, 10, 15].map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`seg-opt${cfg.thermal_sustained_samples === n ? ' active' : ''}`}
+              onClick={() => save({ thermal_sustained_samples: n })}
+            >
+              {t('system.reminder.thermalSamples', { n, min: n * 5 })}
+            </button>
+          ))}
+        </div>
+      </label>
+      <div className="muted small" style={{ marginTop: 6 }}>
+        {t('system.reminder.thermalHint')}
+      </div>
+
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.startupTitle')}</div>
+      <div className="switch-row">
+        <div>
+          <div className="switch-label">{t('system.reminder.startupTitle')}</div>
+          <div className="switch-desc">
+            {t('system.reminder.startupDescA')}
+            <b>{t('system.reminder.startupDescB')}</b>
+          </div>
+        </div>
+        <input
+          type="checkbox"
+          className="switch"
+          checked={cfg.startup_watch_enabled}
+          onChange={(e) => save({ startup_watch_enabled: e.target.checked })}
+        />
+      </div>
+      <label className="field" style={{ marginTop: 10 }}>
+        <span>{t('system.reminder.startupIntervalLabel')}</span>
+        <div className="seg seg-5 auto">
+          {[15, 30, 60, 120, 240].map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`seg-opt${cfg.startup_watch_minutes === m ? ' active' : ''}`}
+              onClick={() => save({ startup_watch_minutes: m })}
+            >
+              {m === 60 ? t('system.reminder.startupHour') : t('system.reminder.startupMinutes', { n: m })}
+            </button>
+          ))}
+        </div>
+      </label>
+      <div className="muted small" style={{ marginTop: 6 }}>
+        {t('system.reminder.startupHint')}
+      </div>
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.forecastTitle')}</div>
       <button className="ghost" onClick={checkForecast} disabled={forecastBusy}>
         <TrendingUp size={13} /> {forecastBusy ? t('system.reminder.forecastChecking') : t('system.reminder.forecastCheck')}

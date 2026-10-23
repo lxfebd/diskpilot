@@ -1472,6 +1472,16 @@ export interface MockReminderConfig {
   full_warn_days: number;
   /** R297：多久没扫阈值（默认 21，与后端 ReminderConfig 默认同口径） */
   scan_stale_days: number;
+  /** R298：R291 温度持续采样开关（默认关，与后端同口径）。 */
+  thermal_sample_enabled: boolean;
+  /** R298：持续偏高阈值 ℃（默认 85）。 */
+  thermal_sustained_c: number;
+  /** R298：连续采样点数（默认 5）。 */
+  thermal_sustained_samples: number;
+  /** R298：R292 启动项变化监听开关（默认关）。 */
+  startup_watch_enabled: boolean;
+  /** R298：启动项快照间隔分钟（默认 60）。 */
+  startup_watch_minutes: number;
 }
 
 let reminderCfg: MockReminderConfig = {
@@ -1482,6 +1492,11 @@ let reminderCfg: MockReminderConfig = {
   weekly_interval_days: 7,
   full_warn_days: 0,
   scan_stale_days: 21,
+  thermal_sample_enabled: false,
+  thermal_sustained_c: 85,
+  thermal_sustained_samples: 5,
+  startup_watch_enabled: false,
+  startup_watch_minutes: 60,
 };
 
 export async function getReminderConfig(): Promise<MockReminderConfig> {

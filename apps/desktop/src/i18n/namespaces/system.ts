@@ -157,6 +157,23 @@ export const system = {
     'system.reminder.fullWarnDays': '{n} 天',
     'system.reminder.fullWarnHint': '需要至少两次扫描记录才有趋势；清理或卸载后释放空间，预警会自动解除。',
 
+    // ── R298 热管理与启动项监听（R291/R292 的开关与阈值）──
+    'system.reminder.thermalTitle': '温度持续偏高提醒',
+    'system.reminder.thermalDescA': '后台采样温度，连续 N 个采样点全超过阈值才提醒（采样周期 5 分钟）。',
+    'system.reminder.thermalDescB': '只读传感器，绝不写入',
+    'system.reminder.thermalThreshold': '判定阈值',
+    'system.reminder.thermalC': '{c} ℃',
+    'system.reminder.thermalSamplesLabel': '连续采样点数',
+    'system.reminder.thermalSamples': '{n} 点（≈ {min} 分钟）',
+    'system.reminder.thermalHint': '默认 5 点 ≈ 连续 25 分钟无一秒喘息；1 点会退化成瞬时判定。阈值低于 50 会把轻负载唱成过热。',
+    'system.reminder.startupTitle': '启动项变化监听',
+    'system.reminder.startupDescA': '后台按固定间隔拍启动项快照，集合变了才提醒「有启动项被改动」。',
+    'system.reminder.startupDescB': '只枚举对比，绝不修改',
+    'system.reminder.startupIntervalLabel': '快照间隔',
+    'system.reminder.startupMinutes': '{n} 分钟',
+    'system.reminder.startupHour': '1 小时',
+    'system.reminder.startupHint': '默认 1 小时一次；启动项不常变，更频繁只会白耗一次 PowerShell 枚举。',
+
     // ── R297 扫描时效提醒阈值 ──
     'system.reminder.scanStaleLabel': '扫描时效提醒',
     'system.reminder.scanStaleDescA': '超过阈值天数没扫描的盘，会在后台提醒「这块盘多久没扫」。同阈值也用于今日体检的扫描时效格。',
@@ -341,6 +358,23 @@ export const system = {
     'system.reminder.fullWarnOff': 'Off',
     'system.reminder.fullWarnDays': '{n} days',
     'system.reminder.fullWarnHint': 'Needs at least two scan samples to have a trend; freeing space by cleaning or uninstalling clears the warning automatically.',
+
+    // ── R298 thermal + startup watch (switches and thresholds for R291/R292) ──
+    'system.reminder.thermalTitle': 'Sustained high temperature alert',
+    'system.reminder.thermalDescA': 'Samples temperature in the background; alerts only when N consecutive samples all stay above the threshold (sample period 5 minutes).',
+    'system.reminder.thermalDescB': 'Read-only sensor access — never writes',
+    'system.reminder.thermalThreshold': 'Threshold',
+    'system.reminder.thermalC': '{c} °C',
+    'system.reminder.thermalSamplesLabel': 'Consecutive samples',
+    'system.reminder.thermalSamples': '{n} samples (~{min} min)',
+    'system.reminder.thermalHint': 'The default 5 samples means 25 straight minutes with no dip; 1 sample degenerates into an instant spike check. A threshold below 50 °C reports light load as overheating.',
+    'system.reminder.startupTitle': 'Startup item change watch',
+    'system.reminder.startupDescA': 'Takes a startup item snapshot on a fixed interval and alerts only when the set actually changed (something was added or removed).',
+    'system.reminder.startupDescB': 'Enumerates and compares only — never modifies',
+    'system.reminder.startupIntervalLabel': 'Snapshot interval',
+    'system.reminder.startupMinutes': '{n} min',
+    'system.reminder.startupHour': '1 hour',
+    'system.reminder.startupHint': 'Defaults to once an hour; startup items rarely change, and going more frequent just burns a PowerShell enumeration for nothing.',
 
     // ── R297 scan-staleness reminder threshold ──
     'system.reminder.scanStaleLabel': 'Scan staleness reminder',

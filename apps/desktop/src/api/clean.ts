@@ -220,6 +220,16 @@ export const cleanApi = {
     full_warn_days?: number;
     /** R297 「这块盘多久没扫」阈值（天）；0 = 关闭该提醒。后端钳 ≤3650。 */
     scan_stale_days?: number;
+    /** R291 温度持续采样开关。关掉只是不采，不影响已有历史样本。 */
+    thermal_sample_enabled?: boolean;
+    /** 持续偏高阈值 ℃（后端钳 50..=110）。 */
+    thermal_sustained_c?: number;
+    /** 连续采样点数（后端钳 1..=60；1 = 瞬时判定）。 */
+    thermal_sustained_samples?: number;
+    /** R292 启动项变化监听开关。 */
+    startup_watch_enabled?: boolean;
+    /** 启动项快照间隔分钟（后端钳 1..=1440）。 */
+    startup_watch_minutes?: number;
   }) =>
     isTauri
       ? invoke<ReminderConfig>('set_reminder_config', {
@@ -230,6 +240,13 @@ export const cleanApi = {
           weeklyIntervalDays: patch.weekly_interval_days ?? null,
           fullWarnDays: patch.full_warn_days ?? null,
           scanStaleDays: patch.scan_stale_days ?? null,
+          // R298：热管理与启动项监听的 5 个旋钮。后端早已接收（reminder.rs:160-165），
+          // 此前前端零入口，用户只能手改 reminder.json。
+          thermalSampleEnabled: patch.thermal_sample_enabled ?? null,
+          thermalSustainedC: patch.thermal_sustained_c ?? null,
+          thermalSustainedSamples: patch.thermal_sustained_samples ?? null,
+          startupWatchEnabled: patch.startup_watch_enabled ?? null,
+          startupWatchMinutes: patch.startup_watch_minutes ?? null,
         })
       : mocks.setReminderConfig(patch),
 
@@ -351,6 +368,20 @@ export interface ReminderConfig {
   /** 「多久没扫」提醒阈值天（R293，默认 21；0 = 关闭该提醒）。
    *  今日体检「扫描时效」格与它同口径：设置里改，体检跟着改。 */
   scan_stale_days: number;
+  /** R291 温度持续采样开关（默认关）。独立于 enabled——采集本身零成本
+   *  （顺手读一次传感器），开着它才能让「温度持续偏高」变得可判断。 */
+  thermal_sample_enabled: boolean;
+  /** 持续偏高判定阈值 ℃（默认 85，后端钳 50..=110）。低于睿频上限、高于
+   *  日常轻负载，减少误报。 */
+  thermal_sustained_c: number;
+  /** 连续多少个采样点全超温才算「持续」（默认 5，后端钳 1..=60）。
+   *  采样周期 5 分钟 → 默认 5 点 ≈ 连续 25 分钟；1 会退化成瞬时判定。 */
+  thermal_sustained_samples: number;
+  /** R292 启动项变化监听开关（默认关）。独立于 enabled：只想知道「启动项
+   *  有没有被动过」的用户可以只开这个。 */
+  startup_watch_enabled: boolean;
+  /** 启动项快照间隔分钟（默认 60，后端钳 1..=1440）。 */
+  startup_watch_minutes: number;
 }
 
 /** 单盘可清字节（只读统计） */
