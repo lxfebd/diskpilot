@@ -958,6 +958,7 @@ function HealthCheckupCard({
   onGoHardware,
   onGoStartup,
   onGoRedDrive,
+  onGoStaleDrive,
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
@@ -969,6 +970,8 @@ function HealthCheckupCard({
   onGoStartup?: () => void;
   /** 选中指定的红盘（体检条红盘格用）：右侧详情卡与低配救援横幅都跟着这块盘走。 */
   onGoRedDrive?: (path: string) => void;
+  /** 选中「最久没扫」的那块盘并滚到盘条（扫描时效格用，R307）。 */
+  onGoStaleDrive?: (path: string) => void;
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
@@ -1023,6 +1026,46 @@ function HealthCheckupCard({
   const hwSummary = summarizeDiskHealth(hwDisks);
   const riskyDisks = riskyDrives(hwDisks);
 
+  // R307：扫描时效格此前只是文本——说「最久 21 天没扫」却不说是哪块盘。有可处理对象
+  // （never/stale/skew 都带 worstRoot）→ 点击选中最久没扫的那块并滚到盘条；ok/unread
+  // 没有对象，保持不可点 div，不造一个点下去没反应的按钮。
+  const scanAgeCls = scanAge
+    ? 'ao-checkup-item' + (scanAge.state === 'never' || scanAge.state === 'stale' ? ' danger' : scanAge.state === 'skew' ? ' caution' : '')
+    : 'ao-checkup-item';
+  const scanAgeGo = scanAge?.worstRoot ?? null;
+  const scanAgeTitle = scanAge == null
+    ? undefined
+    : scanAge.state === 'never'
+      ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
+      : scanAge.state === 'stale'
+        ? scanAge.worstLastAt != null
+          ? t('overview.checkup.scanAgeStaleAt', { days: scanAge.worstDays ?? 0, date: formatDateKey(new Date(scanAge.worstLastAt * 1000)) })
+          : t('overview.checkup.scanAgeStale', { n: scanAge.staleCount, days: scanAge.worstDays ?? 0 })
+        : scanAge.state === 'skew'
+          ? t('overview.checkup.scanAgeSkew')
+          : scanAge.unreadCount > 0
+            ? t('overview.checkup.scanAgeUnread', { n: scanAge.unreadCount })
+            : undefined;
+  // 格子内容只写一份：可点与不可点共用，避免两份措辞漂移。
+  const scanAgeInner = scanAge ? (
+    <>
+      <History size={14} />
+      <span>
+        {scanAge.state === 'unread'
+          ? t('overview.checkup.scanAgeUnreadAll')
+          : scanAge.state === 'never'
+            ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
+            : scanAge.state === 'stale'
+              ? scanAge.worstLastAt != null
+                ? t('overview.checkup.scanAgeStaleAtShort', { days: scanAge.worstDays ?? 0, date: formatDateKey(new Date(scanAge.worstLastAt * 1000)) })
+                : t('overview.checkup.scanAgeStaleDays', { days: scanAge.worstDays ?? 0 })
+              : scanAge.state === 'skew'
+                ? t('overview.checkup.scanAgeSkewShort')
+                : t('overview.checkup.scanAgeOk')}
+      </span>
+    </>
+  ) : null;
+
   return (
     <section className="ao-checkup">
       <div className="ao-checkup-head">
@@ -1069,39 +1112,22 @@ function HealthCheckupCard({
           <Thermometer size={14} />
           <span>{tempC != null ? t('overview.checkup.temp', { temp: Math.round(tempC) }) : t('overview.checkup.tempNone')}</span>
         </div>
-        {/* 扫描时效：多久没扫。只在有盘时出现；three 态措辞分开（R293） */}
+        {/* 扫描时效：多久没扫。只在有盘时出现；three 态措辞分开（R293）。
+            R307：有落点（哪块盘最久没扫）→ 按钮点下去选中它；没有 → 维持不可点 div。 */}
         {scanAge && (
-          <div
-            className={'ao-checkup-item' + (scanAge.state === 'never' || scanAge.state === 'stale' ? ' danger' : scanAge.state === 'skew' ? ' caution' : '')}
-            title={
-              scanAge.state === 'never'
-                ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
-                : scanAge.state === 'stale'
-                  ? scanAge.worstLastAt != null
-                    ? t('overview.checkup.scanAgeStaleAt', { days: scanAge.worstDays ?? 0, date: formatDateKey(new Date(scanAge.worstLastAt * 1000)) })
-                    : t('overview.checkup.scanAgeStale', { n: scanAge.staleCount, days: scanAge.worstDays ?? 0 })
-                  : scanAge.state === 'skew'
-                    ? t('overview.checkup.scanAgeSkew')
-                    : scanAge.unreadCount > 0
-                      ? t('overview.checkup.scanAgeUnread', { n: scanAge.unreadCount })
-                      : undefined
-            }
-          >
-            <History size={14} />
-            <span>
-              {scanAge.state === 'unread'
-                ? t('overview.checkup.scanAgeUnreadAll')
-                : scanAge.state === 'never'
-                  ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
-                  : scanAge.state === 'stale'
-                    ? scanAge.worstLastAt != null
-                      ? t('overview.checkup.scanAgeStaleAtShort', { days: scanAge.worstDays ?? 0, date: formatDateKey(new Date(scanAge.worstLastAt * 1000)) })
-                      : t('overview.checkup.scanAgeStaleDays', { days: scanAge.worstDays ?? 0 })
-                    : scanAge.state === 'skew'
-                      ? t('overview.checkup.scanAgeSkewShort')
-                      : t('overview.checkup.scanAgeOk')}
-            </span>
-          </div>
+          scanAgeGo && onGoStaleDrive ? (
+            <button
+              className={scanAgeCls}
+              onClick={() => onGoStaleDrive(scanAgeGo)}
+              title={scanAgeTitle ? scanAgeTitle + ' · ' + t('overview.checkup.goStaleDrive') : t('overview.checkup.goStaleDrive')}
+            >
+              {scanAgeInner}
+            </button>
+          ) : (
+            <div className={scanAgeCls} title={scanAgeTitle}>
+              {scanAgeInner}
+            </div>
+          )
         )}
         {/* 启动项：与硬盘健康格一致——可点进系统优化页看/管明细（R304 此前只是不可点的计数） */}
         <button
@@ -1450,10 +1476,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     resqHintRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
-  // R305：体检条红盘格「查看红盘」的落点 = 选中那块最满的红盘并滚到盘条
-  // （救援横幅与右侧详情卡都跟着选中盘走，用户能直接看到是哪块盘红了）。
+  // R305/R307：体检条「红盘格」与「扫描时效格」共用一个落点 = 选中指定那块盘并
+  // 滚到盘条（救援横幅与右侧详情卡都跟着选中盘走，用户能直接看到是哪块盘红了/
+  // 最久没扫）。只选中不动作：要真扫它，点盘卡片（与既有交互一致）。
   const stripRef = useRef<HTMLDivElement | null>(null);
-  const goRedDrive = (path: string) => {
+  const goDrive = (path: string) => {
     setSelPath(path);
     stripRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
@@ -1570,7 +1597,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         onGoCleanup={onOpenCleanup}
         onGoHardware={onGoHardware}
         onGoStartup={onGoStartup}
-        onGoRedDrive={goRedDrive}
+        onGoRedDrive={goDrive}
+        onGoStaleDrive={goDrive}
       />
 
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}
