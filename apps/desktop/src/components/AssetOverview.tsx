@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, History, ChevronDown, ChevronUp, File, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff, type ThermalPoint } from '../api';
 import { CAT_COLORS } from '../colors';
-import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
+import { formatBytes, formatBytesTriple, normKey, driveLetter, formatDateKey } from '../format';
 import { ensureHwDiskQuick } from '../hwCache';
 import { pathDriveLetter, riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
@@ -346,10 +346,12 @@ export function startupCheckState(
 
 export type ScanAgeState = 'unread' | 'never' | 'stale' | 'skew' | 'ok';
 
-/** 单盘扫描时效读数：staleness == null 表示读失败（未读到，不是刚扫过）。 */
+/** 单盘扫描时效读数：staleness == null 表示读失败（未读到，不是刚扫过）。
+ *  与后端 scan_staleness_cmd 返回同形：`last_at` 是上次扫描的 unix 秒，
+ *  后端注释明写「展示『上次扫于 X』用」——此前前端只保留 days 把日期丢了。 */
 export interface ScanAgeRow {
   root: string;
-  staleness: { never: boolean; clock_skew: boolean; days: number | null } | null;
+  staleness: { never: boolean; clock_skew: boolean; days: number | null; last_at: number | null } | null;
 }
 
 export interface ScanAgeSummary {
@@ -358,6 +360,8 @@ export interface ScanAgeSummary {
   worstRoot: string | null;
   /** 最久未扫的天数（state==='stale' 时有值）。 */
   worstDays: number | null;
+  /** 最该处理那盘的上次扫描时间（unix 秒）；null = 无有效记录（never/未读到）。 */
+  worstLastAt: number | null;
   /** 从未扫过的盘数。 */
   neverCount: number;
   /** 达到阈值的盘数（不含 never）。 */
@@ -370,7 +374,7 @@ export interface ScanAgeSummary {
  *  优先级：unread（全是未读到）> never（最该动手）> stale > skew > ok。
  *  部分盘读数失败时仍按已知盘判定，unreadCount 单独提示，不静默吞掉。 */
 export function summarizeScanAge(
-  rows: readonly { root: string; staleness: { never: boolean; clock_skew: boolean; days: number | null } | null }[],
+  rows: readonly ScanAgeRow[],
   warnDays: number,
 ): ScanAgeSummary {
   const unread = rows.filter((r) => r.staleness == null);
@@ -382,18 +386,19 @@ export function summarizeScanAge(
     .sort((a, b) => (b.staleness!.days ?? 0) - (a.staleness!.days ?? 0));
   const base = { neverCount: never.length, staleCount: stale.length, unreadCount: unread.length };
   if (read.length === 0) {
-    return { state: 'unread', worstRoot: null, worstDays: null, ...base };
+    return { state: 'unread', worstRoot: null, worstDays: null, worstLastAt: null, ...base };
   }
   if (never.length > 0) {
-    return { state: 'never', worstRoot: never[0].root, worstDays: null, ...base };
+    // never 盘理论上 last_at 为 null（无记录），但如实带出，不猜。
+    return { state: 'never', worstRoot: never[0].root, worstDays: null, worstLastAt: never[0].staleness!.last_at, ...base };
   }
   if (stale.length > 0) {
-    return { state: 'stale', worstRoot: stale[0].root, worstDays: stale[0].staleness!.days, ...base };
+    return { state: 'stale', worstRoot: stale[0].root, worstDays: stale[0].staleness!.days, worstLastAt: stale[0].staleness!.last_at, ...base };
   }
   if (skew.length > 0) {
-    return { state: 'skew', worstRoot: skew[0].root, worstDays: null, ...base };
+    return { state: 'skew', worstRoot: skew[0].root, worstDays: null, worstLastAt: skew[0].staleness!.last_at, ...base };
   }
-  return { state: 'ok', worstRoot: null, worstDays: null, ...base };
+  return { state: 'ok', worstRoot: null, worstDays: null, worstLastAt: null, ...base };
 }
 
 // ── 温度采样历史（R299）：把「采到几个点」和「点长什么样」分开说 ──
@@ -987,7 +992,9 @@ function HealthCheckupCard({
               scanAge.state === 'never'
                 ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
                 : scanAge.state === 'stale'
-                  ? t('overview.checkup.scanAgeStale', { n: scanAge.staleCount, days: scanAge.worstDays ?? 0 })
+                  ? scanAge.worstLastAt != null
+                    ? t('overview.checkup.scanAgeStaleAt', { days: scanAge.worstDays ?? 0, date: formatDateKey(new Date(scanAge.worstLastAt * 1000)) })
+                    : t('overview.checkup.scanAgeStale', { n: scanAge.staleCount, days: scanAge.worstDays ?? 0 })
                   : scanAge.state === 'skew'
                     ? t('overview.checkup.scanAgeSkew')
                     : scanAge.unreadCount > 0
@@ -1002,7 +1009,9 @@ function HealthCheckupCard({
                 : scanAge.state === 'never'
                   ? t('overview.checkup.scanAgeNever', { n: scanAge.neverCount })
                   : scanAge.state === 'stale'
-                    ? t('overview.checkup.scanAgeStaleDays', { days: scanAge.worstDays ?? 0 })
+                    ? scanAge.worstLastAt != null
+                      ? t('overview.checkup.scanAgeStaleAtShort', { days: scanAge.worstDays ?? 0, date: formatDateKey(new Date(scanAge.worstLastAt * 1000)) })
+                      : t('overview.checkup.scanAgeStaleDays', { days: scanAge.worstDays ?? 0 })
                     : scanAge.state === 'skew'
                       ? t('overview.checkup.scanAgeSkewShort')
                       : t('overview.checkup.scanAgeOk')}

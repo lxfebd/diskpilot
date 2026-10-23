@@ -167,6 +167,9 @@ export const overview = {
     'overview.checkup.scanAgeNever': '{n} 块盘还没扫描过',
     'overview.checkup.scanAgeStale': '{n} 块盘超过 {days} 天没扫了',
     'overview.checkup.scanAgeStaleDays': '最久 {days} 天没扫',
+    // R303：后端返回 last_at（「上次扫于 X」），此前只留天数把日期丢了
+    'overview.checkup.scanAgeStaleAt': '{days} 天没扫（上次 {date}）',
+    'overview.checkup.scanAgeStaleAtShort': '最久 {days} 天没扫（{date}）',
     'overview.checkup.scanAgeSkew': '扫描时间戳晚于当前时刻（时钟异常），天数不可信',
     'overview.checkup.scanAgeSkewShort': '扫描时间异常',
     'overview.checkup.scanAgeUnread': '{n} 块盘的扫描记录未读到（不代表没扫过）',
@@ -386,6 +389,9 @@ export const overview = {
     'overview.checkup.scanAgeNever': '{n} drive(s) never scanned',
     'overview.checkup.scanAgeStale': '{n} drive(s) not scanned for over {days} day(s)',
     'overview.checkup.scanAgeStaleDays': 'last scan {days} day(s) ago',
+    // R303: the backend returns last_at (last scanned at); only the day count was kept before
+    'overview.checkup.scanAgeStaleAt': 'not scanned for {days} day(s) (last {date})',
+    'overview.checkup.scanAgeStaleAtShort': 'last scan {days} day(s) ago ({date})',
     'overview.checkup.scanAgeSkew': 'Scan timestamps are ahead of the clock (time skew); day counts are unreliable',
     'overview.checkup.scanAgeSkewShort': 'Scan time looks wrong',
     'overview.checkup.scanAgeUnread': '{n} drive(s) with unread scan history (that does not mean never scanned)',

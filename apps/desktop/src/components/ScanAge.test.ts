@@ -5,8 +5,8 @@ import { summarizeScanAge, type ScanAgeRow } from './AssetOverview';
 // 断言按中文原文写，先钉死语言。
 beforeAll(() => setLang('zh'));
 
-function row(root: string, days: number | null, never = false, clock_skew = false): ScanAgeRow {
-  return { root, staleness: { never, clock_skew, days } };
+function row(root: string, days: number | null, never = false, clock_skew = false, last_at: number | null = null): ScanAgeRow {
+  return { root, staleness: { never, clock_skew, days, last_at } };
 }
 
 describe('扫描时效汇总（R293：never / stale / skew / unread 四态分开）', () => {
@@ -34,6 +34,21 @@ describe('扫描时效汇总（R293：never / stale / skew / unread 四态分开
     expect(s.worstRoot).toBe('C:\\');
     expect(s.worstDays).toBe(30);
     expect(s.staleCount).toBe(1); // D=20 未达 21，不算过期
+  });
+
+  it('stale 带 last_at：worstLastAt 如实带出，供「上次扫于 X」展示（R303）', () => {
+    const s = summarizeScanAge([row('C:\\', 30, false, false, 1728000000), row('D:\\', 20, false, false, 1727800000)], 21);
+    expect(s.state).toBe('stale');
+    expect(s.worstRoot).toBe('C:\\');
+    expect(s.worstLastAt).toBe(1728000000);
+    expect(summarizeScanAge([row('C:\\', 30)], 21).worstLastAt).toBeNull(); // 无 last_at 不编日期
+  });
+
+  it('never/skew 的 last_at 如实带出，unread/ok 为 null（R303）', () => {
+    expect(summarizeScanAge([row('D:\\', null, true, false, 1710000000)], 21).worstLastAt).toBe(1710000000);
+    expect(summarizeScanAge([row('C:\\', null, false, true, 1700000000)], 21).worstLastAt).toBe(1700000000);
+    expect(summarizeScanAge([], 21).worstLastAt).toBeNull();
+    expect(summarizeScanAge([row('C:\\', 3)], 21).worstLastAt).toBeNull();
   });
 
   it('skew：时间戳异常时天数不可信，不报 stale 也不编天数', () => {

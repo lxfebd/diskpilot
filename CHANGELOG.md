@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 扫描时效格补上「上次扫于哪天」（R303）
+
+后端 `scan_staleness_cmd` 一直返回 `last_at`（源码注释写明「展示『上次扫于 X』用」），
+但总览体检卡的扫描时效格只保留天数——最久一块盘「21 天没扫」，用户看不出到底是
+哪天扫的，也没法对照「是不是我上个月刚做过一次体检」。本条把日期接上：
+
+- `ScanAgeRow.staleness` 补 `last_at`（与后端 `ScanStalenessOut` 同形，不再手写窄类型丢字段），
+  `summarizeScanAge` 返回 `worstLastAt`，如实带出最该处理那盘的上次扫描时间。
+- 体检卡过期态文案改为「最久 21 天没扫（2026-10-03）」，title 同步带上日期；
+  `last_at` 为 null（从未扫过/读数异常）时回退原文案，不编日期。
+- 补 2 条单测：`worstLastAt` 带出与 null 回退、never/skew 如实带出。
 ### 2026-10-24 立即检查的结果里也点出授权命中项（R302）
 
 R295 让清理提醒的 toast 点出「其中 N 项已按你的授权规则进清单」，但设置页
