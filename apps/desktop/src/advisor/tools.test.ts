@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { parseProposalFromText, renderArgsTemplate, validateManifestArgs, mcpToolRegistry, dynamicMcpTools, refreshMcpTools, clip, listNote, toolRegistry, takeProposal, resetAgentPending } from './tools';
 import type { ToolManifestInvocation } from '../api';
+import * as mocks from '../mocks';
 
 const inv = (over: Partial<ToolManifestInvocation> = {}): ToolManifestInvocation =>
   ({
@@ -593,5 +594,89 @@ describe('toolRegistry 只读工具预览支路执行可用（R280）', () => {
     const t = toolRegistry.find((x) => x.name === 'get_fan_status')!;
     const out = await t.execute({}, { user: 'test' });
     expect(out).not.toContain('已应用自定义转速：是');
+  });
+});
+
+// R289：execute_cleanup = AI 清理**预演**（后端 execute_ai_plan 的 dryRun
+// 分支：纯只读实测、不回收、不写 undo 台账）。放开的是"核实路径是否存在、
+// 能清多少"，不是执行权——真正回收仍只有 executeAiPlan(userConfirmed)
+// 一条路，用户确认窗是唯一放行闸门。
+describe('toolRegistry execute_cleanup 预演（R289）', () => {
+  const LIVE = 'C:\\Users\\90740\\AppData\\Local\\Temp';
+  const LIVE2 = 'C:\\Users\\90740\\AppData\\Local\\CrashDumps';
+
+  const item = (path: string) => ({ path, what: '临时文件', purpose: '缓存', impact: '可重建', risk: 'safe' });
+
+  it('execute_cleanup 注册且不带 tauriOnly（纯只读预演）', () => {
+    const t = toolRegistry.find((x) => x.name === 'execute_cleanup')!;
+    expect(t, 'execute_cleanup 应已注册').toBeTruthy();
+    expect(t.tauriOnly).toBeUndefined();
+    expect(typeof t.execute).toBe('function');
+    expect(t.required).toEqual(['items']);
+  });
+
+  // 关键闭环：预演命中的项必须经 pendingProposal 交给确认窗（与
+  // propose_cleanup_plan 同一链路），否则 AI 验证完的清单到不了用户眼前。
+  it('预演结果经 pendingProposal 交给确认窗（命中项全量）', async () => {
+    resetAgentPending();
+    const t = toolRegistry.find((x) => x.name === 'execute_cleanup')!;
+    const out = await t.execute({ items: [item(LIVE), item(LIVE2)] }, { user: 'test' });
+    expect(out).toContain('预演完成');
+    expect(out).toContain('2/2');
+    const proposal = takeProposal();
+    expect(proposal).toBeTruthy();
+    expect(proposal!.title).toBe('AI 清理预演');
+    expect(proposal!.items.map((i) => i.path)).toEqual([LIVE, LIVE2]);
+    expect(takeProposal()).toBeNull();
+    resetAgentPending();
+  });
+
+  // 诚实性：预演不到的路径（编造/已清/不可访问）不得进确认窗——AI 不能把
+  // 幻觉路径端给用户点；必须在返回文本里如实报"未命中"。
+  it('未命中路径从确认窗剔除，并在返回里如实列出', async () => {
+    resetAgentPending();
+    const t = toolRegistry.find((x) => x.name === 'execute_cleanup')!;
+    const ghost = 'C:\\Users\\不存在\\AppData\\Local\\GhostCache';
+    const out = await t.execute({ items: [item(LIVE), item(ghost)] }, { user: 'test' });
+    expect(out).toContain('1/2');
+    expect(out).toContain('未命中');
+    expect(out).toContain(ghost);
+    const proposal = takeProposal();
+    expect(proposal!.items.map((i) => i.path)).toEqual([LIVE]);
+    expect(takeProposal()).toBeNull();
+    resetAgentPending();
+  });
+
+  // 安全边界：一条都没命中时**不挂** pendingProposal——确认窗弹出空清单
+  // 会让用户对"清什么"一无所知；AI 应把全部项如实报为未命中。
+  it('全部未命中不产生确认窗清单', async () => {
+    resetAgentPending();
+    const t = toolRegistry.find((x) => x.name === 'execute_cleanup')!;
+    const out = await t.execute({ items: [item('C:\\Users\\不存在\\a'), item('C:\\Users\\不存在\\b')] }, { user: 'test' });
+    expect(out).toContain('0/2');
+    expect(out).toContain('未命中');
+    expect(takeProposal()).toBeNull();
+    resetAgentPending();
+  });
+
+  it('items 为空 / 无 path 时不挂清单，明确报错', async () => {
+    resetAgentPending();
+    const t = toolRegistry.find((x) => x.name === 'execute_cleanup')!;
+    const out = await t.execute({ items: [{ what: '没有 path 的项', purpose: 'x', impact: 'y', risk: 'safe' }] }, { user: 'test' });
+    expect(out).toContain('清单为空');
+    expect(takeProposal()).toBeNull();
+    resetAgentPending();
+  });
+
+  // 预演是**只读**：mock 的 dryRun 分支只实测字节、不回收、不写台账——
+  // 断言它不产生任何 undo 台账条目（防将来误把执行权接到这里）。
+  it('预演不写 undo 台账（dry-run 是纯只读）', async () => {
+    resetAgentPending();
+    const before = await mocks.listUndo(100);
+    const t = toolRegistry.find((x) => x.name === 'execute_cleanup')!;
+    await t.execute({ items: [item(LIVE)] }, { user: 'test' });
+    const after = await mocks.listUndo(100);
+    expect(after.length).toBe(before.length);
+    resetAgentPending();
   });
 });

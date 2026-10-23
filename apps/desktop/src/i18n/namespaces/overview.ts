@@ -89,6 +89,17 @@ export const overview = {
     'overview.clean.failed': '没能读取可清理项',
     'overview.clean.loadFailed': '没能读取可清理项（不代表没有；可能是后端未就绪或统计失败）：{msg}',
     'overview.clean.spotless': '{drive} 盘很干净，暂无可清理项目',
+    // health-butler P0：建议清理跨次对比。措辞纪律——没有上次快照就说"首次"，
+    // 读失败就说"未读到"，绝不用"持平"假装有比较过。
+    'overview.clean.diffMore': '比上次多出 {size}',
+    'overview.clean.diffLess': '比上次少了 {size}',
+    'overview.clean.diffFlat': '与上次持平',
+    'overview.clean.diffGap': '距上次 {n} 天',
+    'overview.clean.diffTop': '主要在 {label}',
+    'overview.clean.diffNew': '新增 {n} 类',
+    'overview.clean.diffGone': '减少 {n} 类',
+    'overview.clean.diffFirst': '首次统计，下次扫描后可对比变化',
+    'overview.clean.diffUnread': '没能读取上次统计（不代表没有记录）：{msg}',
     // 拆前缀/后缀是为了保住中间的 <b> 加粗数字，英文靠两个片段间的空格拼成整句。
     'overview.clean.selPrefix': '已选',
     'overview.clean.selSuffix': '项，共',
@@ -279,6 +290,17 @@ export const overview = {
     'overview.clean.failed': 'Could not read cleanup items',
     'overview.clean.loadFailed': 'Could not read cleanup items (this does not mean there are none; backend may be unavailable or stats failed): {msg}',
     'overview.clean.spotless': 'The {drive} drive looks clean — nothing to remove',
+    // health-butler P0: cross-session cleanup delta. No fake "unchanged" when
+    // there is no previous snapshot to compare against.
+    'overview.clean.diffMore': '{size} more than last time',
+    'overview.clean.diffLess': '{size} less than last time',
+    'overview.clean.diffFlat': 'Same as last time',
+    'overview.clean.diffGap': '{n} days since last check',
+    'overview.clean.diffTop': 'Mostly {label}',
+    'overview.clean.diffNew': '{n} new',
+    'overview.clean.diffGone': '{n} cleared',
+    'overview.clean.diffFirst': 'First snapshot — changes can be compared after the next scan',
+    'overview.clean.diffUnread': 'Could not read the previous snapshot (this does not mean there is none): {msg}',
     // Split around the bold numbers; the space between the two fragments joins the sentence.
     'overview.clean.selPrefix': 'Selected',
     'overview.clean.selSuffix': 'items, freeing about',

@@ -285,6 +285,64 @@ export const toolRegistry: ToolDef[] = [
     },
   },
   {
+    name: 'execute_cleanup',
+    description: '预演一次清理：逐条核实清单里的路径是否真实存在、能释放多少字节（只读探测，不回收、不写历史）。用它在给出最终建议前验证路径，或把已验证的清单交给用户确认窗。你不能真正执行任何删除/回收——真正回收只发生在用户逐项核对并确认之后。调用后按实测结果在回答里如实汇报：命中的项、跳过的项（含原因）。',
+    properties: {
+      items: {
+        type: 'array',
+        description: '要预演的路径清单，最多 10 项',
+        items: {
+          type: 'object',
+          properties: {
+            path: { type: 'string', description: '目录绝对路径（Windows 反斜杠），必须真实存在' },
+            what: { type: 'string', description: '这是什么（一句话）' },
+            purpose: { type: 'string', description: '它是干什么用的' },
+            impact: { type: 'string', description: '删了会怎样（有无影响 / 如何恢复）' },
+            risk: { type: 'string', enum: ['safe', 'caution', 'danger'], description: '风险等级：safe 可放心清 / caution 谨慎 / danger 高危' },
+          },
+          required: ['path', 'what', 'purpose', 'impact', 'risk'],
+        },
+      },
+    },
+    required: ['items'],
+    // R289：AI「能操盘」的最小安全形态。放开的是**预演**（后端 execute_ai_plan
+    // 的 dryRun 分支：纯只读实测、不回收、不写 undo 台账），不是执行权——真正
+    // 回收仍只有 executeAiPlan(userConfirmed) 一条路，确认窗仍是唯一闸门。
+    // 预览模式同样放行：mock 的 dryRun 分支只读树内路径，无副作用。
+    execute: async (args) => {
+      const src = (args.items ? args : (args.execute_cleanup ?? args)) as Record<string, unknown>;
+      const norm = normalizeProposal({ title: 'AI 清理预演', ...(src as Record<string, unknown>) });
+      if (!norm) return '预演清单为空：items 里每项必须有 path。请核对路径后重新生成。';
+      try {
+        const hit = await api.executeAiPlanDryRun(norm.items.map((i) => i.path));
+        const live = new Map(hit.map((e) => [e.source.toLowerCase(), e.bytes_freed ?? 0]));
+        // 只有真实命中（磁盘上存在）的项才进确认窗——预演不到等于不存在，
+        // 不该把幻觉路径端给用户点。
+        const confirmed = norm.items.filter((i) => live.has(i.path.toLowerCase()));
+        const missing = norm.items.filter((i) => !live.has(i.path.toLowerCase()));
+        if (confirmed.length > 0) {
+          // 与 propose_cleanup_plan 同一链路：只挂 pendingProposal，由
+          // agent.ts 的 takeProposal() 统一交给 UI 确认窗，由用户逐项勾选并
+          // 确认后才执行（execute_ai_plan 的 user_confirmed 是唯一放行条件）。
+          // 不在这里直接回调 onProposal，否则一次运行里多次调用会弹多个窗。
+          pendingProposal = { title: norm.title, items: confirmed };
+        }
+        const total = confirmed.reduce((s, i) => s + (live.get(i.path.toLowerCase()) ?? 0), 0);
+        const out: string[] = [
+          `预演完成：${confirmed.length}/${norm.items.length} 项真实存在（合计约 ${formatBytes(total)}）。`,
+          '以上已验证项已生成确认清单交给用户，由用户逐项核对并确认后才回收。你绝不能自行执行任何删除/回收。',
+        ];
+        if (missing.length > 0) {
+          out.push(`以下 ${missing.length} 项预演未命中（磁盘上不存在或不可访问），已从清单剔除：`);
+          for (const m of missing) out.push('- ' + m.path);
+        }
+        return out.join('\n');
+      } catch (e) {
+        return '预演失败：' + String(e instanceof Error ? e.message : e);
+      }
+    },
+  },
+  {
     name: 'get_disk_health',
     description: '读取本机所有磁盘的实时容量与使用率（总/已用/可用）。回答磁盘空间、哪块盘快满了、该清哪里之前先调用本工具获取真实数据，不要凭记忆或猜测。浏览器预览模式下返回演示磁盘清单（与总览磁盘卡同源）。',
     properties: {},

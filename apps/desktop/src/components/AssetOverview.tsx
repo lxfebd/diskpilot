@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, ChevronDown, ChevronUp, File } from 'lucide-react';
-import { api, type SpacePoint, type StartupItem, type HwDiskHealth } from '../api';
+import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, ChevronDown, ChevronUp, File, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
 import { ensureHwDiskQuick } from '../hwCache';
@@ -260,6 +260,33 @@ export function reclaimByScaffoldIds(
     m.set(it.scaffoldId, (m.get(it.scaffoldId) ?? 0) + it.bytes);
   }
   return m;
+}
+
+// ── 建议清理跨次对比（health-butler P0）──
+// "比上次多出 X GB"的措辞生成。纯函数便于单测：所有分支都不编造数字——
+// 没有上次快照就说"首次"，读失败就说"未读到"，绝不拿 0 假装持平。
+
+/** 环比方向：up=多出（该关注了）/ down=更少（清理见效）/ flat=持平 / none=无从比较。 */
+export type DiffTrend = 'up' | 'down' | 'flat' | 'none';
+
+export interface DiffTrendInfo {
+  trend: DiffTrend;
+  /** 变化字节的绝对值（0 = 持平或无从比较）。 */
+  abs: number;
+}
+
+/** 由 total_delta 定方向。null → 'none'（没有上次，不谈涨跌，也不假装持平）。 */
+export function diffTrend(totalDelta: number | null): DiffTrendInfo {
+  if (totalDelta === null) return { trend: 'none', abs: 0 };
+  if (totalDelta > 0) return { trend: 'up', abs: totalDelta };
+  if (totalDelta < 0) return { trend: 'down', abs: -totalDelta };
+  return { trend: 'flat', abs: 0 };
+}
+
+/** 环比行是否值得显示：有方向（含持平）才显示；null/无数据 → false。 */
+export function shouldShowDiff(d: SuggestionDiff | null): boolean {
+  if (!d) return false;
+  return diffTrend(d.total_delta).trend !== 'none';
 }
 
 /** R92：每个 scaffold 的「主目录」路径（同 aggregateByScaffold 口径——父节点已
@@ -934,6 +961,26 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     if (selDrive) void loadClean(selDrive.path);
   }, [selDrive, scanSeq, loadClean]);
 
+  // ── health-butler P0：建议清理跨次对比（"比上次多出 X GB"）──
+  // 与 cleanItems 同触发条件（选盘变化 + 扫描完成）。只读 L0，失败/无历史
+  // 一律不显示环比区，绝不用默认值假装"持平"。
+  const [suggDiff, setSuggDiff] = useState<SuggestionDiff | null>(null);
+  const [suggDiffErr, setSuggDiffErr] = useState<string | null>(null);
+  const loadSuggDiff = useCallback(async (path: string) => {
+    try {
+      const d = await api.suggestionDiff(path);
+      setSuggDiff(d);
+      setSuggDiffErr(null);
+    } catch (e) {
+      // 读失败 ≠ 没有历史：置空并记 err，让 UI 显示"未读到"而非凭空消失。
+      setSuggDiff(null);
+      setSuggDiffErr(String(e instanceof Error ? e.message : e));
+    }
+  }, []);
+  useEffect(() => {
+    if (selDrive) void loadSuggDiff(selDrive.path);
+  }, [selDrive, scanSeq, loadSuggDiff]);
+
   const selCount = useMemo(() => cleanItems.filter((i) => checked[i.key]).length, [cleanItems, checked]);
   const selBytes = useMemo(() => cleanItems.filter((i) => checked[i.key]).reduce((s, i) => s + i.bytes, 0), [cleanItems, checked]);
   // 分类占用卡标题上的「可回收潜力合计」：全部建议项加总（不依赖勾选状态）。
@@ -1321,6 +1368,51 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                 {t('overview.clean.openPage')}
               </button>
             </h2>
+            {/* health-butler P0：建议清理跨次对比（"比上次多出 X GB"）。
+                只有真有两个快照才出环比；读失败显示"未读到"而非凭空消失——
+                读失败不等于"没有历史"。 */}
+            {shouldShowDiff(suggDiff) ? (
+              <div className="ao-clean-diff">
+                <span className={'ao-diff-badge ' + diffTrend(suggDiff!.total_delta).trend}>
+                  {diffTrend(suggDiff!.total_delta).trend === 'up' ? <TrendingUp size={13} />
+                    : diffTrend(suggDiff!.total_delta).trend === 'down' ? <TrendingDown size={13} />
+                    : <Minus size={13} />}
+                  {suggDiff!.total_delta === 0
+                    ? t('overview.clean.diffFlat')
+                    : diffTrend(suggDiff!.total_delta).trend === 'up'
+                      ? t('overview.clean.diffMore', { size: formatBytes(diffTrend(suggDiff!.total_delta).abs) })
+                      : t('overview.clean.diffLess', { size: formatBytes(diffTrend(suggDiff!.total_delta).abs) })}
+                </span>
+                {suggDiff!.gap_days !== null && (
+                  <span className="ao-diff-gap">
+                    {t('overview.clean.diffGap', { n: suggDiff!.gap_days })}
+                  </span>
+                )}
+                {suggDiff!.scaffolds.length > 0 && (
+                  <span className="ao-diff-top">
+                    {t('overview.clean.diffTop', {
+                      label: suggDiff!.scaffolds[0].scaffold_id,
+                      size: formatBytes(Math.abs(suggDiff!.scaffolds[0].delta)),
+                    })}
+                  </span>
+                )}
+                {(suggDiff!.new_scaffolds.length > 0 || suggDiff!.gone_scaffolds.length > 0) && (
+                  <span className="ao-diff-churn">
+                    {suggDiff!.new_scaffolds.length > 0 && t('overview.clean.diffNew', { n: suggDiff!.new_scaffolds.length })}
+                    {suggDiff!.new_scaffolds.length > 0 && suggDiff!.gone_scaffolds.length > 0 && ' · '}
+                    {suggDiff!.gone_scaffolds.length > 0 && t('overview.clean.diffGone', { n: suggDiff!.gone_scaffolds.length })}
+                  </span>
+                )}
+              </div>
+            ) : suggDiffErr !== null ? (
+              <div className="ao-clean-diff ao-diff-err">
+                <AlertTriangle size={13} />
+                {t('overview.clean.diffUnread', { msg: suggDiffErr })}
+              </div>
+            ) : suggDiff !== null ? (
+              // 有本次快照但没有上次 → 首次，无从比较（不说"持平"）。
+              <div className="ao-clean-diff ao-diff-first">{t('overview.clean.diffFirst')}</div>
+            ) : null}
             <div className="ao-clean-list">
               {cleanState === 'loading' ? (
                 <div className="ao-empty"><RefreshCw size={16} className="ao-spin" />{t('overview.clean.checkingList')}</div>

@@ -152,7 +152,8 @@ mod tests {
         assert!(p["gpu_temp_c"].is_null(), "缺数据的 GPU 曲线必须是 null");
 
         // 温度采集失败（null）与 ts 缺失（0 兜底）都不炸
-        let sparse = serde_json::json!({"cpu_temp_c": null, "gpu_temp_c": null, "mem_percent": null});
+        let sparse =
+            serde_json::json!({"cpu_temp_c": null, "gpu_temp_c": null, "mem_percent": null});
         let p = trend_point(&sparse);
         assert!(p["cpu_temp_c"].is_null());
         assert!(p["gpu_temp_c"].is_null());

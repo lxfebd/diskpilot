@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -517,3 +517,32 @@ describe('mergeCheckedState（勾选状态跨重拉保留）', () => {
     expect(input).toEqual({ 'a:s1': false });
   });
 });
+// health-butler P0：建议清理跨次对比。核心纪律——没有上次快照（total_delta
+// = null）时不得显示任何"涨跌"措辞，更不能把 null 当 0 说成"持平"。
+describe('建议清理跨次对比（health-butler P0）', () => {
+  it('diffTrend：正差=多出，取绝对值', () => {
+    expect(diffTrend(3_000_000_000)).toEqual({ trend: 'up', abs: 3_000_000_000 });
+  });
+
+  it('diffTrend：负差=更少，绝对值取正（显示不带负号）', () => {
+    expect(diffTrend(-1_500)).toEqual({ trend: 'down', abs: 1_500 });
+  });
+
+  it('diffTrend：0 = 持平', () => {
+    expect(diffTrend(0)).toEqual({ trend: 'flat', abs: 0 });
+  });
+
+  it('diffTrend：null = 无从比较（没有上次，绝不当成 0）', () => {
+    expect(diffTrend(null)).toEqual({ trend: 'none', abs: 0 });
+  });
+
+  it('shouldShowDiff：有方向（含持平）才显示环比区', () => {
+    const base = { at: 10, prev_at: 5, gap_days: 1, scaffolds: [], new_scaffolds: [], gone_scaffolds: [] };
+    expect(shouldShowDiff({ ...base, total_delta: 1024 })).toBe(true);
+    expect(shouldShowDiff({ ...base, total_delta: 0 })).toBe(true);
+    // 首次快照：diff 对象存在但没有差值 → 不显示徽标（另走"首次"文案）。
+    expect(shouldShowDiff({ ...base, total_delta: null })).toBe(false);
+    expect(shouldShowDiff(null)).toBe(false);
+  });
+});
+

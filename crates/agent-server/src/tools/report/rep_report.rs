@@ -86,7 +86,10 @@ pub(crate) fn trend_point(r: &serde_json::Value) -> serde_json::Value {
 
 /// 从已读的 JSONL 行里取最近 `n` 条并转折线图点（纯函数，可单测）：
 /// 按行序保持数组有序（旧→新），取尾部 n 条；n 缺失或 0=全部。
-pub(crate) fn points_from_rows(rows: &[serde_json::Value], n: Option<usize>) -> Vec<serde_json::Value> {
+pub(crate) fn points_from_rows(
+    rows: &[serde_json::Value],
+    n: Option<usize>,
+) -> Vec<serde_json::Value> {
     let take = n
         .filter(|v| *v > 0)
         .map(|v| v.clamp(1, 500))
@@ -183,7 +186,11 @@ pub fn sensor_history(n: Option<usize>, format: Option<String>) -> Result<String
         return Ok(serde_json::json!({ "total": rows.len(), "points": points }).to_string());
     }
     let mut out = String::from("传感器历史（只读，不追加采集）：\n");
-    out.push_str(&format!("共 {} 条已记录，本次返回最近 {} 条：\n", rows.len(), points.len()));
+    out.push_str(&format!(
+        "共 {} 条已记录，本次返回最近 {} 条：\n",
+        rows.len(),
+        points.len()
+    ));
     for r in points {
         let ts = r.get("ts").and_then(|v| v.as_i64()).unwrap_or(0);
         let temp = r

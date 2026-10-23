@@ -342,6 +342,19 @@ async fn commit_scan(
         &ScanStatsEvent::from((cmd_ms, outcome.tag_ms, &outcome.stats)),
     );
 
+    // health-butler P0 建议跨次对比：扫描刚算出的建议汇总统一份快照（move 进
+    // 缓存之前提取），总览据此回答「比上次多出 X GB」。只 root 级总量 + scaffold
+    // 小计，不落路径明细。静默失败，不影响扫描主流程。
+    let suggestion_total: u64 = outcome.suggestions.iter().map(|s| s.bytes).sum();
+    let mut by_scaffold: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+    for s in &outcome.suggestions {
+        by_scaffold
+            .entry(s.scaffold_id.clone())
+            .and_modify(|v| *v = v.saturating_add(s.bytes))
+            .or_insert(s.bytes);
+    }
+    crate::suggestion_history::record_suggestion_point(&app, key, suggestion_total, &by_scaffold);
+
     // 建议统计与完整树：cleanup_suggestions / AI 总览 / dry_run 目录匹配都从
     // 内存树秒算，替代每次切页都重新全盘 walk。
     if let Ok(mut cache) = state.cleanup_cache.lock() {

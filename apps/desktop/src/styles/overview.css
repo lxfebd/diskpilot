@@ -370,6 +370,53 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 
 /* 建议清理项目卡片（列表可滚动 + 底部操作栏固定） */
 .ao-clean-card { height: 100%; }
+
+/* ── health-butler P0：建议清理跨次对比行（"比上次多出 X GB"）──
+   全部走语义 token：--risk-caution（涨了该关注）/ --risk-safe（清理见效）/
+   --text-3（持平），深浅色主题都由 token 层自动适配，不在此写死颜色。 */
+.ao-clean-diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 6px 10px;
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.ao-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+/* up = 比上次多出（该关注了）→ caution；down = 清理见效 → safe；flat → 中性 */
+.ao-diff-badge.up { color: var(--risk-caution); }
+.ao-diff-badge.down { color: var(--risk-safe); }
+.ao-diff-badge.flat,
+.ao-diff-badge.none { color: var(--text-3); }
+.ao-diff-gap,
+.ao-diff-top,
+.ao-diff-churn {
+  color: var(--text-3);
+  font-weight: 500;
+}
+.ao-diff-gap::before { content: "· "; color: var(--border-strong); }
+.ao-diff-top::before { content: "· "; color: var(--border-strong); }
+.ao-diff-churn::before { content: "· "; color: var(--border-strong); }
+/* 读失败 ≠ 没有历史：用 err 软底明确提示"未读到"，不静默消失。 */
+.ao-diff-err {
+  color: var(--risk-danger);
+  background: var(--err-soft);
+  border-color: color-mix(in srgb, var(--risk-danger) 28%, var(--border));
+}
+/* 首次快照：没有上次可比的诚实说明（不说"持平"）。 */
+.ao-diff-first { color: var(--text-3); }
 .ao-clean-summary { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--accent-strong); font-family: var(--font-mono); white-space: normal; line-height: 1.35; }
 .ao-clean-list {
   flex: 1;

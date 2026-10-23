@@ -27,6 +27,7 @@ mod scan;
 mod space_history;
 pub(crate) mod startup;
 pub(crate) mod steam;
+mod suggestion_history;
 pub(crate) mod system;
 pub(crate) mod toolbelt;
 pub(crate) mod updates;
@@ -245,6 +246,7 @@ pub fn run() {
             weekly_report::generate_weekly_report_cmd,
             weekly_report::get_weekly_reports,
             space_history::get_space_history,
+            suggestion_history::suggestion_diff,
             hw_history::get_hw_history,
             hw_history::compare_hw_snapshots,
             hw_history::hw_snapshot_series,

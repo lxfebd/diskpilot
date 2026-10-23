@@ -129,6 +129,16 @@ export const cleanApi = {
       : mocks.executeAiPlan(selectedPaths, userConfirmed, dryRun);
   },
 
+  /** R289：AI 清理预演（纯只读，不要求用户确认）——AI 自己核实清单里每条
+   *   路径是否真实存在、能清多少字节；预演不回收、不写台账。真执行仍只走
+   *   executeAiPlan（userConfirmed，确认窗是唯一放行条件）。 */
+  executeAiPlanDryRun: (paths: string[]) => {
+    if (paths.length === 0) return Promise.resolve([] as UndoEntry[]);
+    return isTauri
+      ? invoke<UndoEntry[]>('execute_ai_plan', { paths, userConfirmed: false, dryRun: true })
+      : mocks.executeAiPlan(paths, false, true);
+  },
+
   listUndo: (limit?: number) =>
     isTauri ? invoke<UndoEntry[]>('list_undo', { limit: limit ?? null }) : mocks.listUndo(limit),
 
@@ -246,6 +256,13 @@ export const cleanApi = {
     isTauri
       ? invoke<WeeklyReport[]>('get_weekly_reports', { limit: limit ?? 5 })
       : mocks.getWeeklyReports(limit),
+
+  // ── 建议清理跨次对比（health-butler P0）──
+  /** 某盘建议清理总量与上次的环比（只读 L0）。缺历史 → null；读失败 → reject。 */
+  suggestionDiff: (root: string) =>
+    isTauri
+      ? invoke<SuggestionDiff | null>('suggestion_diff', { rootPath: root })
+      : mocks.suggestionDiff(root),
 };
 
 // 清理域内部类型（节点正由 types.ts 提供；此处为本域独立形状，语义同 rust 端
@@ -380,6 +397,36 @@ export interface SpacePoint {
   /** Unix 秒 */
   at: number;
 }
+
+// ── 建议清理跨次对比（health-butler P0，后端 suggestion_history.rs 返回形状）──
+
+/** 单个 scaffold 的环比明细（只在两个快照都出现过的 scaffold 才有）。 */
+export interface SuggestionScopeDiff {
+  scaffold_id: string;
+  now_bytes: number;
+  prev_bytes: number;
+  /** 差值（字节），正=比上次多 */
+  delta: number;
+}
+
+/** 某盘建议总量的跨次对比。缺字段一律 null / 空数组，不编造差值。 */
+export interface SuggestionDiff {
+  /** 本次快照时间（unix 秒） */
+  at: number;
+  /** 上次快照时间；没有则为 0 */
+  prev_at: number;
+  /** 总量差值：>0 多出，<0 更少，=0 持平。**没有上次 → null**（不假装持平）。 */
+  total_delta: number | null;
+  /** 与上次间隔天数（环比跨度参照）；无上次或时间异常 → null */
+  gap_days: number | null;
+  /** 共同出现的 scaffold 环比明细 */
+  scaffolds: SuggestionScopeDiff[];
+  /** 本次才出现的 scaffold（上次没有）：净新增，不谈涨跌 */
+  new_scaffolds: string[];
+  /** 上次有、本次没有的 scaffold：已清完或不再命中 */
+  gone_scaffolds: string[];
+}
+
 // ── 社区脚本仓库（R8，后端 scaffold_registry.rs 返回形状）──
 
 /** 索引条目：一份可安装的社区清理脚本 */

@@ -1116,6 +1116,57 @@ export async function getWeeklyReports(limit?: number): Promise<MockWeeklyReport
   return WEEKLY_ARCHIVE.slice(0, limit ?? 5).map((r) => ({ ...r }));
 }
 
+
+// —— health-butler P0：建议清理跨次对比的预览演示数据 ——
+// 预览模式没有跨会话的历史文件，不能凭空造一个"上次"假装环比。诚实做法：
+// 会话内首次询问 = 「首次，无比值」（total_delta=null），与桌面端首次扫描后
+// 只有一份快照的表现一致；本轮会话内再次询问同一盘时，与上一份本会话快照
+// 比，让用户能在预览里看到真实的环比交互（而不是假数字）。
+interface MockSuggestionSnapshot { root: string; total_bytes: number; scaffolds: Record<string, number>; at: number; }
+
+/** 预览演示用的建议环比形状（与 api 层 SuggestionDiff 同构）。 */
+export interface MockSuggestionDiff {
+  at: number;
+  prev_at: number;
+  total_delta: number | null;
+  gap_days: number | null;
+  scaffolds: { scaffold_id: string; now_bytes: number; prev_bytes: number; delta: number }[];
+  new_scaffolds: string[];
+  gone_scaffolds: string[];
+}
+const SUGGESTION_SNAPSHOTS: MockSuggestionSnapshot[] = [];
+
+/** 预览模式建议环比（口径与桌面端一致：缺上次 → null，不编造差值）。 */
+export async function suggestionDiff(root: string): Promise<MockSuggestionDiff | null> {
+  await wait(60);
+  const prev = [...SUGGESTION_SNAPSHOTS].reverse().find((s) => s.root === root) ?? null;
+  const now = Math.floor(Date.now() / 1000);
+  // 与总览建议卡同源：当前可清合计作"本次"快照，再记进会话历史供下次环比。
+  const list = await cleanupSuggestions(root, undefined, true);
+  const scaffolds: Record<string, number> = {};
+  let total_bytes = 0;
+  for (const s of list) {
+    scaffolds[s.scaffold_id] = (scaffolds[s.scaffold_id] ?? 0) + s.bytes;
+    total_bytes += s.bytes;
+  }
+  SUGGESTION_SNAPSHOTS.push({ root, total_bytes, scaffolds, at: now });
+  if (SUGGESTION_SNAPSHOTS.length > 20) SUGGESTION_SNAPSHOTS.shift();
+  const shared = prev ? Object.keys(scaffolds).filter((k) => prev.scaffolds[k] !== undefined) : [];
+  const newScaffolds = prev ? Object.keys(scaffolds).filter((k) => prev.scaffolds[k] === undefined) : Object.keys(scaffolds);
+  const goneScaffolds = prev ? Object.keys(prev.scaffolds).filter((k) => scaffolds[k] === undefined) : [];
+  return {
+    at: now,
+    prev_at: prev?.at ?? 0,
+    total_delta: prev ? total_bytes - prev.total_bytes : null,
+    gap_days: prev && now > prev.at ? Math.floor((now - prev.at) / 86_400) : null,
+    scaffolds: shared
+      .map((k) => ({ scaffold_id: k, now_bytes: scaffolds[k], prev_bytes: prev!.scaffolds[k], delta: scaffolds[k] - prev!.scaffolds[k] }))
+      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)),
+    new_scaffolds: newScaffolds.sort(),
+    gone_scaffolds: goneScaffolds.sort(),
+  };
+}
+
 // —— R196：预览模式的电源计划演示数据 ——
 // 真实桌面端 power_plan 无参时枚举 Windows 电源计划（只读）；带
 // setScheme 时切换系统计划（系统级写，L2 权限 + 两步确认）。浏览器
@@ -1976,7 +2027,10 @@ export async function executeAiPlan(
   dryRun: boolean,
 ): Promise<UndoEntry[]> {
   await wait(300);
-  if (!userConfirmed) return Promise.reject(new Error('AI 清理提案需要用户确认后才可执行'));
+  // 与后端同步（R289）：dryRun 是纯只读预演，不要求确认——AI 要能自己核实
+  // "这条路径真的命中吗、能清多少"，才不会把编造的路径当成事实交给用户。
+  // 真执行仍旧必须 confirmed（唯一放行条件）。
+  if (!dryRun && !userConfirmed) return Promise.reject(new Error('AI 清理提案需要用户确认后才可执行'));
   if (selectedPaths.length === 0) return [];
   // 快照一份「当前可回收」集合：树内真实存在且未被剪过。树里只有目录 +
   // 少量 file() 叶子，重复文件候选在 MOCK_KNOWN_FILES 表（只读扫描/
