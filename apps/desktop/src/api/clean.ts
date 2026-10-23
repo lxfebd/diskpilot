@@ -256,6 +256,13 @@ export const cleanApi = {
       ? invoke<ReminderPayload | null>('run_reminder_check_cmd')
       : mocks.runReminderCheck(),
 
+  /** R299：温度采样历史（只读）。此前这套点只有 reminder 后台线程自己读——
+   *  用户在设置里打开采样开关，却看不到采到没有、采了多少、最高多少。
+   *  三态与后端同口径：缺文件 = 从未采样 → 空数组；读失败 → 抛错（不伪装成
+   *  「没有样本」）。浏览器模式无真实传感器历史 → 空数组（诚实：没读=没有）。 */
+  getThermalHistory: (): Promise<ThermalPoint[]> =>
+    isTauri ? invoke<ThermalPoint[]>('get_thermal_history') : mocks.getThermalHistory(),
+
   /** R100 立即检查各盘空间趋势（只读）：逐盘返回预计满盘天数/无法预测的原因。
     *  浏览器模式无真实历史 → 空列表（诚实：没读=没有）。 */
   checkSpaceForecast: () =>
@@ -542,6 +549,16 @@ export interface SpacePoint {
   /** 已用容量（字节，= total - free） */
   used_bytes: number;
   /** Unix 秒 */
+  at: number;
+}
+
+// ── 温度采样历史（R291 后端 / R299 前端接线，thermal_history.rs 返回形状）──
+
+/** 单条温度快照：`temp_max_c` = 该帧归一化最高温（CPU/GPU/主板取最大，
+ *  与 fan_curve_advice().temp_max_c 同源口径）；`at` 为 Unix 秒。
+ *  采样周期 5 分钟、最多留 3000 条（约 3 周半）。 */
+export interface ThermalPoint {
+  temp_max_c: number;
   at: number;
 }
 

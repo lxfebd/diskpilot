@@ -172,6 +172,16 @@ export const overview = {
     'overview.checkup.scanAgeUnread': '{n} 块盘的扫描记录未读到（不代表没扫过）',
     'overview.checkup.scanAgeUnreadAll': '扫描记录未读到',
     'overview.checkup.scanAgeOk': '扫描记录较新',
+    // R299 温度采样历史：开关开了多久、采到几个点、区间峰值分别是三件事
+    'overview.thermal.title': '温度采样',
+    'overview.thermal.note': '只读历史 · 5 分钟一点',
+    'overview.thermal.empty': '还没有采样点（开关没开，或刚开还没到一个周期）',
+    'overview.thermal.unread': '温度历史未读到（不代表没采样）',
+    'overview.thermal.single': '仅 1 点 · 当前 {temp}℃',
+    'overview.thermal.range': '近 {n} 点 · {span} 分钟',
+    'overview.thermal.peak': '区间峰值 {temp}℃',
+    'overview.thermal.peakHigh': '区间峰值 {temp}℃（曾到阈值）',
+    'overview.thermal.hint': '采样开关在「设置 → 提醒 → 温度持续偏高提醒」。这里只展示已采到的点，不写入、不改采样频率。',
 
     // 重复文件查找 → 清理提案（提案四件套：是什么 / 干什么用 / 删了影响）
     'overview.dup.noneFound': '未发现 ≥1MB 的重复文件（按大小 + 头部哈希）',
@@ -381,6 +391,16 @@ export const overview = {
     'overview.checkup.scanAgeUnread': '{n} drive(s) with unread scan history (that does not mean never scanned)',
     'overview.checkup.scanAgeUnreadAll': 'Scan history not read',
     'overview.checkup.scanAgeOk': 'Scan history is recent',
+    // R299 thermal sampling history: how long it has run, how many points, and the peak are three different facts
+    'overview.thermal.title': 'Thermal samples',
+    'overview.thermal.note': 'Read-only history · one point per 5 min',
+    'overview.thermal.empty': 'No samples yet (the switch is off, or it was just turned on)',
+    'overview.thermal.unread': 'Thermal history not read (that does not mean nothing was sampled)',
+    'overview.thermal.single': '1 point · now {temp}℃',
+    'overview.thermal.range': '{n} points · {span} min',
+    'overview.thermal.peak': 'Peak {temp}℃',
+    'overview.thermal.peakHigh': 'Peak {temp}℃ (reached the threshold)',
+    'overview.thermal.hint': 'The sampling switch lives in Settings, Reminders, Sustained high temperature. This view only shows points already sampled; it never writes or changes the sampling rate.',
 
     // Duplicate scan → cleanup proposal (what / purpose / impact)
     'overview.dup.noneFound': 'No duplicates ≥1MB found (by size + header hash)',

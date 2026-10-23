@@ -155,6 +155,16 @@ pub(crate) fn read_history(app: &tauri::AppHandle) -> Result<Vec<ThermalPoint>, 
     read_history_at(&p)
 }
 
+/// R299：把采样历史暴露给前端。此前这套点只有 reminder 后台线程自己读——
+/// 用户在设置里打开了采样开关，却看不到「到底采到了没有、采了多少、最高多少」。
+/// **只读**：不落新点、不改任何配置、不触发判定以外的事。
+/// 三态诚实（与 read_history 同口径）：缺文件 = 从未采样 → 空数组；
+/// 文件在但损坏 → Err，前端显示「读失败」而不是伪装成「没有样本」。
+#[tauri::command]
+pub(crate) fn get_thermal_history(app: tauri::AppHandle) -> Result<Vec<ThermalPoint>, String> {
+    read_history(&app)
+}
+
 /// 「持续偏高」判定（纯函数）：窗口内至少 `min_samples` 个采样、且**全部** ≥
 /// 阈值，才算持续。返回 (命中, 实际样本数)。
 ///

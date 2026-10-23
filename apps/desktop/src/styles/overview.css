@@ -145,6 +145,13 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 .ao-checkup-item.caution svg { color: currentColor; }
 .ao-checkup-item.accent { color: var(--accent-strong); border-color: currentColor; }
 .ao-checkup-item.accent svg { color: currentColor; }
+/* R299 温度采样历史卡：曲线与元数据一行，峰值可以单独告警而不染色整卡 */
+.ao-thermal-body { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ao-thermal-svg { flex: 1; min-width: 80px; height: 34px; }
+.ao-thermal-meta { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.ao-thermal-meta b { font-weight: 700; color: var(--ink); }
+.ao-thermal-meta small { color: var(--text-3); font-weight: 600; font-family: var(--font-mono); }
+.ao-thermal-meta small.hot { color: var(--risk-caution); }
 
 /* ── 低配救援横幅：红盘时提示一键救急 ── */
 .ao-rescue {

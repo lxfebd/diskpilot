@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, History, ChevronDown, ChevronUp, File, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff } from '../api';
+import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff, type ThermalPoint } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter } from '../format';
 import { ensureHwDiskQuick } from '../hwCache';
@@ -396,6 +396,72 @@ export function summarizeScanAge(
   return { state: 'ok', worstRoot: null, worstDays: null, ...base };
 }
 
+// ── 温度采样历史（R299）：把「采到几个点」和「点长什么样」分开说 ──
+// 后端 `get_thermal_history` 只读 thermal-history.jsonl（5 分钟一点），零传感器
+// 写、零通知，不为展示新造任何采样。空数组有两种真实来源——采样开关没开、或开了
+// 但还没走完第一个 5 分钟周期——对用户是同一句话「还没有采样点」，不编造温度。
+// 读失败是另一种态：不是「没采样」，是「没读到」，措辞必须分开。
+
+export type ThermalHistoryState = 'unread' | 'empty' | 'single' | 'ok';
+
+export interface ThermalHistorySummary {
+  state: ThermalHistoryState;
+  /** 区间最高温（有有效点时才有值）。 */
+  peakC: number | null;
+  /** 最新一点温度（有有效点时才有值）。 */
+  latestC: number | null;
+  /** 首末两点的时间跨度（分钟，向下取整）；不足两点为 null。 */
+  spanMinutes: number | null;
+  /** 有效采样点数（NaN/Inf 与时间戳倒挂的点已剔除）。 */
+  count: number;
+}
+
+/** 汇总温度采样历史（纯函数，可单测）。
+ *  `pts === null` = 读失败（unread，不能用「还没采样」糊过去）；
+ *  空数组 = 真空（empty）；只有一点 = single（有当值，画不了线）；
+ *  ≥2 点 = ok（可画火花线 + 区间峰值）。
+ *  非法温度（NaN/Inf）不参与任何统计——它不是温度。 */
+export function summarizeThermalHistory(
+  pts: readonly { temp_max_c: number; at: number }[] | null,
+): ThermalHistorySummary {
+  const none: ThermalHistorySummary = { state: 'unread', peakC: null, latestC: null, spanMinutes: null, count: 0 };
+  if (pts == null) return none;
+  const valid = pts
+    .filter((p) => Number.isFinite(p.temp_max_c) && Number.isFinite(p.at))
+    .slice()
+    .sort((a, b) => a.at - b.at);
+  if (valid.length === 0) return { state: 'empty', peakC: null, latestC: null, spanMinutes: null, count: 0 };
+  const peakC = Math.max(...valid.map((p) => p.temp_max_c));
+  const latestC = valid[valid.length - 1].temp_max_c;
+  if (valid.length === 1) return { state: 'single', peakC, latestC, spanMinutes: 0, count: 1 };
+  const spanSecs = valid[valid.length - 1].at - valid[0].at;
+  return {
+    state: 'ok',
+    peakC,
+    latestC,
+    spanMinutes: spanSecs > 0 ? Math.floor(spanSecs / 60) : 0,
+    count: valid.length,
+  };
+}
+
+/** 温度火花线 path：与空间趋势同一画法（120×34，归一化到自身 min/max，
+ *  值平 = 水平线）。不足两点返回空串——一点不是线，别画成假的走势。 */
+export function thermalSparkPath(pts: readonly { temp_max_c: number; at: number }[]): string {
+  if (pts.length < 2) return '';
+  const min = Math.min(...pts.map((p) => p.temp_max_c));
+  const max = Math.max(...pts.map((p) => p.temp_max_c));
+  const span = Math.max(1, max - min);
+  const W = 120;
+  const H = 34;
+  return pts
+    .map((p, i) => {
+      const x = (i / (pts.length - 1)) * W;
+      const y = H - 3 - ((p.temp_max_c - min) / span) * (H - 6);
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
+
 // 磁盘空间趋势（R6）：拉取扫描历史，按盘画迷你曲线 + 近期增量定位。
 // 纯只读展示：数据来自每次扫描后追加的 space-history.jsonl，绝不触盘 IO。
 function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | null; drives: readonly DriveEntry[]; onGoWorkspace: (drivePath: string) => void }) {
@@ -559,6 +625,73 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
           );
         })}
       </div>
+    </section>
+  );
+}
+
+// ── 温度采样历史卡（R299）─────────────────────────────────────────
+// 只读：数据来自 thermal-history.jsonl（后端 5 分钟一点、最多 3000 条）。
+// 三种态分开说：读失败（unread）≠ 还没采样（empty）≠ 只有一点（single，
+// 有当值但画不了线）。峰值与最新点分开显示——「一直 70℃」和「刚才冲到 92℃、
+// 现在 70℃」是完全不同的机器状态，只给一个数会说谎。
+function ThermalHistoryCard() {
+  const t = useT();
+  const [pts, setPts] = useState<ThermalPoint[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.getThermalHistory().then((r) => {
+      if (!alive) return;
+      setPts(Array.isArray(r) ? r : []);
+      setErr(null);
+    }).catch((e) => {
+      if (!alive) return;
+      setPts(null);
+      setErr(String(e instanceof Error ? e.message : e));
+    });
+    return () => { alive = false; };
+  }, []);
+
+  // 还在飞：不渲染「还没有采样点」——那是结论，不是加载态。
+  if (pts === null && err === null) return null;
+
+  const sum = summarizeThermalHistory(err ? null : pts);
+  const hotspot = sum.peakC != null && isTempHigh(sum.peakC, TEMP_WARN_C);
+  const line = pts && sum.state === 'ok' ? thermalSparkPath(pts) : '';
+
+  return (
+    <section className="ao-card ao-thermal-card">
+      <h2 className="ao-card-title">
+        <Thermometer size={16} /> {t('overview.thermal.title')}
+        <span className="ao-card-note">{t('overview.thermal.note')}</span>
+      </h2>
+      {sum.state === 'unread' && (
+        <div className="ao-empty"><Info size={16} />{t('overview.thermal.unread')}</div>
+      )}
+      {sum.state === 'empty' && (
+        <div className="ao-empty"><Info size={16} />{t('overview.thermal.empty')}</div>
+      )}
+      {sum.state !== 'unread' && sum.state !== 'empty' && (
+        <div className="ao-thermal-body">
+          {line ? (
+            <svg className="ao-trend-svg ao-thermal-svg" viewBox="0 0 120 34" preserveAspectRatio="none">
+              <path d={line} fill="none" stroke={hotspot ? 'var(--risk-caution)' : 'var(--accent-strong)'} strokeWidth="2" />
+            </svg>
+          ) : null}
+          <span className="ao-thermal-meta">
+            <b>{sum.state === 'single'
+              ? t('overview.thermal.single', { temp: Math.round(sum.latestC ?? 0) })
+              : t('overview.thermal.range', { n: sum.count, span: sum.spanMinutes ?? 0 })}</b>
+            {sum.peakC != null && (
+              <small className={hotspot ? 'hot' : undefined}>
+                {hotspot
+                  ? t('overview.thermal.peakHigh', { temp: Math.round(sum.peakC) })
+                  : t('overview.thermal.peak', { temp: Math.round(sum.peakC) })}
+              </small>
+            )}
+          </span>
+        </div>
+      )}
     </section>
   );
 }
@@ -1395,6 +1528,9 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
 
           {/* 磁盘空间趋势（R6）：扫描历史曲线 + 近期增量 */}
           <SpaceTrendCard selPath={selPath} drives={drives} onGoWorkspace={onGoWorkspace} />
+
+          {/* 温度采样历史（R299）：只读回看已采到的点，不写入、不改频率 */}
+          <ThermalHistoryCard />
 
           {/* 快速操作按钮区 */}
           <section className="ao-card">

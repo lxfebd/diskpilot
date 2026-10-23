@@ -248,6 +248,7 @@ pub fn run() {
             reminder::run_reminder_check_cmd,
             reminder::check_startup_delta_cmd,
             scan_stamp::scan_staleness_cmd,
+            thermal_history::get_thermal_history,
             reminder::check_space_forecast_cmd,
             auto_list::get_auto_list_config,
             auto_list::set_auto_list_config,

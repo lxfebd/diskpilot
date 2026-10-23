@@ -900,6 +900,23 @@ export async function getSpaceHistory(): Promise<
   return { 'C:\\': pts };
 }
 
+/** R299：温度采样历史 mock。浏览器没有真实传感器，给一条「今天刚开采样、
+ *  点还不多」的诚实曲线：5 分钟周期 × 6 点 ≈ 半小时，温度在 55–68℃ 之间
+ *  缓动（低于 85℃ 阈值，不触发持续高温判定）。让「温度持续偏高提醒」的
+ *  开关开了之后至少有个东西可看，且明确低于阈值——演示不撒谎。 */
+export async function getThermalHistory(): Promise<{ temp_max_c: number; at: number }[]> {
+  await wait(30);
+  const now = Math.floor(Date.now() / 1000);
+  const out: { temp_max_c: number; at: number }[] = [];
+  const base = 56 + Math.sin(now / 500) * 4;
+  for (let i = 5; i >= 0; i--) {
+    const at = now - i * 300;
+    const v = base + Math.sin((now - i * 300) / 900) * 5;
+    out.push({ temp_max_c: Math.round(v * 10) / 10, at });
+  }
+  return out;
+}
+
 // —— R184：预览模式的启动项演示数据 ——
 // 真实桌面端从注册表/启动文件夹枚举（list_startup_items）；浏览器里没有系统
 // 可读，给一批覆盖四个来源（HKCU/HKLM/用户夹/机器夹）的样例启动项，让设置页
