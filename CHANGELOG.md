@@ -24,6 +24,9 @@ health-butler P2-1 的前端接线。R290 在后端已把「按项授权」做�
   `user_confirmed`）。阈值本身是提醒的门槛，不是删除的门槛。
 - 新增 10 条中英文案（`system.reminder.autoList*`）；zh/en 键对齐由既有
   `i18n/coverage.test.ts` parity 测试守住。
+- 规则变换抽成纯函数 `withRule` 并配 7 条单测（`ReminderSettings.test.ts`）：
+  同 id 重复授权按**替换**处理——后端 `should_auto_list` 对同 scaffold 取
+  最低阈值，若保留两条同 id 规则，用户刚改大的阈值会被旧的小值静默吞掉。
 
 ### 2026-10-23 散热曲线提示闭环：持续超温时一键去调（R294）
 

@@ -7,6 +7,30 @@ import { useStore } from '../store';
 import { useT } from '../i18n';
 
 /**
+ * 按项授权（health-butler P2-1）的纯规则变换，与后端 auto_list.rs 同语义。
+ * 覆写 = 调用方持有完整规则集；添加按 id 排序（多规则命中同 scaffold 取
+ * 更低阈值，后端 should_auto_list 已保证）；删除按 scaffold_id 过滤。
+ */
+export function withRule(
+  rules: AutoListRule[],
+  op: 'add' | 'remove',
+  arg: { scaffold_id: string; min_bytes?: number },
+): AutoListRule[] {
+  if (op === 'remove') {
+    return rules.filter((r) => r.scaffold_id !== arg.scaffold_id);
+  }
+  if (arg.min_bytes === undefined) return rules;
+  // 同 id 先剔除再插入：用户再选一次同一项，就是改阈值（最新一次选择即意图）。
+  // 若保留两条同 id 规则，后端按最低阈值命中，用户刚填的更大值会静默失效。
+  const next = rules
+    .filter((r) => r.scaffold_id !== arg.scaffold_id)
+    .map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes }));
+  next.push({ scaffold_id: arg.scaffold_id, min_bytes: arg.min_bytes });
+  next.sort((a, b) => a.scaffold_id.localeCompare(b.scaffold_id));
+  return next;
+}
+
+/**
  * 清理提醒设置（R3）：开关 + 间隔 + 阈值 + 手动检查一次。
  * 铁律：只出清单 + 通知，绝不自动清理——检查按钮也只跑引擎真算并发通知，
  * 清理仍走总览页确认窗（execute_ai_plan user_confirmed）。
@@ -75,13 +99,12 @@ export function ReminderSettings() {
 
   const addAutoListRule = async () => {
     if (!autoList || !pickId) return;
-    const target = scaffolds.find((s) => s.id === pickId);
-    if (!target) return;
-    // 与后端同语义：多规则命中同一 scaffold 取最低阈值——重复授权同一项时
-    // 取更小阈值，避免「配了 5GB 却因另一条规则门槛更高没生效」的意外。
-    const next = [...autoList.rules.map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes }))];
-    next.push({ scaffold_id: pickId, min_bytes: pickMb * 1024 * 1024 });
-    next.sort((a, b) => a.scaffold_id.localeCompare(b.scaffold_id));
+    // 只允许本机真实存在的清理项（下拉本来就只列这些；这里再挡一次防御）。
+    if (!scaffolds.some((s) => s.id === pickId)) return;
+    const next = withRule(autoList.rules, 'add', {
+      scaffold_id: pickId,
+      min_bytes: pickMb * 1024 * 1024,
+    });
     await persistAutoList({ enabled: autoList.enabled, rules: next });
     setPickId('');
     setPickMb(0);
@@ -89,9 +112,7 @@ export function ReminderSettings() {
 
   const removeAutoListRule = async (scaffoldId: string) => {
     if (!autoList) return;
-    const next = autoList.rules
-      .filter((r) => r.scaffold_id !== scaffoldId)
-      .map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes }));
+    const next = withRule(autoList.rules, 'remove', { scaffold_id: scaffoldId });
     await persistAutoList({ enabled: autoList.enabled, rules: next });
   };
 
