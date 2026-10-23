@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 扩展名过滤行能用键盘选；盘卡片不再嵌一个假按钮（R322）
+
+两处无障碍欠债：文件视图顶部的「按扩展名过滤」行是纯 div 点击，Tab 跳不过去、回车没反应；
+盘卡片里那个悬停才出现的「单独重扫」是嵌在整卡 `<button>` 里的 `role="button" tabIndex={-1}` span——
+HTML 里按钮不能嵌按钮，读屏软件还会念出一个永远无法聚焦的按钮。
+
+- `FileView.tsx` 的 `.fv-ext-row` 加 `role="button" tabIndex={0}`、`aria-pressed`（它就是开关语义）
+  与 `onKeyDown={activateOnKey(…)}`，与 R314 的树行/文件行同一套工具函数；
+- `settings.css` 补 `.fv-ext-row:focus-visible` 描边，键盘用户看得见焦点；
+- `DriveStrip.tsx` 的 `.ao-strip-refresh` 去掉 `role`/`tabIndex`，改 `aria-hidden="true"`
+  （仍是鼠标悬停快捷方式，键盘用整卡按钮扫描），并在源码里写明原因；
 ### 2026-10-24 面板崩了能一键把现场交出去（R321）
 
 `ErrorBoundary` 的兜底界面只会显示报错信息和一大段堆栈：用户想反馈，只能手抄或截图；

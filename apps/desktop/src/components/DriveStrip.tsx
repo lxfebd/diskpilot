@@ -67,10 +67,13 @@ export function DriveStrip({ drives, scanning, onScanAll, onScanDrive, onRefresh
             disabled={scanning}
             title={scanned ? t('shell.drivestrip.openLast', { path: d.path }) : t('shell.drivestrip.scanNow', { path: d.path, free: formatBytes(d.free_bytes) })}
           >
+            {/* R322：外层是整卡 <button>（回车=扫描该盘），这个「单独重扫」只是鼠标悬停
+                时的快捷方式。它不能是嵌套的 role="button"——HTML 里按钮不能嵌按钮，
+                读屏软件还会念出一个永远无法聚焦的按钮。改为 aria-hidden 从无障碍树摘掉，
+                键盘用户用整卡按钮扫描即可。 */}
             <span
               className="ao-strip-refresh"
-              role="button"
-              tabIndex={-1}
+              aria-hidden="true"
               title={t('shell.drivestrip.rescan', { path: d.path })}
               onClick={(e) => { e.stopPropagation(); onRefresh(d.path); }}
             >

@@ -238,6 +238,10 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
                 key={ext}
                 className={'fv-ext-row' + (extFilter === ext ? ' active' : '')}
                 onClick={() => setExtFilter(extFilter === ext ? null : ext)}
+                role="button"
+                tabIndex={0}
+                aria-pressed={extFilter === ext}
+                onKeyDown={activateOnKey(() => setExtFilter(extFilter === ext ? null : ext))}
                 title={t('overview.fileview.clickFilter', { ext: extLabel(ext) })}
               >
                 <span className="fv-ext-name" style={{ color: fillForExt(ext) }}>{extLabel(ext)}</span>

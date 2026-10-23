@@ -595,6 +595,7 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 }
 .fv-ext-row:hover { opacity: 0.75; }
 .fv-ext-row.active { outline: 1.5px solid var(--accent-strong); border-radius: var(--radius-xs); padding: 2px 4px; }
+.fv-ext-row:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; border-radius: var(--radius-xs); }
 .fv-ext-name {
   font-family: var(--font-mono);
   font-size: calc(11px * var(--font-scale, 1));
