@@ -368,7 +368,8 @@ function Winapp2ImportPanel({
       setItems(list);
       setSelected(new Set(list.filter((i) => !i.red_line).map((i) => i.id)));
     } catch (e) {
-      setErr(String(e));
+      // R309：此前直接丢原始异常文本（英文），这里用专用键包一层
+      setErr(t('studio.winapp2ParseFailed', { msg: String(e) }));
     } finally {
       setBusy(false);
     }
@@ -426,7 +427,7 @@ function Winapp2ImportPanel({
           spellCheck={false}
         />
         {err && <div className="install-err">{err}</div>}
-        {items !== null && (
+        {items !== null && items.length > 0 && (
           <div className="winapp2-preview">
             <div className="winapp2-preview-head">
               <span className="muted small">
@@ -456,15 +457,21 @@ function Winapp2ImportPanel({
             </ul>
           </div>
         )}
+        {/* R309：解析出 0 条（只含注册表项/内容为空）时，不要拿「全部安全」唱空结论——
+            那是 0 条的数据，不是健康结论。此前该键写了没人渲染。 */}
+        {items !== null && items.length === 0 && (
+          <div className="winapp2-preview muted small">{t('studio.winapp2Empty')}</div>
+        )}
       </div>
       <div className="modal-foot">
         <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
+        {/* R309：没有安全可装的条目（如全被红线拒绝）时按钮禁用，不让用户点了才吃一个错误提示 */}
         {items === null ? (
           <button className="primary" onClick={() => void parse()} disabled={busy || !ini.trim()}>
             {busy ? t('studio.winapp2Parsing') : t('studio.winapp2Parse')}
           </button>
         ) : (
-          <button className="primary" onClick={() => void installSelected()} disabled={busy}>
+          <button className="primary" onClick={() => void installSelected()} disabled={busy || selected.size === 0}>
             {busy ? t('studio.winapp2Installing') : t('studio.winapp2InstallSelected', { n: selected.size })}
           </button>
         )}
