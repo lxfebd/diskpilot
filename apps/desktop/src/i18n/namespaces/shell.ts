@@ -87,6 +87,8 @@ export const shell = {
     'shell.toast.actionHistory': '查看周报',
     // R294 温度持续偏高 → 去应用散热曲线（只导航；写入仍走 L2 双确认）
     'shell.toast.actionFanCurve': '去调散热',
+    // R304 启动项变化 → 去系统优化页看/管明细（此前跳总览，总览只有一行计数）
+    'shell.toast.actionStartup': '去管启动项',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': '目录树',
@@ -263,6 +265,8 @@ export const shell = {
     'shell.toast.actionHistory': 'View report',
     // R294 sustained high temp -> go adjust cooling (navigation only; writes still require L2 double-confirm)
     'shell.toast.actionFanCurve': 'Adjust cooling',
+    // R304 startup items changed -> go to the optimizer page to review/manage them
+    'shell.toast.actionStartup': 'Manage startup items',
 
     // 左栏视图切换
     'shell.leftpanel.viewTree': 'Tree',

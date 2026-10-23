@@ -397,7 +397,9 @@ export default function App() {
           days: gapTxt,
         }),
         'warn',
-        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
+        // 动作直达「系统优化」页：启动项明细与启停都在那里（R304 此前跳总览，
+        // 而总览只有一行不可点的计数——与 R294 散热 toast 同族问题）。
+        { label: t('shell.toast.actionStartup'), run: () => setView(PAGE_IDS.optimizer) },
       );
     });
     return () => { unlisten.then((u) => u()); };
@@ -689,6 +691,7 @@ export default function App() {
                 }}
                 onOpenCleanup={(scaffoldId?: string) => openCleanup(scaffoldId)}
                 onGoHardware={() => setView('tools')}
+                onGoStartup={() => setView(PAGE_IDS.optimizer)}
               />
             </Suspense>
           </ErrorBoundary>

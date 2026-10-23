@@ -42,6 +42,8 @@ type Props = {
   onOpenCleanup: (scaffoldId?: string) => void;
   /** 跳到工具页的硬件面板看硬盘健康明细（体检条的硬盘格用）。 */
   onGoHardware?: () => void;
+  /** 跳到系统优化页看启动项明细（体检条的启动项格用；R304 此前该格不可点）。 */
+  onGoStartup?: () => void;
 };
 
 function catColor(seed: string): string {
@@ -892,6 +894,7 @@ function HealthCheckupCard({
   onScanAll,
   onGoCleanup,
   onGoHardware,
+  onGoStartup,
 }: {
   drives: readonly DriveInfo[];
   reclaimTotal: number;
@@ -900,6 +903,7 @@ function HealthCheckupCard({
   onScanAll: () => void;
   onGoCleanup: () => void;
   onGoHardware?: () => void;
+  onGoStartup?: () => void;
 }) {
   const t = useT();
   // 温度 / 启动项 / 硬盘健康每次进总览拉一次（非关键路径，失败静默降级为「未读到」）。
@@ -1018,8 +1022,13 @@ function HealthCheckupCard({
             </span>
           </div>
         )}
-        {/* 启动项 */}
-        <div className="ao-checkup-item">
+        {/* 启动项：与硬盘健康格一致——可点进系统优化页看/管明细（R304 此前只是不可点的计数） */}
+        <button
+          className="ao-checkup-item"
+          onClick={onGoStartup}
+          disabled={!onGoStartup}
+          title={t('overview.checkup.goStartup')}
+        >
           <Rocket size={14} />
           <span>
             {startupCheckState(startup, startupErr) === 'ok'
@@ -1028,7 +1037,7 @@ function HealthCheckupCard({
                 ? t('overview.checkup.startupUnread')
                 : t('overview.checkup.startupNone')}
           </span>
-        </div>
+        </button>
         {/* 硬盘健康：读不到就说读不到；Unknown 只标「未上报」，不给红牌（第 26 轮的教训） */}
         <button
           className={'ao-checkup-item' + (hwSummary.state === 'risky' ? (hwSummary.bad > 0 ? ' danger' : ' caution') : '')}
@@ -1058,7 +1067,7 @@ function HealthCheckupCard({
   );
 }
 
-export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup, onGoHardware }: Props) {
+export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, onScanAll, onRefresh, onGoWorkspace, onOpenCleanup, onGoHardware, onGoStartup }: Props) {
   const t = useT();
   const scanCache = useStore((s) => s.scanCache);
   const toast = useStore((s) => s.toast);
@@ -1471,6 +1480,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         onScanAll={onScanAll}
         onGoCleanup={onOpenCleanup}
         onGoHardware={onGoHardware}
+        onGoStartup={onGoStartup}
       />
 
       {/* ---- 顶部硬盘扫描条：一键扫描全部 + 盘卡片横向滚动 ---- */}
