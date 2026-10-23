@@ -75,7 +75,7 @@ pnpm tauri build      # 打安装包
   <img src="assets/workspace.png" alt="工作台 · 三栏布局：磁盘树 / AI 对话 / Studio 清理脚本" width="100%">
 </p>
 
-<p align="center"><sub>工作台 · 顶部盘符卡片（一键扫描全部硬盘）· 左：文件夹树 · 中：拖文件夹给 AI 分析 · 右：Studio 已识别 18 个清理脚本（Steam 盘点、Conda、微信、安全套装……）</sub></p>
+<p align="center"><sub>工作台 · 顶部盘符卡片（一键扫描全部硬盘）· 左：文件夹树 · 中：拖文件夹给 AI 分析 · 右：Studio 已识别 21 个清理脚本（Steam 盘点、Conda、微信、安全套装……）</sub></p>
 
 <p align="center">
   <img src="assets/toolwall.png" alt="工具墙 · 90+ 系统工具分类集成" width="100%">
@@ -95,9 +95,9 @@ Windows 直读 NTFS MFT（配合 USN 日志增量更新），其他平台用 jwa
 
 不认识的文件夹，从树里拖进中间聊天框，AI 告诉你这是什么、能不能删、删了会丢什么。AI 顾问也能直接问整机状态（配置、温度、磁盘健康、清理建议）。BYOK 模式——自带 Anthropic / OpenAI / Gemini 的 API Key，或者本地跑 Ollama 完全免费。支持中/英文界面与深浅主题。
 
-### 3. 十八份清理脚本，按 scope 逐项清
+### 3. 二十一份清理脚本，按 scope 逐项清
 
-对占空间大、边界清楚的大众应用，写一份**清理脚本**（TOML 声明 scope + Rust 安全集成测试），Studio 卡片里按 scope 单独清。**现有 18 份**：
+对占空间大、边界清楚的大众应用，写一份**清理脚本**（TOML 声明 scope + Rust 安全集成测试），Studio 卡片里按 scope 单独清。**现有 21 份**：
 
 | scaffold | scope | 清理内容 |
 |---|---|---|
@@ -119,6 +119,9 @@ Windows 直读 NTFS MFT（配合 USN 日志增量更新），其他平台用 jwa
 | **Microsoft Teams** | 11 | 1.x 经典 + 2.x 新版；MSIX 包只列目录名 |
 | **Zoom** | 6 | 录制缓存 / WebRTC 媒体缓存白名单 |
 | **安全软件套装** | 2 | 360 全家桶 / 电脑管家 / 火绒缓存；不动隔离区与本体 |
+| **浏览器使用痕迹** | 2 | Chrome/Edge 历史库 + Firefox 表单历史；书签、密码、Cookie、站点数据红线不碰 |
+| **Windows 活动痕迹** | 3 | 最近打开列表（含 JumpList）、缩略图缓存、INetCache；凭据与缩略图索引不碰 |
+| **Windows 更新缓存** | 2 | SoftwareDistribution/Download + 传递优化缓存；更新历史库 `DataStore.edb` 与回滚依赖不碰 |
 
 每份脚本都经过同一套流程：真实机器勘测目录结构 → 精准 glob → `scaffold-lint` 红线校验（CI 强制）→ 安全测试（正向断言 + 红线反向断言）→ 真机试运行验证。宁缺毋滥——早期曾有 36 份未经核验的模板脚本被全部下架，因为 glob 边界没验证过就存在误删风险。
 
@@ -212,7 +215,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 
 - [x] 整盘秒扫 + treemap / 树视图 + 总览页（磁盘卡片墙 / 空间趋势 / 分类占用）
 - [x] 拖文件夹给 AI 解释 + AI 顾问整机问答（BYOK 四协议）
-- [x] 18 份清理脚本 + 红线校验 + 安全测试流水线
+- [x] 21 份清理脚本 + 红线校验 + 安全测试流水线
 - [x] 回收站 / undo.jsonl / 隔离区 / 一键撤销
 - [x] 75 个 MCP 工具的 AI agent 操作层（写操作确认门）
 - [x] 硬件中心（基准 / 压测 / 传感器 / 体检报告）+ 工具墙 90+ 工具集成
@@ -248,7 +251,7 @@ cargo test --workspace    # Rust 全工作空间测试（Windows 上 MFT 相关�
 pnpm -C apps/desktop exec vitest run   # 前端测试
 ```
 
-目录速览：`apps/desktop`（Tauri 前端 + 后端）、`crates/`（7 个 Rust crate）、`scaffolds/`（18 份清理脚本 TOML）。
+目录速览：`apps/desktop`（Tauri 前端 + 后端）、`crates/`（7 个 Rust crate）、`scaffolds/`（21 份清理脚本 TOML）。
 
 > 改了 `crates/agent-server` 的守卫 / 工具逻辑后，必须 `cargo build -p agent-server` 重编 `target/debug|release/agent-server.exe` —— 前端 agent.rs 测试 spawn 的是这个产物，源码改了不重编，测试跑的还是旧守卫（历史上曾因"改源码没重编"让 `list_dir C:\` 盘根被旧 exe 误拦）。
 

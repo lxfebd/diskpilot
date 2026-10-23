@@ -140,6 +140,6 @@ core 收 `Arc<dyn Fn(u64, String)>` 回调保持可脱离 UI 测试。
 
 | 层 | 手段 |
 |---|---|
-| Rust | 每 crate 单测 + 每 scaffold 一个 safety 集成测试（18 份）；MFT 用例需提权终端 |
+| Rust | 每 crate 单测 + 每 scaffold 一个 safety 集成测试（21 份）；MFT 用例需提权终端 |
 | 前端 | vitest（store / tooltree / 组件回归），断言译文的用例 `setLang('zh')` 钉语言 |
 | CI | 上述全跑 + scaffold-lint 红线闸 + i18n 覆盖率守卫（键集对等 + 硬编码中文棘轮） |

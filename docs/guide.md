@@ -58,7 +58,7 @@
 
 ## 6. 清理脚本（Studio）
 
-右侧 Studio 列出应用已在本机检测到的清理脚本（微信、Conda、浏览器缓存、QQ、Discord、IDE、游戏引擎、Teams、Zoom、安全软件等 18 份）。打开卡片 → 看到各 scope 的可释放量 → 勾选 → 清理。
+右侧 Studio 列出应用已在本机检测到的清理脚本（微信、Conda、浏览器缓存、QQ、Discord、IDE、游戏引擎、Teams、Zoom、安全软件等 21 份）。打开卡片 → 看到各 scope 的可释放量 → 勾选 → 清理。
 
 安全边界：
 

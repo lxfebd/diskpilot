@@ -45,8 +45,8 @@ cargo run -p diskpilot-scaffold-lint -- list     # 看现有脚本格式与风�
 跑法（不需要提权）：
 
 ```bash
-cargo test -p scaffold <id>_safety
-cargo run -p scaffold-lint          # 18+1 份 TOML 红线校验
+cargo test -p diskpilot-scaffold <id>_safety
+cargo run -p diskpilot-scaffold-lint -- scaffolds/*.toml   # 21 份 TOML 红线校验（另有 _templates/ 一份模板）
 ```
 
 ## 4. 本地验证

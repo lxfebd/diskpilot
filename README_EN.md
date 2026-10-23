@@ -72,7 +72,7 @@ See an unfamiliar folder? Drag it from the left tree (or the path on the right) 
 
 ### 3. Known apps get a dedicated cleanup scaffold
 
-Some apps are mainstream, eat real disk, and have a clear cleanup boundary — for those we ship a **cleanup scaffold** (one TOML + one Rust integration test). Users can clean each scope individually right from the Studio card. **Currently shipping eighteen**:
+Some apps are mainstream, eat real disk, and have a clear cleanup boundary — for those we ship a **cleanup scaffold** (one TOML + one Rust integration test). Users can clean each scope individually right from the Studio card. **Currently shipping twenty-one**:
 
 | Scaffold | Scopes | What it cleans |
 |---|---|---|
@@ -94,6 +94,9 @@ Some apps are mainstream, eat real disk, and have a clear cleanup boundary — f
 | **Security suites** | 2 | 360 / PC Manager / Huorong caches |
 | **Steam shader cache** | 1 | Steam ShaderCache precompiled shaders |
 | **System temp** | 1 | `%TEMP%` temporary files |
+| **Browser history** | 2 | Chrome / Edge history DBs + Firefox form history; never bookmarks, passwords, cookies, site data |
+| **Windows activity traces** | 3 | Recent items (incl. JumpList), thumbnail cache, INetCache; never credentials or the thumbnail index |
+| **Windows update cache** | 2 | SoftwareDistribution/Download + Delivery Optimization cache; never the update history DB (`DataStore.edb`) |
 
 **Why we cut the previous 36 legacy scaffolds**: nobody had verified their glob boundaries, creating a real risk of deleting user data (e.g. the old `node-modules` scaffold matched Cursor / VSCode / game-bundled `node_modules` directories). Every new scaffold goes through the same 14-phase workflow: on-machine survey → precise globs → scaffold-lint red-line check → safety integration test (positive + red-line assertions) → dry-run verification.
 
@@ -142,7 +145,7 @@ All deletes go to the **system Recycle Bin** by default — recoverable. Every a
 
 - [x] Whole-disk scan in seconds — see how much every folder takes
 - [x] Drag any folder into the AI to ask "what is this, can I delete it?"
-- [x] Eighteen cleanup scaffolds: WeChat, Teams, game engines, Zoom, Discord, dev caches, QQ, browser cache, IDE caches, Conda, crash dumps, Firefox, HuggingFace, Docker buildx, OBS, security suites, Steam shader, system temp
+- [x] Twenty-one cleanup scaffolds: WeChat, Teams, game engines, Zoom, Discord, dev caches, QQ, browser cache, browser history, IDE caches, Conda, crash dumps, Firefox, HuggingFace, Docker buildx, OBS, security suites, Steam shader, system temp, Windows activity traces, Windows update cache
 - [x] An "undo" button: recover anything you deleted from Recycle Bin / quarantine in one click (`~/.diskpilot/undo.jsonl` + "Recent cleanups" panel)
 - [x] Steam shader cache cleanup (SteamInspector read-only scan + shader scaffold)
 - [x] Scan-tree persistence across restarts (recent drives reopen instantly)

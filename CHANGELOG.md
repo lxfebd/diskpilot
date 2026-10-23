@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 文档不再数错脚本：21 份脚本 / 97 个 scope（R333）
+
+- 公开文档统一停在「18 份清理脚本」——`scaffolds/` 实际已有 21 份（新三份 Windows 隐私/活动
+  痕迹/更新缓存上线后没人回头改数字）；
+- `README.md` 标题「十八份清理脚本」、正文「现有 18 份」、目录速览、路线图勾选、截图说明
+  全部改 21，脚本表格补上三行（浏览器使用痕迹 2 scope / Windows 活动痕迹 3 / Windows 更新缓存 2，
+  各自写明红线不碰什么）；`README_EN.md` 同口径（Eighteen→Twenty-one、补三行、路线图列表补三项）；
+- `docs/guide.md`、`docs/architecture.md`（每 scaffold 一个 safety 集成测试）同步改 21；
+- 官网 `website/index.html` 三处 18 改 21，统计块「100+ 个 scope」改成实测的 97 个；
+- 顺手修 `docs/scaffold-authoring.md` 两处**错包名**：`cargo test -p scaffold` 实为
+  `-p diskpilot-scaffold`，`cargo run -p scaffold-lint` 实为
+  `cargo run -p diskpilot-scaffold-lint -- scaffolds/*.toml`（原写法照抄会报 no such package），
+  并把「18+1 份」改成「21 份（另有 _templates/ 一份模板）」。
+
 ### 2026-10-24 补跑 rustfmt：CI 的 `cargo fmt --all -- --check` 门此前是红的（R332）
 
 - CI `lint-rust` 的第一道门是 `cargo fmt --all -- --check`（三平台都跑），但 R290–R331 期间
