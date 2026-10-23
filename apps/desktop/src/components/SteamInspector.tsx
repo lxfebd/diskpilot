@@ -96,6 +96,16 @@ export function sortByPivot(games: SteamGame[], pivot: Pivot): SteamGame[] {
   return list;
 }
 
+// R311：卸载残留列表的可见窗口。头部计数说的是「全部残留 N 项」，此前表格却只画前
+// 12 条、不说还有几条——头部数字与可见行数对不上，用户以为清单只有这些。抽成纯
+// 函数：默认给前 cap 条 + 剩余条数，展开后全给、剩余 0。
+export const RESIDUE_CAP = 12;
+export function residueWindow<T>(items: readonly T[], showAll: boolean, cap = RESIDUE_CAP) {
+  const limit = Math.max(0, cap);
+  const shown = showAll ? items : items.slice(0, limit);
+  return { shown, hidden: items.length - shown.length };
+}
+
 export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }) {
   const t = useT();
   const [inventory, setInventory] = useState<SteamInventory | null>(null);
@@ -238,6 +248,8 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
   const recycle = useStore((s) => s.recyclePaths);
   const [residueConfirm, setResidueConfirm] = useState<string | null>(null);
   const [residueBusy, setResidueBusy] = useState<string | null>(null);
+  // R311：残留清单头部计数是全量，默认只列前 RESIDUE_CAP 条——展开后全部列出。
+  const [showAllResidue, setShowAllResidue] = useState(false);
 
   const doRecycleResidue = useCallback(
     async (r: { path: string; libRoot: string; size_bytes: number }) => {
@@ -463,6 +475,9 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     inventory?.libraries
       .filter((l) => enabledLibraries.has(l.root))
       .reduce((s, l) => s + l.residue_size_bytes, 0) ?? 0;
+  // R311：头部计数是全量，列表默认只画前 RESIDUE_CAP 条；hidden>0 时在列表尾
+  // 给出「还有 N 条」+ 展开入口，不让人把 12 条当成全部残留。
+  const residueWin = residueWindow(residueItems, showAllResidue);
 
   return (
     <div className="steam-inspector">
@@ -563,7 +578,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
                   </span>
                 </div>
                 <div className="steam-residue-lead">{t('steam.residueLead')}</div>
-                {residueItems.slice(0, 12).map((r) => (
+                {residueWin.shown.map((r) => (
                   <div key={`${r.libRoot}-${r.path}`} className="steam-residue-item">
                     <div className="steam-residue-row">
                       <span className="steam-residue-kind">
@@ -619,6 +634,21 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
                     )}
                   </div>
                 ))}
+                {/* R311：头部计数是全量，这里明说没画全的部分并给展开入口 */}
+                {(residueWin.hidden > 0 || (showAllResidue && residueItems.length > RESIDUE_CAP)) && (
+                  <div className="steam-residue-more">
+                    {residueWin.hidden > 0 && (
+                      <span className="muted small">{t('steam.residueMore', { n: residueWin.hidden })}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="ghost small"
+                      onClick={() => setShowAllResidue((v) => !v)}
+                    >
+                      {showAllResidue ? t('steam.residueCollapse') : t('steam.residueShowAll')}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <div className="steam-search">

@@ -477,6 +477,13 @@
 .steam-residue-confirm > span { flex: 1; min-width: 0; }
 /* 确认条内按钮统一紧凑尺寸（button.primary.small 全局没有定义，别依赖 .small） */
 .steam-residue-confirm button { padding: 5px 10px; font-size: 12px; min-height: 28px; }
+/* R311：残留清单被 12 条窗口截断时的一行说明 + 展开/收起 */
+.steam-residue-more {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+.steam-residue-more button { font-size: 12px; min-height: 26px; padding: 3px 8px; }
 
 .steam-row {
   display: grid;

@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 Steam 卸载残留清单不再悄悄只画前 12 条（R311）
+
+残留卡头部写的是全量「N 处 · 大小」，表格却硬编码 `residueItems.slice(0, 12)`——
+超过 12 处时用户只看见 12 行，剩下的既列不出来也没有任何说明，头部数字和可见行数
+对不上还找不到差额。本条把窗口显式化：
+
+- 新增导出常量 `RESIDUE_CAP = 12` 与纯函数 `residueWindow(items, showAll, cap)`：
+  折叠时给前 cap 条 + 剩余条数，展开时全给、剩余 0；cap 为负按 0（不越界）。配 5 条单测。
+- 列表尾在 `hidden > 0` 时加一行「还有 {n} 处未列出」+「展开全部 / 收起」——头部的
+  计数从此和能看到的行对得上，也给了看全整份残留的入口（回收仍逐条两步确认，不批量）。
+- 已消费 i18n：`steam.residueMore / residueShowAll / residueCollapse`（zh/en 各三条）。
 ### 2026-10-24 操作历史台账到拉取上限时明说「只显示最近 N 条」（R310）
 
 历史页按 `LOAD_LIMIT = 500` 拉台账（后端 `list_undo` 只 take(limit)、不返回 total）。

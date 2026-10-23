@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sortByPivot } from './SteamInspector';
+import { RESIDUE_CAP, residueWindow, sortByPivot } from './SteamInspector';
 import type { SteamGame } from '../types';
 
 // Steam 库排序透视（R97）：四条 pivot 各管一种「先看谁」的心智模型：
@@ -84,5 +84,40 @@ describe('sortByPivot size / library / lastplayed', () => {
     const never = game({ appid: 3, last_played_ts: null });
     const sorted = sortByPivot([never, old, fresh], 'lastplayed');
     expect(sorted.map((g) => g.appid)).toEqual([1, 2, 3]);
+  });
+});
+// R311：残留清单头部计数是全量，列表默认只画前 12 条。窗口函数必须如实报出没画
+// 的那部分条数——否则「N 处」和可见行数对不上，或者展开后仍说「还有 N 条」。
+describe('residueWindow（卸载残留可见窗口）', () => {
+  const items = Array.from({ length: 20 }, (_, i) => i);
+
+  it('默认只给前 CAP 条，并报出剩余条数', () => {
+    const w = residueWindow(items, false);
+    expect(w.shown).toHaveLength(RESIDUE_CAP);
+    expect(w.shown).toEqual(items.slice(0, RESIDUE_CAP));
+    expect(w.hidden).toBe(20 - RESIDUE_CAP);
+  });
+
+  it('展开后全给、剩余 0（不再喊还有 N 条）', () => {
+    const w = residueWindow(items, true);
+    expect(w.shown).toHaveLength(20);
+    expect(w.hidden).toBe(0);
+  });
+
+  it('不超过 CAP 时剩余 0，展开与折叠给出同一份', () => {
+    const few = [1, 2, 3];
+    expect(residueWindow(few, false)).toEqual({ shown: few, hidden: 0 });
+    expect(residueWindow(few, true).shown).toEqual(few);
+  });
+
+  it('恰好等于 CAP → hidden 0；空清单 → 空窗口', () => {
+    const exact = items.slice(0, RESIDUE_CAP);
+    expect(residueWindow(exact, false).hidden).toBe(0);
+    expect(residueWindow([], false)).toEqual({ shown: [], hidden: 0 });
+  });
+
+  it('cap 为 0/负数时不越界（负数按 0 处理）', () => {
+    expect(residueWindow(items, false, 0)).toEqual({ shown: [], hidden: 20 });
+    expect(residueWindow(items, false, -3)).toEqual({ shown: [], hidden: 20 });
   });
 });
