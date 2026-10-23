@@ -807,7 +807,9 @@ export default function App() {
       )}
       <CleanupProposalDialog />
 
-      <div className="toast-stack">
+      {/* R319：toast 是本应用的主要反馈通道，之前没有任何 live region——
+          读屏软件对「清理完成 / 打不开 / 提醒」一律静默。容器常驻，内容一变就播报。 */}
+      <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => (
           <div key={toast.id} className={'toast ' + toast.kind}>
             <span className="toast-text">{toast.text}</span>
@@ -827,7 +829,7 @@ export default function App() {
             <button
               type="button"
               className="toast-close"
-              aria-label="close"
+              aria-label={t('common.close')}
               onClick={() => dismissToast(toast.id)}
             >
               <X size={12} />

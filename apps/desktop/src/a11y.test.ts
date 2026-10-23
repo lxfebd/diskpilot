@@ -64,3 +64,24 @@ describe('图标按钮的可访问名字（R318）', () => {
     expect(violations).toEqual([]);
   });
 });
+
+// ── aria-label 必须走文案表（R319）─────────────────────────────
+// 出现过 `aria-label="close"` / `aria-label="loading"`：中文界面里读屏软件念英文，
+// 而且绕开了 zh/en 双表。这里禁止任何字面量 aria-label，必须 `aria-label={t('…')}`。
+describe('aria-label 走文案表（R319）', () => {
+  it('源码里没有字面量 aria-label', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (/\.test\.tsx$/.test(path)) continue;
+      const re = /aria-label=\s*("([^"]*)"|'([^']*)')/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src))) {
+        const val = (m[2] ?? m[3] ?? '').trim();
+        if (!val) continue;
+        const line = src.slice(0, m.index).split('\n').length;
+        violations.push(`${path}:${line} aria-label="${val}"`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

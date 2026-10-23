@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 toast 能被读屏软件念出来了（R319）
+
+toast 是这个应用的主要反馈通道（清理完成、打不开文件夹、提醒、扫描失效……），但那个常驻的
+`toast-stack` 容器上没有 `role` / `aria-live`，屏幕阅读器对所有提示一律静默；顺带两处
+`aria-label` 还写死了英文。
+
+- `toast-stack` 改为 `role="status" aria-live="polite"`（容器常驻，内容一变就播报）；
+- `aria-label="close"` → `aria-label={t('common.close')}`，聊天加载圈 `aria-label="loading"`
+  → `role="status"` + `aria-label={t('common.loading')}`；`common` 表补 `common.close` /
+  `common.loading` 两键；
+- `a11y.test.ts` 加守卫：源码里不许出现字面量 `aria-label="…"`，必须走文案表。
 ### 2026-10-24 纯图标按钮补上可访问名字（R318）
 
 读屏软件读到的是一串空按钮：全仓有 7 个「只有图标、既没有 aria-label 也没有 title」的按钮，

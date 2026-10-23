@@ -1027,7 +1027,7 @@ const TurnRow = memo(function TurnRow({ turn, node, recycleNode }: TurnRowProps)
         <TraceBlock trace={turn.trace} live={!!turn.pending} />
       )}
       <div className="chat-bubble">
-        {turn.pending && <span className="chat-spinner" aria-label="loading" />}
+        {turn.pending && <span className="chat-spinner" role="status" aria-label={t('common.loading')} />}
         {turn.role === 'assistant'
           ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{turn.text}</ReactMarkdown>
           : turn.text}

@@ -15,6 +15,9 @@ export const common = {
 
     // 通用词
     'common.chat.untitled': '未命名',
+    // 无障碍标签用的通用词（R319：aria-label 也要走文案表，不许写死英文）
+    'common.close': '关闭',
+    'common.loading': '加载中',
     // 两步确认面板按钮（ConfirmDialog）
     'common.confirm.cancel': '取消',
     'common.confirm.ok': '确认',
@@ -57,6 +60,8 @@ export const common = {
     'common.recycle.aiDone': 'Recycled {n} items as you confirmed (recoverable from the Recycle Bin) · about {size}',
 
     'common.chat.untitled': 'Untitled',
+    'common.close': 'Close',
+    'common.loading': 'Loading',
     'common.confirm.cancel': 'Cancel',
     'common.confirm.ok': 'Confirm',
     'common.copiedPath': 'Path copied',
