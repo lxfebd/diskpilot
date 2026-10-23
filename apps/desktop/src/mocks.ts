@@ -1068,6 +1068,15 @@ export async function checkSpaceForecast(): Promise<
   return [{ path: 'C:\\', days, reason: 'ok', warn: days !== null && threshold !== null && days <= threshold }];
 }
 
+/** R300：启动项变化「立即对比」的诚实 mock。浏览器里没有真实启动项快照，
+ *  返回空 delta（added/gone 均为空、gap 0、prev_at 0）——「自上次快照以来
+ *  没有变化」在演示里是能成立的真话，但**不编造**任何新增/消失：用户盯着看
+ *  「昨天还在的某某消失了」这种话，必须是真实系统的观测结果。 */
+export async function checkStartupDelta(): Promise<{ added: string[]; gone: string[]; gap_days: number; prev_at: number }> {
+  await wait(30);
+  return { added: [], gone: [], gap_days: 0, prev_at: 0 };
+}
+
 // —— R187：预览模式的周体检简报演示数据 ——
 // 真实桌面端从扫描建议 + 温度 + 硬盘快照算周报（generate_weekly_report_cmd），
 // 浏览器里没有传感器/归档，给一份与 R182/R183 同源的 C 盘样例（可清字节 =

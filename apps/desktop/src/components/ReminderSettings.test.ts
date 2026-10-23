@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { withRule, normalizeReminderCfg } from './ReminderSettings';
+import { withRule, normalizeReminderCfg, formatStartupDelta } from './ReminderSettings';
 import type { AutoListRule } from '../api';
 
 // R298：热管理与启动项监听的 5 个旋钮此前只有后端、前端零入口。
@@ -125,5 +125,34 @@ describe('withRule（按项授权规则变换）', () => {
   it('空规则集上 add 产生单条（阈值原样保留，含 1 字节这种边界）', () => {
     const out = withRule([], 'add', { scaffold_id: 'a', min_bytes: 1 });
     expect(out).toEqual([{ scaffold_id: 'a', min_bytes: 1 }]);
+  });
+});
+
+describe('formatStartupDelta（R300 启动项对比四态判定）', () => {
+  it('err 含 no_history → noHistory（真空：只有 0/1 份快照）', () => {
+    expect(formatStartupDelta('no_history: only one snapshot', null).kind).toBe('noHistory');
+  });
+
+  it('其他 err → unread（真实读失败，不能说成「没有变化」）', () => {
+    expect(formatStartupDelta('file corrupted', null).kind).toBe('unread');
+    expect(formatStartupDelta('boom', { added: [], gone: [], gap_days: 1, prev_at: 1 }).kind).toBe('unread');
+  });
+
+  it('无 err 无 delta → unread（防御）', () => {
+    expect(formatStartupDelta(null, null).kind).toBe('unread');
+  });
+
+  it('added/gone 全空 → same（真空一致，不报「新增 0 项消失 0 项」当新闻）', () => {
+    const s = formatStartupDelta(null, { added: [], gone: [], gap_days: 2, prev_at: 100 });
+    expect(s.kind).toBe('same');
+    expect(s.gap).toBe(2);
+  });
+
+  it('有新增/消失 → changed，数字与 gap 原样带出', () => {
+    const s = formatStartupDelta(null, { added: ['a', 'b'], gone: ['c'], gap_days: 3, prev_at: 100 });
+    expect(s.kind).toBe('changed');
+    expect(s.add).toBe(2);
+    expect(s.gone).toBe(1);
+    expect(s.gap).toBe(3);
   });
 });

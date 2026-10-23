@@ -1,10 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Play, BellOff, TrendingUp, ListPlus, Trash2, AlertTriangle } from 'lucide-react';
 import { api } from '../api';
-import type { ReminderConfig, ReminderPayload, SpaceForecast, AutoListConfigView, AutoListRule } from '../api';
+import type { ReminderConfig, ReminderPayload, SpaceForecast, AutoListConfigView, AutoListRule, StartupChanged } from '../api';
 import { formatBytes } from '../format';
 import { useStore } from '../store';
 import { useT } from '../i18n';
+
+/** R300：启动项对比结果的组织（纯函数，可单测）。
+ *  后端 check_startup_delta_cmd 区分两种「没得比」：Err("no_history") = 真空
+ *  （只有 0/1 份快照，首次快照已记）与真实读失败。UI 必须分开说——把「还没
+ *  第二份快照」说成「读失败」，或把读失败说成「没有变化」，都是编造。
+ *  delta 为 null = 读失败；added/gone 全空 = 一致。返回 (kind, text) 由调用方
+ *  翻译文案，本函数只做判定与数字组织。 */
+export type StartupDeltaKind = 'unread' | 'noHistory' | 'same' | 'changed';
+
+export function formatStartupDelta(
+  err: string | null | undefined,
+  delta: { added: string[]; gone: string[]; gap_days: number; prev_at: number } | null | undefined,
+): { kind: StartupDeltaKind; add: number; gone: number; gap: number } {
+  if (err) {
+    if (/no_history/i.test(err)) return { kind: 'noHistory', add: 0, gone: 0, gap: 0 };
+    return { kind: 'unread', add: 0, gone: 0, gap: 0 };
+  }
+  if (!delta) return { kind: 'unread', add: 0, gone: 0, gap: 0 };
+  const add = delta.added.length;
+  const gone = delta.gone.length;
+  if (add === 0 && gone === 0) return { kind: 'same', add: 0, gone: 0, gap: delta.gap_days };
+  return { kind: 'changed', add, gone, gap: delta.gap_days };
+}
 
 /**
  * 按项授权（health-butler P2-1）的纯规则变换，与后端 auto_list.rs 同语义。
@@ -75,6 +98,11 @@ export function ReminderSettings() {
   const [forecastBusy, setForecastBusy] = useState(false);
   const [forecast, setForecast] = useState<SpaceForecast[] | null>(null);
   const [forecastErr, setForecastErr] = useState<string | null>(null);
+  // R300 启动项「立即对比」：独立忙碌/结果/失败态。Err 分两种（no_history 与真
+  // 读失败），交给 formatStartupDelta 判定，UI 措辞分开。
+  const [startupBusy, setStartupBusy] = useState(false);
+  const [startupDelta, setStartupDelta] = useState<StartupChanged | null>(null);
+  const [startupErr, setStartupErr] = useState<string | null>(null);
   // health-butler P2-1 按项授权：规则集（含每条生效状态）+ 待添加的 scaffold + 阈值。
   const [autoList, setAutoList] = useState<AutoListConfigView | null>(null);
   const [autoListErr, setAutoListErr] = useState<string | null>(null);
@@ -169,6 +197,23 @@ export function ReminderSettings() {
       useStore.getState().toast(t('system.reminder.toastCheckFailed', { err: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
       setBusy(false);
+    }
+  };
+
+  // R300：立即对比启动项（只读 startup-history.jsonl 最后两份快照，零枚举、零写入）。
+  // 后端区分真空态（只有 0/1 份快照 → Err no_history）与真实读失败——
+  // 分别给「首次快照」与「未读到」措辞，绝不用「没有变化」糊住任一种。
+  const checkStartupDelta = async () => {
+    setStartupBusy(true);
+    setStartupErr(null);
+    try {
+      const d = await api.checkStartupDelta();
+      setStartupDelta(d);
+    } catch (e) {
+      setStartupDelta(null);
+      setStartupErr(String(e instanceof Error ? e.message : e));
+    } finally {
+      setStartupBusy(false);
     }
   };
 
@@ -411,6 +456,30 @@ export function ReminderSettings() {
       </label>
       <div className="muted small" style={{ marginTop: 6 }}>
         {t('system.reminder.startupHint')}
+      </div>
+      <div className="reminder-result" style={{ marginTop: 10 }}>
+        <button className="ghost" onClick={checkStartupDelta} disabled={startupBusy}>
+          <TrendingUp size={13} /> {startupBusy ? t('system.reminder.startupChecking') : t('system.reminder.startupCheck')}
+        </button>
+        {(() => {
+          const s = formatStartupDelta(startupErr, startupDelta);
+          if (startupBusy) return null;
+          if (s.kind === 'noHistory') {
+            return <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.startupNoHistory')}</div>;
+          }
+          if (s.kind === 'unread') {
+            return <div className="error small" style={{ marginTop: 8 }}>{t('system.reminder.loadFailed', { err: startupErr ?? '' })}</div>;
+          }
+          if (s.kind === 'same') {
+            return <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.startupSame')}</div>;
+          }
+          return (
+            <div style={{ marginTop: 8 }}>
+              <div className="muted small">{t('system.reminder.startupDelta', { days: s.gap, add: s.add, gone: s.gone })}</div>
+              <div className="muted small" style={{ marginTop: 4 }}>{t('system.reminder.startupDeltaHint')}</div>
+            </div>
+          );
+        })()}
       </div>
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.forecastTitle')}</div>
       <button className="ghost" onClick={checkForecast} disabled={forecastBusy}>

@@ -263,6 +263,12 @@ export const cleanApi = {
   getThermalHistory: (): Promise<ThermalPoint[]> =>
     isTauri ? invoke<ThermalPoint[]>('get_thermal_history') : mocks.getThermalHistory(),
 
+  /** R300 立即对比启动项（只读）：读 startup-history.jsonl 的最后两份快照做集合 diff，
+   *  区分「没历史」与「读失败」——真空态后端返回 Err("no_history")，UI 说「首次快照」，
+   *  真实读失败说「未读到」。绝不用「无变化」糊住任一种。零系统扫描、零写入。 */
+  checkStartupDelta: (): Promise<StartupChanged> =>
+    isTauri ? invoke<StartupChanged>('check_startup_delta_cmd') : mocks.checkStartupDelta(),
+
   /** R100 立即检查各盘空间趋势（只读）：逐盘返回预计满盘天数/无法预测的原因。
     *  浏览器模式无真实历史 → 空列表（诚实：没读=没有）。 */
   checkSpaceForecast: () =>

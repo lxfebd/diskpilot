@@ -173,6 +173,14 @@ export const system = {
     'system.reminder.startupMinutes': '{n} 分钟',
     'system.reminder.startupHour': '1 小时',
     'system.reminder.startupHint': '默认 1 小时一次；启动项不常变，更频繁只会白耗一次 PowerShell 枚举。',
+    'system.reminder.startupCheck': '立即对比',
+    'system.reminder.startupChecking': '对比中…',
+    'system.reminder.startupNoHistory': '还没有两份快照可比（首次快照已记下，下一份出来才能对比）',
+    'system.reminder.startupSame': '与上一份快照一致，没有变化',
+    'system.reminder.startupDelta': '自 {days} 天前的快照：新增 {add} 项、消失 {gone} 项',
+    'system.reminder.startupAdded': '新增（{n}）',
+    'system.reminder.startupGone': '消失（{n}）',
+    'system.reminder.startupDeltaHint': '只说「新出现/消失」，不判断是谁做的。对比本身只读，不改任何启动项。',
 
     // ── R297 扫描时效提醒阈值 ──
     'system.reminder.scanStaleLabel': '扫描时效提醒',
@@ -375,6 +383,14 @@ export const system = {
     'system.reminder.startupMinutes': '{n} min',
     'system.reminder.startupHour': '1 hour',
     'system.reminder.startupHint': 'Defaults to once an hour; startup items rarely change, and going more frequent just burns a PowerShell enumeration for nothing.',
+    'system.reminder.startupCheck': 'Compare now',
+    'system.reminder.startupChecking': 'Comparing…',
+    'system.reminder.startupNoHistory': 'Only one snapshot so far (the first one is recorded; a comparison needs the next one)',
+    'system.reminder.startupSame': 'Identical to the previous snapshot — no changes',
+    'system.reminder.startupDelta': 'Since the snapshot {days} days ago: {add} added, {gone} gone',
+    'system.reminder.startupAdded': 'Added ({n})',
+    'system.reminder.startupGone': 'Gone ({n})',
+    'system.reminder.startupDeltaHint': 'This only reports what appeared or disappeared; it does not attribute the change. The comparison is read-only and never touches startup items.',
 
     // ── R297 scan-staleness reminder threshold ──
     'system.reminder.scanStaleLabel': 'Scan staleness reminder',
