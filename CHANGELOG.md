@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 新三份 Windows 隐私脚本补上安全测试 + 「TOML 必有测试」守卫（R331）
+
+- `scaffolds/` 实际有 21 份脚本，其中 `browser-privacy` / `windows-privacy` / `windows-update`
+  三份当初只交了 TOML 没交安全测试——违反 `docs/scaffold-authoring.md` 的「一份脚本必须同时
+  交付 TOML + 安全测试，缺一不可合入」，靠人肉审查才发现；
+- 新增 `crates/scaffold/tests/browser_privacy_safety.rs`（5 条正向 + 21 条红线：书签、
+  `Login Data`、Cookie、Preferences、Local Storage/IndexedDB/扩展数据，以及 Firefox 的
+  `places.sqlite`（书签与历史同库）、`cookies.sqlite`、`logins.json`、`key4.db` 一律零命中）；
+- 新增 `windows_privacy_safety.rs`（Recent 快捷方式/JumpList、`thumbcache_*.db`、INetCache
+  正向；凭据库、`Recent Custom`、`thumbcache.idx`、无关目录同名结构零命中）；
+- 新增 `windows_update_safety.rs`（固定 `WINDIR`；`SoftwareDistribution/Download/**` 与
+  `DeliveryOptimization/Cache/**` 正向；`DataStore.edb`（更新历史与回滚依赖）、AuthCabs、
+  System32/WinSxS、用户目录同名结构零命中）；
+- 新增 `crates/scaffold/tests/scaffold_coverage.rs` 守卫：每份 `scaffolds/*.toml` 必须有
+  `<id>_safety.rs`、每个 `*_safety.rs` 必须对得上一份 TOML（防改名留孤儿），并校验 TOML 的
+  `id` 字段与文件名一致——规则从文档变成 `cargo test` 会红的检查，CI 三平台测试自动覆盖。
+
 ### 2026-10-24 文档链接不再指向不存在的文件（R330）
 
 - 文档索引里 4 条相对链接是坏的：`docs/README.md` 列了从未存在的 `PROJECT_FUNCTION_MAP.md`；
@@ -28,6 +45,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   UTC+8 凌晨会显示成前一天；改用 `formatDateKey`（本地日期）；
 - 新增守卫单测：源码里不许再出现 `toLocaleTimeString` / `toLocaleDateString`（数字的
   千分位 `toLocaleString` 仍允许）。
+
 ### 2026-10-24 Agent 进度监听不再每次渲染都叠加一个（R328）
 
 - `useAgentToolProgress` 的 `import(...).then(...)` 里返回的注销函数从来没有被调用过，
