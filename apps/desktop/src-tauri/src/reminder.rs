@@ -56,6 +56,19 @@ pub(crate) struct ReminderConfig {
     /// 连续 25 分钟无一秒喘息）。1 会退化成瞬时判定，正是要避免的形态。
     #[serde(default = "default_thermal_sustained_samples")]
     pub thermal_sustained_samples: u64,
+    /// R292 启动项变化监听开关。独立于 enabled：只想知道「启动项有没有被动过」
+    /// 的用户可以只开这个，不接清理提醒。0 成本静默：只在枚举后集合真的变了
+    /// 才落一份快照。
+    #[serde(default)]
+    pub startup_watch_enabled: bool,
+    /// 启动项快照间隔（分钟，1..=1440，默认 60）。启动项不常变，一小时一次的
+    /// 枚举成本（一次 PowerShell + 两个目录列举）远低于它的价值。
+    #[serde(default = "default_startup_watch_minutes")]
+    pub startup_watch_minutes: u64,
+}
+
+fn default_startup_watch_minutes() -> u64 {
+    60
 }
 
 fn default_thermal_sustained_c() -> f32 {
@@ -78,6 +91,8 @@ impl Default for ReminderConfig {
             thermal_sample_enabled: false,
             thermal_sustained_c: 85.0,
             thermal_sustained_samples: 5,
+            startup_watch_enabled: false,
+            startup_watch_minutes: 60,
         }
     }
 }
@@ -140,6 +155,8 @@ pub(crate) fn set_reminder_config(
     thermal_sample_enabled: Option<bool>,
     thermal_sustained_c: Option<f32>,
     thermal_sustained_samples: Option<u64>,
+    startup_watch_enabled: Option<bool>,
+    startup_watch_minutes: Option<u64>,
 ) -> Result<ReminderConfig, String> {
     let Some(p) = config_path(&app) else {
         return Err("无法定位数据目录".into());
@@ -178,6 +195,13 @@ pub(crate) fn set_reminder_config(
     if let Some(v) = thermal_sustained_samples {
         // 钳 1..=60：1 = 瞬时判定（要避免的形态），60 = 整整一小时不喘息。
         cfg.thermal_sustained_samples = v.clamp(1, 60);
+    }
+    if let Some(v) = startup_watch_enabled {
+        cfg.startup_watch_enabled = v;
+    }
+    if let Some(v) = startup_watch_minutes {
+        // 钳 1..=1440（1 天）：低于 1 分钟会变成 PowerShell 进程风暴。
+        cfg.startup_watch_minutes = v.clamp(1, 1440);
     }
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
@@ -301,6 +325,48 @@ pub(crate) fn thermal_sustained_now(app: &AppHandle, cfg: &ReminderConfig) -> Op
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0),
+    })
+}
+
+/// R292 启动项变化负载（emit 给前端）。只说「自上次快照后新出现/消失」，
+/// **不断言是谁做的、也不判定有害**——软件自装与恶意自装在数据上无法区分，
+/// 本模块没有能力区分，也不假装能。
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct StartupChanged {
+    /// 新出现的身份键（location + 单元分隔符 + name）。
+    pub added: Vec<String>,
+    /// 消失的身份键。
+    pub gone: Vec<String>,
+    /// 距上一份快照的天数。
+    pub gap_days: u64,
+    /// 上一份快照时间（unix 秒）。
+    pub prev_at: u64,
+}
+
+/// 读历史 + diff。None 的两种情形必须可区分：
+/// - 无历史（首次/仅一份）→ None，通知通道静默不发；
+/// - 读失败 → 这里也返回 None（通知通道语义 = 跳过即不发），但**原因不同**：
+///   前端若想区分「没历史」与「读失败」，走主动查询 check_startup_delta_cmd，
+///   那条路径会把 Err 如实呈现，不会把读失败演成「无变化」。
+pub(crate) fn startup_delta_now(app: &AppHandle) -> Option<StartupChanged> {
+    let d = crate::startup_history::diff_with_history(app).ok()?;
+    Some(StartupChanged {
+        added: d.added,
+        gone: d.gone,
+        gap_days: d.gap_days,
+        prev_at: d.prev_at,
+    })
+}
+
+/// 主动查询一次（设置页「立即检查」按钮）：区分真空态与读失败。
+#[tauri::command]
+pub(crate) fn check_startup_delta_cmd(app: AppHandle) -> Result<StartupChanged, String> {
+    let d = crate::startup_history::diff_with_history(&app)?;
+    Ok(StartupChanged {
+        added: d.added,
+        gone: d.gone,
+        gap_days: d.gap_days,
+        prev_at: d.prev_at,
     })
 }
 
@@ -469,6 +535,9 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
         // R291 温度采样与持续预警：flag 防抖（报过一次就等回落才复位）。
         let mut last_thermal_sample = std::time::Instant::now();
         let mut thermal_warned = false;
+        // R292 启动项变化监听：flag 防抖同 thermal（报过一次就等集合回落才复位）。
+        let mut last_startup_snapshot = std::time::Instant::now();
+        let mut startup_warned = false;
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
@@ -505,6 +574,36 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                     let _ = app.emit("thermal-sustained", sustained);
                 } else if sustained.is_none() && thermal_warned {
                     thermal_warned = false;
+                }
+            }
+            // R292 启动项快照：只在 startup_watch_enabled 开启时按
+            // startup_watch_minutes 间隔枚举。**枚举失败不落空快照**
+            // （record_startup_snapshot 对空集合直接拒绝）——否则读失败会被
+            // 记成「上次是空的」，下次把现有启动项全报成新增。
+            if cfg.startup_watch_enabled
+                && last_startup_snapshot.elapsed()
+                    >= Duration::from_secs(cfg.startup_watch_minutes.clamp(1, 1440) * 60)
+            {
+                last_startup_snapshot = std::time::Instant::now();
+                if let Ok(items) = tauri::async_runtime::block_on(
+                    crate::startup::list_startup_items(),
+                ) {
+                    // 用内容键（location + name）而非 StartupItem.id：id 是
+                    // 单次枚举的自增序号，删一项会让其后所有 id 错位，拿它
+                    // diff 会产出大量虚假的新增/消失。
+                    let keys: std::collections::BTreeSet<String> = items
+                        .iter()
+                        .map(|it| crate::startup_history::startup_key(&it.location, &it.name))
+                        .collect();
+                    crate::startup_history::record_startup_snapshot(&app, &keys);
+                }
+                let delta = startup_delta_now(&app);
+                let changed = delta.as_ref().is_some_and(|d| !d.added.is_empty() || !d.gone.is_empty());
+                if changed && !startup_warned {
+                    startup_warned = true;
+                    let _ = app.emit("startup-changed", delta);
+                } else if !changed && startup_warned {
+                    startup_warned = false;
                 }
             }
             // 周巡检简报（health-butler P1）：weekly_report_enabled 开才跑。
@@ -627,6 +726,13 @@ mod tests {
         // 已证否——这里只确认配置层不会被 clamp 悄悄改成别的值。
         let c = ReminderConfig { thermal_sustained_samples: 1, ..ReminderConfig::default() };
         assert_eq!(c.thermal_sustained_samples, 1);
+    }
+
+    #[test]
+    fn startup_watch_defaults_are_conservative() {
+        let c = ReminderConfig::default();
+        assert!(!c.startup_watch_enabled, "监听默认关：不主动跑 PowerShell");
+        assert_eq!(c.startup_watch_minutes, 60, "一小时一次：启动项不常变");
     }
 
     #[test]

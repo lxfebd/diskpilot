@@ -345,6 +345,54 @@ export default function App() {
     return () => { unlisten.then((u) => u()); };
   }, [t]);
 
+  // R291 温度持续偏高（只通知；调速写入仍走 L2 双确认，本条不含任何写路径）。
+  // 文案说「检测到…持续偏高」而不是「有人把机器弄过热了」：后端给的是采样事实，
+  // 归因超出数据能力，不替它下结论。
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = listen<import('./api').ThermalSustained>('thermal-sustained', (e) => {
+      const p = e.payload;
+      if (!p) return;
+      useStore.getState().toast(
+        t('shell.toast.thermalSustained', {
+          temp: p.temp_max_c != null ? String(Math.round(p.temp_max_c)) : '?',
+          threshold: String(Math.round(p.threshold_c)),
+          samples: String(p.samples),
+        }),
+        'warn',
+        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
+      );
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [t]);
+
+  // R292 启动项变化。**只说新增/消失了几项，不说是谁做的**：软件自装与恶意
+  // 自装在数据上无法区分，后端没有能力判断，前端更不该替它断言。
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = listen<import('./api').StartupChanged>('startup-changed', (e) => {
+      const p = e.payload;
+      if (!p) return;
+      if (p.added.length === 0 && p.gone.length === 0) return;
+      const goneTxt =
+        p.gone.length > 0 ? t('shell.toast.startupGone', { gone: p.gone.length }) : '';
+      const gapTxt =
+        p.gap_days > 0
+          ? String(p.gap_days)
+          : t('shell.toast.startupNoGap');
+      useStore.getState().toast(
+        t('shell.toast.startupChanged', {
+          added: p.added.length,
+          gone: goneTxt,
+          days: gapTxt,
+        }),
+        'warn',
+        { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
+      );
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [t]);
+
   const pickDirectory = async () => {
     if (!isTauri) {
       // 提示语走文案表；默认值 'C:\\' 是数据，保持原样。

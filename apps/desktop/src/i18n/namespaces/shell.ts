@@ -72,6 +72,12 @@ export const shell = {
     'shell.toast.spaceFull': '{path} 预计 {days} 后空间用满——可以清理了',
     'shell.toast.spaceFullNow': '今天',
     'shell.toast.spaceFullMore': '，另有 {n} 块盘也在预警中',
+    // R291 温度持续偏高（只通知；调速写入仍走 L2 双确认）
+    'shell.toast.thermalSustained': '检测到温度持续偏高：{temp}℃（阈值 {threshold}℃，连续 {samples} 次采样均超限）',
+    // R292 启动项变化（只告知「新增/消失了几项」，不断言是谁做的）
+    'shell.toast.startupChanged': '启动项有变化：新增 {added} 项{gone}（相对于 {days} 天前的快照）',
+    'shell.toast.startupGone': '、减少 {gone} 项',
+    'shell.toast.startupNoGap': '上次快照',
     // R103 通知 toast 操作按钮（点击直达对应页面）
     'shell.toast.actionOverview': '去总览',
     'shell.toast.actionHistory': '查看周报',
@@ -236,6 +242,12 @@ export const shell = {
     'shell.toast.spaceFull': '{path} may be full in {days} — time to clean up',
     'shell.toast.spaceFullNow': '0 days',
     'shell.toast.spaceFullMore': ', {n} more drive(s) also approaching full',
+    // R291 sustained high temperature (notification only; fan writes still require L2 double-confirm)
+    'shell.toast.thermalSustained': 'Sustained high temperature: {temp}C (threshold {threshold}C, {samples} consecutive samples over limit)',
+    // R292 startup items changed (only reports added/removed counts; never claims who did it)
+    'shell.toast.startupChanged': 'Startup items changed: {added} added{gone} (vs. a snapshot from {days} day(s) ago)',
+    'shell.toast.startupGone': ', {gone} removed',
+    'shell.toast.startupNoGap': 'last snapshot',
     // R103 notification toast action buttons (jump straight to the relevant page)
     'shell.toast.actionOverview': 'Go to Overview',
     'shell.toast.actionHistory': 'View report',

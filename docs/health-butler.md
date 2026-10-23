@@ -83,10 +83,12 @@
   （不用平均值：均值 84℃ 分不清「一直 84」和「一半 95 一半 73」，二者处置相反；
   不用单点：单点即瞬时判定，正是要消灭的形态）。由 reminder 后台线程顺手采样，
   零额外磁盘扫描；命中只发 `thermal-sustained` 通知，不做任何写入。
-  仍缺的两条：
-  - **启动项悄悄加了两个**：`startup::list_startup_items()` 只读但无历史归档，
-    "加了两个"需与上次清单 diff，`grep baseline` 零命中。需新建启动项快照历史
-    （同 `thermal_history` 套路，一次只读落盘）。
+  **已落地（R292）**：启动项信号已完成——`startup_history.rs` 存身份键快照
+  （location + name，**不用 `StartupItem.id`**：那是单次枚举的自增序号，删一项
+  会让其后所有 id 错位，拿它 diff 会产出虚假的新增/消失），`diff_snapshots`
+  出 added/gone；通知文案只说「新增 N 项」，**不归因是谁做的**。两个事件
+  （`thermal-sustained` / `startup-changed`）已在 `App.tsx` 接通前端 toast。
+  仍缺的一条：
   - **C 盘三周没扫**：扫描只发生在内存（`cleanup_cache` / Node 树均为进程内
     `Mutex`、不落盘），全仓库无 `last_scan_at` 类记录；`space_history` 采样时间
     是趋势采样而非扫描，拿它冒充属编造。需在扫描完成时补一条轻量时间戳。

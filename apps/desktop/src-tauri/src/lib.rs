@@ -27,6 +27,7 @@ mod scaffold_registry;
 mod scan;
 mod space_history;
 pub(crate) mod startup;
+mod startup_history;
 pub(crate) mod steam;
 mod suggestion_history;
 mod thermal_history;
@@ -244,6 +245,7 @@ pub fn run() {
             reminder::get_reminder_config,
             reminder::set_reminder_config,
             reminder::run_reminder_check_cmd,
+            reminder::check_startup_delta_cmd,
             reminder::check_space_forecast_cmd,
             auto_list::get_auto_list_config,
             auto_list::set_auto_list_config,

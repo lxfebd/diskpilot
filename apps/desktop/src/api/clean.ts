@@ -342,6 +342,32 @@ export interface SpaceFullWarn {
   days: number;
 }
 
+/** R291 温度持续偏高（thermal-sustained 负载）。只通知，不含任何写路径。 */
+export interface ThermalSustained {
+  /** 判定阈值（℃）。 */
+  threshold_c: number;
+  /** 参与判定的采样点数。 */
+  samples: number;
+  /** 窗口内最高温；null = 读不到（不拿 0℃ 冒充）。 */
+  temp_max_c: number | null;
+  /** 生成时间（unix 秒）。 */
+  ts: number;
+}
+
+/** R292 启动项变化（startup-changed / check_startup_delta_cmd 返回形状）。
+ *  added/gone 是身份键（location + 单元分隔符 + name）——只说「自上次快照后
+ *  新出现/消失」，不说是谁做的。 */
+export interface StartupChanged {
+  /** 新出现的身份键。 */
+  added: string[];
+  /** 消失的身份键。 */
+  gone: string[];
+  /** 距上一份快照的天数（0 = 一天内）。 */
+  gap_days: number;
+  /** 上一份快照时间（unix 秒）。 */
+  prev_at: number;
+}
+
 /** R100 逐盘趋势检查结果（check_space_forecast_cmd 返回）。
  *  days = null 时 reason 说明为何预测不了（从实况诚实上报，缺失≠满盘）。 */
 export interface SpaceForecast {
