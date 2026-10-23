@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, Cpu, FolderOpen, Globe, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '../../api';
+import { revealWithToast } from '../../reveal';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { formatBytes } from '../../format';
@@ -82,7 +83,6 @@ export function NetworkPanel({ ctx: _ctx }: { ctx: ToolContext }) {
 
 export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
   const t = useT();
-  const toast = useStore((s) => s.toast);
   const [probe, setProbe] = useState<SystemProbe | null>(null);
   const [loading, setLoading] = useState(true);
   const timerRef = useRef<number | null>(null);
@@ -220,9 +220,7 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
                           title={t('toolbelt.sys.procsReveal')}
                           aria-label={t('toolbelt.sys.procsReveal')}
                           onClick={() => {
-                            api.revealInExplorer(exe).catch((e) => {
-                              toast(String(e instanceof Error ? e.message : e), 'err');
-                            });
+                            void revealWithToast(exe);
                           }}
                         >
                           <FolderOpen size={11} />

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { api } from '../api';
+import { revealWithToast } from '../reveal';
 import { useStore } from '../store';
 import type { SteamGame, SteamInventory } from '../types';
 import { formatBytes } from '../format';
@@ -597,7 +598,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
                       )}
                       <button
                         className="steam-icon-btn"
-                        onClick={() => void api.revealInExplorer(r.path)}
+                        onClick={() => void revealWithToast(r.path)}
                         title={t('steam.residueOpenTitle')}
                         aria-label={t('steam.residueOpenTitle')}
                       >

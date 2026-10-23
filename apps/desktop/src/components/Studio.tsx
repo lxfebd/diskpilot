@@ -13,6 +13,7 @@ import { collectScaffoldCards, type ScaffoldCard } from '../cleanup/matches';
 import { SteamInspectorModal } from './SteamInspectorModal';
 import { UndoPanel } from './UndoPanel';
 import { copyPathWithToast } from '../clipboard';
+import { revealWithToast } from '../reveal';
 
 const FEATURED_IDS = [
   'wechat-pc',
@@ -532,7 +533,7 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
         {
           label: t('studio.reveal'),
           icon: <FolderOpen size={12} />,
-          onClick: () => { api.revealInExplorer(p).catch(() => { /* path may have been deleted */ }); },
+          onClick: () => { void revealWithToast(p); },
         },
         {
           label: t('studio.copyPath'),

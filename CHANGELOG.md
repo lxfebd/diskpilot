@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 打开所在文件夹失败时给一句原因（R317）
+
+上一版的「复制路径」补了回音，同族问题还在：四处「在资源管理器里打开」（扫描树 / 文件视图 / Studio 卡片 /
+Steam 详情页的重叠文件行）写的是 `api.revealInExplorer(p).catch(() => {})`，
+或者干脆 `void api.revealInExplorer(...)`——失败被吞掉，最后一种连未处理的 Promise 拒绝都算上。
+而「路径已经不存在」恰恰是这个按钮最常见的失败，用户点了没反应只会以为软件卡了。
+
+- 新增 `src/reveal.ts` 的 `revealWithToast(path)`：成功不打扰（资源管理器窗口自己会跳出来），
+  失败 toast「打不开所在文件夹：{原因}」；返回是否成功。配 2 条单测。
+- 五处调用统一走它：`tooltree.tsx`、`FileView.tsx`、`Studio.tsx`、`SteamInspector.tsx`
+  （顺带修掉那处未处理拒绝）、`toolbelt/services.tsx`（原本自己 catch 的也并进来，文案口径一致）。
+- `common` 表补 `common.revealFailed`；顺手清掉三处因此不再使用的 import。
 ### 2026-10-24 复制路径有回音了（R316）
 
 三处右键菜单的「复制路径」（扫描树 / 工具树 / Studio 卡片）此前写的是

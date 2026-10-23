@@ -8,11 +8,11 @@
 import { FolderOpen, Copy, Trash2 } from 'lucide-react';
 import type { Node } from './types';
 import type { ContextMenuItem, ContextMenuState } from './components/ContextMenu';
-import { api } from './api';
 // 非组件模块：用模块级 t()，且只在打开菜单 / 点项的调用点求值，
 // 绝不在模块顶层把文案求成常量（那样中文会烤死在首次 import）。
 import { t } from './i18n';
 import { copyPathWithToast } from './clipboard';
+import { revealWithToast } from './reveal';
 
 // pruneMany 多路径版：一次整树遍历同时移除 N 个目标，而不是每删一项
 // 全树走一遍。批量回收用它把「N 项 × M 棵缓存树」次重建压成「M 棵」次。
@@ -72,7 +72,8 @@ export function openDiskpilotMenu(
     {
       label: t('shell.tooltree.openInExplorer'),
       icon: <FolderOpen size={12} />,
-      onClick: () => { api.revealInExplorer(node.path).catch(() => { /* 路径可能已不存在 */ }); },
+      // R317：打不开就说一声（路径可能已不存在），不再静默吞 catch。
+      onClick: () => { void revealWithToast(node.path); },
     },
     {
       label: t('shell.tooltree.copyPath'),

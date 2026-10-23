@@ -21,6 +21,8 @@ export const common = {
     // 复制路径的统一回音（R316：树/工具树/Studio 右键菜单）
     'common.copiedPath': '已复制路径',
     'common.copyFailed': '复制失败：{msg}',
+    // 打开所在文件夹的回音（R317：失败说明原因，不再静默吞 catch）
+    'common.revealFailed': '打不开所在文件夹：{msg}',
 
     // 工具墙分类名（后端 toolbelt manifest 的 category 值；色值/图标按中文名匹配）
     'common.category.cpu': '处理器工具',
@@ -59,6 +61,7 @@ export const common = {
     'common.confirm.ok': 'Confirm',
     'common.copiedPath': 'Path copied',
     'common.copyFailed': 'Copy failed: {msg}',
+    'common.revealFailed': 'Cannot open the folder: {msg}',
 
     'common.category.cpu': 'CPU tools',
     'common.category.gpu': 'GPU tools',

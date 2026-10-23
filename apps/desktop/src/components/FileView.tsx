@@ -4,11 +4,11 @@ import type { Node } from '../types';
 import { formatBytes, extOf as sharedExtOf } from '../format';
 import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
-import { api } from '../api';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { activateOnKey } from '../a11y';
 import { copyPathWithToast } from '../clipboard';
+import { revealWithToast } from '../reveal';
 
 type Props = {
   /** 从 root 出发选中的目录（不含该目录自身，只收集其子树内的文件节点） */
@@ -192,7 +192,7 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
                   {
                     label: t('overview.fileview.menuReveal'),
                     icon: <Folder size={12} />,
-                    onClick: () => { api.revealInExplorer(f.path).catch(() => { /* 路径可能已不存在 */ }); },
+                    onClick: () => { void revealWithToast(f.path); },
                   },
                   {
                     label: t('overview.fileview.menuCopy'),
