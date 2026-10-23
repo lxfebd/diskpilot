@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { api } from '../api';
 import { useT } from '../i18n';
 import { usePerfScale } from '../perfHooks';
+import { isActivationKey } from '../a11y';
 
 type Props = {
   root: Node;
@@ -281,7 +282,20 @@ const Row = memo(function Row({
   return (
     <div
       className={'tree-row' + (sel ? ' selected' : '') + (node.is_dir ? '' : ' is-file')}
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(node.path, node)}
+      // R314：Enter/空格 = 选中；←/→ = 收起/展开（树视图的通用键盘口径）。
+      // 空格必须 preventDefault，否则滚页面。
+      onKeyDown={(e) => {
+        if (isActivationKey(e.key)) {
+          e.preventDefault();
+          onSelect(node.path, node);
+          return;
+        }
+        if (e.key === 'ArrowRight' && hasKids && !open) { e.preventDefault(); onToggle(node); return; }
+        if (e.key === 'ArrowLeft' && open) { e.preventDefault(); onToggle(node); }
+      }}
       onContextMenu={(e) => onCtx(e, node)}
       draggable
       onDragStart={(e) => {

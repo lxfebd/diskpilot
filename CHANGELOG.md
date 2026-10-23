@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 列表行能用键盘选了（R314）
+
+此前全仓只有侧栏写了 `:focus-visible`，列表行（树视图行、文件列表行、空间大头行、页脚重扫）
+都是纯鼠标：Tab 跳过、Enter 没反应，这些地方对键盘用户等于不存在。本条把「按什么键等于点一下」
+收敛成一处口径并接线：
+
+- 新增 `src/a11y.ts`：`isActivationKey(key)`（Enter / 空格，对齐原生 button）、
+  `activateOnKey(handler)`（非激活键直接放行；激活键先 `preventDefault` 再执行——空格不再滚页面）。
+  事件只取最小形状 `KeyLike { key, preventDefault? }`，不依赖 React 类型，可纯函数单测；配 4 条单测。
+- 接线 4 处：TreeView 树行 `role="button"` + `tabIndex={0}`，Enter/空格选中、←/→ 收起/展开；
+  FileView 文件行、总览「空间大头」行、页脚「重新扫描」同为 `role="button"` + Enter/空格触发。
+- 三份样式各补 `:focus-visible` 描边（`2px solid var(--accent-strong)`，与侧栏同口径），键盘焦点看得见。
+- 未动 `DriveStrip` 卡片内的刷新热区：它嵌在真 `<button>` 里，键盘用户用外层卡片按钮即可扫描，
+  避免可交互元素嵌套。
 ### 2026-10-24 文案层补一道占位符守卫 + 清掉无人使用的键（R313）
 
 i18n 守卫测试此前只保证 zh / en「键集一致」，不保证同一键两边都用得上参数——

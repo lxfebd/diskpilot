@@ -7,6 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { api } from '../api';
 import { useStore } from '../store';
 import { useT } from '../i18n';
+import { activateOnKey } from '../a11y';
 
 type Props = {
   /** 从 root 出发选中的目录（不含该目录自身，只收集其子树内的文件节点） */
@@ -267,7 +268,10 @@ const FileRow = memo(function FileRow({
   return (
     <div
       className={'fileview-row' + (selected ? ' selected' : '')}
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(f.path)}
+      onKeyDown={activateOnKey(() => onSelect(f.path))}
       onContextMenu={(e) => {
         e.preventDefault();
         onCtx(e.clientX, e.clientY);

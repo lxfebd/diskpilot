@@ -650,6 +650,11 @@ aside::-webkit-scrollbar-thumb {
   transition: background .06s;
 }
 .tree-row:hover { background: var(--accent-bg); }
+/* R314：树行可用键盘选中，焦点描边与侧栏同一口径（app-shell.css 的 :focus-visible）。 */
+.tree-row:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .tree-row.selected {
   background: var(--accent);
   color: var(--on-accent, var(--ink));

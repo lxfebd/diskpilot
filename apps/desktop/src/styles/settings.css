@@ -529,6 +529,11 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 }
 .fileview-row:hover { background: var(--accent-bg); }
 .fileview-row.selected { background: var(--accent-bg); box-shadow: inset 3px 0 0 var(--accent-strong); }
+/* R314：文件行可用键盘选中，焦点描边与侧栏同一口径。 */
+.fileview-row:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .fv-name {
   display: inline-flex;
   align-items: center;

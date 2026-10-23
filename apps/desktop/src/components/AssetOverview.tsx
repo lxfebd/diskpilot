@@ -10,6 +10,7 @@ import { isPermEnabled } from '../permissions';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, type DriveEntry } from '../drives';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
+import { activateOnKey } from '../a11y';
 import { latestCleanTs, formatLastActive } from '../cleanup/model';
 import type { Node, Scaffold } from '../types';
 
@@ -1950,7 +1951,15 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           </h2>
           <div className="ao-toplist" style={{ marginTop: 4 }}>
             {topDirs.map((n, i) => (
-              <div key={i} className="ao-top-row" onClick={() => onGoWorkspace(n.path)} title={t('overview.locateInWorkspace')}>
+              <div
+                key={i}
+                className="ao-top-row"
+                role="button"
+                tabIndex={0}
+                onClick={() => onGoWorkspace(n.path)}
+                onKeyDown={activateOnKey(() => onGoWorkspace(n.path))}
+                title={t('overview.locateInWorkspace')}
+              >
                 <span className="ao-rank">{i + 1}</span>
                 <span className="ao-top-name">{n.name}</span>
                 <span className="ao-top-files">{t('overview.top.files', { count: n.files.toLocaleString() })}</span>
@@ -1972,7 +1981,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         <span>
           <Check size={14} /> {t('overview.foot.scanned', { n: scannedCount, total: drives.length })}
         </span>
-        <span className="ao-foot-refresh" onClick={() => selDrive && onRefresh(selDrive.path)} title={t('overview.foot.rescanTitle')}>
+        <span
+          className="ao-foot-refresh"
+          role="button"
+          tabIndex={0}
+          onClick={() => selDrive && onRefresh(selDrive.path)}
+          onKeyDown={activateOnKey(() => { if (selDrive) onRefresh(selDrive.path); })}
+          title={t('overview.foot.rescanTitle')}
+        >
           <RefreshCw size={13} /> {t('overview.foot.rescan')}{selDrive ? t('overview.foot.rescanDrive', { drive: driveLetter(selDrive.path) }) : ''}
         </span>
       </div>
