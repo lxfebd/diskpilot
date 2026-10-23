@@ -5,11 +5,14 @@
 import { t } from './i18n';
 import { useStore } from './store';
 
-/** 复制一段文本并回音：成功 toast「已复制路径」，失败 toast 错误原因。返回是否成功。 */
-export async function copyPathWithToast(text: string): Promise<boolean> {
+/**
+ * 复制一段文本并回音：成功后 toast `okKey`（默认「已复制路径」），失败 toast 错误原因。
+ * 返回是否成功。错误面板等非路径场景传自己的成功能文案键（R321）。
+ */
+export async function copyPathWithToast(text: string, okKey: string = 'common.copiedPath'): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
-    useStore.getState().toast(t('common.copiedPath'));
+    useStore.getState().toast(t(okKey));
     return true;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

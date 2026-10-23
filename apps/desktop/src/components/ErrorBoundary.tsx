@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 // class 组件用不了 hook：在 render 里调用模块级 t()，每次重渲染现取文案，
 // 不在模块顶层求值（那会把中文烤死在首次 import）。
 import { t } from '../i18n';
+import { copyPathWithToast } from '../clipboard';
 
 interface Props { children: ReactNode; fallbackLabel?: string }
 interface State { error: Error | null; info: ErrorInfo | null }
@@ -20,10 +21,24 @@ export class ErrorBoundary extends Component<Props, State> {
 
   reset = () => this.setState({ error: null, info: null });
 
+  // R321：崩了之后要有办法把现场交出去——此前只能靠用户手抄/截图。
+  // 带上面板名与组件栈，粘到 issue 里就能定位。
+  details = (): string => {
+    const { error, info } = this.state;
+    const label = this.props.fallbackLabel ?? t('shell.boundary.fallback');
+    return [
+      `[DiskPilot] ${label}`,
+      String(error?.message ?? error ?? ''),
+      error?.stack ?? '',
+      info?.componentStack ?? '',
+    ].filter((s) => s !== '').join('\n\n');
+  };
+
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div style={{ padding: 16, fontFamily: 'monospace', fontSize: 12, color: 'var(--err)', overflow: 'auto', maxHeight: '100%' }}>
+      // role="alert"：崩掉的瞬间就让读屏软件念出来，而不是等用户摸到这段文字。
+      <div role="alert" style={{ padding: 16, fontFamily: 'monospace', fontSize: 12, color: 'var(--err)', overflow: 'auto', maxHeight: '100%' }}>
         <div style={{ fontWeight: 600, marginBottom: 8 }}>
           {this.props.fallbackLabel ?? t('shell.boundary.fallback')}
         </div>
@@ -33,7 +48,12 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error.stack}
           </pre>
         )}
-        <button onClick={this.reset} style={{ marginTop: 8 }}>{t('shell.boundary.reset')}</button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button onClick={this.reset}>{t('shell.boundary.reset')}</button>
+          <button onClick={() => void copyPathWithToast(this.details(), 'shell.boundary.copied')}>
+            {t('shell.boundary.copy')}
+          </button>
+        </div>
       </div>
     );
   }

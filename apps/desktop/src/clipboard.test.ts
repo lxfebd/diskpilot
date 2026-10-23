@@ -50,4 +50,15 @@ describe('复制路径回音（R316）', () => {
     expect(String(toast.mock.calls[0][0])).toContain('复制失败');
     expect(toast.mock.calls[0][1]).toBe('err');
   });
+
+  it('传自己的成功文案键（错误面板等非路径场景）→ toast 用该键（R321）', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    const toast = vi.fn();
+    useStore.setState({ toast });
+
+    await expect(copyPathWithToast('boom\nstack', 'shell.boundary.copied')).resolves.toBe(true);
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(String(toast.mock.calls[0][0])).toContain('错误信息已复制');
+  });
 });

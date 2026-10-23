@@ -124,6 +124,8 @@ export const shell = {
     // 错误边界
     'shell.boundary.fallback': '组件渲染失败',
     'shell.boundary.reset': '重置该面板',
+    'shell.boundary.copy': '复制错误信息',
+    'shell.boundary.copied': '错误信息已复制，可以直接粘到反馈里',
     'shell.boundary.appRender': 'DiskPilot 渲染失败',
     'shell.boundary.overviewFailed': '资产总览渲染失败',
     'shell.boundary.detailFailed': '详情面板渲染失败',
@@ -302,6 +304,8 @@ export const shell = {
     // 错误边界
     'shell.boundary.fallback': 'This component failed to render',
     'shell.boundary.reset': 'Reset this panel',
+    'shell.boundary.copy': 'Copy error details',
+    'shell.boundary.copied': 'Error details copied — paste them into your report',
     'shell.boundary.appRender': 'DiskPilot failed to render',
     'shell.boundary.overviewFailed': 'Asset overview failed to render',
     'shell.boundary.detailFailed': 'Detail panel failed to render',
