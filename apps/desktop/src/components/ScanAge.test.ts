@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { setLang } from '../i18n';
-import { summarizeScanAge, type ScanAgeRow } from './AssetOverview';
+import { summarizeScanAge, settleScanAge, type ScanAgeRow } from './AssetOverview';
 
 // 断言按中文原文写，先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -84,3 +84,27 @@ describe('扫描时效汇总（R293：never / stale / skew / unread 四态分开
     expect(summarizeScanAge([row('C:\\', 14)], 30).state).toBe('ok');
   });
 });
+
+describe('settleScanAge（R325：个别盘查不到不吞别的盘）', () => {
+  it('全部成功：按原顺序原样保留', () => {
+    const r1 = row('C:\\', 30);
+    const r2 = row('D:\\', 3);
+    const out = settleScanAge([{ status: 'fulfilled', value: r1 }, { status: 'fulfilled', value: r2 }]);
+    expect(out).toEqual([r1, r2]);
+  });
+
+  it('部分失败：失败盘被剔除，成功盘照常判 stale（不整格消失）', () => {
+    const out = settleScanAge([
+      { status: 'rejected', reason: new Error('volume gone') },
+      { status: 'fulfilled', value: row('D:\\', 30) },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(summarizeScanAge(out, 21).state).toBe('stale');
+    expect(summarizeScanAge(out, 21).worstRoot).toBe('D:\\');
+  });
+
+  it('全部失败：空结果（不谎报「没扫过」，staleness=null 才是那个语义）', () => {
+    expect(settleScanAge([{ status: 'rejected', reason: new Error('x') }])).toEqual([]);
+  });
+});
+

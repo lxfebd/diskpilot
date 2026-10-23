@@ -426,6 +426,17 @@ export function summarizeScanAge(
   return { state: 'ok', worstRoot: null, worstDays: null, worstLastAt: null, ...base };
 }
 
+// R325：一次查多块盘的扫描时效，个别盘查不到不该把整格信号吞掉——此前用 Promise.all，
+// 一块盘 reject 就整格消失，其余盘「最久 N 天没扫 / 上次扫于 X」也说不出来了。
+// 这里只收成功的行；失败盘干脆不出现在结果里（不谎报「没扫过」，那是 staleness=null 的语义）。
+export function settleScanAge(results: readonly PromiseSettledResult<ScanAgeRow>[]): ScanAgeRow[] {
+  const rows: ScanAgeRow[] = [];
+  for (const r of results) {
+    if (r.status === 'fulfilled') rows.push(r.value);
+  }
+  return rows;
+}
+
 // ── 温度采样历史（R299）：把「采到几个点」和「点长什么样」分开说 ──
 // 后端 `get_thermal_history` 只读 thermal-history.jsonl（5 分钟一点），零传感器
 // 写、零通知，不为展示新造任何采样。空数组有两种真实来源——采样开关没开、或开了
@@ -999,9 +1010,8 @@ function HealthCheckupCard({
     api.fanCurveAdvice().then((r) => { if (alive && r?.temp_max_c != null) setTempC(r.temp_max_c); }).catch(() => {});
     api.listStartupItems().then((r) => { if (alive) { setStartup(r); setStartupErr(null); } }).catch((e) => { if (alive) { setStartup(null); setStartupErr(String(e instanceof Error ? e.message : e)); } });
     ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
-    Promise.all(physicalDrives(drives).map((d) => api.scanStaleness(d.path).then((s) => ({ root: d.path, staleness: s }))))
-      .then((rows) => { if (alive) setScanAgeRows(rows); })
-      .catch(() => {});
+    Promise.allSettled(physicalDrives(drives).map((d) => api.scanStaleness(d.path).then((s) => ({ root: d.path, staleness: s }))))
+      .then((results) => { if (alive) setScanAgeRows(settleScanAge(results)); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 刻意不把 drives 放进依赖（见上方注释）
   }, []);
