@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 健康阈值收口到一处（R327）
+
+- 温度警戒线此前写了两遍：体检条/温度采样卡用 `TEMP_WARN_C = 80`，
+  周报温度项却写死 `temp_max_c >= 80`——改一处另一处就会给出相反结论；
+- 新增 `src/thresholds.ts` 集中 `TEMP_WARN_C=80 / SCAN_STALE_WARN_DAYS=21 /
+  `DEFAULT_THERMAL_SUSTAINED_C=85`（分别与后端 `hw_report/fan.rs` 的 `t >= 80.0`、
+  `collect_scan_stale` 默认 21 天、`temp_breaker` 默认 85℃ 同口径）；
+- 体检条、周报温度项、提醒设置的三处默认值全部改引常量，`isTempHigh` 默认参数也取自它；
+- 新增 `thresholds.test.ts`：值断言 + 源码守卫（组件里不许再出现
+  `temp_max_c >= 数字`、`scan_stale_days ?? 数字`、`thermal_sustained_c ?? 数字`、
+  `>= 80` 字面量）。
+
 ### 2026-10-24 盘使用率阈值收口成一套口径（R326）
 
 - 此前盘卡片那条进度色先 `Math.round` 再比 85，84.6% 的盘会被画成红色，

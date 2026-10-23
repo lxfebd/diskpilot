@@ -8,6 +8,7 @@ import { CalendarDays, Eraser, Flame, Loader2, ShieldAlert, ShieldCheck, ShieldQ
 import { api } from '../../api';
 import type { WeeklyReport } from '../../api';
 import { formatBytes, formatDateKey } from '../../format';
+import { TEMP_WARN_C } from '../../thresholds';
 import { useStore } from '../../store';
 import { useT } from '../../i18n';
 
@@ -147,7 +148,7 @@ export function WeeklyHealthCard({
               <Flame size={14} />
               <span>{t('history.weekly.total', { size: formatBytes(report.total_bytes) })}</span>
             </div>
-            <div className={'wh-stat' + (report.temp_max_c != null && report.temp_max_c >= 80 ? ' danger' : '')}>
+            <div className={'wh-stat' + (report.temp_max_c != null && report.temp_max_c >= TEMP_WARN_C ? ' danger' : '')}>
               <Thermometer size={14} />
               <span>
                 {report.temp_max_c != null

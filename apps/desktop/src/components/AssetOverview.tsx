@@ -8,6 +8,7 @@ import { pathDriveLetter, riskyDrives, summarizeDiskHealth } from '../diskHealth
 import { useStore, type CleanupProposalItem } from '../store';
 import { isPermEnabled } from '../permissions';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, type DriveEntry } from '../drives';
+import { TEMP_WARN_C, SCAN_STALE_WARN_DAYS } from '../thresholds';
 
 // 迁移后仍从这里导出，既有 import 与单测不用改。
 export { driveUsagePct } from '../drives';
@@ -340,7 +341,7 @@ export function scaffoldMainPaths(root: Node | null): Map<string, string> {
 // 不为展示新造任何磁盘扫描。纯函数便于单测，组件只负责装配与跳转。
 
 /** 温度档位判定：是否达到「偏高」阈值（健康管家口径，可单测）。 */
-export function isTempHigh(tempC: number | null | undefined, warnC = 80): boolean {
+export function isTempHigh(tempC: number | null | undefined, warnC = TEMP_WARN_C): boolean {
   return tempC != null && tempC >= warnC;
 }
 
@@ -954,10 +955,12 @@ function ScopePreview({ items, lastClean }: { items: readonly { path: string; by
 // 全只读把散点的健康信号汇总成一条横幅：红盘数、可回收合计、温度、启动项。
 // 温度走 fanCurveAdvice().temp_max_c（后端已归一化最高温，一次调用），
 // 启动项走 listStartupItems。不为展示新造任何磁盘扫描。
-const TEMP_WARN_C = 80;
+// TEMP_WARN_C / SCAN_STALE_WARN_DAYS 已统一迁到 src/thresholds.ts，此处只引用。
+// 温度警戒线 80℃ 与后端 hw_report/fan.rs 的 t >= 80.0 同口径；扫描时效 21 天是展示默认。
+// (常量定义见 ../thresholds，迁移后不再在本文件写死两个数)
 // 扫描时效阈值：与后端 collect_scan_stale 的默认值同口径（21 天）。
 // 展示用阈值——不写配置，只是「这格怎么说」的分界线。
-const SCAN_STALE_WARN_DAYS = 21;
+
 
 function HealthCheckupCard({
   drives,

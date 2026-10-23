@@ -3,6 +3,7 @@ import { Play, BellOff, TrendingUp, ListPlus, Trash2, AlertTriangle } from 'luci
 import { api } from '../api';
 import type { ReminderConfig, ReminderPayload, SpaceForecast, AutoListConfigView, AutoListRule, StartupChanged } from '../api';
 import { formatBytes } from '../format';
+import { SCAN_STALE_WARN_DAYS, DEFAULT_THERMAL_SUSTAINED_C } from '../thresholds';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 
@@ -87,9 +88,9 @@ export function normalizeReminderCfg(raw: Partial<ReminderConfig> | null | undef
     weekly_report_enabled: raw.weekly_report_enabled ?? false,
     weekly_interval_days: raw.weekly_interval_days ?? 7,
     full_warn_days: raw.full_warn_days ?? 0,
-    scan_stale_days: raw.scan_stale_days ?? 21,
+    scan_stale_days: raw.scan_stale_days ?? SCAN_STALE_WARN_DAYS,
     thermal_sample_enabled: raw.thermal_sample_enabled ?? false,
-    thermal_sustained_c: raw.thermal_sustained_c ?? 85,
+    thermal_sustained_c: raw.thermal_sustained_c ?? DEFAULT_THERMAL_SUSTAINED_C,
     thermal_sustained_samples: raw.thermal_sustained_samples ?? 5,
     startup_watch_enabled: raw.startup_watch_enabled ?? false,
     startup_watch_minutes: raw.startup_watch_minutes ?? 60,
