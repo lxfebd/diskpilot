@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, HardDrive, RefreshCw, ScanSearch } from 'lucide-react';
 import { useStore } from '../store';
 import { formatBytes, normKey, driveLetter } from '../format';
+import { driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, DRIVE_LOW_PCT } from '../drives';
 import { useT } from '../i18n';
 
 interface DriveInfo {
@@ -56,7 +57,9 @@ export function DriveStrip({ drives, scanning, onScanAll, onScanDrive, onRefresh
       </button>
       {drives.map((d) => {
         const capacityKnown = d.total_bytes > 0;
-        const usedPct = capacityKnown ? Math.round((d.used_bytes / d.total_bytes) * 100) : -1;
+        // R326：阈值判定用未取整的百分比（既往这里先 Math.round 再比 85，84.6% 会被
+        // 说成红盘，而体检条的「红盘 N 块」按未取整算是 0——同一块盘两个结论）。
+        const usedPct = capacityKnown ? driveUsagePct(d.used_bytes, d.total_bytes) : -1;
         const scanned = !!scanCache[normKey(d.path)];
         const isSel = sel === d.path;
         return (
@@ -90,11 +93,11 @@ export function DriveStrip({ drives, scanning, onScanAll, onScanDrive, onRefresh
                   {t('shell.drivestrip.mappedBadge')}
                 </span>
               )}
-              {capacityKnown && usedPct >= 95 && <span className="ao-strip-danger">{t('shell.drivestrip.lowSpace')}</span>}
+              {capacityKnown && usedPct >= DRIVE_LOW_PCT && <span className="ao-strip-danger">{t('shell.drivestrip.lowSpace')}</span>}
               {scanned && <span className="ao-strip-done"><Check size={10} /> {t('shell.drivestrip.scanned')}</span>}
             </span>
-            <span className={'ao-strip-bar ' + (!capacityKnown ? 'u' : usedPct >= 85 ? 'r' : usedPct >= 60 ? 'o' : 'g')}>
-              <i style={{ width: capacityKnown ? `${Math.max(3, Math.min(100, usedPct))}%` : '100%' }} />
+            <span className={'ao-strip-bar ' + (!capacityKnown ? 'u' : usedPct >= DRIVE_WARN_PCT ? 'r' : usedPct >= DRIVE_CAUTION_PCT ? 'o' : 'g')}>
+              <i style={{ width: capacityKnown ? `${Math.max(3, Math.min(100, Math.round(usedPct)))}%` : '100%' }} />
             </span>
             <span className="ao-strip-meta">
               {capacityKnown

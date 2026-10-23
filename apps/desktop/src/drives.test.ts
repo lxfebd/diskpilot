@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { physicalDrives, physicalUsedBytes, scanTargets, volumeLetterOf } from './drives';
+import {
+  physicalDrives,
+  physicalUsedBytes,
+  scanTargets,
+  volumeLetterOf,
+  driveUsagePct,
+  DRIVE_WARN_PCT,
+  DRIVE_CAUTION_PCT,
+  DRIVE_LOW_PCT,
+} from './drives';
 
 // 数据形状取自本机 list_drives 的真实结果：D: 不在 Get-Partition 里，
 // 它是 `subst D: J:\D`——和 J: 是同一块 KIOXIA、同一份空间。
@@ -91,3 +100,31 @@ describe('physicalUsedBytes（全机已用按物理卷求和）', () => {
     expect(physicalUsedBytes([{ path: 'C:\\' }, { path: 'E:\\', used_bytes: 7 }])).toBe(7);
   });
 });
+
+// R326：体检条「红盘 N 块」、总览环形图、盘卡片那条进度色必须同一套口径。
+// 旧实现里盘卡片先 Math.round 再比 85，84.6% 的盘被画成红的，而体检条按未取整算是 0 块。
+describe('盘使用率阈值口径（R326）', () => {
+  it('84.6% 取整是 85 但不是红盘——判定不吃取整', () => {
+    const pct = driveUsagePct(846, 1000);
+    expect(pct).toBeCloseTo(84.6, 5);
+    expect(Math.round(pct)).toBe(85); // 取整后就会误判，正是旧 bug
+    expect(pct).toBeLessThan(DRIVE_WARN_PCT);
+  });
+
+  it('阈值边界：恰好 85% 才算红盘，84.9% 不算', () => {
+    expect(driveUsagePct(850, 1000)).toBeGreaterThanOrEqual(DRIVE_WARN_PCT);
+    expect(driveUsagePct(849, 1000)).toBeLessThan(DRIVE_WARN_PCT);
+  });
+
+  it('caution / low 档沿用 60 / 95，与盘卡片一致', () => {
+    expect(DRIVE_WARN_PCT).toBe(85);
+    expect(DRIVE_CAUTION_PCT).toBe(60);
+    expect(DRIVE_LOW_PCT).toBe(95);
+  });
+
+  it('容量没读到时返回 0（调用方另有 capacityKnown 判断，不当作 0% 健康）', () => {
+    expect(driveUsagePct(5, 0)).toBe(0);
+    expect(driveUsagePct(0, 0)).toBe(0);
+  });
+});
+

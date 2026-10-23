@@ -7,7 +7,10 @@ import { ensureHwDiskQuick } from '../hwCache';
 import { pathDriveLetter, riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
 import { isPermEnabled } from '../permissions';
-import { physicalDrives, physicalUsedBytes, volumeLetterOf, type DriveEntry } from '../drives';
+import { physicalDrives, physicalUsedBytes, volumeLetterOf, driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, type DriveEntry } from '../drives';
+
+// 迁移后仍从这里导出，既有 import 与单测不用改。
+export { driveUsagePct } from '../drives';
 import { DriveStrip } from './DriveStrip';
 import { t, useT } from '../i18n';
 import { activateOnKey } from '../a11y';
@@ -53,15 +56,9 @@ function catColor(seed: string): string {
   return CAT_COLORS[Math.abs(h) % CAT_COLORS.length];
 }
 
-/** 盘使用率百分比（0..100，total 无效返回 0）。 */
-export function driveUsagePct(usedBytes: number, totalBytes: number): number {
-  if (!(totalBytes > 0)) return 0;
-  return (usedBytes / totalBytes) * 100;
-}
-
-/** 红盘救援阈值：使用率 >=85% 视为「快满了」（DriveGauge 与救援横幅共用）。 */
+/** 红盘救援阈值：使用率 >=85%（未取整）视为「快满了」（体检条计数、DriveGauge、救援横幅共用同一口径）。 */
 export function isDriveCritical(usedBytes: number, totalBytes: number): boolean {
-  return driveUsagePct(usedBytes, totalBytes) >= 85;
+  return driveUsagePct(usedBytes, totalBytes) >= DRIVE_WARN_PCT;
 }
 
 /** 盘容量是否读到了（total 无效 = 没读到，不是「0 字节」）。 */
@@ -98,7 +95,9 @@ function DriveGauge({ usedBytes, totalBytes }: { usedBytes: number; totalBytes: 
   const pct = known ? Math.round(driveUsagePct(usedBytes, totalBytes)) : 0;
   const R = 52;
   const CIRC = 2 * Math.PI * R;
-  const color = !known ? 'var(--paper-3)' : isDriveCritical(usedBytes, totalBytes) ? 'var(--risk-danger)' : pct >= 60 ? 'var(--risk-caution)' : 'var(--risk-safe)';
+  // R326：颜色判定用未取整的百分比——与体检条红盘计数、盘卡片同口径（pct 只用于中心数字）。
+  const rawPct = driveUsagePct(usedBytes, totalBytes);
+  const color = !known ? 'var(--paper-3)' : isDriveCritical(usedBytes, totalBytes) ? 'var(--risk-danger)' : rawPct >= DRIVE_CAUTION_PCT ? 'var(--risk-caution)' : 'var(--risk-safe)';
   return (
     <div className="ao-gauge">
       <svg viewBox="0 0 140 140">

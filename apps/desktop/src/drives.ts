@@ -66,6 +66,19 @@ export function physicalDrives<T extends DriveEntry>(drives: readonly T[]): T[] 
   return out;
 }
 
+// ── 盘使用率的阈值口径（R326）：体检条红盘计数、盘卡片颜色、环形图颜色必须共用一套，
+// 否则同一块 84.6% 的盘会出现「体检说 0 块红盘、盘卡片那条却是红的」这种自相矛盾。
+// 判定一律用未取整的百分比，只在显示时 Math.round。
+export const DRIVE_WARN_PCT = 85;
+export const DRIVE_CAUTION_PCT = 60;
+export const DRIVE_LOW_PCT = 95;
+
+/** 盘使用率百分比（0..100，total 无效返回 0）。判定阈值的唯一来源。 */
+export function driveUsagePct(usedBytes: number, totalBytes: number): number {
+  if (!(totalBytes > 0)) return 0;
+  return (usedBytes / totalBytes) * 100;
+}
+
 /** 「扫描全部」的扫描目标：同一块物理盘只扫一次。 */
 export function scanTargets(drives: readonly DriveEntry[]): string[] {
   return physicalDrives(drives).map((d) => d.path);

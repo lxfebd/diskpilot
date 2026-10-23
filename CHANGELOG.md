@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 盘使用率阈值收口成一套口径（R326）
+
+- 此前盘卡片那条进度色先 `Math.round` 再比 85，84.6% 的盘会被画成红色，
+  而同页体检条的「红盘 N 块」按未取整计算是 0——同一块盘两个相反的结论；
+- `drives.ts` 新增共享常量 `DRIVE_WARN_PCT=85 / DRIVE_CAUTION_PCT=60 / DRIVE_LOW_PCT=95`
+  与未取整的 `driveUsagePct`；体检条计数、环形图颜色、盘卡片进度色全部改用同一套；
+- `drives.test.ts` + `AssetOverview.test.ts` 新增 7 条边界单测（84.6/84.9/85、容量未读、
+  阈值与常量同源）。
+
 ### 2026-10-24 体检条扫描时效：一块盘查不到不再整格消失（R325）
 
 - 此前的实现用 `Promise.all` 一次查所有盘的扫描时效，任何一块盘查询失败（比如盘已拔出），

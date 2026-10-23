@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
+import { DRIVE_WARN_PCT } from '../drives';
 import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
@@ -580,3 +581,20 @@ describe('建议清理跨次对比（health-butler P0）', () => {
   });
 });
 
+// R326：红盘判定用未取整的百分比，并且与盘卡片/环形图共用 drives.ts 的同一个常量。
+describe('红盘判定口径（R326）', () => {
+  it('84.6% 不算红盘（取整成 85 也不算）', () => {
+    expect(isDriveCritical(846, 1000)).toBe(false);
+    expect(isDriveCritical(850, 1000)).toBe(true);
+    expect(isDriveCritical(849, 1000)).toBe(false);
+  });
+
+  it('阈值取自共享常量，组件里不再另写字面量', () => {
+    expect(isDriveCritical(DRIVE_WARN_PCT, 100)).toBe(true);
+    expect(isDriveCritical(DRIVE_WARN_PCT - 1, 100)).toBe(false);
+  });
+
+  it('容量没读到：不判红盘（0 不是健康，只是没读数）', () => {
+    expect(isDriveCritical(5, 0)).toBe(false);
+  });
+});
