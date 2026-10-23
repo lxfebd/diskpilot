@@ -86,6 +86,20 @@ export function formatDateTime(d: Date, withSeconds = false): string {
   const time = `${pad(d.getHours())}:${pad(d.getMinutes())}` + (withSeconds ? `:${pad(d.getSeconds())}` : '');
   return `${date} ${time}`;
 }
+/** Date → `HH:MM` 或 `HH:MM:SS`（地区中立）。R329：此前多处用 toLocaleTimeString，
+ *  输出跟随系统地区（英文界面在中文系统上会渲染成中文时段），收口到与 formatDateTime 同口径。 */
+export function formatTime(d: Date, withSeconds = false): string {
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}` + (withSeconds ? `:${pad(d.getSeconds())}` : '');
+}
+
+/** Date → `MM-DD`（地区中立）。用于图表横轴这类只放得下月日的刻度。 */
+export function formatMonthDay(d: Date): string {
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 /**
  * 取文件名扩展名（小写，不含点）。无扩展名返回 `''`。

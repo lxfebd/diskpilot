@@ -16,6 +16,7 @@ import { GpuDonut, DeadPixelOverlay } from './gpu-donut';
 import { TrendChart, StressTempChart, StressHistoryChart, ScoreHistoryChart, DistributionBar, HealthRatingCard, extractLongSeries, parseTrendJson, buildScoreSeries, trendSpan } from './charts';
 import type { TrendPoint } from './charts';
 import { MEM_RAMP, TEMP_RAMP } from '../../colors';
+import { formatDateTime } from '../../format';
 
 interface BenchHistoryEntry {
   at: number;
@@ -319,7 +320,7 @@ export function BenchPanel() {
           {historyOf(key).slice().reverse().slice(1).map((h, i) => (
             <details key={i}>
               <summary className="muted small">
-                {h.label} · {new Date(h.at).toLocaleString()}
+                {h.label} · {formatDateTime(new Date(h.at))}
               </summary>
               <pre className="bench-out">{h.result}</pre>
             </details>
@@ -412,7 +413,7 @@ export function BenchPanel() {
             .map((h, i) => {
               const pts = parseStressCurve(h.result);
               if (!pts) return null;
-              const time = new Date(h.at).toLocaleString();
+              const time = formatDateTime(new Date(h.at));
               return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length], at: h.at };
             })
             .filter((s): s is NonNullable<typeof s> => s !== null)
@@ -423,7 +424,7 @@ export function BenchPanel() {
           <div className="bench-history">
             {historyOf('stress_test').slice().reverse().slice(1).map((h, i) => (
               <details key={i}>
-                <summary className="muted small">{h.label} · {new Date(h.at).toLocaleString()}</summary>
+                <summary className="muted small">{h.label} · {formatDateTime(new Date(h.at))}</summary>
                 <pre className="bench-out">{h.result}</pre>
               </details>
             ))}
@@ -457,7 +458,7 @@ export function BenchPanel() {
             .map((h, i) => {
               const pts = parseStressCurve(h.result);
               if (!pts) return null;
-              const time = new Date(h.at).toLocaleString();
+              const time = formatDateTime(new Date(h.at));
               return { label: time, points: pts, color: HISTORY_COLORS[i % HISTORY_COLORS.length], at: h.at };
             })
             .filter((s): s is NonNullable<typeof s> => s !== null)

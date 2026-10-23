@@ -1,6 +1,7 @@
 // ── 轻量 SVG 图表（无第三方图表库）：传感器趋势折线 + 稳定性压测温度折线 ──
 import { useT } from '../../i18n';
 import { TEMP_RAMP } from '../../colors';
+import { formatTime, formatMonthDay, formatDateKey } from '../../format';
 
 // ── G15 传感器趋势折线图（轻量 SVG，无第三方图表库）──
 export interface TrendPoint {
@@ -104,7 +105,7 @@ export function TrendChart({ points }: { points: TrendPoint[] }) {
         ))}
         {ticks.map((p, i) => (
           <text key={i} x={xAt(i, ticks.length)} y={H - 8} textAnchor="middle" className="bench-trend-ticks">
-            {new Date(p.ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {formatTime(new Date(p.ts * 1000))}
           </text>
         ))}
         <text x={PAD} y={12} fill="#888" fontSize={10}>max {hi.toFixed(0)}</text>
@@ -290,7 +291,7 @@ export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) 
                 {s.value >= 1000 ? `${(s.value / 1000).toFixed(s.value >= 100000 ? 0 : 1)}k` : s.value.toFixed(0)}
               </text>
               <text x={x + barW / 2} y={H - 4} textAnchor="middle" fontSize={8} fill="#888">
-                {new Date(s.at).toLocaleDateString([], { month: '2-digit', day: '2-digit' })}
+                {formatMonthDay(new Date(s.at))}
               </text>
             </g>
           );
@@ -322,7 +323,7 @@ export function ScoreHistoryChart({ series }: { series: ScoreHistorySeries[] }) 
               {t('toolbelt.scoreChart.bestRun', {
                 value: best.value.toLocaleString(),
                 unit: best.unit,
-                date: new Date(best.at).toLocaleDateString([], { year: 'numeric', month: '2-digit', day: '2-digit' }),
+                date: formatDateKey(new Date(best.at)),
               })}
             </span>
             {delta !== null && (

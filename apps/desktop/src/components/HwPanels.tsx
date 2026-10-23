@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Cpu, HardDrive, Gauge, Loader2, ShieldCheck, ShieldAlert, ShieldQuestion, ShieldX, X, Zap, StopCircle, ThermometerSun, Clock, RefreshCw } from 'lucide-react';
 import { isTauri } from '../env';
-import { formatBytes } from '../format';
+import { formatBytes, formatDateTime } from '../format';
 import { api } from '../api';
 import { LEVEL_COLORS } from '../colors';
 import { driveLettersOf, gradeDiskHealth } from '../diskHealth';
@@ -594,7 +594,7 @@ export function HwHistorySection() {
 export function fmtHwTime(at: number | string): string {
   const n = typeof at === 'number' ? at : Number(at);
   if (!Number.isFinite(n) || n <= 0) return '';
-  return new Date(n * 1000).toLocaleString();
+  return formatDateTime(new Date(n * 1000));
 }
 
 /// R146：单条硬件趋势线的采样充分度——`n`（总快照数）不等于「这条线有几个

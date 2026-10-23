@@ -12,6 +12,7 @@ import { isTauri } from '../env';
 import { ErrorBoundary } from './ErrorBoundary';
 import { refreshMcpTools } from '../advisor/tools';
 import { useT } from '../i18n';
+import { formatTime } from '../format';
 
 /**
  * 设置页「MCP」标签：管理用户添加的通用 MCP 服务器（stdio 进程 / 远程
@@ -358,7 +359,7 @@ function McpServersInner() {
           {audit !== null && audit.length > 0 && (
             <ul className="mcp-tools-list" style={{ maxHeight: 220, overflowY: 'auto' }}>
               {audit.map((e, i) => {
-                const time = new Date(e.ts * 1000).toLocaleTimeString();
+                const time = formatTime(new Date(e.ts * 1000), true);
                 const tag = e.op === 'call_tool'
                   ? t('mcp.auditCall', { tool: e.tool ?? '' })
                   : e.op === 'add_server' ? t('mcp.auditAddServer')

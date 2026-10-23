@@ -19,7 +19,7 @@ import { api } from '../api';
 import { revealWithToast } from '../reveal';
 import { useStore } from '../store';
 import type { SteamGame, SteamInventory } from '../types';
-import { formatBytes, formatDateTime } from '../format';
+import { formatBytes, formatDateTime, formatDateKey } from '../format';
 import { t, useT } from '../i18n';
 import { SteamWorkshopModal } from './SteamWorkshopModal';
 
@@ -55,7 +55,7 @@ function relativeTime(ts: number | null): string {
 function absoluteTime(ts: number | null): string {
   if (ts == null) return t('steam.neverPlayed');
   const d = new Date(ts * 1000);
-  return d.toISOString().slice(0, 10);
+  return formatDateKey(d);
 }
 
 function sleepScore(g: SteamGame): number {
@@ -363,7 +363,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `steam-sleep-report-${new Date().toISOString().slice(0, 10)}.md`;
+    a.download = `steam-sleep-report-${formatDateKey(new Date())}.md`;
     a.click();
     URL.revokeObjectURL(url);
     showToast(t('steam.reportExported'));

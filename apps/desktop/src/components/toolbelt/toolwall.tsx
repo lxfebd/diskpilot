@@ -31,6 +31,7 @@ import {
   type RiskFilter,
 } from './catalog';
 import type { ToolContext } from './shared';
+import { formatTime } from '../../format';
 
 export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
   const t = useT();
@@ -290,7 +291,7 @@ function HwAggregatePanel() {
       <div className="hw-aggregate-head">
         <span className="muted small">
           {t('toolbelt.hwagg.summary')}
-          {cache.at != null && <>{t('toolbelt.hwagg.updatedAt', { time: new Date(cache.at).toLocaleTimeString() })}</>}
+          {cache.at != null && <>{t('toolbelt.hwagg.updatedAt', { time: formatTime(new Date(cache.at)) })}</>}
         </span>
         <button className="ghost small" onClick={refresh} disabled={cache.loading} title={t('toolbelt.hwagg.refreshTitle')}>
           <RefreshCw size={12} className={cache.loading ? 'spin' : ''} /> {cache.loading ? t('toolbelt.hwagg.reading') : t('toolbelt.common.refresh')}

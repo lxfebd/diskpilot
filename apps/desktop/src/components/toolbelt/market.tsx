@@ -11,7 +11,7 @@ import type {
 import { RISK_COLORS } from '../../colors';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
-import { formatBytes } from '../../format';
+import { formatBytes, formatDateTime } from '../../format';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
 import { APP_VERSION } from '../../version';
@@ -569,7 +569,7 @@ export function MarketPanel() {
           {regInfo && regInfo.indexed && (
             <p className="muted small" style={{ marginTop: 6 }}>
               {t('toolbelt.mkt.indexLabel')}{regInfo.registry_url}
-              {regInfo.fetched_at > 0 && <>{t('toolbelt.hwagg.updatedAt', { time: new Date(regInfo.fetched_at * 1000).toLocaleString() })}</>}
+              {regInfo.fetched_at > 0 && <>{t('toolbelt.hwagg.updatedAt', { time: formatDateTime(new Date(regInfo.fetched_at * 1000)) })}</>}
               {regInfo.plugins > 0 && <> · {t('toolbelt.mkt.pluginCount', { n: regInfo.plugins })}</>}
               {regInfo.signed && <> · {regInfo.verified ? t('toolbelt.mkt.sigOk') : t('toolbelt.mkt.sigBad')}</>}
             </p>
@@ -627,7 +627,7 @@ export function MarketPanel() {
                         <span className="toolbelt-risk-chip">{p.source === 'registry' ? t('toolbelt.mkt.srcRegistry') : p.source === 'url' ? t('toolbelt.mkt.srcUrl') : p.source === 'zip' ? t('toolbelt.mkt.srcZip') : p.source}</span>
                       </div>
                       <p className="muted small">
-                        {t('toolbelt.mkt.installedAt', { time: new Date(p.installed_at * 1000).toLocaleString() })}
+                        {t('toolbelt.mkt.installedAt', { time: formatDateTime(new Date(p.installed_at * 1000)) })}
                         {p.history.length > 0 && <> · {t('toolbelt.mkt.historyVersions', { n: p.history.length })}</>}
                       </p>
                     </div>

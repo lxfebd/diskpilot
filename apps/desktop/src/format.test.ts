@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf, driveRootOf, formatDateKey, formatDateTime } from './format';
+import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf, driveRootOf, formatDateKey, formatDateTime, formatTime, formatMonthDay } from './format';
 
 describe('formatBytes', () => {
   it('bytes below 1 KiB stay in B', () => {
@@ -162,3 +162,47 @@ describe('日期格式化不许写死地区（R324）', () => {
   });
 });
 
+// R329：此前 9 处时间显示走 toLocaleTimeString/toLocaleDateString，输出跟随系统地区
+// （英文界面在中文系统上渲染成中文时段），与 formatDateTime 的「应用语言决定格式」口径不一致。
+describe('formatTime（地区中立的时分）', () => {
+  it('补零到 HH:MM', () => {
+    expect(formatTime(new Date(2026, 0, 5, 9, 7))).toBe('09:07');
+    expect(formatTime(new Date(2026, 11, 31, 23, 59, 8))).toBe('23:59');
+  });
+
+  it('withSeconds 时带秒', () => {
+    expect(formatTime(new Date(2026, 9, 24, 15, 4, 3), true)).toBe('15:04:03');
+  });
+
+  it('无效日期返回空串', () => {
+    expect(formatTime(new Date('nope'))).toBe('');
+  });
+});
+
+describe('formatMonthDay（地区中立的月-日）', () => {
+  it('补零到 MM-DD', () => {
+    expect(formatMonthDay(new Date(2026, 0, 5))).toBe('01-05');
+    expect(formatMonthDay(new Date(2026, 11, 31))).toBe('12-31');
+  });
+
+  it('无效日期返回空串', () => {
+    expect(formatMonthDay(new Date('nope'))).toBe('');
+  });
+});
+
+// 守卫：日期/时间一律走 format.ts，禁止再出现跟随系统地区的 toLocale 时间 API。
+// 数字的 toLocaleString（千分位）仍允许——那是数量级展示，不是日期。
+describe('日期时间不许跟随系统地区（R329）', () => {
+  it('源码里不出现 toLocaleTimeString / toLocaleDateString', () => {
+    const files = import.meta.glob('./**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    const bad: string[] = [];
+    for (const [rel, text] of Object.entries(files)) {
+      if (rel.includes('.test.')) continue;
+      if (rel.endsWith('/format.ts') || rel.endsWith('/mocks.ts')) continue;
+      text.split('\n').forEach((line, i) => {
+        if (/\.toLocale(Time|Date)String\(/.test(line)) bad.push(`${rel}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(bad).toEqual([]);
+  });
+});

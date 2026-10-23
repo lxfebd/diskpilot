@@ -4,7 +4,7 @@ import { api } from '../api';
 import { restoreKind } from '../history/model';
 import { useStore } from '../store';
 import { useT } from '../i18n';
-import { formatBytes } from '../format';
+import { formatBytes, formatMonthDay, formatTime } from '../format';
 import type { UndoEntry } from '../types';
 
 /// Recent-cleanup panel (P0 #3 undo UX).
@@ -17,8 +17,7 @@ function fmtTime(ts: string): string {
   // ts is RFC3339 from chrono. Keep it short & local.
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return ts;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getMonth() + 1}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${formatMonthDay(d)} ${formatTime(d)}`;
 }
 
 /** 文案函数类型（useT() 的返回值）：模块级纯函数按这个签名收 t，保证在渲染时求值。 */

@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 时间显示统一走应用语言，不再跟随系统地区（R329）
+
+- R324 只修掉了 Steam 报表里写死 `zh-CN` 的那一处；仓库里还有 9 处 `toLocaleTimeString` /
+  `toLocaleDateString` / 无参 `toLocaleString`，输出跟随**系统**地区——英文界面在中文系统上
+  会渲染成中文时段（「下午3:04」），与 `formatDateTime` 的口径相反；
+- `format.ts` 新增 `formatTime(d, withSeconds?)`（HH:MM[:SS]）与 `formatMonthDay(d)`（MM-DD），
+  硬件历史、MCP 审计、跑分历史/趋势轴/最佳跑分、插件市场索引与安装时间、工具墙聚合时间、
+  操作历史与最近清理面板全部改走这两个函数；
+- Steam「最后游玩」与报表文件名此前用 `toISOString().slice(0,10)` 取日期——那是 **UTC** 日期，
+  UTC+8 凌晨会显示成前一天；改用 `formatDateKey`（本地日期）；
+- 新增守卫单测：源码里不许再出现 `toLocaleTimeString` / `toLocaleDateString`（数字的
+  千分位 `toLocaleString` 仍允许）。
 ### 2026-10-24 Agent 进度监听不再每次渲染都叠加一个（R328）
 
 - `useAgentToolProgress` 的 `import(...).then(...)` 里返回的注销函数从来没有被调用过，

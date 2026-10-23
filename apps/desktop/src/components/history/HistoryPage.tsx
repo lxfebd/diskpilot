@@ -6,7 +6,7 @@ import { History, Loader2, RotateCcw, Search } from 'lucide-react';
 import { api } from '../../api';
 import { useStore } from '../../store';
 import { useT } from '../../i18n';
-import { formatBytes } from '../../format';
+import { formatBytes, formatTime } from '../../format';
 import type { UndoEntry } from '../../types';
 import { WeeklyHealthCard } from './WeeklyHealthCard';
 import {
@@ -279,6 +279,5 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
 function fmtTime(ts: string): string {
   const d = new Date(ts);
   if (Number.isNaN(d.getTime())) return ts;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return formatTime(d);
 }
