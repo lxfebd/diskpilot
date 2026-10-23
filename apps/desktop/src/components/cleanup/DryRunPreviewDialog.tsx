@@ -144,7 +144,7 @@ export function DryRunPreviewDialog({
       <div className="modal cleanup-preview-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>{t('cleanup.previewHead')}</div>
-          <button className="ghost icon" onClick={onCancel} disabled={running}><X size={16} /></button>
+          <button className="ghost icon" onClick={onCancel} disabled={running} title={t('cleanup.close')} aria-label={t('cleanup.close')}><X size={16} /></button>
         </div>
 
         <div className="cleanup-preview-summary">

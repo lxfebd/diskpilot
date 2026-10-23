@@ -839,7 +839,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
               <span key={d.path} className="chat-pill" title={d.path}>
                 {d.path.endsWith(d.name) && d.path !== d.name ? <Folder size={11} /> : <File size={11} />}
                 {d.name}
-                <button onClick={() => setPendingDrops((prev) => prev.filter((p) => p.path !== d.path))}><X size={11} /></button>
+                <button type="button" onClick={() => setPendingDrops((prev) => prev.filter((p) => p.path !== d.path))} title={t('chat.removePending')} aria-label={t('chat.removePending')}><X size={11} /></button>
               </span>
             ))}
           </div>
@@ -852,6 +852,8 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
                 <button
                   type="button"
                   onClick={() => setPendingImages((prev) => prev.filter((p) => p.id !== img.id))}
+                  title={t('chat.removePending')}
+                  aria-label={t('chat.removePending')}
                 ><X size={11} /></button>
               </span>
             ))}

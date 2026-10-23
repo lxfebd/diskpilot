@@ -53,6 +53,8 @@ export const chat = {
     'chat.overview.dragHint': '你可以从左边把任意文件夹/文件拖进来问。',
     'chat.drop.about': '（关于：{paths}）',
     'chat.drop.images': '（带 {n} 张图片）',
+    // 待发项胶囊上的移除 X（R318：图标按钮要有可访问名字）
+    'chat.removePending': '移除待发项',
 
     // 系统回合（不进 AI 上下文，纯界面反馈）
     'chat.sys.imageTooBig': '图片 {name} 太大（>20MB），跳过',
@@ -156,6 +158,7 @@ export const chat = {
     'chat.overview.dragHint': 'You can drag any folder or file from the left into the chat.',
     'chat.drop.about': '(about: {paths})',
     'chat.drop.images': '({n} image attached)',
+    'chat.removePending': 'Remove pending item',
 
     // System turns (never sent back to the model)
     'chat.sys.imageTooBig': 'Skipped {name}: image is larger than 20MB',

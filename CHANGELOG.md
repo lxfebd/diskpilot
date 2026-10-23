@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 纯图标按钮补上可访问名字（R318）
+
+读屏软件读到的是一串空按钮：全仓有 7 个「只有图标、既没有 aria-label 也没有 title」的按钮，
+都是对话框/胶囊上的关闭与移除 X。同族的 `CleanupProposalDialog`、`HwPanels` 早就写了
+`title={t('cleanup.close')} aria-label={t('cleanup.close')}`，这几处漏了。
+
+- 补齐 7 处：清理预演对话框、设置面板、插件市场确认框、工具墙导出/回收确认框各一个关闭 X，
+  以及聊天待发项胶囊上的文件/图片移除 X（新增 `chat.removePending`）。
+- `a11y.test.ts` 加一条守卫：用 `import.meta.glob('?raw')` 扫全部组件源码，
+  单图标且没有 aria-label / title 的 button 直接失败——以后新增按钮不会再悄悄少了名字。
 ### 2026-10-24 打开所在文件夹失败时给一句原因（R317）
 
 上一版的「复制路径」补了回音，同族问题还在：四处「在资源管理器里打开」（扫描树 / 文件视图 / Studio 卡片 /

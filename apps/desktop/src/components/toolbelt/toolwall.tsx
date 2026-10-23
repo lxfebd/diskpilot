@@ -608,7 +608,7 @@ function ToolDetailModal({
             <div className="modal recycle-confirm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <div><Package size={15} style={{ verticalAlign: '-2px', marginRight: 6 }} />{t('toolbelt.detail.exportConfirmTitle', { name: tool.name })}</div>
-                <button className="ghost icon" onClick={() => setExportAsk(null)} disabled={exporting}><X size={15} /></button>
+                <button className="ghost icon" onClick={() => setExportAsk(null)} disabled={exporting} title={t('toolbelt.common.close')} aria-label={t('toolbelt.common.close')}><X size={15} /></button>
               </div>
               <div className="modal-body">
                 <p className="stress-warn">
@@ -632,7 +632,7 @@ function ToolDetailModal({
             <div className="modal recycle-confirm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <div><Trash2 size={15} style={{ verticalAlign: '-2px', marginRight: 6 }} />{t('toolbelt.detail.removeConfirmTitle', { name: tool.name })}</div>
-                <button className="ghost icon" onClick={() => setRecycleAsk(false)} disabled={recycling}><X size={15} /></button>
+                <button className="ghost icon" onClick={() => setRecycleAsk(false)} disabled={recycling} title={t('toolbelt.common.close')} aria-label={t('toolbelt.common.close')}><X size={15} /></button>
               </div>
               <div className="modal-body">
                 <p className="stress-warn">

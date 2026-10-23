@@ -352,7 +352,7 @@ export function Settings({ onClose, initialTab }: Props) {
       <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>{t('settings.title')} {saved && <CheckCircle2 size={16} style={{ verticalAlign: 'middle', marginLeft: 6, color: 'var(--accent-strong)' }} />}</div>
-          <button className="ghost icon" onClick={onClose}><X size={16} /></button>
+          <button className="ghost icon" onClick={onClose} title={t('settings.close')} aria-label={t('settings.close')}><X size={16} /></button>
         </div>
 
         <div className="settings-tabs">

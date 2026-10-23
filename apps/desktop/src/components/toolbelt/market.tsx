@@ -783,7 +783,7 @@ export function MarketPanel() {
           <div className="modal recycle-confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div><ShieldAlert size={15} style={{ verticalAlign: '-2px', marginRight: 6 }} />{confirmAsk.title}</div>
-              <button className="ghost icon" onClick={() => setConfirmAsk(null)}><X size={15} /></button>
+              <button className="ghost icon" onClick={() => setConfirmAsk(null)} title={t('toolbelt.common.close')} aria-label={t('toolbelt.common.close')}><X size={15} /></button>
             </div>
             <div className="modal-body">
               <p className="stress-warn">{confirmAsk.body}</p>
