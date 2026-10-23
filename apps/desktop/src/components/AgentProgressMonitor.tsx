@@ -7,7 +7,7 @@
  * 
  * 与 HwTestMonitor 独立但复用 listen API；UI 上并排显示、互不干扰。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isTauri } from '../env';
 import { api } from '../api';
 import { useT } from '../i18n';
@@ -33,49 +33,65 @@ export const stopAgentTool = async () => {
   }
 };
 
+
+/** 终态判定（纯函数，可单测）：后端 done 由 pct>=1000 表达；
+ *  message 含「完成」是历史兼容兜底（旧调用路径不报 1000）。
+ *  两种都认，但绝不把「进行中」误判成终态。 */
+export function agentProgressDone(payload: Pick<AgentToolProgressPayload, 'pct' | 'message'>): boolean {
+  return payload.pct >= 1000 || payload.message.includes('完成');
+}
+
 /**
  * 使用 hook：返回运行中状态 + 当前进度载荷。
  * onStop 回调在终态时触发（用户手动停止或后端 done=true）。
+ *
+ * 实现注意（R328）：事件监听只在挂载时注册一次（deps []），onStop 经 ref 读取，
+ * 避免调用方传内联箭头（ChatPanel 就传 `() => {}`）时每次渲染都重注册一个监听；
+ * 卸载时注销监听，import 完成后才挂载的监听也会立刻注销，不再泄漏。
  */
 export function useAgentToolProgress(onStop?: () => void) {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<AgentToolProgressPayload | null>(null);
+  const onStopRef = useRef(onStop);
+  useEffect(() => {
+    onStopRef.current = onStop;
+  }, [onStop]);
 
   useEffect(() => {
     if (!isTauri) return;
     let cancelled = false;
+    let unlisten: (() => void) | undefined;
 
     import('@tauri-apps/api/event').then(async (mod) => {
-      const unlisten = await mod.listen<AgentToolProgressPayload>('agent-tool-progress', (e) => {
+      const fn = await mod.listen<AgentToolProgressPayload>('agent-tool-progress', (e) => {
         if (cancelled) return;
-        
         const payload = e.payload;
         setProgress(payload);
-        
-        // 终态检查：如果 message 包含「完成」或 pct=1000，标记 running=false
-        const isComplete = payload.pct >= 1000 || payload.message.includes('完成');
-        if (isComplete) {
+        if (agentProgressDone(payload)) {
           setProgress(null);
           setRunning(false);
-          onStop?.();
+          onStopRef.current?.();
           return;
         }
-        
         setRunning(true);
       });
-
-      return () => { unlisten(); };
+      if (cancelled) {
+        fn();
+        return;
+      }
+      unlisten = fn;
     });
 
     return () => {
       cancelled = true;
+      unlisten?.();
     };
-  }, [onStop]);
+  }, []);
 
   const stop = async () => {
     await stopAgentTool();
     setRunning(false);
-    onStop?.();
+    onStopRef.current?.();
   };
 
   const clear = () => {

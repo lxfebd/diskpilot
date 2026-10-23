@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 Agent 进度监听不再每次渲染都叠加一个（R328）
+
+- `useAgentToolProgress` 的 `import(...).then(...)` 里返回的注销函数从来没有被调用过，
+  且 effect 依赖 `[onStop]`——ChatPanel 传的是内联 `() => {}`，于是每次渲染都新注册一个
+  `agent-tool-progress` 监听器，旧的永不注销（长任务越跑越多监听、多份 setState）；
+- 监听改为挂载时注册一次（`deps []`），`onStop` 走 ref 读取，卸载时注销；
+  若 import 完成前组件已卸载，拿到句柄后立刻注销，不留悬挂监听；
+- 终态判断抽成纯函数 `agentProgressDone(payload)`（`pct>=1000` 或 message 含「完成」），
+  新增 3 条单测。
+
 ### 2026-10-24 健康阈值收口到一处（R327）
 
 - 温度警戒线此前写了两遍：体检条/温度采样卡用 `TEMP_WARN_C = 80`，
