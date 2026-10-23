@@ -19,7 +19,7 @@ import { api } from '../api';
 import { revealWithToast } from '../reveal';
 import { useStore } from '../store';
 import type { SteamGame, SteamInventory } from '../types';
-import { formatBytes } from '../format';
+import { formatBytes, formatDateTime } from '../format';
 import { t, useT } from '../i18n';
 import { SteamWorkshopModal } from './SteamWorkshopModal';
 
@@ -329,7 +329,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
     const lines: string[] = [
       t('steam.reportTitle'),
       '',
-      t('steam.reportGenerated', { time: new Date().toLocaleString('zh-CN') }),
+      t('steam.reportGenerated', { time: formatDateTime(new Date()) }),
       t('steam.reportSummary', { n: games.length, size: formatBytes(games.reduce((s, g) => s + g.size_bytes, 0)) }),
       '',
       t('steam.reportHeader'),

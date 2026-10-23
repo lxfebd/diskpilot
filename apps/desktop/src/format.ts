@@ -75,6 +75,19 @@ export function formatDateKey(d: Date): string {
 }
 
 /**
+ * Date → `YYYY-MM-DD HH:MM`（地区中立，可排序）。用于报表/审计等要落文本的场合。
+ * R324：此前 Steam 报表里写死带地区参数的 toLocaleString 调用——英文界面也会
+ * 按中文地区格式渲染，且依赖运行时地区。收口到这里，口径与 formatDateKey 一致。
+ */
+export function formatDateTime(d: Date, withSeconds = false): string {
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}` + (withSeconds ? `:${pad(d.getSeconds())}` : '');
+  return `${date} ${time}`;
+}
+
+/**
  * 取文件名扩展名（小写，不含点）。无扩展名返回 `''`。
  * FileView/TreeView 各有一份私有实现，收敛到此单源；FileView 的
  * `'(none)'` 分组哨兵是展示层语义，由调用方自行映射。

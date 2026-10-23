@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf, driveRootOf } from './format';
+import { formatBytes, formatBytesTriple, formatCount, ellipsizePath, extOf, driveRootOf, formatDateKey, formatDateTime } from './format';
 
 describe('formatBytes', () => {
   it('bytes below 1 KiB stay in B', () => {
@@ -123,3 +123,42 @@ describe('driveRootOf（路径 → 盘根）', () => {
     expect(driveRootOf('plainpath')).toBe('plainpath');
   });
 });
+
+// R324：报表/审计等要落成文本的时间显示——此前 Steam 报表写死 toLocaleString('zh-CN')，
+// 英文界面也按中文地区格式渲染。收口成地区中立的 `YYYY-MM-DD HH:MM`。
+describe('formatDateTime（地区中立的完整时间）', () => {
+  it('日期 + 时分，补零', () => {
+    expect(formatDateTime(new Date(2026, 0, 5, 9, 7))).toBe('2026-01-05 09:07');
+    expect(formatDateTime(new Date(2026, 11, 31, 23, 59, 8))).toBe('2026-12-31 23:59');
+  });
+
+  it('withSeconds 时带上秒', () => {
+    expect(formatDateTime(new Date(2026, 9, 24, 15, 4, 3), true)).toBe('2026-10-24 15:04:03');
+  });
+
+  it('无效日期返回空串，不打印 NaN', () => {
+    expect(formatDateTime(new Date('nope'))).toBe('');
+  });
+
+  it('前半个日期与 formatDateKey 同口径', () => {
+    const d = new Date(2026, 9, 24, 15, 4);
+    expect(formatDateTime(d).split(' ')[0]).toBe(formatDateKey(d));
+  });
+});
+
+// 守卫：日期格式化不许写死地区（否则界面语言切换后时间格式不跟着变）。
+describe('日期格式化不许写死地区（R324）', () => {
+  const RAW = import.meta.glob('./**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+  it('源码里不出现 toLocale*(\'xx-XX\') 这类硬编码地区', () => {
+    const bad: string[] = [];
+    for (const [rel, src] of Object.entries(RAW)) {
+      if (rel.includes('.test.')) continue;
+      src.split('\n').forEach((line, i) => {
+        if (/toLocale\w*\(\s*['"]/.test(line)) bad.push(`${rel}:${i + 1}: ${line.trim()}`);
+      });
+    }
+    expect(bad).toEqual([]);
+  });
+});
+

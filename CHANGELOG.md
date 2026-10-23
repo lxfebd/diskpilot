@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 报表时间不再写死中文地区（R324）
+
+Steam 盘点页导出报告的那行「生成于 …」用的是 `new Date().toLocaleString('zh-CN')`：
+英文界面下也按中文地区口径渲染，而且格式随运行时地区变，落进 markdown 里不好排序。
+
+- `format.ts` 新增 `formatDateTime(d, withSeconds = false)` → 地区中立的 `YYYY-MM-DD HH:MM`，
+  与 `formatDateKey` 同口径（无效日期返回空串，不打印 NaN）；Steam 报表改用它；
+- `format.test.ts` 新增 4 条单测 + 一条守卫：源码里不许出现 `toLocale*('xx-XX')` 这种
+  带字面量地区的调用（`.test.` 文件除外），避免以后又写死；
 ### 2026-10-24 聊天会话列表能用键盘切换了（R323）
 
 侧栏的会话列表每行是纯 `div` 点击：Tab 跳不过去，回车没反应，键盘用户没法切会话；
