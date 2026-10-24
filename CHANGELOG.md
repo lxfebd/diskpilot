@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 AI 配置改完没保存就关窗，不再默默丢掉——先提示、再确认（R352）
+
+- 缺口：设置页 AI tab 的 base URL / API key / 模型只存在组件 state 里，点「保存」才落盘；
+  改完直接点 X、点遮罩或按 Esc 关窗，输入会静默消失（此前设置页也没有 Esc）。
+- `components/Settings.tsx`：新增导出 `AiDraft` 与纯函数 `aiDraftDirty(draft, base)`；
+  打开时把已保存配置记成基线（`setBaseline`），保存 / 试连成功 / 清除后同步更新基线；
+  草稿与基线不一致时，保存按钮上方显示「有未保存的修改——点『保存』才会生效」。
+- 关窗统一走 `requestClose`：有未保存改动先弹 `ConfirmDialog`（「放弃修改 / 继续编辑」），
+  无改动直接关；X、遮罩、底部「关闭」和 Esc 都走同一条路径，Esc 也因此补上了
+  ——叠层时靠 R349 的 Esc 栈保证只关最上层（确认框在前，设置页不跟着关）。
+- i18n 新增 5 个键：`settings.ai.unsaved` 与 `settings.discardTitle` / `discardBody` /
+  `discardConfirm` / `discardCancel`（中英文各一套）。
+- 新增 `components/Settings.test.ts` 5 条单测（与基线一致不脏、四字段任一不同算脏、
+  清空算改动、providerOverride 由 undefined 变具体值算脏、无已保存配置时以全空为基线）。
+- 验证：`pnpm -C apps/desktop check` 全绿（56 files / 921 tests）。
 ### 2026-10-24 切到英文后 <html lang> 也跟着改——读屏软件不再拿中文音念英文（R351）
 
 - 缺口：`apps/desktop/index.html` 里 `<html lang="zh-CN">` 是写死的，语言切到英文后这个属性

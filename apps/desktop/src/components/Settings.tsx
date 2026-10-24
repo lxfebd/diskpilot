@@ -4,6 +4,7 @@ import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, Slide
 import { api } from '../api';
 import { isTauri } from '../env';
 import { ConfirmDialog } from './ConfirmDialog';
+import { useEscapeKey } from '../escapeKey';
 import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { PermissionCenter } from './PermissionCenter';
@@ -58,6 +59,25 @@ const PROVIDER_LABEL_SHORT: Record<Provider, string> = {
 };
 
 export type SettingsTab = 'appearance' | 'ai' | 'general' | 'perms' | 'system' | 'mcp' | 'market' | 'reminder';
+
+/** R352：AI 配置的草稿——改完点「保存」才落盘，点 X / 按 Esc 关窗就会丢。 */
+export interface AiDraft {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  providerOverride?: Provider;
+}
+
+/** R352：草稿与已保存的配置是否不同（未载入配置时以全空为基线）。 */
+export function aiDraftDirty(draft: AiDraft, base: AiDraft | null): boolean {
+  const b: AiDraft = base ?? { baseUrl: '', apiKey: '', model: '', providerOverride: undefined };
+  return (
+    draft.baseUrl !== b.baseUrl ||
+    draft.apiKey !== b.apiKey ||
+    draft.model !== b.model ||
+    draft.providerOverride !== b.providerOverride
+  );
+}
 
 // 预设色板：每套主题各有几个「主色」，点一下就换 accent 家族。
 // 主色取自参考库的品牌原始值，让自定义色快捷预览贴近对应设计语言。
@@ -119,6 +139,9 @@ export function Settings({ onClose, initialTab }: Props) {
   const [providerOverride, setProviderOverride] = useState<Provider | undefined>(undefined);
   const [showManual, setShowManual] = useState(false);
   const [testing, setTesting] = useState(false);
+  // R352：已保存的配置快照（判断草稿有没有改动；关窗会丢，得先问一句）。
+  const [baseline, setBaseline] = useState<AiDraft | null>(null);
+  const [askDiscard, setAskDiscard] = useState(false);
 
   // ── Appearance tab state ──
   const [theme, setTheme] = useState(loadTheme());
@@ -222,6 +245,12 @@ export function Settings({ onClose, initialTab }: Props) {
       setBaseUrl(existing.baseUrl);
       setProviderOverride(existing.providerOverride);
       setSaved(true);
+      setBaseline({
+        baseUrl: existing.baseUrl,
+        apiKey: existing.apiKey,
+        model: existing.model,
+        providerOverride: existing.providerOverride,
+      });
     }
   }, []);
 
@@ -257,6 +286,14 @@ export function Settings({ onClose, initialTab }: Props) {
   const provider = providerOverride ?? detectProvider(baseUrl);
   const needsKey = provider !== 'ollama';
 
+  // R352：AI 配置改了没点「保存」就关窗，此前会静默丢掉——先给提示，关窗时再问一句。
+  const aiDirty = aiDraftDirty({ baseUrl, apiKey, model, providerOverride }, baseline);
+  const requestClose = () => {
+    if (aiDirty) setAskDiscard(true);
+    else onClose();
+  };
+  useEscapeKey(requestClose);
+
   // 本机性能档位对应的本地 Ollama 建议（弱机→云端，中机→可本地，强机→放心本地）。
   // 横幅配色走语义 token 类（hint-warn/hint-info/hint-ok/hint-danger），不内联浅色 hex，
   // 否则深色主题下 --ink-2 反相为浅色 → 浅底浅字不可读（dark.css 无需补丁即适配）。
@@ -290,6 +327,7 @@ export function Settings({ onClose, initialTab }: Props) {
     if (needsKey && !apiKey.trim()) { setErr(t('settings.ai.errKey')); return; }
     try {
       saveSettings({ provider, model, apiKey, baseUrl, providerOverride });
+      setBaseline({ baseUrl, apiKey, model, providerOverride });
       setMsg(t('settings.ai.saved'));
       setSaved(true);
     } catch (e) {
@@ -303,6 +341,7 @@ export function Settings({ onClose, initialTab }: Props) {
     setBaseUrl('');
     setModel('');
     setProviderOverride(undefined);
+    setBaseline({ baseUrl: '', apiKey: '', model: '', providerOverride: undefined });
     setShowManual(false);
     setSaved(false);
     setMsg(t('settings.ai.wiped'));
@@ -312,6 +351,8 @@ export function Settings({ onClose, initialTab }: Props) {
     setErr(null); setMsg(null); setTesting(true);
     try {
       saveSettings({ provider, model, apiKey, baseUrl, providerOverride });
+      // 试连也把配置落了盘，所以草稿不再算「未保存」。
+      setBaseline({ baseUrl, apiKey, model, providerOverride });
       const reply = await freeChat('', '回复"连接成功"四个字，别的什么都别说。'); // @i18n-keep 发给模型的探针 prompt，恒中文
       setMsg(`${t('settings.ai.connOk')}${reply.slice(0, 40)}`);
     } catch (e) {
@@ -348,11 +389,23 @@ export function Settings({ onClose, initialTab }: Props) {
   };
 
   return (
-    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={onClose}>
+    <>
+      {/* R352：有未保存的 AI 改动时关窗先问一句——直接关掉等于把用户刚敲的配置扔了。 */}
+      {askDiscard && (
+        <ConfirmDialog
+          title={t('settings.discardTitle')}
+          body={t('settings.discardBody')}
+          confirmLabel={t('settings.discardConfirm')}
+          cancelLabel={t('settings.discardCancel')}
+          onConfirm={() => { setAskDiscard(false); onClose(); }}
+          onCancel={() => setAskDiscard(false)}
+        />
+      )}
+    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={requestClose}>
       <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>{t('settings.title')} {saved && <CheckCircle2 size={16} style={{ verticalAlign: 'middle', marginLeft: 6, color: 'var(--accent-strong)' }} />}</div>
-          <button className="ghost icon" onClick={onClose} title={t('settings.close')} aria-label={t('settings.close')}><X size={16} /></button>
+          <button className="ghost icon" onClick={requestClose} title={t('settings.close')} aria-label={t('settings.close')}><X size={16} /></button>
         </div>
 
         <div className="settings-tabs">
@@ -599,6 +652,10 @@ export function Settings({ onClose, initialTab }: Props) {
               {t('settings.ai.privacy')}
             </p>
 
+            {aiDirty && (
+              <p className="muted small" style={{ marginTop: 8 }}>{t('settings.ai.unsaved')}</p>
+            )}
+
             <div className="modal-actions">
               {saved && <button className="ghost" onClick={wipe}>{t('settings.ai.clear')}</button>}
               <button className="ghost" onClick={testConn} disabled={testing || !baseUrl.trim() || !model.trim()}>
@@ -799,9 +856,10 @@ export function Settings({ onClose, initialTab }: Props) {
         {tab === 'reminder' && <ReminderSettings />}
 
         <div className="modal-actions" style={{ marginTop: 14 }}>
-          <button className="ghost" onClick={onClose}>{t('settings.close')}</button>
+          <button className="ghost" onClick={requestClose}>{t('settings.close')}</button>
         </div>
       </div>
     </div>
+    </>
   );
 }
