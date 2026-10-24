@@ -1,6 +1,6 @@
 //! diskpilot-scaffold-gen：交互式生成清理脚本（scaffold TOML）。
 //!
-//! 对应 scaffold 14-phase 工作流的 Phase 8-10 机械化部分（见 development.md）：
+//! 对应 scaffold 14-phase 工作流的 Phase 8-10 机械化部分（流程见 .claude/commands/add-scaffold.md）：
 //! 交互采集 → 生成 `scaffolds/<id>.toml` → 跑本地红线校验（Phase 9）→
 //! 生成 safety test 骨架（Phase 10）。它不替代 14-phase 的调研/实测步骤，
 //! 只是把"复制模板 + 手填 + 手工 lint"压缩成一次问答。
@@ -72,7 +72,7 @@ fn main() -> anyhow::Result<()> {
     write_new(&test_path, &test)?;
     println!("test: {} 已生成（请补正向/红线路径后跑 cargo test -p diskpilot-scaffold --test {}_safety）", test_path.display(), id);
 
-    println!("\n完成。建议按 development.md 的 14-phase 流程补完 requirements 文档与实测勘测。");
+    println!("\n完成。建议按 .claude/commands/add-scaffold.md 的 14-phase 流程补完实测勘测（结论写进 PR 描述）。");
     Ok(())
 }
 
@@ -184,7 +184,7 @@ fn render_toml(
          homepage    = \"\"\n\
          risk        = \"{risk}\"\n\
          disclaimer  = \"\"\"\\\n\
-         由 diskpilot-scaffold-gen 生成，请按 development.md 的 14-phase 流程补完：\n\
+         由 diskpilot-scaffold-gen 生成，请按 .claude/commands/add-scaffold.md 的 14-phase 流程补完：\n\
          TODO: 显式列出\"绝不删 X / Y / Z\"。\\\n\
          明确\"删除后某些功能可能受影响\"。\\\n\
          明确\"走回收站可还原\"。\\\n\
@@ -259,7 +259,7 @@ fn render_safety_test(id: &str) -> String {
     let fn_suffix = id.replace('-', "_");
     format!(
         r#"//! 由 diskpilot-scaffold-gen 生成的 safety 测试骨架。
-//! 按 development.md 的 14-phase 流程 Phase 10 补完：
+//! 按 .claude/commands/add-scaffold.md 的 14-phase 流程 Phase 10 补完：
 //!   1. positives：每个 scope id 至少一条命中路径
 //!   2. red_lines：该应用特有"看似可清实则不可清"目录
 //! 跑：cargo test -p diskpilot-scaffold --test {id}_safety

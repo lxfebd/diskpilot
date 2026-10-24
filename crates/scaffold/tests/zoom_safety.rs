@@ -1,6 +1,6 @@
 //! Zoom scaffold safety test — glob 正向断言 + 红线断言。
 //!
-//! 需求依据：docs/scaffold-requirements/appendix-zoom.md。
+//! 需求依据：Zoom 实测勘测附录（勘测记录随公开仓库精简不入库，流程见 docs/scaffold-authoring.md）。
 //! 红线断言失败 = glob 写宽了 → 收紧 glob，不要放宽测试。
 //!
 //! Zoom 最重要的红线是「用户录制」：%USERPROFILE%/Documents/Zoom 与

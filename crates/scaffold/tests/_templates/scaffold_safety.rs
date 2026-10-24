@@ -2,7 +2,7 @@
 //!
 //! 跑：`cargo test -p diskpilot-scaffold --test <id>_safety`
 //!
-//! 这个测试是把需求文档（docs/scaffold-requirements/<category>.md）里的红线节
+//! 这个测试是把 <app> 实测勘测里的红线节
 //! 变成可执行检查。**红线断言失败 = scaffold glob 写宽了**——回去收紧 glob，
 //! 不要放宽测试。
 

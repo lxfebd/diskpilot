@@ -1,7 +1,8 @@
 //! Regression test for `scaffolds/wechat-pc.toml`: every scope glob must match
 //! the paths it advertises, and **must not** match WeChat red lines (chat DBs,
 //! account state, favorites, Moments, etc.). This file is the executable form
-//! of the red-line clauses in `docs/scaffold-requirements/messaging.md`.
+//! of the red-line clauses in the WeChat field survey (kept out of the public repo;
+//! the authoring flow lives in `docs/scaffold-authoring.md`).
 //!
 //! Also asserts the [match] block's behavior — basename + must_have_child must
 //! tag real data dirs (`xwechat_files`, `WeChat Files`) without false-positiving

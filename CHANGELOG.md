@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 清死引用：scaffold-requirements 目录删了四年后没人收拾（R334）
+
+- `docs/scaffold-requirements/`（含 `_TEMPLATE.md`、`STATUS.md`）早已随 `12c6c74` 精简移除，
+  但 `crates/scaffold/src/bin/scaffold-gen.rs` 4 处、5 份 safety 测试头部、模板
+  `crates/scaffold/tests/_templates/scaffold_safety.rs`、`.claude/commands/add-scaffold.md`
+  的 Phase 1-2 / 7 / 14 都还在让它读/写/复制那个目录——按着文档走必踩「路径不存在」；
+- 统一口径「需求勘测附录随公开仓库精简移出仓库，可执行形式即 TOML + safety test」，
+  `scaffold-gen.rs` 的 `development.md` 死引用改指仓库内真实存在的 14-phase 流程
+  `.claude/commands/add-scaffold.md`；
+- safety 测试头部五处 `docs/scaffold-requirements/messaging.md §x.x（xx 实测附录）` 改为
+  描述性「xx 实测勘测附录（勘测记录随公开仓库精简不入库，流程见 docs/scaffold-authoring.md）」；
+- `add-scaffold.md` Phase 1-2 改为「访谈结论写进 PR 描述」、Phase 7 改为「修订 PR 描述的实测附录」、
+  Phase 14 不再更新已删除的 STATUS.md，改记 CHANGELOG 并提示改 README/website 数字；
+- `docs/scaffold-authoring.md` §1 补一条：「勘测记录不入库」的显式说明。
+
 ### 2026-10-24 文档不再数错脚本：21 份脚本 / 97 个 scope（R333）
 
 - 公开文档统一停在「18 份清理脚本」——`scaffolds/` 实际已有 21 份（新三份 Windows 隐私/活动
