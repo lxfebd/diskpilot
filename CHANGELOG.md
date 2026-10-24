@@ -1,14 +1,23 @@
 DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+### R406: 聊天区翻历史时不再被新消息拽回底部——贴底才跟随
+
+- 缺口：ChatPanel 在 turns.length / chatBusy 变化时无条件 scrollTo(scrollHeight)——用户往上翻历史，一条新回复（或流式增量）直接把滚动位置拽回底部，正在读的内容飞走。
+- 改动：新增 apps/desktop/src/stickBottom.ts 的纯函数 stickNearBottom(el, thresholdPx=80)（scrollHeight - scrollTop - clientHeight <= 阈值算贴底；null/undefined 按跟随处理；NaN 不跟随）；ChatPanel 新增 stickRef（初始 true，首屏仍滚到最新），chat-scroll 容器加 onScroll 实时维护 stickRef，原有滚动 effect 开头加 if (!stickRef.current) return;。
+- 测试：stickBottom.test.ts 6 条（贴底/过冲/翻历史/阈值边界 80/空元素/NaN）。
+- 守卫：a11y.test.ts 新增 describe「聊天区贴底跟随（R406）」2 条——ChatPanel 必须同时含 onScroll + stickNearBottom(e.currentTarget) + 滚动 effect 的 stickRef 守卫，且守卫出现在 scrollTo 调用之前。反向自检：临时删掉守卫行 → Tests 2 failed，还原后全绿。
+- 顺手：scripts/check-changelog.mjs 补一条 2.5 规则——## [未发布] 必须出现在所有 ### 条目之前（R405 落地时把新条目写到了标题上面，原有守卫「恰好一个 [未发布]」「标题前有空行」都照样通过，只有这条能抓住）。
+- 验证：pnpm -C apps/desktop check EXIT=0，72 files / 1040 tests（1032 + 8）；check-changelog / check-docs 均 EXIT=0。
+
 ### R405: 键盘 Tab 到自定义输入框时焦点描边不再被吞——4 处 outline:none 补 :focus-visible 替身 + CSS 守卫
 
 - 缺口：layout.css 的全局 input/select 只在 R348 补了 :focus-visible 描边，textarea 与自绘控件不在覆盖范围——Studio TOML 导入框（.scaffold-toml-input）、清理提案高危确认词（.proposal-danger-input）、工具箱 CLI 参数（.tb-args）、聊天输入框（.chat-input textarea）都在 :focus 里 outline: none，只剩 1px 边框变色，键盘用户看不出焦点在哪。
 - 改动：四处各补 :focus-visible（2px var(--accent-strong) + outline-offset:-2px）——layout.css / overview.css / toolwall.css / chat.css；:focus 的边框变色保留给鼠标（点击时不画突兀的框），Tab 到的才亮描边。
 - 守卫：focusVisible.test.ts 新增 describe「焦点描边被抹掉的控件要有替身（R405）」——解析全部 CSS 块，凡选择器含 :focus\b（排除 :focus-visible / :focus-within）且 body 含 outline: none 的块，其选择器键（去 :focus、逗号拆开）必须在某条 outline 非 none 的 :focus-visible 规则里出现过；main 豁免（程序化移焦刻意不画框）。假数据自检：裸 .x:focus{outline:none} 报红、配对 :focus-visible 后变绿、main 豁免；反向自检删 .tb-args:focus-visible → focusVisible.test.ts Tests 1 failed（6 中 1 红），还原后全绿。
 - 验证：pnpm -C apps/desktop check EXIT=0，71 files / 1032 tests（1031 + 1）。
-
-## [未发布]
 
 ### R404: 输入法组合期间的 Enter 不再把打一半的句子发出去
 
@@ -134,7 +143,6 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 前端：HistoryPage 注释更新——「查看全部」看到的就是台账里真实存在的全部记录（ALL_LIMIT 与 UNDO_LOG_MAX 同值），不再有隐性缺口。
 - 测试：`crates/executor/tests/executor_ops.rs` 新增 4 条——超限裁到指定条数且最新在前、不足上限不重写不动文件（含不存在的台账 / max=0）、坏行随重写丢弃、execute 自动把超限台账收口到 UNDO_LOG_MAX（预置 5002 条再执行一次清理）。
 - 验证：cargo test -p diskpilot-executor 27 passed；cargo clippy -p diskpilot-executor --all-targets -- -D warnings 干净；`pnpm -C apps/desktop check` 65 files / 998 tests 全绿。
-
 
 ### R387: Tauri 事件监听不再有取消竞态——迟到的解绑立即生效，三处监听收进 useTauriEvent
 

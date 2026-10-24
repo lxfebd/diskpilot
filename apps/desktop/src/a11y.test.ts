@@ -879,3 +879,29 @@ describe('输入法组合期间的 Enter 不许发送（R404）', () => {
     expect(src).toContain('composingRef.current || e.nativeEvent.isComposing');
   });
 });
+
+
+// ── 聊天区贴底跟随，不许退回无条件滚动（R406）────────────────────────
+// ChatPanel 曾在 turns 变化时无条件 scrollTo(scrollHeight)：用户往上翻历史会被
+// 新消息拽回底部。现在 onScroll 维护贴底位、滚动 effect 先看它——删掉任何一半
+// 都会让「翻历史」重新变成不可能，所以断言两半都在。
+describe('聊天区贴底跟随（R406）', () => {
+  it('onScroll 维护贴底位 + 滚动 effect 先看贴底位', () => {
+    const entry = Object.entries(RAW_TSX).find(([p]) => p.endsWith('components/ChatPanel.tsx'));
+    expect(entry).toBeTruthy();
+    const src = entry?.[1] ?? '';
+    expect(src).toContain('onScroll=');
+    expect(src).toContain('stickNearBottom(e.currentTarget)');
+    expect(src).toContain('if (!stickRef.current) return;');
+    expect(src).toContain('import { stickNearBottom }');
+  });
+
+  it('滚动 effect 不是无条件滚动（stickRef 守卫在 scrollTo 之前）', () => {
+    const entry = Object.entries(RAW_TSX).find(([p]) => p.endsWith('components/ChatPanel.tsx'));
+    const src = entry?.[1] ?? '';
+    const guard = src.indexOf('if (!stickRef.current) return;');
+    const scroll = src.indexOf('scrollerRef.current?.scrollTo');
+    expect(guard).toBeGreaterThan(0);
+    expect(scroll).toBeGreaterThan(guard);
+  });
+});

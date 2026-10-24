@@ -27,6 +27,13 @@ if (unreleased.length !== 1) {
   violations.push('必须有且只有一个 ## [未发布] 区（当前: ' + unreleased.length + ' 个，行 ' + unreleased.map((i) => i + 1).join(',') + '）');
 }
 
+// 2.5) [未发布] 必须是第一个条目之前的位置（R406：曾经把新条目写在标题上面，
+//      结构照样「一个 [未发布]、标题前有空行」，只能靠这条抓出来）。
+const firstH3 = lines.findIndex((l) => /^### /.test(l));
+if (unreleased.length === 1 && firstH3 >= 0 && unreleased[0] > firstH3) {
+  violations.push('## [未发布] 必须在所有 ### 条目之前（当前在第 ' + (unreleased[0] + 1) + ' 行，第一条目在第 ' + (firstH3 + 1) + ' 行）');
+}
+
 // 3) ### 标题前必须是空行（或文件首行）
 lines.forEach((l, i) => {
   if (/^### /.test(l) && i > 0 && lines[i - 1].trim() !== '') {

@@ -13,6 +13,7 @@ import { grantSessionAuth, clearSessionAuths, PERMS } from '../permissions';
 import { deriveChatHistory } from '../advisor/chatHistory';
 import { lastToolCall, runningSecs } from '../advisor/traceTimer';
 import { scrollBehavior } from '../motion';
+import { stickNearBottom } from '../stickBottom';
 import { prefs } from '../theme';
 import type { Node, AdvisorResponse, Scaffold } from '../types';
 import { HwReportCard, StressConfirmPanel, HwTestMonitor, useHwTestMonitor, type StressConfirm } from './HwPanels';
@@ -136,6 +137,8 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
 // 用组合状态位挡住，否则拼音输入时打回车会直接把打一半的句子发出去。
 const composingRef = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  // R406：是否贴底跟随（onScroll 每次更新；初始为 true，首屏仍会滚到最新）。
+  const stickRef = useRef(true);
   // 待用户确认的 CLI 工具调用（图吧工具箱中/高风险 run_cli_tool）。
   const [pendingCli, setPendingCli] = useState<PendingCliTool | null>(null);
   const [pendingSession, setPendingSession] = useState<PendingSessionConfirm | null>(null);
@@ -267,6 +270,8 @@ const composingRef = useRef(false);
   }, [studioRequest?.ts]);
 
   useEffect(() => {
+    // R406：只有贴在底部（或刚打开）才跟着滚；往上翻过历史就不拽回来。
+    if (!stickRef.current) return;
     // R357：系统开了「减少动态效果」就瞬间到位（scrollBehavior 内部判断）。
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: scrollBehavior() });
   }, [turns.length, chatBusy]);
@@ -702,7 +707,7 @@ const composingRef = useRef(false);
       </div>
 
       {/* R399：对话是流式更新的动态内容——role="log"（aria-live=polite）让读屏播报新消息，chat-typing 补 role=status。 */}
-      <div className="chat-scroll" role="log" aria-live="polite" aria-label={t('chat.transcriptAria')} aria-busy={chatBusy || undefined} ref={scrollerRef}>
+      <div className="chat-scroll" role="log" aria-live="polite" aria-label={t('chat.transcriptAria')} aria-busy={chatBusy || undefined} ref={scrollerRef} onScroll={(e) => { stickRef.current = stickNearBottom(e.currentTarget); }}>
         {empty && !root && (
           <div className="chat-hero">
             <MessageSquare size={32} />
