@@ -12,7 +12,7 @@ vi.mock('./api', () => ({
   },
 }));
 
-import { useStore, type ChatTurn } from './store';
+import { useStore, toastDuration, type ChatTurn } from './store';
 import { api } from './api';
 
 function mk(name: string, path: string, size: number, file_count: number, children: Node[] = []): Node {
@@ -438,5 +438,30 @@ describe('archiveActiveChat（关窗归档）在 AI 在飞时的断点', () => {
     // pending:false 原样落盘 → 恢复不会标记中断
     expect(a1?.pending).toBe(false);
     expect(a1 && 'text' in a1 ? (a1 as { text?: string }).text ?? '' : '').not.toContain('中断');
+  });
+});
+
+// R342：toast 停留时长按「要读的量 / 要不要动手」分级——错误与动作提示不能再一律 5 秒。
+describe('toastDuration（停留时长分级，R342）', () => {
+  it('默认按 kind 分级：ok 5s / warn 7s / err 9s', () => {
+    expect(toastDuration('ok', '已复制路径', false)).toBe(5000);
+    expect(toastDuration('warn', '磁盘快满了', false)).toBe(7000);
+    expect(toastDuration('err', '复制失败', false)).toBe(9000);
+  });
+
+  it('长文案加时：>60 字 +2s，>140 字再 +2s', () => {
+    const mid = 'x'.repeat(61);
+    expect(toastDuration('err', mid, false)).toBe(11_000);
+    expect(toastDuration('err', 'x'.repeat(141), false)).toBe(13_000);
+    expect(toastDuration('ok', 'x'.repeat(60), false)).toBe(5000); // 正好 60 不加
+  });
+
+  it('带动作按钮 +3s——按钮得留出可点的时间', () => {
+    expect(toastDuration('ok', '散热持续偏高', true)).toBe(8000);
+    expect(toastDuration('err', 'x'.repeat(141), true)).toBe(16_000); // 封顶
+  });
+
+  it('再长也不超过 16 秒封顶（不挡视线）', () => {
+    expect(toastDuration('err', 'x'.repeat(2000), true)).toBe(16_000);
   });
 });

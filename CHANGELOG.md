@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 toast 停留时长按「要读的量 / 要不要动手」分级（R342）
+
+- 此前所有 toast 一律 5 秒消失：带异常原文的错误读不完、带动作按钮的提示（「去调散热」
+  「查看周报」「去管启动项」）还没点就没了，动作等于白给；
+- 现在按级别 + 内容算停留时间：ok 5s / warn 7s / err 9s，文案 >60 字 +2s、>140 字再 +2s，
+  带动作按钮 +3s，总计封顶 16 秒（再长就挡视线，也能点 X 手动关）；
+- 判定收口成纯函数 `toastDuration(kind, text, hasAction)`，`store.toast` 用它设 `setTimeout`；
+- 新增 4 条单测（kind 分级 / 长文案两档加时且 60 字整不加 / 动作 +3s / 16s 封顶）；
+- 验证：`pnpm -C apps/desktop check` 全绿（53 files / 875 tests）。
 ### 2026-10-24 停止 agent 工具失败不再只写控制台（R341）
 
 - 「停止」按钮走 `stopAgentTool` → `api.cancelToolCalls()`，取消失败时只 `console.error`，

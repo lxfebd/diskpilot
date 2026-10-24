@@ -322,6 +322,29 @@ export interface ToastItem {
   action?: { label: string; run: () => void };
 }
 
+// R342：toast 停留时长。此前一律 5 秒——带异常原文的错误读不完、带动作按钮的提示
+// 没点就消失（「去调散热」「查看周报」这类动作等于白给）。按 kind 分级加时，长文案
+// 与动作再各加一档，封顶 16 秒：再长就挡视线，用户也能点 X 手动关。
+const TOAST_MS = { ok: 5000, warn: 7000, err: 9000 } as const;
+const TOAST_LONG_TEXT = 60;
+const TOAST_VERY_LONG_TEXT = 140;
+const TOAST_ACTION_BONUS_MS = 3000;
+const TOAST_MAX_MS = 16000;
+
+/** 停留时长（毫秒）：ok 5s / warn 7s / err 9s；文案 >60 字 +2s、>140 字再 +2s；
+ *  带动作按钮 +3s；总计封顶 16s。纯函数，便于单测钉住分级。 */
+export function toastDuration(
+  kind: ToastItem['kind'],
+  text: string,
+  hasAction: boolean,
+): number {
+  let ms: number = TOAST_MS[kind];
+  if (text.length > TOAST_LONG_TEXT) ms += 2000;
+  if (text.length > TOAST_VERY_LONG_TEXT) ms += 2000;
+  if (hasAction) ms += TOAST_ACTION_BONUS_MS;
+  return Math.min(ms, TOAST_MAX_MS);
+}
+
 interface AppState {
   root: Node | null;
   // 按盘符缓存的扫描结果树（key = 大写去尾斜杠的盘符/路径）。全盘扫完后再点
@@ -485,7 +508,7 @@ export const useStore = create<AppState>((set, get) => {
   toast: (text, kind = 'ok', action) => {
     const id = Math.random().toString(36).slice(2);
     set((s) => ({ toasts: [...s.toasts, { id, text, kind, action }] }));
-    setTimeout(() => get().dismissToast(id), 5000);
+    setTimeout(() => get().dismissToast(id), toastDuration(kind, text, action !== undefined));
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setProposal: (proposal) => set({ proposal }),
