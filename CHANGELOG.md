@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 删掉 406 行零引用的死 CSS（R375）
+
+- 用脚本把 `src/styles/*.css` 里的 1075 个类名逐个回查 `.ts/.tsx` 源码（排除 `.test.`），
+  筛出 77 个「CSS 有定义、源码零引用」的死类；再核掉动态拼值的 `risk-*` / `cli-risk-*` /
+  `tb-risk-*` / `health-rating-*` 家族（它们由运行时拼出来，样式是活的）。
+- 删除判定按整个选择器算：逗号列表里每个选择器都含死类才删（列表里只要还有一个活选择器就不动）；
+  单个选择器里出现一个死类，它本身就永远不会匹配当前 DOM。规则按花括号配对截取，可跨行。
+- 实际删掉 105 条规则 / 406 行：layout.css 193 行（provider-pill、diag-*、center-body、
+  breadcrumb、treemap-wrap、card-*、studio-list/studio-row、studio-scope-*）、
+  overview.css 70 行（AI 低风险自动清理 toast 的 toast-success 一族 + proposal-reason）、
+  toolwall.css 142 行（toolbelt-side/nav、tb-health-*、tb-advice、tb-ai-*、tb-file*、
+  tb-dup*、tb-rank、tb-status、tb-confirm-modal、tb-ext-arch/variants）、settings.css 1 行（trace-tool-name）。
+- 只删不加：`git diff --numstat` 为 0 增 / 406 删；删后重新扫一遍四个文件，死类命中 0 行、
+  花括号配对全部平衡。`pnpm -C apps/desktop check` 仍 61 files / 983 tests 全绿。
+
 ### 2026-10-24 三处死类名收口 + 电源方案当前项高亮（R374）
 
 - 扫描进度条 `scan-bar-fill` 的 `determinate` 修饰类没有任何 CSS 定义（真正有样式的是

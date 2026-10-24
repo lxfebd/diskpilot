@@ -387,7 +387,6 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   overflow: auto;
   color: var(--ink-3);
 }
-.trace-tool-name { font-weight: 600; color: var(--ink); }
 
 /* ── LeftPanel 三视图切换 ──────────────────────────────────────────── */
 .leftpanel {

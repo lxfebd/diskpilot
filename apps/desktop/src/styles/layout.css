@@ -229,23 +229,6 @@ select:focus-visible {
   outline-offset: -2px;
 }
 
-/* ── Header advisor pill ───────────────────────────────────────────── */
-.provider-pill {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  background: var(--mint);
-  color: var(--ink);
-  border: 1px solid var(--border);
-  padding: 2px 8px;
-  border-radius: 999px;
-  box-shadow: var(--shadow-sm);
-}
-
 /* ── Scan progress bar ─────────────────────────────────────────────── */
 .scan-bar {
   position: relative;
@@ -303,32 +286,6 @@ select:focus-visible {
   text-overflow: ellipsis;
   padding: 0 12px;
   max-width: 100%;
-}
-
-/* ── Diagnostics ───────────────────────────────────────────────────── */
-.diag-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  background: var(--paper-2);
-  border-bottom: 1px solid var(--border);
-  color: var(--ink);
-}
-.diag-bar .diag-label {
-  font-weight: 700;
-  background: var(--ink);
-  color: var(--paper);
-  padding: 1px 6px;
-  border-radius: calc(var(--radius-xs) * 0.5);
-  letter-spacing: 0.02em;
-}
-.diag-bar .diag-stats {
-  flex: 1;
-  overflow-x: auto;
-  white-space: nowrap;
 }
 
 /* ── Banner ────────────────────────────────────────────────────────── */
@@ -564,56 +521,6 @@ aside::-webkit-scrollbar-thumb {
   border: 1px solid var(--border);
   border-radius: 0;
 }
-
-.center-body { overflow: auto; background: var(--paper); }
-
-.breadcrumb {
-  padding: 6px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex; gap: 6px; align-items: center;
-  background: var(--paper-2);
-  color: var(--ink-2);
-  font-weight: 600;
-}
-.breadcrumb .tab {
-  background: var(--card);
-  color: var(--ink);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px;
-  box-shadow: var(--shadow-sm);
-  transition: transform .08s, box-shadow .08s, background .08s;
-}
-.breadcrumb .tab:hover { background: var(--accent-bg); }
-.breadcrumb .tab.active { background: var(--surface-2); border-color: var(--border-strong); font-weight: 600; }
-.breadcrumb .grow { flex: 1; }
-.breadcrumb .size {
-  background: var(--accent);
-  color: var(--ink);
-  border: 1px solid var(--border);
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
-}
-
-/* ── Treemap ───────────────────────────────────────────────────────── */
-.treemap-wrap {
-  background: var(--paper);
-  overflow: hidden;
-  position: relative;
-}
-.treemap-wrap::before {
-  content: "";
-  position: absolute; inset: 0;
-  background:
-    repeating-linear-gradient(45deg, transparent 0 14px, rgba(255, 111, 168, 0.04) 14px 15px);
-  pointer-events: none;
-}
 .treemap text { user-select: none; pointer-events: none; }
 
 /* ── WizTree-style tree ────────────────────────────────────────────── */
@@ -804,10 +711,8 @@ footer {
   display: grid; gap: 10px;
   box-shadow: var(--shadow);
 }
-.card-head { display: flex; gap: 10px; align-items: center; }
 .card-title { flex: 1; min-width: 0; }
 .card-name { font-weight: 700; color: var(--ink); font-size: 15px; }
-.card-path { color: var(--ink-3); font-size: 11px; word-break: break-all; font-weight: 500; }
 
 .card-meta {
   color: var(--ink-2);
@@ -823,29 +728,6 @@ footer {
   padding: 1px 8px;
   border-radius: 999px;
   font-weight: 700;
-}
-
-.card-what {
-  font-size: 13px;
-  background: var(--accent-bg);
-  border: 1px solid var(--border);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
-}
-.card-reason { color: var(--ink-2); font-size: 12px; line-height: 1.55; font-weight: 500; }
-
-.card-disclaimer {
-  background: var(--sun);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  color: var(--ink);
-  font-size: 11.5px;
-  line-height: 1.5;
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
 }
 
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
@@ -1308,23 +1190,6 @@ footer {
   align-items: center;
   gap: 4px;
 }
-.studio-list { display: flex; flex-direction: column; gap: 4px; }
-.studio-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 10px;
-  background: transparent;
-  border: 1.5px solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  color: var(--ink);
-}
-.studio-row:hover { background: var(--card); border-color: var(--ink); }
-.studio-row-name { font-family: var(--font-mono); font-size: 12px; font-weight: 600; }
 
 /* ── Studio expandable card ───────────────────────────────────────── */
 .studio-card-wrap {
@@ -1429,64 +1294,6 @@ footer {
   width: auto;
   padding-left: 10px;
   padding-right: 10px;
-}
-
-/* cleanup 样式已迁到 styles/cleanup.css（清理页 + dry-run 预览窗 + 风险徽标）。
-   dark.css 的 cleanup 覆盖项仍保留，加载顺序保证覆盖生效。 */
-
-.studio-scopes {
-  list-style: none;
-  margin: 4px 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.studio-scope-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-  padding: 3px 6px;
-  border-radius: var(--radius-xs);
-  font-size: 11.5px;
-}
-.studio-scope-row:hover { background: var(--accent-bg); }
-.studio-scope-row.empty { opacity: 0.45; }
-.studio-scope-row.bulk {
-  background: var(--paper-2);
-  padding: 5px 8px;
-  font-weight: 500;
-}
-.studio-scope-row.bulk:hover { background: var(--paper-3); }
-.studio-scope-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.studio-scope-size {
-  font-size: 11px;
-  color: var(--text-3);
-  min-width: 80px;
-  text-align: right;
-}
-.studio-scope-btn {
-  padding: 2px 8px;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-.studio-scope-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.studio-scope-btn.armed {
-  background: var(--risk-fill-d);
-  color: #fff;
-  border-color: var(--risk-fill-d);
-}
-.studio-scope-btn.armed:hover { background: color-mix(in srgb, var(--risk-fill-d) 82%, var(--text)); }
-.studio-scope-msg {
-  margin-top: 4px;
-  padding: 2px 6px;
 }
 
 

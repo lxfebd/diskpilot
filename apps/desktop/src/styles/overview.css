@@ -798,69 +798,6 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   to   { transform: translateY(0);   opacity: 1; }
 }
 
-/* ── AI 低风险自动清理 toast（聊天气泡上方）────────────────────────── */
-.toast.toast-success {
-  position: absolute;
-  left: 50%;
-  bottom: 72px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: max-content;
-  max-width: 78%;
-  padding: 10px 14px;
-  background: var(--risk-fill);
-  color: #fff;
-  cursor: default;
-  z-index: 20;
-  white-space: normal;
-}
-.toast-success .toast-content {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  min-width: 0;
-}
-.toast-success .toast-icon {
-  flex: 0 0 auto;
-  margin-top: 1px;
-}
-.toast-success .toast-message {
-  min-width: 0;
-}
-.toast-success .toast-title {
-  font-weight: 600;
-  font-size: 13px;
-}
-.toast-success .toast-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 4px;
-  font-weight: 500;
-  font-size: 11.5px;
-  line-height: 1.35;
-}
-.toast-success .toast-path {
-  font-family: var(--mono, ui-monospace, Consolas, monospace);
-  word-break: break-all;
-}
-.toast-success .toast-more {
-  color: rgba(255, 255, 255, 0.85);
-}
-.toast-success .toast-close {
-  flex: 0 0 auto;
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  display: inline-flex;
-  padding: 2px;
-  opacity: 0.85;
-}
-.toast-success .toast-close:hover { opacity: 1; }
-
 /* ── 顶栏「已为你释放」胶囊 ─────────────────────────────────────────── */
 .reclaimed-pill {
   display: inline-flex;
@@ -986,13 +923,6 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   font-size: 11.5px;
   font-weight: 700;
   color: var(--ink-2);
-}
-.proposal-reason {
-  margin-top: 5px;
-  font-size: 11.5px;
-  color: var(--ink-2);
-  line-height: 1.5;
-  padding-left: 24px;
 }
 /* ── AI 清理清单：风险分组 + 三段式说明 + 高危打字确认 ─────────────── */
 .proposal-group {
