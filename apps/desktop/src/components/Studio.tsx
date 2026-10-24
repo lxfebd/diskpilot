@@ -334,8 +334,10 @@ function InstallScaffoldModal({
                 value={toml}
                 onChange={(e) => setToml(e.target.value)}
                 spellCheck={false}
+                aria-invalid={!!err}
+                aria-describedby="studio-toml-err"
               />
-              {err && <div className="install-err" role="alert">{err}</div>}
+              {err && <div id="studio-toml-err" className="install-err" role="alert">{err}</div>}
             </div>
             <div className="modal-foot">
               <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
@@ -436,8 +438,10 @@ function Winapp2ImportPanel({
           value={ini}
           onChange={(e) => setIni(e.target.value)}
           spellCheck={false}
+          aria-invalid={!!err}
+          aria-describedby="studio-winapp2-err"
         />
-        {err && <div className="install-err" role="alert">{err}</div>}
+        {err && <div id="studio-winapp2-err" className="install-err" role="alert">{err}</div>}
         {items !== null && items.length > 0 && (
           <div className="winapp2-preview">
             <div className="winapp2-preview-head">

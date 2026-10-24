@@ -768,3 +768,50 @@ describe('错误横幅要能手动关闭（R389）', () => {
     expect(css).toMatch(/\.banner-dismiss:focus-visible\s*\{/);
   });
 });
+// ── 字段校验错误要报给读屏（R391）────────────────────────────────
+describe('字段校验错误要报给读屏（R391）', () => {
+  // 与 R361 守卫同款标签截取：花括号/引号跟踪，字段值里的 > 不会把标签截断。
+  const tagEndOf = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let i = start; i < src.length; i++) {
+      const c = src[i];
+      if (quote) {
+        if (c === '\\') i++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return i;
+    }
+    return -1;
+  };
+
+  it('带 aria-invalid 的输入框必须同时带 aria-describedby（不能只标错不给去向）', () => {
+    const violations: string[] = [];
+    for (const [rel, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<(input|textarea)\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEndOf(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/aria-invalid/.test(tag)) continue;
+        if (!/aria-describedby/.test(tag)) violations.push(rel + ':' + src.slice(0, start).split('\n').length);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('aria-describedby 指向的字面 id 必须在同文件里存在（不许指向虚空）', () => {
+    const violations: string[] = [];
+    for (const [rel, src] of Object.entries(RAW_TSX)) {
+      const ids = new Set([...src.matchAll(/id="([\w-]+)"/g)].map((x) => x[1]));
+      for (const m of src.matchAll(/aria-describedby=["']([\w-]+)["']/g)) {
+        if (!ids.has(m[1])) violations.push(rel + ':' + m[1]);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

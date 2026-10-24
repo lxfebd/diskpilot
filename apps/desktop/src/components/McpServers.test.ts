@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { auditNames } from './McpServers';
+import { auditNames, mcpFieldError } from './McpServers';
 import type { McpAuditEntry } from '../api';
 
 const base = (op: string, extra: Partial<McpAuditEntry> = {}): McpAuditEntry => ({
@@ -41,5 +41,31 @@ describe('审计行归属（R339 auditNames）', () => {
 
   it('remove_server：后端不记名字（配置已删）→ 主语为空', () => {
     expect(auditNames(base('remove_server'), null)).toEqual({ subject: null, server: null });
+  });
+});
+describe('字段级校验（R391 mcpFieldError）', () => {
+  it('空名字（含纯空白）→ name', () => {
+    expect(mcpFieldError('', 'stdio', 'npx', '')).toBe('name');
+    expect(mcpFieldError('   ', 'http', '', 'https://x/mcp')).toBe('name');
+  });
+
+  it('stdio：名字有了、命令为空 → command', () => {
+    expect(mcpFieldError('git', 'stdio', '', '')).toBe('command');
+  });
+
+  it('http：名字有了、url 为空 → url（命令空不算错）', () => {
+    expect(mcpFieldError('git', 'http', 'npx', '')).toBe('url');
+  });
+
+  it('stdio：命令有了，url 空不算错', () => {
+    expect(mcpFieldError('git', 'stdio', 'npx', '')).toBeNull();
+  });
+
+  it('http：url 有了，命令空不算错', () => {
+    expect(mcpFieldError('git', 'http', '', 'https://x/mcp')).toBeNull();
+  });
+
+  it('全部填好 → null', () => {
+    expect(mcpFieldError('git', 'http', 'npx', 'https://x/mcp')).toBeNull();
   });
 });

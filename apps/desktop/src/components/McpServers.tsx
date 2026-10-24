@@ -630,6 +630,23 @@ function McpServersInner() {
   );
 }
 
+/** R391：MCP 表单的字段级校验——返回第一个有问题的字段，顺序与原校验一致
+ *  （name → 当前传输方式对应的 command / url）。整体错误（权限不足、保存失败）
+ *  仍走表单顶部横幅，这里只回答「哪个输入框该标红」。 */
+export type McpFieldErr = 'name' | 'command' | 'url' | null;
+
+export function mcpFieldError(
+  name: string,
+  transportType: 'stdio' | 'http',
+  command: string,
+  url: string,
+): McpFieldErr {
+  if (!name.trim()) return 'name';
+  if (transportType === 'stdio' && !command.trim()) return 'command';
+  if (transportType === 'http' && !url.trim()) return 'url';
+  return null;
+}
+
 /** 添加/编辑表单：name + transport 选择（stdio 命令/args/env/cwd 或 http url/headers/timeout）。 */
 function ServerForm(props: {
   editingId: string | null;
@@ -657,6 +674,8 @@ function ServerForm(props: {
   const [permMapText, setPermMapText] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // R391：字段级校验错误单独一份状态——只贴在出错的输入框下方，顶部横幅留给权限/保存类整体错误。
+  const [fieldErr, setFieldErr] = useState<McpFieldErr>(null);
 
   // 编辑已有服务器时，把它的 transport 拆回表单字段。
   const prefillTransport = () => {
@@ -687,10 +706,10 @@ function ServerForm(props: {
   void prefilled;
 
   const buildPayload = (): McpServerPayload | null => {
-    if (!name.trim()) { setErr(t('mcp.errName')); return null; }
+    const field = mcpFieldError(name, transportType, command, url);
+    if (field) { setFieldErr(field); return null; }
     let transport: McpServerPayload['transport'];
     if (transportType === 'stdio') {
-      if (!command.trim()) { setErr(t('mcp.errCommand')); return null; }
       const envObj: Record<string, string> = {};
       for (const line of env.split('\n')) {
         const i = line.indexOf('=');
@@ -704,7 +723,6 @@ function ServerForm(props: {
         cwd: cwd.trim() || null,
       };
     } else {
-      if (!url.trim()) { setErr(t('mcp.errUrl')); return null; }
       const headersObj: Record<string, string> = {};
       for (const line of headers.split('\n')) {
         const i = line.indexOf(':');
@@ -746,6 +764,7 @@ function ServerForm(props: {
     }
     setSaving(true);
     setErr(null);
+    setFieldErr(null);
     try {
       if (editingId) {
         await api.mcpUpdateServer(editingId, payload, true);
@@ -767,14 +786,23 @@ function ServerForm(props: {
 
       <label className="field">
         <span>{t('mcp.fName')}</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('mcp.fNamePlaceholder')} />
+        <input
+          value={name}
+          onChange={(e) => { setName(e.target.value); if (fieldErr === 'name') setFieldErr(null); }}
+          placeholder={t('mcp.fNamePlaceholder')}
+          aria-invalid={fieldErr === 'name'}
+          aria-describedby={fieldErr === 'name' ? 'mcp-err-name' : undefined}
+        />
+        {fieldErr === 'name' && (
+          <div id="mcp-err-name" className="field-err" role="alert">{t('mcp.errName')}</div>
+        )}
       </label>
 
       <label className="field">
         <span>{t('mcp.fTransport')}</span>
         <div className="seg seg-2">
-          <button type="button" className={`seg-opt${transportType === 'stdio' ? ' active' : ''}`} aria-pressed={transportType === 'stdio'} onClick={() => setTransportType('stdio')}>{t('mcp.optStdio')}</button>
-          <button type="button" className={`seg-opt${transportType === 'http' ? ' active' : ''}`} aria-pressed={transportType === 'http'} onClick={() => setTransportType('http')}>{t('mcp.optHttp')}</button>
+          <button type="button" className={`seg-opt${transportType === 'stdio' ? ' active' : ''}`} aria-pressed={transportType === 'stdio'} onClick={() => { setTransportType('stdio'); setFieldErr(null); }}>{t('mcp.optStdio')}</button>
+          <button type="button" className={`seg-opt${transportType === 'http' ? ' active' : ''}`} aria-pressed={transportType === 'http'} onClick={() => { setTransportType('http'); setFieldErr(null); }}>{t('mcp.optHttp')}</button>
         </div>
       </label>
 
@@ -782,7 +810,16 @@ function ServerForm(props: {
         <>
           <label className="field">
             <span>{t('mcp.fCommand')}</span>
-            <input value={command} onChange={(e) => setCommand(e.target.value)} placeholder="npx -y @modelcontextprotocol/server-filesystem" />
+            <input
+              value={command}
+              onChange={(e) => { setCommand(e.target.value); if (fieldErr === 'command') setFieldErr(null); }}
+              placeholder="npx -y @modelcontextprotocol/server-filesystem"
+              aria-invalid={fieldErr === 'command'}
+              aria-describedby={fieldErr === 'command' ? 'mcp-err-command' : undefined}
+            />
+            {fieldErr === 'command' && (
+              <div id="mcp-err-command" className="field-err" role="alert">{t('mcp.errCommand')}</div>
+            )}
           </label>
           <label className="field">
             <span>{t('mcp.fArgs')}</span>
@@ -801,7 +838,16 @@ function ServerForm(props: {
         <>
           <label className="field">
             <span>{t('mcp.fUrl')}</span>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" />
+            <input
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); if (fieldErr === 'url') setFieldErr(null); }}
+              placeholder="https://mcp.example.com/mcp"
+              aria-invalid={fieldErr === 'url'}
+              aria-describedby={fieldErr === 'url' ? 'mcp-err-url' : undefined}
+            />
+            {fieldErr === 'url' && (
+              <div id="mcp-err-url" className="field-err" role="alert">{t('mcp.errUrl')}</div>
+            )}
           </label>
           <label className="field">
             <span>{t('mcp.fHeaders')}</span>

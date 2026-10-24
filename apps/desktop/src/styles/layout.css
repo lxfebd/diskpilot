@@ -854,6 +854,16 @@ footer {
   border-radius: var(--radius-btn);
   padding: 8px 10px;
 }
+/* R391：字段级校验错误——贴在出错的输入框正下方，与顶部整体错误横幅区分。 */
+.field-err {
+  color: var(--risk-danger);
+  font-size: 12px;
+  background: color-mix(in srgb, var(--risk-danger) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--risk-danger) 30%, transparent);
+  border-radius: var(--radius-btn);
+  padding: 6px 10px;
+  margin-top: 4px;
+}
 
 /* 安装弹窗双 tab（TOML / Winapp2.ini 导入） */
 .modal-tabs {

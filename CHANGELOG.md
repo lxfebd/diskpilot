@@ -1,5 +1,15 @@
 ## [未发布]
 
+### R391: 字段级校验错误贴到出错的输入框上，读屏也能念到
+
+- 缺口：MCP 服务器表单的名字/命令/URL 是三个字段级校验错误，但它们和「保存失败」「权限不足」一起挤在表单顶部的大横幅里——用户填错命令时，红色横幅离出错的输入框好几行远；读屏软件只会念到一句横幅，输入框本身不带「这一项有错」的标记（全仓 `aria-invalid` 此前为 0）。
+- 改动：`McpServers.tsx` 新增导出 `McpFieldErr` 类型与纯函数 `mcpFieldError(name, transportType, command, url)`（保持原校验顺序：name → 当前传输方式的 command/url）；表单的字段错误改由 `fieldErr` 状态承载，文案贴在对应输入框正下方（`id="mcp-err-name|command|url"`），输入框加 `aria-invalid` 与 `aria-describedby` 指向该条文案，改动该字段或切换传输方式即清除；顶部横幅只留权限不足/保存失败这类整体错误。
+- `Studio.tsx` 的 TOML 安装与 winapp2 导入两个 textarea 同理：`aria-invalid={!!err}`、`aria-describedby` 指向已有的错误块（补 `id="studio-toml-err"` / `id="studio-winapp2-err"`）。
+- CSS：`layout.css` 新增 `.field-err`（与 `.install-err` 同款风险配色，内联小块）。
+- 守卫：`a11y.test.ts` 新增 2 条——带 `aria-invalid` 的输入框必须同时带 `aria-describedby`；`aria-describedby="<字面 id>"` 指向的 id 必须在同文件存在。
+- 测试：`McpServers.test.ts` 新增 6 条 `mcpFieldError` 单测（空白名字、stdio 缺命令、http 缺 url、交叉不误报、全填好为 null）。
+- 验证：`pnpm -C apps/desktop check` 全绿。
+
 ### R390: 清理面板不再把「最近 50 条」说成「共 50 条」——碰上限就明说还有更早的
 
 - 缺口：`UndoPanel` 只拉最近 50 条（`api.listUndo(50)`），但头部计数文案 `cleanup.entriesCount` 直接填 `entries.length`——台账超过 50 条时（R388 后上限 5000）面板会显示「50 条」，把截断后的列表当成了全部，和 R310 修过的台账页是同一族「数据不自曝截断」问题。
