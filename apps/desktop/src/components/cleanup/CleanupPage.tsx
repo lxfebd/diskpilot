@@ -169,7 +169,7 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
                 <button
                   key={st}
                   type="button"
-                  className={'cp-status-chip' + (status === st ? ' active' : '')}
+                  className={'cp-status-chip' + (status === st ? ' active' : '')} aria-pressed={status === st}
                   onClick={() => setStatus(st)}
                 >
                   {st === 'all' ? t('cleanup.scriptsStatusAll')
@@ -198,7 +198,7 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
                 return (
                   <button
                     key={c.scaffold.id}
-                    className={`cp-script${active ? ' active' : ''}${detected ? ' detected' : ''}`}
+                    className={`cp-script${active ? ' active' : ''}${detected ? ' detected' : ''}`} aria-pressed={active}
                     onClick={() => select(c.scaffold.id)}
                     disabled={!!session?.running}
                     title={c.scaffold.name}

@@ -169,10 +169,10 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
       </div>
 
       <div className="fileview-head">
-        <button className={'sortable' + (sortKey === 'name' ? ' active' : '')} onClick={() => toggleSort('name')}>
+        <button className={'sortable' + (sortKey === 'name' ? ' active' : '')} aria-pressed={sortKey === 'name'} onClick={() => toggleSort('name')}>
           {t('overview.fileview.colName')} {sortKey === 'name' && (sortDesc ? <ArrowDown size={11} /> : <ArrowUp size={11} />)}
         </button>
-        <button className={'sortable' + (sortKey === 'size' ? ' active' : '')} onClick={() => toggleSort('size')}>
+        <button className={'sortable' + (sortKey === 'size' ? ' active' : '')} aria-pressed={sortKey === 'size'} onClick={() => toggleSort('size')}>
           {t('overview.fileview.colSize')} {sortKey === 'size' && (sortDesc ? <ArrowDown size={11} /> : <ArrowUp size={11} />)}
         </button>
       </div>

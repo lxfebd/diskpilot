@@ -444,7 +444,7 @@ function SystemToolsInner() {
           <span className="sys-filter-chips">
             <button
               type="button"
-              className={'chip' + (drvClass === null ? ' active' : '')}
+              className={'chip' + (drvClass === null ? ' active' : '')} aria-pressed={drvClass === null}
               onClick={() => setDrvClass(null)}
             >
               {t('system.driver.classAll')}
@@ -453,7 +453,7 @@ function SystemToolsInner() {
               <button
                 key={c.cls || '(blank)'}
                 type="button"
-                className={'chip' + (drvClass === c.cls ? ' active' : '')}
+                className={'chip' + (drvClass === c.cls ? ' active' : '')} aria-pressed={drvClass === c.cls}
                 onClick={() => setDrvClass(c.cls)}
               >
                 {c.cls || t('system.driver.classUnknown')} <b>{c.n}</b>
@@ -514,14 +514,14 @@ function SystemToolsInner() {
             <span className="sys-filter-chips">
               <button
                 type="button"
-                className={'chip' + (wuDriverOnly ? '' : ' active')}
+                className={'chip' + (wuDriverOnly ? '' : ' active')} aria-pressed={!wuDriverOnly}
                 onClick={() => setWuDriverOnly(false)}
               >
                 {t('system.driver.wuFilterAll')}
               </button>
               <button
                 type="button"
-                className={'chip' + (wuDriverOnly ? ' active' : '')}
+                className={'chip' + (wuDriverOnly ? ' active' : '')} aria-pressed={wuDriverOnly}
                 onClick={() => setWuDriverOnly(true)}
                 disabled={wuCounts.drivers === 0}
               >

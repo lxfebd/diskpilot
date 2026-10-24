@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 其余 32 个 active 类按钮也报选中态——筛选芯片/排序列头/主题色板/页签全补 aria-pressed（R369）
+
+- 接在 R366 之后：当时只补了 `seg-opt` 分段单选 16 处，全仓扫一遍发现还有 32 个按钮
+  同样用「active 类」表达选中态——清理状态筛选芯片、脚本选中行、历史动作筛选、左侧页签、
+  主题色板（含自动色）、启动项筛选、Steam 创意工坊排序、Studio 模态页签、驱动分类/更新筛选、
+  工具墙 CLI 页签 / 分类导航 / 风险与排序与 AI 权限筛选 / 隐藏推广开关、工具箱六个服务页签。
+  这些状态只在 CSS 上可见，读屏听不出「当前选的是哪一个」。
+- 逐个补 `aria-pressed={与 active 同一个条件}`（主题自动色是反向条件 `!theme.accent`，
+  WU 筛选的「全部」是 `!wuDriverOnly`）；与 tablist 结构无关的分组统一用按下态，
+  避免为两三个按钮引入 role=tab 后还得配 tabpanel / roving tabindex 的半套 ARIA。
+- 守卫：a11y.test.ts 新增「className 含 active 的按钮必须带 aria 状态」——
+  aria-pressed / aria-selected / aria-current / aria-checked 任一即可。
+  自检：删掉 FileView 排序列头的 aria-pressed → 报 `./components/FileView.tsx:172` 并红。
+
 ### 2026-10-24 右键菜单补键盘入口——菜单键 / Shift+F10（R368）
 
 - 缺口：全仓 5 处 `onContextMenu`（文件树行、文件列表行、社区仓库两处路径、右键菜单自身）把「在文件管理器中打开 / 复制路径 / 移入回收站」只挂右键——

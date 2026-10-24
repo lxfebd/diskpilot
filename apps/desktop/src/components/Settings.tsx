@@ -523,7 +523,7 @@ export function Settings({ onClose, initialTab }: Props) {
               <div className="swatch-grid">
                 <button
                   type="button"
-                  className={`swatch auto${theme.accent ? '' : ' active'}`}
+                  className={`swatch auto${theme.accent ? '' : ' active'}`} aria-pressed={!theme.accent}
                   onClick={() => updateTheme({ accent: null })}
                   title={t('settings.themeAutoTitle')}
                 >{t('settings.themeAuto')}</button>
@@ -531,7 +531,7 @@ export function Settings({ onClose, initialTab }: Props) {
                   <button
                     key={c}
                     type="button"
-                    className={`swatch${theme.accent === c ? ' active' : ''}`}
+                    className={`swatch${theme.accent === c ? ' active' : ''}`} aria-pressed={theme.accent === c}
                     style={{ background: c }}
                     onClick={() => updateTheme({ accent: c })}
                     title={c}

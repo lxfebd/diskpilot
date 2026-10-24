@@ -143,11 +143,11 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
         <button className="ghost icon" title={t('toolbelt.cli.redetect')} aria-label={t('toolbelt.cli.redetect')} onClick={refresh}><RefreshCw size={13} /></button>
       </h2>
       <div className="toolbelt-tabs">
-        <button className={'tb-tab' + (view === 'cli' ? ' active' : '')} onClick={() => setView('cli')}>
+        <button className={'tb-tab' + (view === 'cli' ? ' active' : '')} aria-pressed={view === 'cli'} onClick={() => setView('cli')}>
           {t('toolbelt.cli.tabCli')}
           {status && <span className="tb-count">{t('toolbelt.cli.readyCount', { installed: cliInstalled, total: status.tools.length })}</span>}
         </button>
-        <button className={'tb-tab' + (view === 'all' ? ' active' : '')} onClick={() => setView('all')}>
+        <button className={'tb-tab' + (view === 'all' ? ' active' : '')} aria-pressed={view === 'all'} onClick={() => setView('all')}>
           {t('toolbelt.cli.tabAll')}
           {catalog && <span className="tb-count">{t('toolbelt.cli.totalCount', { n: catalog.total })}</span>}
         </button>
@@ -931,7 +931,7 @@ export function CatalogWall({
         <span className="muted small toolwall-count">
           {t('toolbelt.wall.toolCount', { n: activeTools.length })}
           <button
-            className={'ghost toolwall-hidepromo' + (hidePromo ? ' active' : '')}
+            className={'ghost toolwall-hidepromo' + (hidePromo ? ' active' : '')} aria-pressed={hidePromo}
             onClick={() => {
               const next = !hidePromo;
               setHidePromo(next);
@@ -954,7 +954,7 @@ export function CatalogWall({
       {/* 左：12 分类导航（全部 = 聚合视图，硬件信息 = 聚合页） */}
       <div className="toolwall-nav">
         <button
-          className={'toolwall-nav-item' + (activeCat === '__all__' ? ' active' : '')}
+          className={'toolwall-nav-item' + (activeCat === '__all__' ? ' active' : '')} aria-pressed={activeCat === '__all__'}
           onClick={() => setActiveCat('__all__')}
           title={t('toolbelt.wall.allTools')}
         >
@@ -963,7 +963,7 @@ export function CatalogWall({
           <span className="toolwall-nav-count">{allTools.length}</span>
         </button>
         <button
-          className={'toolwall-nav-item' + (activeCat === '__hardware__' ? ' active' : '')}
+          className={'toolwall-nav-item' + (activeCat === '__hardware__' ? ' active' : '')} aria-pressed={activeCat === '__hardware__'}
           onClick={() => setActiveCat('__hardware__')}
         >
           <Gauge size={15} />
@@ -976,7 +976,7 @@ export function CatalogWall({
           return (
             <button
               key={c.name}
-              className={'toolwall-nav-item' + (activeCat === c.name ? ' active' : '')}
+              className={'toolwall-nav-item' + (activeCat === c.name ? ' active' : '')} aria-pressed={activeCat === c.name}
               onClick={() => setActiveCat(c.name)}
               title={c.name}
             >
@@ -1019,7 +1019,7 @@ export function CatalogWall({
                   <button
                     key={r}
                     type="button"
-                    className={'chip' + (riskFilter === r ? ' active' : '')}
+                    className={'chip' + (riskFilter === r ? ' active' : '')} aria-pressed={riskFilter === r}
                     onClick={() => setRiskFilter(r)}
                   >
                     {r === 'all' ? t('toolbelt.wall.riskAll')
@@ -1037,7 +1037,7 @@ export function CatalogWall({
                   <button
                     key={k}
                     type="button"
-                    className={'chip' + (sortBy === k ? ' active' : '')}
+                    className={'chip' + (sortBy === k ? ' active' : '')} aria-pressed={sortBy === k}
                     onClick={() => setSortBy(k)}
                   >
                     {k === 'default' ? t('toolbelt.wall.sortDefault')
@@ -1082,7 +1082,7 @@ export function CatalogWall({
                       <button
                         key={f}
                         type="button"
-                        className={'chip' + (aiPerm === f ? ' active' : '')}
+                        className={'chip' + (aiPerm === f ? ' active' : '')} aria-pressed={aiPerm === f}
                         onClick={() => setAiPerm(f)}
                       >
                         {f === 'all' ? t('toolbelt.wall.aiPermAll')

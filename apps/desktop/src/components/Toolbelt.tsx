@@ -53,7 +53,7 @@ export function Toolbelt({ drives, scanning, onScanDrive, onScanAll, onGoWorkspa
       {/* 顶部服务工具行：网络 / 系统信息 / 返回工具墙（主角是下面的工具墙） */}
       <div className="toolbelt-services">
         <button
-          className={'toolbelt-service' + (view === 'wall' ? ' active' : '')}
+          className={'toolbelt-service' + (view === 'wall' ? ' active' : '')} aria-pressed={view === 'wall'}
           onClick={() => setView('wall')}
           title={t('toolbelt.svc.wallTitle')}
         >
@@ -61,35 +61,35 @@ export function Toolbelt({ drives, scanning, onScanDrive, onScanAll, onGoWorkspa
           {catalog && <span className="toolbelt-service-count">{catalog.total}</span>}
         </button>
         <button
-          className={'toolbelt-service' + (view === 'network' ? ' active' : '')}
+          className={'toolbelt-service' + (view === 'network' ? ' active' : '')} aria-pressed={view === 'network'}
           onClick={() => setView('network')}
           title={t('toolbelt.svc.networkTitle')}
         >
           <Globe size={16} /> {t('toolbelt.svc.network')}
         </button>
         <button
-          className={'toolbelt-service' + (view === 'sysinfo' ? ' active' : '')}
+          className={'toolbelt-service' + (view === 'sysinfo' ? ' active' : '')} aria-pressed={view === 'sysinfo'}
           onClick={() => setView('sysinfo')}
           title={t('toolbelt.svc.sysinfoTitle')}
         >
           <Cpu size={16} /> {t('toolbelt.svc.sysinfo')}
         </button>
         <button
-          className={'toolbelt-service' + (view === 'hardware' ? ' active' : '')}
+          className={'toolbelt-service' + (view === 'hardware' ? ' active' : '')} aria-pressed={view === 'hardware'}
           onClick={() => setView('hardware')}
           title={t('toolbelt.svc.hardwareTitle')}
         >
           <Activity size={16} /> {t('toolbelt.svc.hardware')}
         </button>
         <button
-          className={'toolbelt-service' + (view === 'bench' ? ' active' : '')}
+          className={'toolbelt-service' + (view === 'bench' ? ' active' : '')} aria-pressed={view === 'bench'}
           onClick={() => setView('bench')}
           title={t('toolbelt.svc.benchTitle')}
         >
           <Gauge size={16} /> {t('toolbelt.svc.bench')}
         </button>
         <button
-          className={'toolbelt-service' + (view === 'plugins' ? ' active' : '')}
+          className={'toolbelt-service' + (view === 'plugins' ? ' active' : '')} aria-pressed={view === 'plugins'}
           onClick={() => setView('plugins')}
           title={t('toolbelt.svc.marketTitle')}
         >

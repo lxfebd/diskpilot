@@ -62,7 +62,7 @@ export function LeftPanel({ root, selectedPath, onSelect }: Props) {
         {viewTabs(t).map((v) => (
           <button
             key={v.id}
-            className={'lefttab' + (view === v.id ? ' active' : '')}
+            className={'lefttab' + (view === v.id ? ' active' : '')} aria-pressed={view === v.id}
             onClick={() => persist(v.id)}
           >
             {v.icon} {v.label}

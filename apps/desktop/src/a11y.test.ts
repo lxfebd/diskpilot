@@ -547,3 +547,37 @@ describe('右键菜单的键盘入口（R368）', () => {
     expect(violations).toEqual([]);
   });
 });
+// R369：除 seg-opt 外还有 32 个按钮用「active 类」表达选中态——筛选芯片、排序列头、
+// 主题色板、服务页签、工具分类、模态页签等。active 只是视觉，读屏听不出选中的一项；
+// 全部补 aria-pressed（按下=当前项），守卫禁止未来再出现裸 active 类按钮。
+describe('active 类按钮都要报选中态（R369）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) { if (c === '\\') j++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it('className 含 active 的按钮必须带 aria 状态', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<button\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/' active'/.test(tag)) continue;
+        if (!/aria-pressed=|aria-selected=|aria-current=|aria-checked=/.test(tag)) {
+          violations.push(path + ':' + src.slice(0, start).split('\n').length);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

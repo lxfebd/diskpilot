@@ -314,10 +314,10 @@ function InstallScaffoldModal({
           <button className="ghost icon" onClick={onClose} title={t('studio.close')} aria-label={t('studio.close')}><X size={14} /></button>
         </div>
         <div className="modal-tabs">
-          <button className={'modal-tab' + (tab === 'toml' ? ' active' : '')} onClick={() => setTab('toml')}>
+          <button className={'modal-tab' + (tab === 'toml' ? ' active' : '')} aria-pressed={tab === 'toml'} onClick={() => setTab('toml')}>
             {t('studio.tabToml')}
           </button>
-          <button className={'modal-tab' + (tab === 'winapp2' ? ' active' : '')} onClick={() => setTab('winapp2')}>
+          <button className={'modal-tab' + (tab === 'winapp2' ? ' active' : '')} aria-pressed={tab === 'winapp2'} onClick={() => setTab('winapp2')}>
             {t('studio.tabWinapp2')}
           </button>
         </div>

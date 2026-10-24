@@ -159,7 +159,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
           <button
             key={a}
             type="button"
-            className={'hp-chip' + (action === a ? ' active' : '')}
+            className={'hp-chip' + (action === a ? ' active' : '')} aria-pressed={action === a}
             onClick={() => setAction(a)}
           >
             {filterLabel(a, t)}

@@ -193,7 +193,7 @@ export function StartupPanel() {
                 <button
                   key={f}
                   type="button"
-                  className={'chip' + (filter === f ? ' active' : '')}
+                  className={'chip' + (filter === f ? ' active' : '')} aria-pressed={filter === f}
                   onClick={() => setFilter(f)}
                 >
                   {f === 'all' ? t('system.startup.filterAll')

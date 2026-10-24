@@ -179,13 +179,13 @@ export function SteamWorkshopModal({
             <div className="steam-workshop-toolbar">
               <span className="steam-workshop-toolbar-label">{t('steam.workshopSort')}</span>
               <button
-                className={'steam-workshop-sortbtn' + (sortBy === 'oldest' ? ' active' : '')}
+                className={'steam-workshop-sortbtn' + (sortBy === 'oldest' ? ' active' : '')} aria-pressed={sortBy === 'oldest'}
                 onClick={() => setSortBy('oldest')}
               >
                 {t('steam.workshopSortOldest')}
               </button>
               <button
-                className={'steam-workshop-sortbtn' + (sortBy === 'size' ? ' active' : '')}
+                className={'steam-workshop-sortbtn' + (sortBy === 'size' ? ' active' : '')} aria-pressed={sortBy === 'size'}
                 onClick={() => setSortBy('size')}
               >
                 {t('steam.workshopSortSize')}
