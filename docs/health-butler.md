@@ -1,6 +1,6 @@
 # DiskPilot 定位升级：从「磁盘清理工具」到「整机健康管家」
 
-> 状态：方案（2026-10-01）· 读者：产品/开发 · 目的：把已有的 AI 代理、75 个 MCP 工具、
+> 状态：方案（2026-10-01）· 读者：产品/开发 · 目的：把已有的 AI 代理、76 个 MCP 工具、
 > 传感器/风扇写控、清理脚本体系串成一条**「预检 → 清单 → 一键确认」的自动化维护流程**，
 > 给产品定位和分期排期定方向。所有条目都挂在真实代码上，不是概念稿。
 
@@ -17,7 +17,7 @@
 | 体检（读） | 整盘秒扫 + 建议清单（scope 级，秒回缓存）| `scanner` crate / `cleanup_suggestions` |
 | 体检（读） | 硬件报告 + 历史归档 + 两次对比 | `hw_report` / `hw-history/*.json` |
 | 体检（读） | 磁盘空间趋势曲线（60s 去重、180 条）| `space-history.jsonl` |
-| 体检（读） | 75 个 MCP 工具（64 只读 + 11 写），AI 可直接接入 | `crates/agent-server` |
+| 体检（读） | 76 个 MCP 工具（65 只读 + 11 写），AI 可直接接入 | `crates/agent-server` |
 | 预检 | `cleanup_preflight`：退出进程检查 / 保留期 / 危险项标注 | 17+3 份 TOML 已回填 |
 | 出清单 | 总览「建议清理项目」+ AI 清单确认窗 + 重复文件清单 | `AssetOverview` / `CleanupProposalDialog` |
 | 确认执行 | 两步确认（5s 预备态）→ 回收站（非永久删）| `doClean` / `executeAiPlan` |

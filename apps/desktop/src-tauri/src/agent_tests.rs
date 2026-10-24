@@ -37,7 +37,7 @@ fn agent_server_bin_name_matches_platform() {
 }
 
 #[tokio::test]
-async fn agent_list_tools_returns_75_tools() {
+async fn agent_list_tools_returns_76_tools() {
     if !has_binary() {
         eprintln!("skip: agent-server 未构建（cargo build -p agent-server）");
         return;
@@ -45,8 +45,8 @@ async fn agent_list_tools_returns_75_tools() {
     let tools = agent_list_tools().await.expect("list tools 应成功");
     assert_eq!(
         tools.len(),
-        75,
-        "应返回 75 个 MCP 工具（64 只读 + 11 写操作，含 AIDA64 复刻 13 个 + 内存/GPU 压测/蓝屏 3 个 + 信息补全 4 个 + 自研 SuperIO 直读 1 个）"
+        76,
+        "应返回 76 个 MCP 工具（65 只读 + 11 写操作，含 AIDA64 复刻 13 个 + 内存/GPU 压测/蓝屏 3 个 + 信息补全 4 个 + 自研 SuperIO 直读 1 个 + 纯只读 sensor_history 1 个）"
     );
     // 抽查几个关键工具存在
     let names: Vec<String> = tools.iter().map(|t| t.name.clone()).collect();
@@ -65,6 +65,7 @@ async fn agent_list_tools_returns_75_tools() {
         "stress_test",
         "system_report",
         "sensor_trend",
+        "sensor_history",
         "sensor_alert",
         "hw_cpu_features",
         "hw_dram_timings",

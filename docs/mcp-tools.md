@@ -62,7 +62,8 @@
 | `fan_selfheal_diag` | — | 诊断风扇写控通道（只读 L0）：调用 fancmd diag json，返回驱动是否加载/驱动名/RTC 端口验证/SuperIO 芯片与 env_base/风扇列表/通道可写性，并给出明确的可修复点清单（缺驱动？芯片不可识别？可写但需 reset？）。用户在其他机器上发现『风扇控制不可用』时，先调这个拿诊断，再决定是否让用户授权 fan_selfheal_fix 修复。 |
 | `fan_selfheal_fix` | action:String, dry_run:Option<bool> | 修复风扇写控通道（**写操作 L2**，由主项目权限中心确认门 + 管理员权限双重守护）。action 可选：install_driver=安装并启动 inpoutx64 端口驱动（需管理员，复制 DLL 到 System32 + sc create/start，绝不覆盖已存在文件）；reset_fan <idx>=恢复指定风扇为主板自动控制（安全可逆，不需管理员）。 |
 | `sensor_alert` | cpu_temp:Option<f64>, disk_temp:Option<f64>, gpu_temp:Option<f64>, mem_percent:Option<f64>, disk_free_gb:Option<f64>, persist:Option<bool> | 传感器阈值告警（只读 L0，persist=true 时写应用自有告警日志）：体检 CPU 温度/磁盘温度/GPU 温度/内存占用/磁盘剩余是否超阈值，输出告警清单（只读采集 + 阈值比较，无系统改动）。参数 cpu_temp=CPU 温度阈值℃（默认 85）、disk_temp=磁盘温度阈值℃（默认 55）、gpu_temp=GPU 阈值℃（默认 85）、mem_percent=内存占用阈值%（默认 90）、disk_free_gb=磁盘剩余阈值 GB（默认 20）、persist=是否把告警写历史到 %LOCALAPPDATA%/diskpilot/agent-server/sensor-alerts.jsonl（默认 false，只写应用自有数据目录）。 |
-| `sensor_trend` | n:Option<usize>, format:Option<String> | 传感器趋势（只读 L0，写应用自有历史文件）：追加一条当前传感器快照（含 CPU 最高温）到历史 JSONL（%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl，追加式 + 自动裁剪 500 条——只写应用自己的数据目录，不改不动用户文件），返回最近 n 条（默认 10，上限 50）。format=json 时返回结构化数组供前端折线图。 |
+| `sensor_history` | n:Option<usize>, format:Option<String> | 传感器历史（**纯只读 L0，不采集不追加**）：只读 %LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl 已记录的历史快照（sensor_trend 追加写入、自动裁剪 500 条），返回最近 n 条（默认全部，上限 500）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。与 sensor_trend 的区别：本工具不做任何新采集/写入，纯展示历史。AI 在用户问『今天散热/温度变化历史/长时间趋势』时调用。 |
+| `sensor_trend` | n:Option<usize>, format:Option<String> | 传感器趋势（只读 L0，写应用自有历史文件）：追加一条当前传感器快照（含 CPU 最高温 / GPU 温度）到历史 JSONL（%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl，追加式 + 自动裁剪 500 条——只写应用自己的数据目录，不改不动用户文件），返回最近 n 条（默认 10，上限 50）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。 |
 | `system_report` | — | 一键系统体检报告（只读 L0，复刻 AIDA64 Report）：汇总 CPU/GPU/内存/主板/温度/磁盘健康/系统/电池全部只读采集，输出 Markdown 报告。AI 在用户问『体检/电脑状态总结/报告』时调用，拿它当结论依据。 |
 
 ## 硬件域（核心）
@@ -372,9 +373,13 @@ IPMI 服务器接口探测（只读 L0，复刻 AIDA64 IPMI）：检测主板是
 
 传感器阈值告警（只读 L0，persist=true 时写应用自有告警日志）：体检 CPU 温度/磁盘温度/GPU 温度/内存占用/磁盘剩余是否超阈值，输出告警清单（只读采集 + 阈值比较，无系统改动）。参数 cpu_temp=CPU 温度阈值℃（默认 85）、disk_temp=磁盘温度阈值℃（默认 55）、gpu_temp=GPU 阈值℃（默认 85）、mem_percent=内存占用阈值%（默认 90）、disk_free_gb=磁盘剩余阈值 GB（默认 20）、persist=是否把告警写历史到 %LOCALAPPDATA%/diskpilot/agent-server/sensor-alerts.jsonl（默认 false，只写应用自有数据目录）。AI 在用户问『电脑状态健康吗/该注意什么』时调用。
 
+### `sensor_history`
+
+传感器历史（纯只读 L0，不采集不追加）：只读 %LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl 已记录的历史快照（sensor_trend 追加写入、自动裁剪 500 条），返回最近 n 条（默认全部，上限 500）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。与 sensor_trend 的区别：本工具不做任何新采集/写入，纯展示历史。AI 在用户问『今天散热/温度变化历史/长时间趋势』时调用。
+
 ### `sensor_trend`
 
-传感器趋势（只读 L0，写应用自有历史文件）：追加一条当前传感器快照（含 CPU 最高温）到历史 JSONL（%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl，追加式 + 自动裁剪 500 条——只写应用自己的数据目录，不改不动用户文件），返回最近 n 条（默认 10，上限 50）。format=json 时返回结构化数组供前端折线图。AI 在用户问『温度趋势/散热表现』时调用（多次调用可见随时间变化）。
+传感器趋势（只读 L0，写应用自有历史文件）：追加一条当前传感器快照（含 CPU 最高温 / GPU 温度）到历史 JSONL（%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl，追加式 + 自动裁剪 500 条——只写应用自己的数据目录，不改不动用户文件），返回最近 n 条（默认 10，上限 50）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。AI 在用户问『温度趋势/散热表现』时调用（多次调用可见随时间变化）。
 
 ### `service_control`
 

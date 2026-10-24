@@ -1072,7 +1072,7 @@ function mcpTool(
   };
 }
 
-// 75 个 MCP 工具（64 只读 + 11 写操作，与 crates/agent-server/src/tools/mod.rs
+// 76 个 MCP 工具（65 只读 + 11 写操作，与 crates/agent-server/src/tools/mod.rs
 // 及 apps/desktop/src-tauri/src/agent.rs WRITE_TOOLS 同源对齐）注册进
 // toolRegistry（execTool / buildToolDefs 查表自动生效）。写工具带 confirmPerm，
 // execute 时先过 sys.control 权限门 + 确认弹窗，confirmed=true 才真正调用。

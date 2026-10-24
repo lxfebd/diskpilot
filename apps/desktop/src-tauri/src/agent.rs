@@ -1,6 +1,6 @@
 //! agent-server 桥接（方案 A：独立进程 + rmcp client over stdio）
 //!
-//! 前端 AI 工具（execTool）把 75 个 MCP 工具（磁盘/文件/进程/硬件/网络/
+//! 前端 AI 工具（execTool）把 76 个 MCP 工具（磁盘/文件/进程/硬件/网络/
 //! 服务/安全审计/回收站/环境变量/工具箱/AIDA64 复刻/内存与 GPU 压测/蓝屏分析
 //! 与信息补全 4 个（Defender/用户账户/网卡明细/许可证）、自研 SuperIO 直读、
 //! 8 个写操作）转到这里调用：本模块用 `rmcp` client spawn `agent-server.exe`
@@ -16,7 +16,7 @@
 //!   温度）→ ACPI 热区 + nvidia-smi/ADL GPU + SMART 磁盘。
 //!
 //! 安全模型：
-//! - 64 个只读工具对应主项目 L0 恒开；11 个写工具（process_kill / service_control /
+//! - 65 个只读工具对应主项目 L0 恒开；11 个写工具（process_kill / service_control /
 //!   fan_selfheal_fix / fan_control / file_recycle / process_start /
 //!   scheduled_task_manage / uninstall_app / toolbelt_run / stress_test / stress_test_gpu）
 //!   要求 confirmed==Some(true) 硬校验
@@ -25,7 +25,7 @@
 //! - 子进程只有继承的 stdio 句柄，崩溃不影响主进程（进程隔离）；
 //! - 二进制找不到时优雅降级（返回错误而非 panic），前端可展示「工具集未就绪」。
 //!
-//! 生命周期：每次调用重新 spawn 一次 agent-server（无共享状态）。75 个工具
+//! 生命周期：每次调用重新 spawn 一次 agent-server（无共享状态）。76 个工具
 //! 单次启动约 10–50ms，AI 工具调用频率低（每轮对话个位数），可接受；
 //! 换来进程隔离 + 崩溃自愈天然成立（一次调用失败不影响下一次）。
 

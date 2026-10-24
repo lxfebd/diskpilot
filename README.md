@@ -6,7 +6,7 @@
 
 **看清磁盘 · 问懂 AI · 安全删净 —— 还能让 AI 自己来操作。**
 
-开源的磁盘分析与系统探查工具，Tauri 2 + Rust 实现。整盘秒扫定位空间去向，陌生文件夹拖给 AI 解释，已知应用按清理脚本逐项回收；内置 75 个 MCP 工具，AI agent 可以直接接入做系统巡检。
+开源的磁盘分析与系统探查工具，Tauri 2 + Rust 实现。整盘秒扫定位空间去向，陌生文件夹拖给 AI 解释，已知应用按清理脚本逐项回收；内置 76 个 MCP 工具，AI agent 可以直接接入做系统巡检。
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
@@ -43,7 +43,7 @@
 
 - **v0.2.2（2026-09-26 发布）**
   - 外壳 2.0：侧栏重构 / 清理页六组件 / 优化页（启动项 + 电源计划）/ 操作历史 / preflight 预检
-  - 75 个 MCP 工具的 AI agent 操作层（64 只读 + 11 写，写操作确认门）+ 通用 MCP 服务器接入
+  - 76 个 MCP 工具的 AI agent 操作层（65 只读 + 11 写，写操作确认门）+ 通用 MCP 服务器接入
   - 工具墙 90+ 系统工具 + 插件市场（Ed25519 校验 + URL/注册表安装 + 更新回滚）
   - 硬件中心：基准 / 压测 / 甜甜圈满载 / 传感器趋势与告警 / 体检报告；风扇写入控制（自研 SuperIO 直读）
   - 扫描与渲染性能专项、扫描结果落盘持久化、低配机器优化
@@ -125,7 +125,7 @@ Windows 直读 NTFS MFT（配合 USN 日志增量更新），其他平台用 jwa
 
 每份脚本都经过同一套流程：真实机器勘测目录结构 → 精准 glob → `scaffold-lint` 红线校验（CI 强制）→ 安全测试（正向断言 + 红线反向断言）→ 真机试运行验证。宁缺毋滥——早期曾有 36 份未经核验的模板脚本被全部下架，因为 glob 边界没验证过就存在误删风险。
 
-### 4. AI agent 可操作：75 个 MCP 工具（64 只读 + 11 写）
+### 4. AI agent 可操作：76 个 MCP 工具（65 只读 + 11 写）
 
 独立的 `agent-server` crate 通过 **MCP（Model Context Protocol）stdio** 把自己接到任意 AI agent 上：
 
@@ -183,7 +183,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
    │           │           │          │            │           │            │           │
 ┌──▼─────┐ ┌───▼─────┐ ┌──▼─────┐ ┌──▼──────┐ ┌───▼───────┐ ┌─▼────────┐ ┌─▼──────────┐
 │scanner │ │scaffold │ │executor│ │scaffold-│ │steam-     │ │toolbelt  │ │agent-server│
-│NTFS MFT│ │TOML 加载│ │回收站/ │ │lint CI  │ │insp.      │ │工具墙    │ │75 个 MCP   │
+│NTFS MFT│ │TOML 加载│ │回收站/ │ │lint CI  │ │insp.      │ │工具墙    │ │76 个 MCP   │
 │+USN+walk││+globset │ │隔离区  │ │红线校验 │ │Steam 盘点 │ │90+ 集成  │ │工具(64+11) │
 └────────┘ └─────────┘ └────────┘ └─────────┘ └───────────┘ └──────────┘ └────────────┘
 ```
@@ -202,7 +202,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 ## 文档
 
 - [docs/](docs/README.md) — 架构详解、使用说明书、清理脚本编写指南
-- [docs/mcp-tools.md](docs/mcp-tools.md) — 内置 75 个 MCP 工具参考（参数与安全分级）
+- [docs/mcp-tools.md](docs/mcp-tools.md) — 内置 76 个 MCP 工具参考（参数与安全分级）
 - [docs/plugin-market-index.md](docs/plugin-market-index.md) — 插件市场社区索引契约（建官方索引仓库时照此执行）
 - [docs/publish-plugin-guide.md](docs/publish-plugin-guide.md) — 发布插件到社区市场（作者快速上手）
 - [website/index.html](website/index.html) — 项目宣传站（本地浏览器直接打开即可预览）
@@ -217,7 +217,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 - [x] 拖文件夹给 AI 解释 + AI 顾问整机问答（BYOK 四协议）
 - [x] 21 份清理脚本 + 红线校验 + 安全测试流水线
 - [x] 回收站 / undo.jsonl / 隔离区 / 一键撤销
-- [x] 75 个 MCP 工具的 AI agent 操作层（写操作确认门）
+- [x] 76 个 MCP 工具的 AI agent 操作层（写操作确认门）
 - [x] 硬件中心（基准 / 压测 / 传感器 / 体检报告）+ 工具墙 90+ 工具集成
 - [x] Steam 游戏库只读盘点 + 着色器缓存清理
 - [x] 性能专项：扫描链路内存与渲染优化（克隆裁剪 / 选中节点引用 / 虚拟滚动 / 批量检测 / 黑名单目录）

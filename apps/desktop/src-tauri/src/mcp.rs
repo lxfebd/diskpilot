@@ -4,7 +4,7 @@
 //! 其暴露的工具自动注册进前端 AI 工具表（mcp_list_tools → dynamicMcpTools）。
 //!
 //! 与内置 agent-server 的区别：
-//! - agent.rs = 硬编码 spawn 本仓库 agent-server.exe（75 个工具 = 64 只读 + 11 写，
+//! - agent.rs = 硬编码 spawn 本仓库 agent-server.exe（76 个工具 = 65 只读 + 11 写，
 //!   真值见 agent.rs 的 WRITE_TOOLS 常量与 agent_tests.rs 的分布断言）；
 //! - 本模块 = 用户配置的任意 MCP 服务器（可插拔增删改，写工具需确认）。
 //!
