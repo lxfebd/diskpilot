@@ -413,7 +413,8 @@
 .steam-search input {
   flex: 1;
   border: none;
-  outline: none;
+  /* R348：这里原来有 outline: none，键盘聚焦搜索框完全看不出焦点；
+     删掉后由 layout.css 的 input:focus-visible 统一给描边。 */
   font: inherit;
   font-size: 13px;
   background: transparent;

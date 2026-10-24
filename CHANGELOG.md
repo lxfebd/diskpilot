@@ -5,6 +5,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 键盘焦点不再被 outline:none 抹掉——输入框/下拉框/弹窗标签补描边并加守卫（R348）
+
+- 缺口：`styles/layout.css` 的 `input, select { outline: none; }` 把浏览器默认焦点框一次性抹掉，
+  只靠 `:focus` 的 1px 位移 + 阴影当暗示——浅色小控件上几乎看不出来，键盘用户 Tab 到下拉框
+  或裸输入框时完全不知道自己停在哪；`styles/steam.css` 的 `.steam-search input` 同样 `outline: none`
+  且没有任何替代（`.steam-search` 只有 border-bottom）；`styles/layout.css` 的
+  `.modal-tab:focus { outline: none; }` 更是连替代都没有，Tab 到非当前标签时焦点彻底消失。
+- 改动：`input:focus-visible, select:focus-visible` 统一补 `outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;`（鼠标点出来的焦点不触发 :focus-visible，不受影响）；`.modal-tab:focus-visible`
+  同样补描边（同特异性后写覆盖 `.modal-tab:focus`）；删掉 `.steam-search input` 的 `outline: none`，
+  交给全局规则统一给描边；
+- `a11y.test.ts` 加两条 CSS 守卫（`import.meta.glob('./**/*.css', { query: '?raw' })`）：
+  ① 单条 `:focus { outline: none; }` 必须在同一行给 border-color/box-shadow，或在文件后部有
+  同名选择器的 `:focus-visible`；② 有 `input, select { … outline: none }` 的样式表必须配
+  `input:focus-visible` 替身。改前跑同一套规则报出 exactly 这两处（layout.css:959 与全局重置），
+  改后归零——守卫非空转；
+- 验证：`pnpm -C apps/desktop check` 全绿（54 files / 902 tests）。
 ### 2026-10-24 弹窗里 Tab 不再跑到背景页——aria-modal 的承诺开始兑现（R347）
 
 - R343 给 15 处遮罩写了 `role="dialog" aria-modal="true"`，等于向读屏软件承诺「外面不可交互」；

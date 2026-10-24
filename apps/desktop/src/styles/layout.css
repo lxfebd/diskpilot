@@ -220,6 +220,14 @@ input:focus, select:focus {
   transform: translate(-1px, -1px);
   box-shadow: var(--shadow);
 }
+/* R348：上一块把 input/select 的默认描边抹了（鼠标点击不想要那圈突兀的框），
+   但 :focus 的位移+阴影在浅色小控件上几乎看不出来——键盘用户看不出焦点在哪。
+   这里只给 :focus-visible 补一条明确描边：鼠标点出来的焦点不受影响，Tab 到的才亮。 */
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 
 /* ── Header advisor pill ───────────────────────────────────────────── */
 .provider-pill {
@@ -957,6 +965,13 @@ footer {
   border-bottom-color: var(--accent);
 }
 .modal-tab:focus { outline: none; }
+/* R348：:focus 抹掉了描边却没给替身——Tab 到非当前标签时完全看不出焦点，
+   补 :focus-visible（同特异性，后写覆盖；鼠标点击仍是静默的）。 */
+.modal-tab:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+  border-radius: var(--radius-xs);
+}
 
 /* Winapp2.ini 导入预览 */
 .winapp2-preview { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }

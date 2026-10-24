@@ -127,3 +127,37 @@ describe('弹窗焦点循环已挂载（R347）', () => {
   });
 });
 
+// ── 键盘焦点不许被 outline:none 抹掉（R348）────────────────────────
+// 全仓出现过两类「焦点看不见」：`input, select { outline: none }` 这种全局重置没配
+// :focus-visible 替身；单条 `<selector>:focus { outline: none; }` 既没给 border-color /
+// box-shadow，也没补 :focus-visible。两者都让键盘用户看不出焦点在哪，且不会有断言变红。
+const RAW_CSS = import.meta.glob('./**/*.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+describe('键盘焦点不许被 outline:none 抹掉（R348）', () => {
+  it(':focus 规则里的 outline:none 必须有可见替身或 :focus-visible', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_CSS)) {
+      const lines = src.split('\n');
+      lines.forEach((line, i) => {
+        if (!/:focus\b(?!-visible)/.test(line)) return;
+        if (!/outline:\s*none/.test(line)) return;
+        if (/border-color|box-shadow/.test(line)) return;
+        const sel = line.slice(0, line.indexOf(':focus')).trim();
+        if (lines.slice(i + 1).join('\n').includes(sel + ':focus-visible')) return;
+        violations.push(`${path}:${i + 1} ${sel}:focus 抹掉了描边但没有可见替身`);
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('全局 input/select 的 outline:none 必须配 :focus-visible 替身', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_CSS)) {
+      if (!/input\s*,\s*select\s*\{[^}]*outline:\s*none/.test(src)) continue;
+      if (/input:focus-visible/.test(src)) continue;
+      violations.push(`${path} 全局 input/select 重置缺 :focus-visible 替身`);
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
