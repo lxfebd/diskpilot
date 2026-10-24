@@ -56,6 +56,7 @@ pub(crate) struct SuggestionDiff {
     /// 每 scaffold 的环比：scaffold_id → (现字节, 上次字节, 差值)。
     /// 只在两个快照里都出现过的 scaffold 才给项；单边出现的（新增/消失）
     /// 走 new_scaffolds / gone_scaffolds，不假装"涨了 N 字节"。
+    /// R337：按 |delta| 降序（同值按 scaffold_id 升序），前端取 [0] 即最大变化。
     pub scaffolds: Vec<SuggestionScopeDiff>,
     /// 本次才出现的 scaffold（上次没有）：可清量是净新增，无从谈"涨跌"。
     pub new_scaffolds: Vec<String>,
@@ -283,6 +284,13 @@ pub(crate) fn diff_points(
             delta: now_bytes as i64 - prev_bytes as i64,
         });
     }
+    // R337：按变化量降序排，别按 id 字典序——前端「主要变化在 X」取的就是 [0]。
+    out.scaffolds.sort_by(|a, b| {
+        b.delta
+            .abs()
+            .cmp(&a.delta.abs())
+            .then(a.scaffold_id.cmp(&b.scaffold_id))
+    });
     Some(out)
 }
 
@@ -453,6 +461,36 @@ mod tests {
         assert_eq!(d.scaffolds.len(), 1, "只有共同出现的才给环比");
         assert_eq!(d.scaffolds[0].scaffold_id, "wechat");
         assert_eq!(d.scaffolds[0].delta, 0, "持平");
+    }
+
+    #[test]
+    fn diff_scaffolds_sorted_by_abs_delta_desc() {
+        // R337：前端「主要在 X」直接取 scaffolds[0] → 必须是最·大变化，而不是按 id
+        // 字典序的第一个（browser 排在 wechat 前，可能只涨了 1 字节）。
+        let cur = pt(
+            1_700_100_000,
+            1_100,
+            &[("browser", 501), ("wechat", 500), ("conda", 99)],
+        );
+        let prev = pt(
+            1_700_000_000,
+            300,
+            &[("browser", 500), ("wechat", 100), ("conda", 0)],
+        );
+        let d = diff_points(Some(&cur), Some(&prev)).unwrap();
+        let order: Vec<&str> = d.scaffolds.iter().map(|s| s.scaffold_id.as_str()).collect();
+        assert_eq!(order, vec!["wechat", "conda", "browser"], "按 |delta| 降序");
+        assert_eq!(d.scaffolds[0].delta, 400, "最大变化在前");
+        // 同 |delta| 时按 id 升序，结果稳定可预测。
+        let cur2 = pt(1_700_100_000, 200, &[("zeta", 100), ("alpha", 100)]);
+        let prev2 = pt(1_700_000_000, 400, &[("zeta", 200), ("alpha", 200)]);
+        let d2 = diff_points(Some(&cur2), Some(&prev2)).unwrap();
+        let order2: Vec<&str> = d2
+            .scaffolds
+            .iter()
+            .map(|s| s.scaffold_id.as_str())
+            .collect();
+        assert_eq!(order2, vec!["alpha", "zeta"], "同值按 id 升序");
     }
 
     #[test]

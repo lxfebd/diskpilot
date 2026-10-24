@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 跨次对比的「主要变化」不再指错项——按变化量排，并补上前后值（R337）
+
+- 「建议清理」卡的环比行写着「主要在 {label}」，取的是 `scaffolds[0]`；而后端
+  `suggestion_history.rs` 是按 `scaffold_id` 字典序收集的——排第一的可能是几乎没变、
+  甚至 0 变化的那类（`browser-cache` 排在 `wechat-pc` 前），文案承诺「主要」却指错项；
+- 后端 `diff_points` 收集完改按 `|delta|` 降序排序（同值按 id 升序，结果稳定可预测），
+  字段注释同步写明「前端取 [0] 即最大变化」，并补单测覆盖排序与同值 tie-break；
+- 前端新增纯函数 `biggestChange`（按 |delta| 挑最大、同值按 id；全为 0 → null），
+  不单方面依赖后端顺序；文案改为「主要在 X（{prev} → {now}）」——把后端一直给、
+  前端从没读过的 `now_bytes` / `prev_bytes` 用上，看得出从多少变成多少；
+- 全为 0 时不显示该行：绝不出「主要在 X（1.2 GB → 1.2 GB）」这种假的主要变化；
+- 测试：`AssetOverview.test.ts` 新增 5 条（最大项 / 减少最多 / 同值按 id / 全 0 与空 / 前后值），
+  `suggestion_history.rs` 新增 1 条（排序 + tie-break）；
+- 验证：`pnpm -C apps/desktop check` 全绿（52 files / 858 tests）；
+  `cargo test -p diskpilot-desktop diff_` 5 passed；`cargo fmt --check` 与 clippy `-D warnings` 均通过。
 ### 2026-10-24 前端产物收口：主包 537 → 442 kB，两条「假动态导入」警告清掉（R336）
 
 - `pnpm -C apps/desktop build` 每次都在喊 `Some chunks are larger than 500 kB`：入口 chunk 537 kB；

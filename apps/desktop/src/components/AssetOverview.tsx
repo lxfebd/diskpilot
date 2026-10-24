@@ -314,6 +314,29 @@ export function shouldShowDiff(d: SuggestionDiff | null): boolean {
   return diffTrend(d.total_delta).trend !== 'none';
 }
 
+/** R337：真正「变化最大」的那一类。此前前端直接取 scaffolds[0]——那是后端按
+ *  scaffold_id 字典序排的第一项，可能恰好 0 变化，于是「主要变化在 X」指错项。
+ *  这里自己按 |delta| 最大挑（同值按 id 升序）；全为 0 → null，不报假的主要变化。 */
+export interface ScopeChange {
+  scaffold_id: string;
+  now_bytes: number;
+  prev_bytes: number;
+  delta: number;
+}
+
+export function biggestChange(scaffolds: readonly ScopeChange[] | null | undefined): ScopeChange | null {
+  if (!scaffolds || scaffolds.length === 0) return null;
+  let best: ScopeChange | null = null;
+  for (const s of scaffolds) {
+    const abs = Math.abs(s.delta);
+    if (abs === 0) continue;
+    if (best === null) { best = s; continue; }
+    const bestAbs = Math.abs(best.delta);
+    if (abs > bestAbs || (abs === bestAbs && s.scaffold_id < best.scaffold_id)) best = s;
+  }
+  return best;
+}
+
 /** R92：每个 scaffold 的「主目录」路径（同 aggregateByScaffold 口径——父节点已
  *  打标则子节点不算，只收最外层命中；同 scaffold 多命中取体量最大的那个）。
  *  分类占用行点击时用它定位到工作台；没有命中目录的分类返回不了键（点击不动作）。
@@ -1612,6 +1635,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         : cleanState === 'error' ? t('overview.clean.failed')
           : selScanned ? t('overview.clean.noneOnDrive')
             : t('overview.clean.needScan');
+  // R337：主要变化 = |delta| 最大的共享 scope（后端排序 + 这里再自证一次）。
+  const diffTopChange = biggestChange(suggDiff ? suggDiff.scaffolds : null);
 
   return (
     <div className="asset-overview">
@@ -1807,11 +1832,15 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                     {t('overview.clean.diffGap', { n: suggDiff!.gap_days })}
                   </span>
                 )}
-                {suggDiff!.scaffolds.length > 0 && (
+                {/* R337：文案承诺「主要在 X」，X 就必须是真·最大变化——此前取 scaffolds[0]，
+                    那是后端按 id 字典序排的第一项，可能恰好 0 变化。顺带把后端一直给、
+                    前端没读的 now_bytes / prev_bytes 补上：看得出从多少变成多少。 */}
+                {diffTopChange !== null && (
                   <span className="ao-diff-top">
                     {t('overview.clean.diffTop', {
-                      label: suggDiff!.scaffolds[0].scaffold_id,
-                      size: formatBytes(Math.abs(suggDiff!.scaffolds[0].delta)),
+                      label: diffTopChange.scaffold_id,
+                      prev: formatBytes(diffTopChange.prev_bytes),
+                      now: formatBytes(diffTopChange.now_bytes),
                     })}
                   </span>
                 )}

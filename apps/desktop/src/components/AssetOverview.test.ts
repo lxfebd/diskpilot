@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -578,6 +578,49 @@ describe('建议清理跨次对比（health-butler P0）', () => {
     // 首次快照：diff 对象存在但没有差值 → 不显示徽标（另走"首次"文案）。
     expect(shouldShowDiff({ ...base, total_delta: null })).toBe(false);
     expect(shouldShowDiff(null)).toBe(false);
+  });
+});
+
+// R337：跨次对比里的「主要变化」必须真是最大变化——后端按 id 字典序给过一份，
+// 前端不能再直接取 [0]。
+describe('主要变化（R337 biggestChange）', () => {
+  const sc = (id: string, prev: number, now: number) => ({
+    scaffold_id: id,
+    prev_bytes: prev,
+    now_bytes: now,
+    delta: now - prev,
+  });
+
+  it('取 |delta| 最大的一项，而不是数组第一项', () => {
+    const top = biggestChange([sc('browser', 500, 501), sc('wechat', 100, 500), sc('conda', 0, 99)]);
+    expect(top?.scaffold_id).toBe('wechat');
+    expect(top?.delta).toBe(400);
+  });
+
+  it('减少得最多的也算最大变化（按绝对值比）', () => {
+    const top = biggestChange([sc('browser', 10, 20), sc('wechat', 900, 100)]);
+    expect(top?.scaffold_id).toBe('wechat');
+    expect(top?.delta).toBe(-800);
+  });
+
+  it('同 |delta| 按 id 升序，结果稳定', () => {
+    expect(biggestChange([sc('zeta', 200, 100), sc('alpha', 200, 100)])?.scaffold_id).toBe('alpha');
+  });
+
+  it('全为 0 / 空 / null → null（不报假的主要变化）', () => {
+    expect(biggestChange([sc('wechat', 100, 100)])).toBeNull();
+    expect(biggestChange([])).toBeNull();
+    expect(biggestChange(null)).toBeNull();
+    expect(biggestChange(undefined)).toBeNull();
+  });
+
+  it('前后值一起带出，看得出从多少变到多少', () => {
+    expect(biggestChange([sc('wechat', 100, 500)])).toEqual({
+      scaffold_id: 'wechat',
+      prev_bytes: 100,
+      now_bytes: 500,
+      delta: 400,
+    });
   });
 });
 
