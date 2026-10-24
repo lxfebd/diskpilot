@@ -5,6 +5,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 停止 agent 工具失败不再只写控制台（R341）
+
+- 「停止」按钮走 `stopAgentTool` → `api.cancelToolCalls()`，取消失败时只 `console.error`，
+  界面毫无反应；压测 / 大文件扫描这种长任务，用户会以为已经停下，实际还在跑；
+- 现在失败会弹一条 err toast：「停止失败：{原因}（任务可能还在跑）」，成功时保持安静；
+  `stopAgentTool` 改为返回 `boolean`（Tauri 环境外直接 true），调用方也能按结果处理；
+- 新增 2 条单测（取消失败 → false + err toast 带原因；取消成功 → true 且不打扰）；
+- 验证：`pnpm -C apps/desktop check` 全绿（53 files / 871 tests）。
 ### 2026-10-24 重复文件清单说清楚「另有 N 个正在用、已跳过」（R340）
 
 - 总览「重复文件」扫描会把每组保留 1 份、其余给成清理候选；被进程占用（独占打开失败）

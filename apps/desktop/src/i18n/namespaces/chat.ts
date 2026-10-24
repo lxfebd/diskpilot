@@ -112,6 +112,7 @@ export const chat = {
     'chat.input.placeholderIdle': '直接问 AI：查看电脑配置、硬件健康、清理建议，或贴张图片问',
     'chat.input.stopTitle': '停止 AI 与正在运行的压测',
     'chat.input.stop': '停止',
+    'chat.stopFailed': '停止失败：{msg}（任务可能还在跑）',
     'chat.input.send': '发送',
   },
   en: {
@@ -216,6 +217,7 @@ export const chat = {
     'chat.input.placeholderIdle': 'Ask away: PC specs, hardware health, cleanup advice — or paste an image',
     'chat.input.stopTitle': 'Stop the AI and any stress test running',
     'chat.input.stop': 'Stop',
+    'chat.stopFailed': 'Stop failed: {msg} (the task may still be running)',
     'chat.input.send': 'Send',
   },
 };

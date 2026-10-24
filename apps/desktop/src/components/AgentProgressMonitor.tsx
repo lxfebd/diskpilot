@@ -10,7 +10,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { isTauri } from '../env';
 import { api } from '../api';
-import { useT } from '../i18n';
+import { t, useT } from '../i18n';
+import { useStore } from '../store';
 
 export interface AgentToolProgressPayload {
   pct: number; // 千分比 0..1000
@@ -23,13 +24,17 @@ export interface AgentToolProgressPayload {
  * 停止当前正在运行的 agent 工具调用（B2/B3）。
  * 后端 agent_tool_cancel 向所有在飞的工具调用发送取消信号，立即退出。
  */
-export const stopAgentTool = async () => {
-  if (isTauri) {
-    try {
-      await api.cancelToolCalls();
-    } catch (e) {
-      console.error('停止 agent 工具失败:', e);
-    }
+export const stopAgentTool = async (): Promise<boolean> => {
+  if (!isTauri) return true;
+  try {
+    await api.cancelToolCalls();
+    return true;
+  } catch (e) {
+    // R341：停止失败必须说话——只写控制台时用户以为任务已经停下，其实还在跑
+    // （压测/大文件扫描这种长任务尤其误导）。返回 false 让调用方也能判断。
+    const msg = e instanceof Error ? e.message : String(e);
+    useStore.getState().toast(t('chat.stopFailed', { msg }), 'err');
+    return false;
   }
 };
 
