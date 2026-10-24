@@ -982,7 +982,7 @@ footer {
 .seg-opt:last-child { border-right: 0; }
 .seg-opt:hover { background: var(--accent-bg); }
 .seg-opt.active { background: var(--accent); color: var(--on-accent, var(--ink)); }
-/* 各分段控件统一按钮尺寸：主题(3)/字号(4)/每目录保留文件数(4)/协议(5) */
+/* 各分段控件统一按钮尺寸：传输方式(2)/主题(3)/字号(4)/每目录保留文件数(4)/协议(5) */
 .seg-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg-3 .seg-opt,
@@ -1018,6 +1018,8 @@ footer {
   white-space: nowrap;
 }
 .seg-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* R397：MCP 输入表单的传输方式切换只有 2 个选项，基础 .seg 是 3 列网格，不写这条会留一个空列的外框格。 */
+.seg-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 /* Base URL 下方的协议识别标签 + 手动开关入口 */
 .provider-detect {

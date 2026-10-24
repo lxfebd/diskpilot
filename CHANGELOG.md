@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R397: MCP 传输方式切换不再留一个空列——seg-2 网格规则补上 + 守卫
+
+- 缺口：layout.css 的基础 .seg 是 3 列网格，seg-3/seg-4/seg-5 变体都有各自的 grid-template-columns 规则，唯独 MCP 服务器表单里传输方式（stdio / http 两项）用的 seg-2 没有任何规则——两个按钮按 3 列排布，各占 1/3 宽，右边空出一个带外框的空列。
+- 改动：layout.css 加 .seg-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }，并把各分段控件按钮尺寸注释补上「传输方式(2)」。
+- 守卫：新增 apps/desktop/src/segGrid.test.ts——扫 TSX 里出现的每个 seg-N，layout.css 必须有对应的 .seg-N 规则（基础 .seg 是 3 列，N 不为 3 时缺规则必留空列/换行）。自检：临时删掉 .seg-2 规则 → 报 ./components/McpServers.tsx:803: seg-2、EXIT=1，还原后全绿。
+- 验证：pnpm -C apps/desktop check 70 files / 1024 tests / EXIT=0。
+
 ### R396: 右键菜单触发器声明会开菜单——读屏听得到 4 处右键入口；顺手删死类型 ToolModule
 
 - 缺口：全仓 4 处上下文菜单触发器（树视图行 TreeView.tsx、文件行 FileView.tsx、工作室路径/子项 Studio.tsx 两处）虽有 R368 的菜单键/Shift+F10 键盘入口，但元素没声明 aria-haspopup，读屏软件不知道「这里能唤出菜单」。
