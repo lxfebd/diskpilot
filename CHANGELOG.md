@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 相同提醒不再堆一摞——toast 按「文本+级别+动作」去重（R364）
+
+- 缺口：`store.ts` 的 `toast()` 每次直接 append——连续几次保存失败、反复触发同一提醒
+  时，栈里堆一摞一模一样的条，互相遮挡还都要等各自超时才消失。
+- 新增 `toastKey(text, kind, actionLabel?)` 纯函数（`级别\u0001文本\u0001动作标签`）；
+  `toast()` 倒序找同 key 的最晚一条：命中就原地替换（位置不变、重记停留时长，
+  旧 id 的定时器 dismiss 扑空无害），否则照旧追加。不同文本/级别/动作按钮各自成条。
+- 测试：`store.test.ts` 新增 4 条（toastKey 组成、相同只留一条、不同文本/级别/动作
+  各自成条、替换后位置不变）。
+- 验证：`pnpm -C apps/desktop check` 全绿（60 files / 957 tests）。
+
 ### 2026-10-24 切页后焦点跟到新页面——跳转链接 + main 收焦点（R363）
 
 - 缺口：点侧栏切页后，焦点还留在侧栏按钮上——读屏软件不知道该从新页面哪里念起，
@@ -23,6 +34,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 顺带：R360 的「每个 `<a>` 都有 onClick」守卫对页内锚点 `href="#..."` 豁免
   （跳转链接不该走 openExternal）。
 - 验证：`pnpm -C apps/desktop check` 全绿（60 files / 953 tests）。
+
 ### 2026-10-24 进度条会自报进度——扫描 / 清理 / 压测 / 下载 / 更新补 role=progressbar（R362）
 
 - 缺口：全仓 `role="progressbar"` 数量是 0。扫描条、清理进度、压测监控条、更新下载、

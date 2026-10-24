@@ -12,7 +12,7 @@ vi.mock('./api', () => ({
   },
 }));
 
-import { useStore, toastDuration, type ChatTurn } from './store';
+import { useStore, toastDuration, toastKey, type ChatTurn } from './store';
 import { api } from './api';
 
 function mk(name: string, path: string, size: number, file_count: number, children: Node[] = []): Node {
@@ -463,5 +463,44 @@ describe('toastDuration（停留时长分级，R342）', () => {
 
   it('再长也不超过 16 秒封顶（不挡视线）', () => {
     expect(toastDuration('err', 'x'.repeat(2000), true)).toBe(16_000);
+  });
+});
+// R364：相同 toast 只留一条——反复触发的同一提醒不再在栈里堆一摞，
+// 原地替换最晚那条并重记停留时长（旧定时器 dismiss 扑空无害）。
+describe('toast 去重（R364）', () => {
+  beforeEach(() => {
+    useStore.setState({ toasts: [] });
+  });
+
+  it('toastKey 按 文本+级别+动作标签 构成标识', () => {
+    expect(toastKey('x', 'ok')).toBe('ok\u0001x\u0001');
+    expect(toastKey('x', 'err', '去处理')).toBe('err\u0001x\u0001去处理');
+    expect(toastKey('x', 'err')).not.toBe(toastKey('x', 'err', '去处理'));
+    expect(toastKey('x', 'ok')).not.toBe(toastKey('x', 'warn'));
+  });
+
+  it('相同文本+级别的 toast 只留一条（原地替换）', () => {
+    useStore.getState().toast('又失败了', 'err');
+    useStore.getState().toast('又失败了', 'err');
+    expect(useStore.getState().toasts).toHaveLength(1);
+    expect(useStore.getState().toasts[0].text).toBe('又失败了');
+    expect(useStore.getState().toasts[0].kind).toBe('err');
+  });
+
+  it('不同文本 / 级别 / 动作按钮的 toast 各自成条', () => {
+    useStore.getState().toast('磁盘快满了', 'warn');
+    useStore.getState().toast('磁盘快满了', 'err');
+    useStore.getState().toast('磁盘快满了', 'err', { label: '去调散热', run: () => {} });
+    expect(useStore.getState().toasts).toHaveLength(3);
+  });
+
+  it('替换后位置不变（顺序与最早那条一致）', () => {
+    useStore.getState().toast('第一条', 'ok');
+    useStore.getState().toast('重复', 'warn');
+    useStore.getState().toast('重复', 'warn');
+    const ts = useStore.getState().toasts;
+    expect(ts).toHaveLength(2);
+    expect(ts[0].text).toBe('第一条');
+    expect(ts[1].text).toBe('重复');
   });
 });

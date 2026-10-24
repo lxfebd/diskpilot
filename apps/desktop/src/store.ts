@@ -322,6 +322,17 @@ export interface ToastItem {
   action?: { label: string; run: () => void };
 }
 
+/** R364：toast 去重的标识——同一「文本 + 级别 + 动作按钮标签」算同一条。
+ *  反复触发同一提醒（例如连续几次保存都失败）时不该在栈里堆一摞一样的条，
+ *  应该原地替换最晚那条并重记停留时长。纯函数，便于单测钉住口径。 */
+export function toastKey(
+  text: string,
+  kind: ToastItem['kind'],
+  actionLabel?: string,
+): string {
+  return `${kind}\u0001${text}\u0001${actionLabel ?? ''}`;
+}
+
 // R342：toast 停留时长。此前一律 5 秒——带异常原文的错误读不完、带动作按钮的提示
 // 没点就消失（「去调散热」「查看周报」这类动作等于白给）。按 kind 分级加时，长文案
 // 与动作再各加一档，封顶 16 秒：再长就挡视线，用户也能点 X 手动关。
@@ -507,7 +518,22 @@ export const useStore = create<AppState>((set, get) => {
 
   toast: (text, kind = 'ok', action) => {
     const id = Math.random().toString(36).slice(2);
-    set((s) => ({ toasts: [...s.toasts, { id, text, kind, action }] }));
+    set((s) => {
+      // R364：相同文本+级别+动作的 toast 只留一条——原地替换最晚那条（位置不变），
+      // 不再往上堆。旧 id 的定时器到时 dismiss 会扑空，天然无害。
+      const key = toastKey(text, kind, action?.label);
+      let idx = -1;
+      for (let i = s.toasts.length - 1; i >= 0; i--) {
+        const o = s.toasts[i];
+        if (toastKey(o.text, o.kind, o.action?.label) === key) { idx = i; break; }
+      }
+      if (idx >= 0) {
+        const next = [...s.toasts];
+        next[idx] = { id, text, kind, action };
+        return { toasts: next };
+      }
+      return { toasts: [...s.toasts, { id, text, kind, action }] };
+    });
     setTimeout(() => get().dismissToast(id), toastDuration(kind, text, action !== undefined));
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
