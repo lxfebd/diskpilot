@@ -284,6 +284,7 @@ const Row = memo(function Row({
       className={'tree-row' + (sel ? ' selected' : '') + (node.is_dir ? '' : ' is-file')}
       role="button"
       tabIndex={0}
+      aria-expanded={node.is_dir ? open : undefined}
       onClick={() => onSelect(node.path, node)}
       // R314：Enter/空格 = 选中；←/→ = 收起/展开（树视图的通用键盘口径）。
       // 空格必须 preventDefault，否则滚页面。

@@ -140,7 +140,7 @@ export function Studio({ onOpenCleanup, onOpenHistory }: { onOpenCleanup: (scaff
       )}
 
       <div className="studio-community">
-        <button className="studio-community-head" onClick={() => setCommunityOpen((v) => !v)}>
+        <button className="studio-community-head" onClick={() => setCommunityOpen((v) => !v)} aria-expanded={communityOpen}>
           <Download size={13} />
           {t('studio.communityRepo')}
           <span className="muted small">{t('studio.communityHint')}</span>
@@ -569,6 +569,7 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
       <button
         className="studio-card"
         onClick={onToggle}
+        aria-expanded={expanded}
         title={sc.disclaimer}
       >
         <Caret size={14} className="studio-caret" />

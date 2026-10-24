@@ -208,7 +208,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
                         {tool.installed ? (
                           <>
                             <div className="toolbelt-actions">
-                              <button className="ghost icon" title={t('toolbelt.cli.usageTitle')} onClick={() => toggleUsage(tool.name)}>
+                              <button className="ghost icon" title={t('toolbelt.cli.usageTitle')} onClick={() => toggleUsage(tool.name)} aria-expanded={!!usageOpen[tool.name]}>
                                 {usageOpen[tool.name] ? <ChevronDown size={14} /> : <ChevronRight size={14} />}{t('toolbelt.cli.usage')}
                               </button>
                               <input

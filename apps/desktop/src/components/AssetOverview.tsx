@@ -1932,6 +1932,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                         className="ao-clean-peek"
                         onClick={() => void togglePreview(it)}
                         title={previewOpen[it.key] ? t('overview.clean.peekHide') : t('overview.clean.peekShow')}
+                        aria-expanded={!!previewOpen[it.key]}
                       >
                         {previewOpen[it.key] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                       </button>

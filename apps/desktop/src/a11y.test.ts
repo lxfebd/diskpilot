@@ -475,3 +475,46 @@ describe('分段单选控件带 aria-pressed（R366）', () => {
     expect(violations).toEqual([]);
   });
 });
+// R367：展开/收起按钮（带 chevron 图标的切换控件）此前只有图标方向变化，
+// 读屏听不出「现在展开还是收起」——树行、清理预览、工具用法、社区仓库、
+// 工具箱卡片、市场进阶区/已安装台账都要报 aria-expanded。
+describe('展开/收起控件报展开状态（R367）', () => {
+  const RAW_TSX = import.meta.glob('./**/*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  it('带 chevron 的按钮必须报 aria-expanded', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (let i = 0; i < src.length; ) {
+        const j = src.indexOf('<button', i);
+        if (j < 0) break;
+        i = j + 7;
+        const nxt = src[j + 7] ?? ' ';
+        if (/[\w-]/.test(nxt)) continue;
+        let brace = 0;
+        let quote = '';
+        let end = -1;
+        for (let k = j; k < src.length; k++) {
+          const c = src[k];
+          if (quote) { if (c === '\\') k++; else if (c === quote) quote = ''; continue; }
+          if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+          if (c === '{') brace++;
+          else if (c === '}') brace--;
+          else if (c === '>' && brace <= 0) { end = k; break; }
+        }
+        if (end < 0) continue;
+        const closeIdx = src.indexOf('</button>', end);
+        if (closeIdx < 0) continue;
+        const openTag = src.slice(j, end + 1);
+        const children = src.slice(end + 1, closeIdx);
+        if (!/Chevron(Down|Up|Right|Left)/.test(children)) continue;
+        if (!/aria-expanded=/.test(openTag)) {
+          violations.push(path + ':' + src.slice(0, j).split('\n').length);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+  it('树行目录节点带展开状态', () => {
+    const tree = RAW_TSX['./components/TreeView.tsx'] ?? '';
+    expect(tree).toContain('aria-expanded={node.is_dir ? open : undefined}');
+  });
+});

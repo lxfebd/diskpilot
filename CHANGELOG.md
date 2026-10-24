@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 展开/收起控件报出「展开状态」——8 处 aria-expanded（R367）
+
+- 缺口：全仓 `aria-expanded` 数量为 0。展开态只靠 chevron 图标方向变化与高亮类，
+  读屏听不出「现在是展开还是收起」——树行（←/→ 可展开）、清理建议的逐项预览、
+  工具用法、社区仓库、工具箱卡片、市场进阶区 / 已安装台账都如此。
+- 8 处补 `aria-expanded={同一状态}`：TreeView 树行目录节点（文件行不报）、
+  AssetOverview 逐项预览、toolwall 用法、Studio 社区仓库与卡片、
+  market 进阶区展开/收起与已安装台账（market 的展开按钮当时必然收起、收起按钮
+  必然展开——照实报当前态）。
+- ChatPanel 的思考/工具调用区用原生 `<details><summary>`，浏览器自带展开语义，不动；
+  Steam 列表的行尾 chevron 是纯装饰，不是开关。
+- 守卫（a11y.test.ts 2 条）：任何子节点含 chevron 图标的 `<button>` 必须在开标签上
+  带 `aria-expanded`；TreeView 必须给目录节点报展开状态。
+- 验证：`pnpm -C apps/desktop check` 全绿。
+
 ### 2026-10-24 分段单选按钮会报「按下状态」——16 处 seg-opt 补 aria-pressed（R366）
 
 - 缺口：全仓 16 处 `seg-opt` 分段单选（语言 / 主题 / 字号 / 提醒间隔与阈值 /

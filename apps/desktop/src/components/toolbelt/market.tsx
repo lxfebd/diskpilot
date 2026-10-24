@@ -553,7 +553,7 @@ export function MarketPanel() {
 
           {/* 进阶：索引 URL 配置 + 刷新 + 校验（未配置索引时折叠，避免满屏术语） */}
           {!showAdvanced && !(regInfo && regInfo.indexed) ? (
-            <button className="ghost small" style={{ marginTop: 8 }} onClick={() => setShowAdvanced(true)}>
+            <button className="ghost small" style={{ marginTop: 8 }} onClick={() => setShowAdvanced(true)} aria-expanded={showAdvanced}>
               <ChevronDown size={13} style={{ verticalAlign: '-2px', marginRight: 3 }} />
               {t('toolbelt.mkt.advancedLead')}
             </button>
@@ -611,12 +611,12 @@ export function MarketPanel() {
                 <ShieldCheck size={12} className={verifying ? 'spin' : undefined} style={{ verticalAlign: '-2px', marginRight: 3 }} />
                 {verifying ? t('toolbelt.mkt.verifying') : t('toolbelt.mkt.verify')}
               </button>
-              <button className="ghost small" onClick={() => setShowInstalled((v) => !v)} title={t('toolbelt.mkt.installedLedgerTitle')}>
+              <button className="ghost small" onClick={() => setShowInstalled((v) => !v)} title={t('toolbelt.mkt.installedLedgerTitle')} aria-expanded={showInstalled}>
                 <Package size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
                 {showInstalled ? t('toolbelt.mkt.collapseInstalled') : `${t('toolbelt.mkt.installedLedger')}${installed ? ` ${installed.length}` : ''}`}
               </button>
               {regInfo && regInfo.indexed && (
-                <button className="ghost small" onClick={() => setShowAdvanced(false)} title={t('toolbelt.common.close')}>
+                <button className="ghost small" onClick={() => setShowAdvanced(false)} title={t('toolbelt.common.close')} aria-expanded={showAdvanced}>
                   <ChevronUp size={13} style={{ verticalAlign: '-2px', marginRight: 3 }} />
                   {t('toolbelt.mkt.advancedLead')}
                 </button>
