@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 索引校验不再挂着上一份索引的结论、跑的时候有话说（R346）
+
+- `market.tsx` 的「校验」按钮此前没有进行态：点下去到结果回来之间界面完全没反应，
+  连点会并发两份结论、后到的覆盖先到的；刷新索引（或改索引地址）成功后，旧的校验结论
+  仍原样挂在面板上，看着像是对新索引的结论——说的是另一份索引的事；失败时也只补一条
+  失败文案，旧结论留在上面；
+- 改动：新增 `verifying` 状态（配 `verifyingRef` 防连点并发），`doVerify` 开跑先把旧结论
+  摘掉（`setVerifyOut(null)`），`finally` 里复位；按钮在 `regBusy || verifying` 时禁用，
+  图标转圈、文案改「校验中…」（新键 `toolbelt.mkt.verifying`）；`plugin_registry_refresh`
+  成功与保存/清空索引地址成功后都 `setVerifyOut(null)`——索引换了，上一份结论作废；
+- 验证：`pnpm -C apps/desktop check` 全绿（54 files / 887 tests）。
 ### 2026-10-24 索引校验说清楚「验了多少、哪些能装但没哈希」（R345）
 
 - 后端 `plugin_registry_verify` 逐条返回 `has_url / https_url / has_sha256 / has_signer /

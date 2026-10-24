@@ -1,6 +1,6 @@
 // ── 插件市场：内置 CLI 工具插件化（补写/移除 tool.plugin.json）+ 社区注册表 ──
 // 独立自包含组件（state + api 调用），Settings「插件市场」tab 复用。
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ChevronDown, ChevronUp, Download, Globe, Info, Package, RefreshCw, Search, ShieldAlert, ShieldCheck, X,
 } from 'lucide-react';
@@ -143,6 +143,9 @@ export function MarketPanel() {
   const [regBusy, setRegBusy] = useState(false);
   const [regInfo, setRegInfo] = useState<{ fetched_at: number; signed: boolean; verified: boolean; indexed: boolean; registry_url: string; plugins: number } | null>(null);
   const [verifyOut, setVerifyOut] = useState<RegistryVerifyOut | null>(null);
+  // R346：校验是「对某一份索引」的结论——跑的过程中不挂旧结论，索引一变就作废。
+  const [verifying, setVerifying] = useState(false);
+  const verifyingRef = useRef(false);
   const [installed, setInstalled] = useState<InstalledPlugin[] | null>(null);
   const [installedErr, setInstalledErr] = useState<string | null>(null);
   const [installedId, setInstalledId] = useState<string | null>(null);
@@ -342,6 +345,7 @@ export function MarketPanel() {
               plugins: r.plugins,
             });
             setMsg(r.ok ? t('toolbelt.mkt.refreshed', { n: r.plugins, sig: r.signed ? (r.verified ? t('toolbelt.mkt.sigValidSuffix') : t('toolbelt.mkt.sigInvalidSuffix')) : t('toolbelt.mkt.sigNoneSuffix') }) : t('toolbelt.mkt.refreshFailed', { msg: String(r.error) }));
+            if (r.ok) setVerifyOut(null); // R346：索引换了，上一份校验结论作废
             loadCommunity(cQuery);
           } catch (e) {
             setMsg(t('toolbelt.mkt.refreshFailed', { msg: String(e) }));
@@ -354,11 +358,20 @@ export function MarketPanel() {
   }, [loadCommunity, cQuery, t]);
 
   const doVerify = useCallback(async () => {
+    // R346：重复点击会并发出两份结论，后到的覆盖先到的；按钮也按 verifying 禁用。
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
+    setVerifying(true);
+    // 先摘掉上一次的结论：正在跑的这段时间里，屏幕上不该挂着「看起来还是这次」的旧结果。
+    setVerifyOut(null);
     setMsg(null);
     try {
       setVerifyOut(await api.pluginRegistryVerify());
     } catch (e) {
       setMsg(t('toolbelt.mkt.verifyFailed', { msg: String(e) }));
+    } finally {
+      verifyingRef.current = false;
+      setVerifying(false);
     }
   }, [t]);
 
@@ -573,6 +586,7 @@ export function MarketPanel() {
                           await api.pluginSetRegistryUrl(u, true);
                           setRegInfo((prev) => ({ ...(prev ?? { fetched_at: 0, signed: false, verified: false, plugins: 0 }), indexed: !!u, registry_url: u }));
                           setMsg(u ? t('toolbelt.mkt.urlSaved') : t('toolbelt.mkt.urlCleared'));
+                          setVerifyOut(null); // R346：索引地址变了，旧的校验结论不再指同一份索引
                         } catch (e) {
                           setMsg(t('toolbelt.mkt.urlSaveFailed', { msg: String(e) }));
                         } finally {
@@ -590,9 +604,9 @@ export function MarketPanel() {
                 <RefreshCw size={12} className={regBusy ? 'spin' : undefined} style={{ verticalAlign: '-2px', marginRight: 3 }} />
                 {regBusy ? t('toolbelt.mkt.refreshing') : t('toolbelt.mkt.refreshIndex')}
               </button>
-              <button className="ghost small" onClick={() => void doVerify()} title={t('toolbelt.mkt.verifyTitle')}>
-                <ShieldCheck size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
-                {t('toolbelt.mkt.verify')}
+              <button className="ghost small" disabled={regBusy || verifying} onClick={() => void doVerify()} title={t('toolbelt.mkt.verifyTitle')}>
+                <ShieldCheck size={12} className={verifying ? 'spin' : undefined} style={{ verticalAlign: '-2px', marginRight: 3 }} />
+                {verifying ? t('toolbelt.mkt.verifying') : t('toolbelt.mkt.verify')}
               </button>
               <button className="ghost small" onClick={() => setShowInstalled((v) => !v)} title={t('toolbelt.mkt.installedLedgerTitle')}>
                 <Package size={12} style={{ verticalAlign: '-2px', marginRight: 3 }} />
