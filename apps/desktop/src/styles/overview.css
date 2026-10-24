@@ -896,6 +896,15 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   border-radius: var(--radius-btn);
   padding: 10px 12px;
 }
+/* R340：清单之外还有被跳过的条目（例如正在使用的重复文件）——单独一句，
+   免得用户把「清单里没有」当成「扫漏了」。 */
+.proposal-note {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  padding: 2px 2px 2px 10px;
+  border-left: 3px solid var(--risk-caution);
+}
 /* 勾选的条目落在健康可疑的盘上：这条提醒比风险徽标更重——它挡住执行按钮，
    必须用户显式承认「我有备份」才放行。 */
 .proposal-risky {

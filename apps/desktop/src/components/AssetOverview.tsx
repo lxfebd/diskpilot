@@ -345,6 +345,15 @@ export function diffGapDate(prevAt: number | null | undefined, gapDays: number |
   return formatDateKey(new Date(prevAt * 1000));
 }
 
+/** R340：重复文件里「正在使用」的文件数。后端把它们排除出可回收候选（dups.rs 的
+ *  `running`），但清单里看不到它们——不说一句，用户会以为「没扫到那对重复文件」。 */
+export function dupRunningCount(groups: readonly { running?: readonly string[] }[] | null | undefined): number {
+  if (!groups) return 0;
+  let n = 0;
+  for (const g of groups) n += g.running?.length ?? 0;
+  return n;
+}
+
 /** R92：每个 scaffold 的「主目录」路径（同 aggregateByScaffold 口径——父节点已
  *  打标则子节点不算，只收最外层命中；同 scaffold 多命中取体量最大的那个）。
  *  分类占用行点击时用它定位到工作台；没有命中目录的分类返回不了键（点击不动作）。
@@ -1606,9 +1615,15 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
         toast(t('overview.dup.allRunning'), 'ok');
         return;
       }
+      // R340：被跳过的「正在使用」文件要在确认窗里说清楚，别让清单显得没扫全。
+      const skippedRunning = dupRunningCount(groups);
       setProposal({
         id: `dup-${Date.now()}`,
         title: t('overview.dup.title', { path: target, size: formatBytes(total) }),
+        note:
+          skippedRunning > 0
+            ? t('overview.dup.skippedRunning', { n: skippedRunning })
+            : undefined,
         items,
       });
     } catch (e) {

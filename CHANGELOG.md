@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 重复文件清单说清楚「另有 N 个正在用、已跳过」（R340）
+
+- 总览「重复文件」扫描会把每组保留 1 份、其余给成清理候选；被进程占用（独占打开失败）
+  的文件后端 `dups.rs` 早已判为「运行中」并排除出候选（`DupGroup.running`），可确认窗里
+  一个字都没提——用户看到的那对明明重复的文件不在清单里，只会以为「扫漏了」；
+- 现在确认窗标题下面多一句：**另有 N 个重复文件正在使用（已跳过，不列入这份清单）**，
+  N 就是各组 `running` 的条数之和；没有跳过项时不显示，不制造额外噪音；
+- `CleanupProposal` 加可选 `note`（清单之外的跳过说明），`CleanupProposalDialog` 在提示块
+  下方渲染一条带 caution 竖线的小字，其它提案（AI 清单、系统垃圾）不传就没有；
+- 新增纯函数 `dupRunningCount(groups)` + 3 条单测（多组累加 / null·空数组 / running 缺失）；
+- 验证：`pnpm -C apps/desktop check` 全绿（53 files / 869 tests）。
 ### 2026-10-24 MCP 审计日志能看出是哪个服务器，工具名不再重复两遍（R339）
 
 - 审计行里 `call_tool` 的文案是「调用 {tool}」，后面又单独渲染了一个 `<code>{tool}</code>`——

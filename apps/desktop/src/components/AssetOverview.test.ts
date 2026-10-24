@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -657,4 +657,18 @@ describe('红盘判定口径（R326）', () => {
   it('容量没读到：不判红盘（0 不是健康，只是没读数）', () => {
     expect(isDriveCritical(5, 0)).toBe(false);
   });
+describe('重复文件跳过数（R340 dupRunningCount）', () => {
+  it('多组累加：running 里每个路径都算一个被跳过的重复文件', () => {
+    expect(dupRunningCount([{ running: ['a.exe', 'b.exe'] }, { running: ['c.exe'] }])).toBe(3);
+  });
+  it('null / 空数组 → 0', () => {
+    expect(dupRunningCount(null)).toBe(0);
+    expect(dupRunningCount(undefined)).toBe(0);
+    expect(dupRunningCount([])).toBe(0);
+  });
+  it('running 缺失或为空数组 → 0（没有跳过项就不加）', () => {
+    expect(dupRunningCount([{ running: undefined }, { running: [] }])).toBe(0);
+  });
+});
+
 });

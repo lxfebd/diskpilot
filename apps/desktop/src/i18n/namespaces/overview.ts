@@ -200,6 +200,7 @@ export const overview = {
     // 重复文件查找 → 清理提案（提案四件套：是什么 / 干什么用 / 删了影响）
     'overview.dup.noneFound': '未发现 ≥1MB 的重复文件（按大小 + 头部哈希）',
     'overview.dup.allRunning': '重复组都只有运行中的文件（跳过），无可回收项',
+    'overview.dup.skippedRunning': '另有 {n} 个重复文件正在使用（已跳过，不列入这份清单）',
     'overview.dup.scanFailed': '重复文件扫描失败（路径被守卫拒绝或未扫描该盘）',
     'overview.dup.title': '重复文件清理 · {path}（约 {size} 可回收）',
     'overview.dup.reason': '重复文件（组内 {n} 份 · {size}）',
@@ -435,6 +436,7 @@ export const overview = {
     // Duplicate scan → cleanup proposal (what / purpose / impact)
     'overview.dup.noneFound': 'No duplicates ≥1MB found (by size + header hash)',
     'overview.dup.allRunning': 'Every duplicate group only holds in-use files (skipped) — nothing to recycle',
+    'overview.dup.skippedRunning': 'Plus {n} duplicate(s) currently in use — skipped, not listed here',
     'overview.dup.scanFailed': 'Duplicate scan failed (path rejected by the guard, or the drive was never scanned)',
     'overview.dup.title': 'Duplicate cleanup · {path} (about {size} reclaimable)',
     'overview.dup.reason': 'Duplicate file ({n} copies in the group · {size})',

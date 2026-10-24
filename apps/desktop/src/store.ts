@@ -309,6 +309,9 @@ export interface CleanupProposal {
   id: string;
   title: string;
   items: CleanupProposalItem[];
+  /** R340：清单之外被跳过的说明（例如重复文件里有 N 个正在使用）——
+   *  为空不渲染；有就摆在确认窗提示块下面，避免「清单里没有 = 不存在」。 */
+  note?: string;
 }
 
 export interface ToastItem {

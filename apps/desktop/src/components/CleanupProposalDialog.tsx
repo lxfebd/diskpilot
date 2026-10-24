@@ -170,6 +170,7 @@ export function CleanupProposalDialog() {
             <b>{t('cleanup.hintRecycleBin')}</b>
             {t('cleanup.hintRecycleTail')}
           </div>
+          {proposal.note && <div className="proposal-note">{proposal.note}</div>}
           {risky.length > 0 && (
             <div className="proposal-risky" role="alert">
               <div className="proposal-risky-line">
