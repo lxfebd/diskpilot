@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 右键菜单能用键盘走——方向键/Home/End + 焦点可见 + ARIA menu（R353）
+
+- 缺口：`components/ContextMenu.tsx`（树视图 / 文件列表 / Studio 三处右键菜单）的项虽然都是 `<button>`，
+  但打开后不给焦点、上下方向键没反应、容器没有 `role="menu"`——键盘用户（含 Shift+F10 唤出）只能盲 Tab。
+- 打开后焦点落到第一项；容器加 `role="menu"`、菜单项加 `role="menuitem" tabIndex={-1}`；
+  `onKeyDown` 支持 ArrowDown / ArrowUp（环绕，导出纯函数 `nextMenuIndex(current, len, delta)` 供单测）、
+  Home / End；Enter 与空格沿用按钮原生激活。
+- Esc 从手写 window keydown 迁到 R349 的 Esc 栈（`useEscapeKey(onClose, state !== null)`），
+  并补 `useReturnFocus(state !== null)`：关菜单后焦点回到打开它的元素。
+- `styles/layout.css` 给 `.ctxmenu-item` 补 `:focus` 底色与 `:focus-visible` 描边（此前只有 :hover）。
+- 新增 `components/ContextMenu.test.ts` 6 条单测（向下/向上环绕、未落点时的起点、单项、空菜单、越界下标）。
+- 验证：`pnpm -C apps/desktop check` 全绿（57 files / 927 tests）。
 ### 2026-10-24 AI 配置改完没保存就关窗，不再默默丢掉——先提示、再确认（R352）
 
 - 缺口：设置页 AI tab 的 base URL / API key / 模型只存在组件 state 里，点「保存」才落盘；

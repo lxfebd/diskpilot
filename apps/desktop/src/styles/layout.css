@@ -1172,6 +1172,9 @@ footer {
   display: flex; align-items: center; gap: 8px;
 }
 .ctxmenu-item:hover { background: var(--accent-bg); }
+/* R353：菜单能用方向键走了，焦点必须看得见（.ctxmenu-item 是 <button>，默认描边被自家样式盖掉）。 */
+.ctxmenu-item:focus { background: var(--accent-bg); }
+.ctxmenu-item:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }
 .ctxmenu-item.danger { color: var(--risk-danger); }
 .ctxmenu-item.danger:hover { background: var(--err-soft); }
 .ctxmenu-icon { display: inline-flex; align-items: center; color: var(--accent-strong); }
