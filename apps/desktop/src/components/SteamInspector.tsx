@@ -749,9 +749,9 @@ function SteamRow({
         {game.is_ghost ? <AlertTriangle size={14} /> : game.default_recommended ? <Zap size={14} /> : null}
       </div>
       <div className="steam-row-name">
-        <div className="steam-row-name-primary">{displayName || `appid ${game.appid}`}</div>
+        <div className="steam-row-name-primary" title={displayName || `appid ${game.appid}`}>{displayName || `appid ${game.appid}`}</div>
         {altName && altName !== displayName && (
-          <div className="steam-row-name-alt">{altName}</div>
+          <div className="steam-row-name-alt" title={altName}>{altName}</div>
         )}
         {game.recommendation_reason && (
           <div className="steam-row-reason">{game.recommendation_reason}</div>

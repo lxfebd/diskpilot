@@ -678,7 +678,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
       <div className="chat-head">
         <Sparkles size={15} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="chat-title">
+          <div className="chat-title" title={root ? (root.name || root.path) : undefined}>
             {root ? (root.name || root.path) : 'DiskPilot AI'}
           </div>
           <div className="chat-sub">

@@ -259,7 +259,7 @@ function WorkshopRow({ item, title }: { item: WorkshopItem; title?: string }) {
       <div className="steam-workshop-item-main">
         {title ? (
           <>
-            <div className="steam-workshop-item-title">{title}</div>
+            <div className="steam-workshop-item-title" title={title}>{title}</div>
             <div className="steam-workshop-item-meta">
               <span className="steam-workshop-item-id-secondary">#{item.id}</span>
               <span className="steam-workshop-item-time">{relativeTime(item.last_modified_ts)}</span>

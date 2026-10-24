@@ -75,7 +75,7 @@ function ScopeRow({ scope }: { scope: Scope }) {
           onChange={() => toggleScope(scope.id)}
         />
         <div className="cleanup-row-text">
-          <span className="cleanup-row-label">{scope.label}</span>
+          <span className="cleanup-row-label" title={scope.label}>{scope.label}</span>
           {/* R174：可清理占比条——三个数字要读一遍才知道「能清掉几成」，
               细条让比例一眼可见（总大小作分母，可清部分填色）。 */}
           {ratio !== null && ratio > 0 && (

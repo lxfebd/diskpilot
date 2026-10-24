@@ -69,7 +69,7 @@ export function NetworkPanel({ ctx: _ctx }: { ctx: ToolContext }) {
           return (
             <div key={s.name} className="tb-ping-row">
               <span>{s.name}</span>
-              <span className="tb-ping-url">{s.url}</span>
+              <span className="tb-ping-url" title={s.url}>{s.url}</span>
               <span className={'tb-ping-state' + state} title={p?.error ?? ''}>
                 {label}
               </span>
@@ -181,7 +181,7 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
           <div className="tb-sys-row"><span>{t('toolbelt.sys.mem')}</span><b>{typeof mem === 'number' ? `${mem} GB` : mem ?? t('toolbelt.common.unknown')}</b></div>
         )}
         <div className="tb-sys-row"><span>{t('toolbelt.sys.env')}</span><b>{isTauri ? t('toolbelt.sys.envDesktop') : t('toolbelt.sys.envBrowser')}</b></div>
-        <div className="tb-sys-row"><span>{t('toolbelt.sys.ua')}</span><b className="tb-sys-ua">{ua}</b></div>
+        <div className="tb-sys-row"><span>{t('toolbelt.sys.ua')}</span><b className="tb-sys-ua" title={ua}>{ua}</b></div>
       </div>
       {isTauri && (
         <p className="hint">

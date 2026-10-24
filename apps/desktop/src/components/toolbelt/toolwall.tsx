@@ -1108,7 +1108,7 @@ export function CatalogWall({
                       </span>
                       {/* R135：列表层直接见关联（top-2），不逼用户逐个点开详情 */}
                       {(aiRelatedMap.get(mt.name)?.length ?? 0) > 0 && (
-                        <span className="toolwall-ai-related muted small">
+                        <span className="toolwall-ai-related muted small" title={aiRelatedMap.get(mt.name)!.join(' · ')}>
                           {t('toolbelt.wall.aiRelated')}
                           {aiRelatedMap.get(mt.name)!.join(' · ')}
                         </span>

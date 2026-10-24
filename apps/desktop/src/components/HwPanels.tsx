@@ -177,7 +177,7 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
               const size = num(pick(d, 'Size'));
               return (
                 <li key={i} className="hw-row">
-                  <span className="hw-name">{String(pick(d, 'Model') ?? t('hw.unknown'))}</span>
+                  <span className="hw-name" title={String(pick(d, 'Model') ?? t('hw.unknown'))}>{String(pick(d, 'Model') ?? t('hw.unknown'))}</span>
                   <span className="hw-meta">{formatBytes(size)} · {String(pick(d, 'InterfaceType'))} · {String(pick(d, 'Status'))}</span>
                 </li>
               );

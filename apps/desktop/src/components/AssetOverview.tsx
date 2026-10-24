@@ -2048,7 +2048,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                 tabIndex={0}
                 onClick={() => onGoWorkspace(n.path)}
                 onKeyDown={activateOnKey(() => onGoWorkspace(n.path))}
-                title={t('overview.locateInWorkspace')}
+                title={t('overview.locateInWorkspace') + ' · ' + n.name}
               >
                 <span className="ao-rank">{i + 1}</span>
                 <span className="ao-top-name">{n.name}</span>

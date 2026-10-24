@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R400: 截断文字悬停能看到全文——8 处省略号文本补 title
+
+- 缺口：从 CSS 里反向扫描 46 条 text-overflow:ellipsis 选择器，逐个到 TSX 核对引用点，找出「文字会被省略号截断、但元素或所在行没有 title 兜底」的 8 处：硬盘型号（Hardware 面板）、Steam 游戏主/别名与创意工坊条目标题、网络测速 URL、系统信息 User-Agent、工具箱 AI 关联列表、总览空间大头行（title 原只有提示没带目录名）、聊天头部标题、清理作用域名。
+- 改动：HwPanels（hw-name）、SteamInspector（steam-row-name-primary/alt）、SteamWorkshopModal（steam-workshop-item-title）、services（tb-ping-url / tb-sys-ua）、toolwall（toolwall-ai-related）、AssetOverview（ao-top-row title 追加目录名）、ChatPanel（chat-title）、CleanupBody（cleanup-row-label）补 title={原文}。
+- 已核实不是缺口（跳过）：FileView / TreeView / CleanupBody 路径行 / DryRunPreviewDialog 路径行的外层早已有 title={path}；AssetOverview 分类条的 button title 已含 scaffold.name；CleanupPage 脚本按钮 title 已含脚本名；Studio 子行 title 已含完整路径。
+- 验证：pnpm -C apps/desktop check 70 files / 1025 tests / EXIT=0。
+
 ### R399: AI 对话记录能被读屏播报——chat-scroll 加 role=log，输入中提示补 role=status
 
 - 缺口：ChatPanel 的对话区（div.chat-scroll）流式渲染 AI 回答、工具调用轨迹、输入中提示，但没有任何 live region——读屏用户全程听不到：AI 有没有在回、回了什么、还在不在想。chatBusy 的「正在打字」也没有 role=status。
