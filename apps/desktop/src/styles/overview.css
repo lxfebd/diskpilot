@@ -1014,6 +1014,11 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   outline: none;
   border-color: var(--risk-danger);
 }
+.proposal-danger-input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
+/* R405：高危确认词输入框键盘焦点补替身。 */
 
 /* ── 磁盘空间趋势（R6）：扫描历史迷你曲线 ── */
 /* R90 时间窗口切换（7/30/全部）：贴卡头右侧，选中态用强调底色。 */

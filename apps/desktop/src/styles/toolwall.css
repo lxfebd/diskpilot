@@ -215,6 +215,11 @@
 /* 工具箱参数输入框 + 未找到 Tools 目录时的提示块 */
 .tb-args { flex: 1; min-width: 160px; font-family: var(--font-mono); font-size: 12px; padding: 6px 9px; border: 1.5px solid var(--paper-3); border-radius: var(--radius-sm); background: var(--paper); color: var(--ink); }
 .tb-args:focus { outline: none; border-color: var(--accent-strong); }
+/* R405：CLI 参数输入框键盘焦点补替身。 */
+.tb-args:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .tb-tools-root { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1.5px dashed var(--paper-3); border-radius: var(--radius-md); background: var(--paper); }
 
 /* 硬件工具箱视图切换（CLI 直通 / 全部工具墙） */

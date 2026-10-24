@@ -501,6 +501,11 @@
   box-shadow: var(--shadow);
   transform: translate(-1px, -1px);
 }
+/* R405：聊天输入框键盘 Tab 到的焦点给明确描边（鼠标点击保持阴影位移、不画框）。 */
+.chat-input textarea:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .chat-input textarea:disabled { background: var(--paper-3); opacity: 0.7; }
 
 .chat-attach {

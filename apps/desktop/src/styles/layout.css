@@ -846,6 +846,11 @@ footer {
   resize: vertical;
 }
 .scaffold-toml-input:focus { outline: none; border-color: var(--accent); }
+.scaffold-toml-input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
+/* R405：textarea 单独补 :focus-visible——全局 input/select 规则不覆盖 textarea。 */
 .install-err {
   color: var(--risk-danger);
   font-size: 12px;

@@ -119,3 +119,76 @@ describe('键盘焦点要看得见（R403）', () => {
     ]);
   });
 });
+
+
+// R405：:focus 里写 outline: none 抹掉默认环的控件，必须配一条 :focus-visible 描边。
+// 背景：layout.css 全局护的是 input / select；textarea 与自绘控件（TOML 输入、CLI 参数、
+// 高危确认词）各自在 :focus 里 outline: none，只剩 1px 边框变色——键盘用户看不出焦点。
+interface CssBlock {
+  file: string;
+  selector: string;
+  body: string;
+}
+
+function cssBlocks(css: Record<string, string>): CssBlock[] {
+  const out: CssBlock[] = [];
+  for (const [file, rawText] of Object.entries(css)) {
+    const text = rawText.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    for (const m of text.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      out.push({ file, selector: m[1].replace(/\s+/g, ' ').trim(), body: m[2] });
+    }
+  }
+  return out;
+}
+
+// main 是程序化移焦的目标（切页时把焦点送进主区域），刻意不画框。
+const FOCUS_RING_EXEMPT = new Set(['main']);
+
+function focusRingOffenders(css: Record<string, string>): string[] {
+  const blocks = cssBlocks(css);
+  const fixed = new Set<string>();
+  for (const b of blocks) {
+    if (!b.selector.includes(':focus-visible')) continue;
+    if (!/outline\s*:/.test(b.body)) continue;
+    if (/outline\s*:\s*none/.test(b.body)) continue;
+    for (const part of b.selector.split(',')) {
+      const key = part.replace(/:focus-visible/g, '').replace(/\s+/g, ' ').trim();
+      if (key) fixed.add(key);
+    }
+  }
+  const bad: string[] = [];
+  for (const b of blocks) {
+    if (b.selector.includes(':focus-visible') || b.selector.includes(':focus-within')) continue;
+    if (!/outline\s*:\s*none/.test(b.body)) continue;
+    for (const part of b.selector.split(',')) {
+      if (!/:focus\b/.test(part)) continue;
+      const key = part.replace(/:focus\b/g, '').replace(/\s+/g, ' ').trim();
+      if (!key || FOCUS_RING_EXEMPT.has(key)) continue;
+      if (!fixed.has(key)) bad.push(b.file + ' :: ' + key + ' 只有 :focus{outline:none}，没有 :focus-visible 描边');
+    }
+  }
+  return bad;
+}
+
+describe('焦点描边被抹掉的控件要有替身（R405）', () => {
+  it('样式块扫到了（守卫不是空转）', () => {
+    expect(cssBlocks(RAW_CSS).length).toBeGreaterThan(100);
+  });
+
+  it('每个 :focus{outline:none} 都有配套的 :focus-visible 描边', () => {
+    expect(focusRingOffenders(RAW_CSS)).toEqual([]);
+  });
+
+  it('能抓到只抹不补的规则（自检）', () => {
+    const bare = { './b.css': '.x:focus { outline: none; border-color: red; }' };
+    expect(focusRingOffenders(bare)).toEqual([
+      './b.css :: .x 只有 :focus{outline:none}，没有 :focus-visible 描边',
+    ]);
+    const paired = {
+      './c.css': '.x:focus { outline: none; } .x:focus-visible { outline: 2px solid red; }',
+    };
+    expect(focusRingOffenders(paired)).toEqual([]);
+    const exempt = { './d.css': 'main:focus { outline: none; }' };
+    expect(focusRingOffenders(exempt)).toEqual([]);
+  });
+});

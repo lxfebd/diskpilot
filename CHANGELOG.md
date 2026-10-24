@@ -1,6 +1,13 @@
 DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+### R405: 键盘 Tab 到自定义输入框时焦点描边不再被吞——4 处 outline:none 补 :focus-visible 替身 + CSS 守卫
+
+- 缺口：layout.css 的全局 input/select 只在 R348 补了 :focus-visible 描边，textarea 与自绘控件不在覆盖范围——Studio TOML 导入框（.scaffold-toml-input）、清理提案高危确认词（.proposal-danger-input）、工具箱 CLI 参数（.tb-args）、聊天输入框（.chat-input textarea）都在 :focus 里 outline: none，只剩 1px 边框变色，键盘用户看不出焦点在哪。
+- 改动：四处各补 :focus-visible（2px var(--accent-strong) + outline-offset:-2px）——layout.css / overview.css / toolwall.css / chat.css；:focus 的边框变色保留给鼠标（点击时不画突兀的框），Tab 到的才亮描边。
+- 守卫：focusVisible.test.ts 新增 describe「焦点描边被抹掉的控件要有替身（R405）」——解析全部 CSS 块，凡选择器含 :focus\b（排除 :focus-visible / :focus-within）且 body 含 outline: none 的块，其选择器键（去 :focus、逗号拆开）必须在某条 outline 非 none 的 :focus-visible 规则里出现过；main 豁免（程序化移焦刻意不画框）。假数据自检：裸 .x:focus{outline:none} 报红、配对 :focus-visible 后变绿、main 豁免；反向自检删 .tb-args:focus-visible → focusVisible.test.ts Tests 1 failed（6 中 1 红），还原后全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0，71 files / 1032 tests（1031 + 1）。
+
 ## [未发布]
 
 ### R404: 输入法组合期间的 Enter 不再把打一半的句子发出去
