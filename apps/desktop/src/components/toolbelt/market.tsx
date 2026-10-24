@@ -79,6 +79,49 @@ export function versionNotes(
   return notes ? notes : null;
 }
 
+/** R345：校验结果的计数——后端 plugin_registry_verify 逐条给了 has_url / https_url /
+ *  has_sha256 / has_signer，前端此前只显示 issue 文案，既不说是「验了多少个」，
+ *  也看不出「能装但没声明 sha256」这类条目（后端 issue 分支不覆盖 sha256 缺失）。 */
+export interface VerifyCounts {
+  total: number;
+  issue: number;
+  noSha: number;
+  ok: number;
+}
+
+export function verifyCounts(items: RegistryVerifyOut['items'] | null | undefined): VerifyCounts {
+  const list = items ?? [];
+  let issue = 0;
+  let noSha = 0;
+  let ok = 0;
+  for (const i of list) {
+    const bad = typeof i.issue === 'string' && i.issue.trim() !== '';
+    if (bad) issue += 1;
+    if (!i.has_sha256) noSha += 1;
+    if (!bad && i.has_sha256) ok += 1;
+  }
+  return { total: list.length, issue, noSha, ok };
+}
+
+/** R345：值得单独点出来的条目——字段不合规（后端 issue），或能装但没声明 sha256。
+ *  后者装完无法比对文件哈希（签名仍会验），用户有权在装之前知道这件事。 */
+export interface VerifyRow {
+  id: string;
+  name: string;
+  version: string;
+  kind: 'issue' | 'noSha';
+  detail: string;
+}
+
+export function verifyRows(items: RegistryVerifyOut['items'] | null | undefined): VerifyRow[] {
+  const out: VerifyRow[] = [];
+  for (const i of items ?? []) {
+    const issue = typeof i.issue === 'string' ? i.issue.trim() : '';
+    if (issue) out.push({ id: i.id, name: i.name, version: i.version, kind: 'issue', detail: issue });
+    else if (!i.has_sha256) out.push({ id: i.id, name: i.name, version: i.version, kind: 'noSha', detail: '' });
+  }
+  return out;
+}
 export function MarketPanel() {
   const t = useT();
   const [market, setMarket] = useState<MarketPlugin[] | null>(null);
@@ -582,18 +625,30 @@ export function MarketPanel() {
           )}
 
           {/* 校验结果 */}
-          {verifyOut && (
-            <div className="toolbelt-market-warn" style={{ marginTop: 6 }}>
-              <b>{t('toolbelt.mkt.verifyHeading')}</b>{t('toolbelt.mkt.verifyColon')}{verifyOut.signed ? (verifyOut.envelope_ok ? t('toolbelt.mkt.sigOk') : t('toolbelt.mkt.sigInvalidWith', { err: String(verifyOut.envelope_error) })) : t('toolbelt.mkt.indexUnsigned')}
-              {verifyOut.items.some((i) => i.issue) && (
-                <ul style={{ marginTop: 4, paddingLeft: 18 }}>
-                  {verifyOut.items.filter((i) => i.issue).map((i) => (
-                    <li key={i.id} className="muted small">{t('toolbelt.mkt.verifyItem', { name: i.name, version: i.version, issue: i.issue ?? '' })}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+          {verifyOut && (() => {
+            const vc = verifyCounts(verifyOut.items);
+            const vrows = verifyRows(verifyOut.items);
+            return (
+              <div className="toolbelt-market-warn" style={{ marginTop: 6 }}>
+                <b>{t('toolbelt.mkt.verifyHeading')}</b>{t('toolbelt.mkt.verifyColon')}{verifyOut.signed ? (verifyOut.envelope_ok ? t('toolbelt.mkt.sigOk') : t('toolbelt.mkt.sigInvalidWith', { err: String(verifyOut.envelope_error) })) : t('toolbelt.mkt.indexUnsigned')}
+                <div className="muted small" style={{ marginTop: 2 }}>
+                  {vc.total === 0
+                    ? t('toolbelt.mkt.verifyEmpty')
+                    : t('toolbelt.mkt.verifyCount', { total: vc.total, ok: vc.ok })}
+                  {vc.noSha > 0 && <> · {t('toolbelt.mkt.verifyNoShaCount', { n: vc.noSha })}</>}
+                </div>
+                {vrows.length > 0 && (
+                  <ul style={{ marginTop: 4, paddingLeft: 18 }}>
+                    {vrows.map((r) => (
+                      <li key={r.id} className="muted small">{r.kind === 'issue'
+                        ? t('toolbelt.mkt.verifyItem', { name: r.name, version: r.version, issue: r.detail })
+                        : t('toolbelt.mkt.verifyNoShaItem', { name: r.name, version: r.version })}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 已安装台账 */}
           {showInstalled && (

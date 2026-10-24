@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 索引校验说清楚「验了多少、哪些能装但没哈希」（R345）
+
+- 后端 `plugin_registry_verify` 逐条返回 `has_url / https_url / has_sha256 / has_signer /
+  issue`，前端此前只把 `issue` 念出来：既不显示一共验了多少个插件，也看不出「地址是
+  https、签名者也给了、但没声明 sha256」这种条目——而 `plugin_mutate.rs:72` 在索引没给
+  哈希时是「跳过比对」放行的，用户有权在装之前知道这件事；
+- `market.tsx` 新增两个纯函数：`verifyCounts(items)` → `{ total, issue, noSha, ok }`；
+  `verifyRows(items)` → 需要点名的行（字段不合规用后端 issue 原文，只缺哈希的 kind='noSha'，
+  同一条两者都命中只出一行、issue 优先）；
+- 校验面板改为：签名结论之后一行「共 {total} 个插件，{ok} 个字段完备」（索引为空时改说
+  「索引里还没有插件，没有可校验的条目」，不再让空索引看起来像「全部通过」），
+  `noSha > 0` 时补「{n} 个未声明 sha256 校验哈希」，条目列表相应扩到两类；
+- 新增 8 条单测（计数四态 / issue 与 noSha 可同命中 / 空·null·undefined 全零 / 行顺序与
+  issue 优先 / 只缺哈希成行 / 空白 issue 不算问题）；
+- 验证：`pnpm -C apps/desktop check` 全绿（54 files / 887 tests）。
 ### 2026-10-24 弹窗关掉后焦点回到打开它的按钮（R344 useReturnFocus）
 
 - 此前关掉确认框/设置窗后焦点落在 body：键盘用户要从页面开头重新 Tab 一遍，读屏软件
