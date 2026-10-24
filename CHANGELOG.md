@@ -3,6 +3,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R407: 内联样式的语义色收口——3 处写死 hex 改走 token + 源码守卫
+
+- 缺口：MCP 审计行的「已拒」徽标 borderColor: '#e05c51'、可写警告条 background: '#fff3cd' + borderLeft: '4px solid #ffc107'、ReminderSettings 的未知脚手架提示 color: '#b45309'——内联样式绕开 tokens.css，深色主题下不跟着反相，也不受设计系统统一调整（仓库对 CSS 文件已有硬编码色值禁令，TSX 内联对象此前没人看）。
+- 改动：三处改用 var(--risk-danger) / var(--warn-soft) + var(--risk-caution) / var(--risk-caution)；lucide 图标的 color prop 同步换 token。
+- 守卫：新建 apps/desktop/src/inlineColor.test.ts——扫所有 TSX 的 style={{…}} 对象，出现裸 hex 整值（: '#hex'）或 border/outline 简写里的 hex 即违规；var(--token, #fallback) 回退形式、调色板数据（categoryColor/文件类型色/主题色板/图表系列色，都在对象外）不受影响。例外只有 gpu-donut.tsx（坏点测试必须渲染纯白/纯黑/纯 RGB 才能判死点，注释写明且不在断言里引用那些字面量）。3 条用例含假数据自检。
+- 反向自检：把 McpServers:401 还原成写死 hex → Tests 1 failed（报 文件:行号 写死颜色），还原后全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0。
+
 ### R406: 聊天区翻历史时不再被新消息拽回底部——贴底才跟随
 
 - 缺口：ChatPanel 在 turns.length / chatBusy 变化时无条件 scrollTo(scrollHeight)——用户往上翻历史，一条新回复（或流式增量）直接把滚动位置拽回底部，正在读的内容飞走。

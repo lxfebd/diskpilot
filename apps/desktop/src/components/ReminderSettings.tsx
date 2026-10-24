@@ -607,13 +607,13 @@ export function ReminderSettings() {
                 const sc = scaffolds.find((s) => s.id === r.scaffold_id);
                 return (
                   <div key={r.scaffold_id} className="rule-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                    <AlertTriangle size={13} style={{ flexShrink: 0 }} color={r.status === 'unknown_scaffold' ? '#b45309' : undefined} />
+                    <AlertTriangle size={13} style={{ flexShrink: 0 }} color={r.status === 'unknown_scaffold' ? 'var(--risk-caution)' : undefined} />
                     <span style={{ flex: 1 }}>{sc ? sc.name : r.scaffold_id}</span>
                     <span className="muted small">
                       {r.min_bytes === 0 ? t('system.reminder.autoListAny') : formatBytes(r.min_bytes)}
                     </span>
                     {r.status === 'unknown_scaffold' && (
-                      <span className="muted xsmall" style={{ color: '#b45309' }}>{t('system.reminder.autoListIdle')}</span>
+                      <span className="muted xsmall" style={{ color: 'var(--risk-caution)' }}>{t('system.reminder.autoListIdle')}</span>
                     )}
                     <button className="ghost icon" aria-label={t('system.reminder.autoListDelete')} disabled={autoListBusy} onClick={() => void removeAutoListRule(r.scaffold_id)}>
                       <Trash2 size={13} />

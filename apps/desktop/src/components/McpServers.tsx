@@ -398,7 +398,7 @@ function McpServersInner() {
                       </>
                     )}
                     {e.perm && <span className={`badge ${e.perm === 'L0' ? 'ok' : e.perm === 'L3' ? '' : 'warn'}`} style={{ marginLeft: 2 }}>{e.perm}</span>}
-                    {e.granted === false && <span className="badge" style={{ borderColor: '#e05c51' }}>{t('mcp.auditDenied')}</span>}
+                    {e.granted === false && <span className="badge" style={{ borderColor: 'var(--risk-danger)' }}>{t('mcp.auditDenied')}</span>}
                     {e.args != null && typeof e.args === 'object' && 'keys' in (e.args as object) && (
                       <span className="muted small">{t('mcp.auditArgs', { keys: (e.args as { keys?: string[] }).keys?.join(', ') ?? '' })}</span>
                     )}
@@ -892,7 +892,7 @@ function ServerForm(props: {
       </label>
 
       {writable && (
-        <p className="hint" style={{ background: '#fff3cd', borderLeft: '4px solid #ffc107', padding: '8px 12px', marginTop: 6 }}>
+        <p className="hint" style={{ background: 'var(--warn-soft)', borderLeft: '4px solid var(--risk-caution)', padding: '8px 12px', marginTop: 6 }}>
           <AlertTriangle size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
           {t('mcp.writableWarn')}
         </p>
