@@ -436,3 +436,42 @@ describe('设置窗分栏是真正的 tabs（R365）', () => {
     expect(violations).toEqual([]);
   });
 });
+// R366：16 处 seg-opt 分段单选按钮（语言/主题/字号/间隔/阈值/传输方式等）
+// 此前只有 active 类——读屏听不出「当前选的是哪一个」。每个按钮补 aria-pressed
+//（按下=当前项），守卫确保以后新增的分段按钮也带上。
+describe('分段单选控件带 aria-pressed（R366）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) {
+        if (c === '\\') j++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+
+  it('每个 seg-opt 按钮都要报按下状态', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<button\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/seg-opt/.test(tag)) continue;
+        if (!/aria-pressed=/.test(tag)) {
+          violations.push(path + ':' + src.slice(0, start).split('\n').length);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

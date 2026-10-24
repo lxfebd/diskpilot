@@ -481,7 +481,7 @@ export function Settings({ onClose, initialTab }: Props) {
                   <button
                     key={l}
                     type="button"
-                    className={`seg-opt${lang === l ? ' active' : ''}`}
+                    className={`seg-opt${lang === l ? ' active' : ''}`} aria-pressed={lang === l}
                     onClick={() => {
                       setLang(l);
                       setLangState(l);
@@ -509,7 +509,7 @@ export function Settings({ onClose, initialTab }: Props) {
                   <button
                     key={id}
                     type="button"
-                    className={`seg-opt${theme.id === id ? ' active' : ''}`}
+                    className={`seg-opt${theme.id === id ? ' active' : ''}`} aria-pressed={theme.id === id}
                     onClick={() => updateTheme({ id, accent: null })}
                   >
                     {themeLabel(id, t)}
@@ -558,7 +558,7 @@ export function Settings({ onClose, initialTab }: Props) {
                     <button
                       key={f}
                       type="button"
-                      className={`seg-opt${Math.abs(theme.fontScale - f) < 0.03 ? ' active' : ''}`}
+                      className={`seg-opt${Math.abs(theme.fontScale - f) < 0.03 ? ' active' : ''}`} aria-pressed={Math.abs(theme.fontScale - f) < 0.03}
                       onClick={() => updateTheme({ fontScale: f })}
                     >
                       {label}
@@ -632,7 +632,7 @@ export function Settings({ onClose, initialTab }: Props) {
               <div className="seg seg-5">
                 <button
                   type="button"
-                  className={`seg-opt${providerOverride === undefined ? ' active' : ''}`}
+                  className={`seg-opt${providerOverride === undefined ? ' active' : ''}`} aria-pressed={providerOverride === undefined}
                   onClick={() => setProviderOverride(undefined)}
                 >
                   {t('settings.ai.auto')}
@@ -641,7 +641,7 @@ export function Settings({ onClose, initialTab }: Props) {
                   <button
                     key={p}
                     type="button"
-                    className={`seg-opt${providerOverride === p ? ' active' : ''}`}
+                    className={`seg-opt${providerOverride === p ? ' active' : ''}`} aria-pressed={providerOverride === p}
                     onClick={() => setProviderOverride(p)}
                   >
                     {t(PROVIDER_LABEL_SHORT[p])}
@@ -760,7 +760,7 @@ export function Settings({ onClose, initialTab }: Props) {
                   <button
                     key={n}
                     type="button"
-                    className={`seg-opt${keepFiles === n ? ' active' : ''}`}
+                    className={`seg-opt${keepFiles === n ? ' active' : ''}`} aria-pressed={keepFiles === n}
                     onClick={() => {
                       setKeepFiles(n);
                       setKeepFilesState(n);

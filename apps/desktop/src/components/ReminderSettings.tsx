@@ -290,7 +290,7 @@ export function ReminderSettings() {
           <button
             key={h}
             type="button"
-            className={`seg-opt${cfg.interval_hours === h ? ' active' : ''}`}
+            className={`seg-opt${cfg.interval_hours === h ? ' active' : ''}`} aria-pressed={cfg.interval_hours === h}
             onClick={() => save({ interval_hours: h })}
           >
             {h === 72 ? t('system.reminder.days3') : t('system.reminder.hours', { n: h })}
@@ -309,7 +309,7 @@ export function ReminderSettings() {
             <button
               key={mb}
               type="button"
-              className={`seg-opt${cfg.min_bytes === mb * 1024 * 1024 ? ' active' : ''}`}
+              className={`seg-opt${cfg.min_bytes === mb * 1024 * 1024 ? ' active' : ''}`} aria-pressed={cfg.min_bytes === mb * 1024 * 1024}
               onClick={() => save({ min_bytes: mb * 1024 * 1024 })}
             >
               {mb >= 1024 ? t('system.reminder.gb', { gb: 1 }) : t('system.reminder.mb', { mb })}
@@ -341,7 +341,7 @@ export function ReminderSettings() {
           <button
             key={d}
             type="button"
-            className={`seg-opt${cfg.weekly_interval_days === d ? ' active' : ''}`}
+            className={`seg-opt${cfg.weekly_interval_days === d ? ' active' : ''}`} aria-pressed={cfg.weekly_interval_days === d}
             onClick={() => save({ weekly_interval_days: d })}
           >
             {t('system.reminder.weeklyDays', { n: d })}
@@ -362,7 +362,7 @@ export function ReminderSettings() {
           <button
             key={d}
             type="button"
-            className={`seg-opt${cfg.full_warn_days === d ? ' active' : ''}`}
+            className={`seg-opt${cfg.full_warn_days === d ? ' active' : ''}`} aria-pressed={cfg.full_warn_days === d}
             onClick={() => save({ full_warn_days: d })}
           >
             {d === 0 ? t('system.reminder.fullWarnOff') : t('system.reminder.fullWarnDays', { n: d })}
@@ -383,7 +383,7 @@ export function ReminderSettings() {
           <button
             key={d}
             type="button"
-            className={`seg-opt${cfg.scan_stale_days === d ? ' active' : ''}`}
+            className={`seg-opt${cfg.scan_stale_days === d ? ' active' : ''}`} aria-pressed={cfg.scan_stale_days === d}
             onClick={() => save({ scan_stale_days: d })}
           >
             {d === 0 ? t('system.reminder.fullWarnOff') : t('system.reminder.fullWarnDays', { n: d })}
@@ -418,7 +418,7 @@ export function ReminderSettings() {
             <button
               key={c}
               type="button"
-              className={`seg-opt${cfg.thermal_sustained_c === c ? ' active' : ''}`}
+              className={`seg-opt${cfg.thermal_sustained_c === c ? ' active' : ''}`} aria-pressed={cfg.thermal_sustained_c === c}
               onClick={() => save({ thermal_sustained_c: c })}
             >
               {t('system.reminder.thermalC', { c })}
@@ -433,7 +433,7 @@ export function ReminderSettings() {
             <button
               key={n}
               type="button"
-              className={`seg-opt${cfg.thermal_sustained_samples === n ? ' active' : ''}`}
+              className={`seg-opt${cfg.thermal_sustained_samples === n ? ' active' : ''}`} aria-pressed={cfg.thermal_sustained_samples === n}
               onClick={() => save({ thermal_sustained_samples: n })}
             >
               {t('system.reminder.thermalSamples', { n, min: n * 5 })}
@@ -469,7 +469,7 @@ export function ReminderSettings() {
             <button
               key={m}
               type="button"
-              className={`seg-opt${cfg.startup_watch_minutes === m ? ' active' : ''}`}
+              className={`seg-opt${cfg.startup_watch_minutes === m ? ' active' : ''}`} aria-pressed={cfg.startup_watch_minutes === m}
               onClick={() => save({ startup_watch_minutes: m })}
             >
               {m === 60 ? t('system.reminder.startupHour') : t('system.reminder.startupMinutes', { n: m })}

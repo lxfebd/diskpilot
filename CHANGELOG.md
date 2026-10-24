@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 分段单选按钮会报「按下状态」——16 处 seg-opt 补 aria-pressed（R366）
+
+- 缺口：全仓 16 处 `seg-opt` 分段单选（语言 / 主题 / 字号 / 提醒间隔与阈值 /
+  MCP 传输方式 / 保留份数 / AI 提供商）只有 `active` 视觉类——读屏听不出
+  「当前选的是哪一个」，键盘用户也只能靠颜色判断选中项。
+- 每个按钮补 `aria-pressed={同一选中条件}`（与 className 的 active 判断逐字相同，
+  不另起一份条件避免漂移）。radio/radiogroup 语义需要方向键巡回焦点才完整，
+  这里先用 aria-pressed 把「选没选」报出来——每组 2–6 项，Tab 逐个走过可接受。
+- 守卫（a11y.test.ts 1 条）：任何 `<button>` 标签里出现 `seg-opt` 必须带 `aria-pressed`，
+  以后新增分段按钮漏补会被点名。
+- 验证：`pnpm -C apps/desktop check` 全绿。
+
 ### 2026-10-24 设置窗 8 个分栏是真正的 tabs——选中态可听、方向键可切（R365）
 
 - 缺口：`Settings.tsx` 的 8 个分栏只是带 `active` 类的普通按钮——读屏听不出

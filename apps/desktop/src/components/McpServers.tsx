@@ -773,8 +773,8 @@ function ServerForm(props: {
       <label className="field">
         <span>{t('mcp.fTransport')}</span>
         <div className="seg seg-2">
-          <button type="button" className={`seg-opt${transportType === 'stdio' ? ' active' : ''}`} onClick={() => setTransportType('stdio')}>{t('mcp.optStdio')}</button>
-          <button type="button" className={`seg-opt${transportType === 'http' ? ' active' : ''}`} onClick={() => setTransportType('http')}>{t('mcp.optHttp')}</button>
+          <button type="button" className={`seg-opt${transportType === 'stdio' ? ' active' : ''}`} aria-pressed={transportType === 'stdio'} onClick={() => setTransportType('stdio')}>{t('mcp.optStdio')}</button>
+          <button type="button" className={`seg-opt${transportType === 'http' ? ' active' : ''}`} aria-pressed={transportType === 'http'} onClick={() => setTransportType('http')}>{t('mcp.optHttp')}</button>
         </div>
       </label>
 
