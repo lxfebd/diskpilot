@@ -66,6 +66,15 @@ export function navItemById(id: PageId): NavItem | undefined {
   return all.find((it) => it.id === id);
 }
 
+// R354：窗口标题跟着页面走。此前 <title> 一直是「DiskPilot」，切到清理/历史/工具箱后
+// 任务栏、窗口列表、读屏软件读到的都还是同一个名字，用户（尤其读屏用户）看不出在哪一页。
+// tr 传进来而不是在这里 import t：这一层保持纯函数，测试不用切语言。
+/** 页面标题：「DiskPilot · 总览」。查不到导航项时退回产品名。 */
+export function pageTitle(id: PageId, tr: (key: string) => string): string {
+  const it = navItemById(id);
+  return it ? `DiskPilot · ${tr(it.titleKey)}` : 'DiskPilot';
+}
+
 // ── 侧边栏折叠三态 ──────────────────────────────────────────────────
 // 显式的用户选择（preferredExpanded）与响应式断点判断（wideViewport）分开记：
 // 窗口缩窄时自动折叠保护内容区，但窗口恢复宽度时回到用户上次的选择，

@@ -28,6 +28,7 @@ import {
   SIDEBAR_EXPANDED_WIDTH_PX,
   createSidebarLayoutState,
   navItemById,
+  pageTitle,
   resizeSidebarLayout,
   toggleSidebarLayout,
   type PageId,
@@ -125,6 +126,11 @@ export default function App() {
   const [drives, setDrives] = useState<DriveInfo[]>([]);
   // 页面分发：设置不在其中——它是全局模态（点导航项只开弹窗，不切页）。
   const [view, setView] = useState<Exclude<PageId, 'settings'>>(PAGE_IDS.overview);
+  // R354：窗口标题 = 「DiskPilot · 当前页面」。任务栏、窗口列表、读屏软件都读它，
+  // 此前切到清理/历史/工具箱后标题始终是「DiskPilot」，看不出在哪一页。
+  useEffect(() => {
+    document.title = pageTitle(view, t);
+  }, [t, view]);
   const [diag, setDiag] = useState<ScanDiag | null>(null);
   // Holds the latest scan-stats event so we can merge it into ScanDiag once
   // api.scan() returns. Tauri emits the event right before the command resolves.

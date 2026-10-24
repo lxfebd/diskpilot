@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 窗口标题跟着页面走——不再是永远一个「DiskPilot」（R354）
+
+- 缺口：`<title>` 写死在 `index.html`，切换总览 / 工作区 / 清理 / 隐私 / 历史 / 工具箱 / 系统优化
+  后窗口标题始终是「DiskPilot」——任务栏、窗口列表、读屏软件读到的都是同一个名字，
+  用户看不出此刻在哪一页（读屏用户尤其依赖标题判断页面）。
+- `nav.ts` 新增纯函数 `pageTitle(id, tr)`：按导航项的 `titleKey` 拼成「DiskPilot · 总览」，
+  查不到导航项时退回产品名（不出现「DiskPilot · undefined」）；tr 由外部传入，这一层保持纯函数。
+- `App.tsx` 用 `useEffect` 在页面或语言变化时写 `document.title`——切语言后标题也跟着换。
+- `nav.test.ts` 新增 3 条单测（中文标题拼接、每个页面 ID 都能拼出且互不相同、未知 ID 退回产品名）。
+- 验证：`pnpm -C apps/desktop check` 全绿（57 files / 930 tests）。
 ### 2026-10-24 右键菜单能用键盘走——方向键/Home/End + 焦点可见 + ARIA menu（R353）
 
 - 缺口：`components/ContextMenu.tsx`（树视图 / 文件列表 / Studio 三处右键菜单）的项虽然都是 `<button>`，

@@ -13,6 +13,7 @@ import {
   SIDEBAR_COLLAPSED_WIDTH_PX,
   createSidebarLayoutState,
   navItemById,
+  pageTitle,
   resizeSidebarLayout,
   toggleSidebarLayout,
 } from './nav';
@@ -45,6 +46,23 @@ describe('导航模型', () => {
 
   it('未知 ID 返回 undefined 而不是抛错', () => {
     expect(navItemById('nope' as never)).toBeUndefined();
+  });
+});
+
+describe('窗口标题（R354 pageTitle）', () => {
+  it('跟着页面走——「DiskPilot · 总览」', () => {
+    const tr = (k: string) => (k === 'shell.nav.overview' ? '总览' : k);
+    expect(pageTitle(PAGE_IDS.overview, tr)).toBe('DiskPilot · 总览');
+  });
+
+  it('每个页面 ID 都能拼出带页面名的标题', () => {
+    const titles = Object.values(PAGE_IDS).map((id) => pageTitle(id, (k) => k));
+    expect(titles.every((s) => s.startsWith('DiskPilot · '))).toBe(true);
+    expect(new Set(titles).size, '不同页面标题应当不同').toBe(titles.length);
+  });
+
+  it('未知 ID 退回产品名，不出现「DiskPilot · undefined」', () => {
+    expect(pageTitle('nope' as never, (k) => k)).toBe('DiskPilot');
   });
 });
 
