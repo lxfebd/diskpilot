@@ -62,12 +62,11 @@ export function treeMayContain(treeKey: string, path: string): boolean {
 // 用户点「确认」才经 store.recyclePaths（执行 + 前端剪枝 + toast 一条链完成），
 // 避免同一路径被重复执行两次。
 export function openDiskpilotMenu(
-  e: React.MouseEvent,
+  pos: { x: number; y: number },
   node: { path: string; name: string; size: number },
   onRequestRecycle: (size: number) => void,
   setCtx: (s: ContextMenuState | null) => void,
 ) {
-  e.preventDefault();
   const items: ContextMenuItem[] = [
     {
       label: t('shell.tooltree.openInExplorer'),
@@ -88,5 +87,5 @@ export function openDiskpilotMenu(
       onClick: () => onRequestRecycle(node.size),
     },
   ];
-  setCtx({ x: e.clientX, y: e.clientY, items });
+  setCtx({ x: pos.x, y: pos.y, items });
 }

@@ -35,3 +35,18 @@ export function cycleIndex(current: number, len: number, delta: number): number 
   if (current < 0 || current >= len) return delta >= 0 ? 0 : len - 1;
   return (current + delta + len) % len;
 }
+// R368：右键菜单的键盘等价入口（Windows 通行口径：菜单键，或 Shift+F10）。
+// 文件树 / 文件列表的操作（打开位置、复制路径、移入回收站）此前只能右键唤出，
+// 键盘用户完全够不到同一组动作。
+export function isContextMenuKey(e: { key: string; shiftKey?: boolean }): boolean {
+  return e.key === 'ContextMenu' || (e.shiftKey === true && e.key === 'F10');
+}
+
+// R368：键盘唤出菜单时的锚点——元素左下角内侧一点，与鼠标点行内任意位置
+// 的观感一致。拿不到元素或尺寸为 0（虚拟列表尚未布局）时返回 null。
+export function contextMenuAnchor(el: Element | null): { x: number; y: number } | null {
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (!(r.width > 0 || r.height > 0)) return null;
+  return { x: Math.round(r.left + 12), y: Math.round(r.top + Math.min(r.height, 22)) };
+}

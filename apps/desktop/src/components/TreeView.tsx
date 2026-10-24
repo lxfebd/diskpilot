@@ -10,7 +10,7 @@ import { useStore } from '../store';
 import { api } from '../api';
 import { useT } from '../i18n';
 import { usePerfScale } from '../perfHooks';
-import { isActivationKey } from '../a11y';
+import { isActivationKey, isContextMenuKey, contextMenuAnchor } from '../a11y';
 
 type Props = {
   root: Node;
@@ -137,9 +137,9 @@ export function TreeView({ root, selectedPath, onSelect }: Props) {
   // onRequestRecycle），用户点「确认」才真正 recycle。
   const [pendingRecycle, setPendingRecycle] = useState<{ path: string; name: string; size: number } | null>(null);
 
-  const openCtx = useCallback((e: React.MouseEvent, node: Node) => {
+  const openCtx = useCallback((pos: { x: number; y: number }, node: Node) => {
     openDiskpilotMenu(
-      e,
+      pos,
       { path: node.path, name: node.name, size: node.size },
       (size) => setPendingRecycle({ path: node.path, name: node.name, size }),
       setCtx,
@@ -266,7 +266,7 @@ const Row = memo(function Row({
   depth: number;
   selectedPath: string | null;
   onSelect: (path: string, node?: Node) => void;
-  onCtx: (e: React.MouseEvent, node: Node) => void;
+  onCtx: (pos: { x: number; y: number }, node: Node) => void;
   open: boolean;
   loading: boolean;
   fullLoaded: boolean;
@@ -289,6 +289,13 @@ const Row = memo(function Row({
       // R314：Enter/空格 = 选中；←/→ = 收起/展开（树视图的通用键盘口径）。
       // 空格必须 preventDefault，否则滚页面。
       onKeyDown={(e) => {
+        // R368：菜单键 / Shift+F10 也在键盘上唤出右键菜单（与鼠标右键同动作）。
+        if (isContextMenuKey(e)) {
+          e.preventDefault();
+          const a = contextMenuAnchor(e.currentTarget);
+          if (a) onCtx(a, node);
+          return;
+        }
         if (isActivationKey(e.key)) {
           e.preventDefault();
           onSelect(node.path, node);
@@ -297,7 +304,7 @@ const Row = memo(function Row({
         if (e.key === 'ArrowRight' && hasKids && !open) { e.preventDefault(); onToggle(node); return; }
         if (e.key === 'ArrowLeft' && open) { e.preventDefault(); onToggle(node); }
       }}
-      onContextMenu={(e) => onCtx(e, node)}
+      onContextMenu={(e) => { e.preventDefault(); onCtx({ x: e.clientX, y: e.clientY }, node); }}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('application/x-diskpilot-path', node.path);

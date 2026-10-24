@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 右键菜单补键盘入口——菜单键 / Shift+F10（R368）
+
+- 缺口：全仓 5 处 `onContextMenu`（文件树行、文件列表行、社区仓库两处路径、右键菜单自身）把「在文件管理器中打开 / 复制路径 / 移入回收站」只挂右键——
+  键盘用户完全够不到这些动作，鼠标右键是唯一入口。
+- `a11y.ts` 新增 `isContextMenuKey`（菜单键 或 Shift+F10，Windows 通行口径）与 `contextMenuAnchor`（锚点取元素左上偏移；
+  零尺寸元素返回 null 不在原地开菜单）。
+- 三处消费点接线：`tooltree.openDiskpilotMenu` 形参从 `React.MouseEvent` 改成坐标对象（调用方各自 preventDefault）；
+  TreeView 行与 FileView 行的 onKeyDown 走同一分支；Studio 的社区路径行 / 子项行新增 `tabIndex={0}` + `ctxKeyDown`，
+  这两处此前连 `role=button` 之外的键盘可达性都没有（按 R368 前的键盘属性为 0）。
+- 守卫：用了 `onContextMenu` 的组件必须用 `isContextMenuKey`（唯一豁免 ContextMenu.tsx 自身）。
+
 ### 2026-10-24 展开/收起控件报出「展开状态」——8 处 aria-expanded（R367）
 
 - 缺口：全仓 `aria-expanded` 数量为 0。展开态只靠 chevron 图标方向变化与高亮类，

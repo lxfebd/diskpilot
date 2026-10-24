@@ -13,6 +13,7 @@ import { collectScaffoldCards, type ScaffoldCard } from '../cleanup/matches';
 import { SteamInspectorModal } from './SteamInspectorModal';
 import { UndoPanel } from './UndoPanel';
 import { copyPathWithToast } from '../clipboard';
+import { isContextMenuKey, contextMenuAnchor } from '../a11y';
 import { revealWithToast } from '../reveal';
 import { useEscapeKey } from '../escapeKey';
 import { useReturnFocus } from '../dialogFocus';
@@ -532,11 +533,10 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
   const [showAllChildren, setShowAllChildren] = useState(false);
   const [ctx, setCtx] = useState<ContextMenuState | null>(null);
 
-  const openCtx = (e: React.MouseEvent, p: string) => {
-    e.preventDefault();
+  const openCtx = (pos: { x: number; y: number }, p: string) => {
     setCtx({
-      x: e.clientX,
-      y: e.clientY,
+      x: pos.x,
+      y: pos.y,
       items: [
         {
           label: t('studio.reveal'),
@@ -551,6 +551,16 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
         },
       ],
     });
+  };
+
+  // R368：菜单键 / Shift+F10 也能唤出同一份右键菜单——键盘用户此前完全够不到
+  // 「在文件管理器中打开 / 复制路径」（这两个动作此前只挂在右键上）。
+  const ctxKeyDown = (e: React.KeyboardEvent, p: string): boolean => {
+    if (!isContextMenuKey(e)) return false;
+    e.preventDefault();
+    const a = contextMenuAnchor(e.currentTarget as Element);
+    if (a) openCtx(a, p);
+    return true;
   };
 
   const topChildrenAll = (() => {
@@ -601,7 +611,9 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
                         e.dataTransfer.setData('application/x-diskpilot-name', m.name);
                         e.dataTransfer.effectAllowed = 'copy';
                       }}
-                      onContextMenu={(e) => openCtx(e, m.path)}
+                      onContextMenu={(e) => { e.preventDefault(); openCtx({ x: e.clientX, y: e.clientY }, m.path); }}
+                      tabIndex={0}
+                      onKeyDown={(e) => { ctxKeyDown(e, m.path); }}
                       title={t('studio.dragTip')}
                     >
                       {m.path}
@@ -649,7 +661,9 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
                           e.dataTransfer.setData('application/x-diskpilot-name', c.name);
                           e.dataTransfer.effectAllowed = 'copy';
                         }}
-                        onContextMenu={(e) => openCtx(e, c.path)}
+                        onContextMenu={(e) => { e.preventDefault(); openCtx({ x: e.clientX, y: e.clientY }, c.path); }}
+                        tabIndex={0}
+                        onKeyDown={(e) => { ctxKeyDown(e, c.path); }}
                         title={t('studio.childTip', { path: c.path })}
                       >
                         <span className="studio-child-name">{c.is_dir ? '📁' : '📄'} {c.name}</span>

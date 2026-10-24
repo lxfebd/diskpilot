@@ -6,7 +6,7 @@ import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useStore } from '../store';
 import { useT } from '../i18n';
-import { activateOnKey } from '../a11y';
+import { activateOnKey, isContextMenuKey, contextMenuAnchor } from '../a11y';
 import { copyPathWithToast } from '../clipboard';
 import { revealWithToast } from '../reveal';
 
@@ -278,7 +278,16 @@ const FileRow = memo(function FileRow({
       role="button"
       tabIndex={0}
       onClick={() => onSelect(f.path)}
-      onKeyDown={activateOnKey(() => onSelect(f.path))}
+      onKeyDown={(e) => {
+        // R368：菜单键 / Shift+F10 唤出右键菜单（复制路径 / 打开位置 / 移入回收站）。
+        if (isContextMenuKey(e)) {
+          e.preventDefault();
+          const a = contextMenuAnchor(e.currentTarget);
+          if (a) onCtx(a.x, a.y);
+          return;
+        }
+        activateOnKey(() => onSelect(f.path))(e);
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onCtx(e.clientX, e.clientY);

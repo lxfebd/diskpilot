@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { activateOnKey, cycleIndex, isActivationKey } from './a11y';
+import { activateOnKey, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
 
 describe('键盘激活口径（R314）', () => {
   it('只有 Enter 与空格算激活键（对齐原生 button）', () => {
@@ -516,5 +516,34 @@ describe('展开/收起控件报展开状态（R367）', () => {
   it('树行目录节点带展开状态', () => {
     const tree = RAW_TSX['./components/TreeView.tsx'] ?? '';
     expect(tree).toContain('aria-expanded={node.is_dir ? open : undefined}');
+  });
+});
+// R368：右键菜单此前只能鼠标唤出——文件树行 / 文件列表行的「打开位置、复制路径、
+// 移入回收站」键盘用户完全够不到。菜单键 / Shift+F10 是 Windows 通行入口。
+describe('右键菜单的键盘入口（R368）', () => {
+  it('isContextMenuKey 认菜单键与 Shift+F10', () => {
+    expect(isContextMenuKey({ key: 'ContextMenu' })).toBe(true);
+    expect(isContextMenuKey({ key: 'F10', shiftKey: true })).toBe(true);
+    expect(isContextMenuKey({ key: 'F10' })).toBe(false);
+    expect(isContextMenuKey({ key: 'Enter' })).toBe(false);
+    expect(isContextMenuKey({ key: 'F10', shiftKey: false })).toBe(false);
+  });
+  it('contextMenuAnchor 给出行内锚点', () => {
+    expect(contextMenuAnchor(null)).toBeNull();
+    const el = { getBoundingClientRect: () => ({ left: 100, top: 40, width: 0, height: 0 }) } as unknown as Element;
+    expect(contextMenuAnchor(el)).toBeNull();
+    const el2 = { getBoundingClientRect: () => ({ left: 100, top: 40, width: 600, height: 24 }) } as unknown as Element;
+    expect(contextMenuAnchor(el2)).toEqual({ x: 112, y: 62 });
+  });
+  it('用了 onContextMenu 的组件都要有键盘等价入口', () => {
+    const EXEMPT = new Set(['./components/ContextMenu.tsx']);
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (EXEMPT.has(path)) continue;
+      if (/onContextMenu/.test(src) && !/isContextMenuKey/.test(src)) {
+        violations.push(path);
+      }
+    }
+    expect(violations).toEqual([]);
   });
 });
