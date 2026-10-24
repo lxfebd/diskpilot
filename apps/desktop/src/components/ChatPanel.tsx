@@ -699,7 +699,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
       </div>
 
       {/* R399：对话是流式更新的动态内容——role="log"（aria-live=polite）让读屏播报新消息，chat-typing 补 role=status。 */}
-      <div className="chat-scroll" role="log" aria-live="polite" aria-label={t('chat.transcriptAria')} ref={scrollerRef}>
+      <div className="chat-scroll" role="log" aria-live="polite" aria-label={t('chat.transcriptAria')} aria-busy={chatBusy || undefined} ref={scrollerRef}>
         {empty && !root && (
           <div className="chat-hero">
             <MessageSquare size={32} />

@@ -861,5 +861,7 @@ describe('聊天记录是动态内容，要被读屏播报（R399）', () => {
       .replace(/<!--[\s\S]*?-->/g, '');
     expect(chat).toContain('<div className="chat-scroll" role="log"');
     expect(chat).toContain('className="chat-typing" role="status"');
+    // R401：流式更新期间要声明 aria-busy，读屏不会急着把拼到一半的内容念完。
+    expect(chat).toContain('aria-busy={chatBusy || undefined}');
   });
 });

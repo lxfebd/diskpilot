@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R401: 聊天流式更新期间声明 aria-busy——读屏不再把拼到一半的半句话念完
+
+- 缺口：R399 给对话区加了 role=log + aria-live=polite，但 AI 回答逐字流式写入时读屏会把每次增量都当独立更新播报，把半句中文/半截工具名念出来；aria-busy 是 live region 的标准「更新进行中，等一等再念」信号，全仓此前只有 HwPanels 的 spinning 用过。
+- 改动：ChatPanel 的 chat-scroll 加 aria-busy={chatBusy || undefined}（打字/工具调用进行中为 true，空闲不写该属性）。
+- 守卫：a11y.test.ts 的 R399 断言里补一条「chat-scroll 必须带 aria-busy={chatBusy || undefined}」（沿用剥注释再断言的写法，防注释冒充）。自检：临时删掉 aria-busy → 报 AssertionError expected ... to contain aria-busy=、Tests 1 failed、EXIT=1，还原后全绿。
+- 验证：pnpm -C apps/desktop check 70 files / 1025 tests / EXIT=0。
+
 ### R400: 截断文字悬停能看到全文——8 处省略号文本补 title
 
 - 缺口：从 CSS 里反向扫描 46 条 text-overflow:ellipsis 选择器，逐个到 TSX 核对引用点，找出「文字会被省略号截断、但元素或所在行没有 title 兜底」的 8 处：硬盘型号（Hardware 面板）、Steam 游戏主/别名与创意工坊条目标题、网络测速 URL、系统信息 User-Agent、工具箱 AI 关联列表、总览空间大头行（title 原只有提示没带目录名）、聊天头部标题、清理作用域名。
