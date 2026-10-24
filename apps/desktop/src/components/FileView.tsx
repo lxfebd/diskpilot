@@ -49,6 +49,19 @@ function fillForExt(ext: string): string {
  *  `downloads/installer.exe`）。通配符（* ?）只对文件名生效，路径片段按
  *  包含匹配——`*.mp4` 依然只搜文件名，不会因路径里有 `.mp4` 误命中。
  *  纯函数，可单测。 */
+
+/** 排序列头的读屏播报：当前排序列给「列名，升/降序」——方向键图标只有视觉意义，
+ *  只按 aria-pressed 听不出是升序还是降序。非当前列返回 undefined（不覆盖按钮原文）。 */
+export function sortHeaderLabel(
+  col: string,
+  active: boolean,
+  desc: boolean,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | undefined {
+  if (!active) return undefined;
+  return t(desc ? 'overview.fileview.sortDesc' : 'overview.fileview.sortAsc', { col });
+}
+
 export function matchesQuery(name: string, q: string, rel?: string): boolean {
   if (!q) return true;
   const lower = q.toLowerCase();
@@ -169,10 +182,20 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
       </div>
 
       <div className="fileview-head">
-        <button className={'sortable' + (sortKey === 'name' ? ' active' : '')} aria-pressed={sortKey === 'name'} onClick={() => toggleSort('name')}>
+        <button
+          className={'sortable' + (sortKey === 'name' ? ' active' : '')}
+          aria-pressed={sortKey === 'name'}
+          aria-label={sortHeaderLabel(t('overview.fileview.colName'), sortKey === 'name', sortDesc, t)}
+          onClick={() => toggleSort('name')}
+        >
           {t('overview.fileview.colName')} {sortKey === 'name' && (sortDesc ? <ArrowDown size={11} /> : <ArrowUp size={11} />)}
         </button>
-        <button className={'sortable' + (sortKey === 'size' ? ' active' : '')} aria-pressed={sortKey === 'size'} onClick={() => toggleSort('size')}>
+        <button
+          className={'sortable' + (sortKey === 'size' ? ' active' : '')}
+          aria-pressed={sortKey === 'size'}
+          aria-label={sortHeaderLabel(t('overview.fileview.colSize'), sortKey === 'size', sortDesc, t)}
+          onClick={() => toggleSort('size')}
+        >
           {t('overview.fileview.colSize')} {sortKey === 'size' && (sortDesc ? <ArrowDown size={11} /> : <ArrowUp size={11} />)}
         </button>
       </div>

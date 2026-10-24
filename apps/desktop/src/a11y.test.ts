@@ -667,3 +667,44 @@ describe('SVG 图要么有名字要么是装饰（R372）', () => {
     expect(violations).toEqual([]);
   });
 });
+// R373：排序列头的方向（升/降）只有箭头图标可见，读屏只能听出 aria-pressed。
+// 当前列必须经 sortHeaderLabel 补 aria-label，把「列名，升/降序」念出来。
+describe('排序列头报出升降序（R373）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) {
+        if (c === '\\') j++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') {
+        quote = c;
+        continue;
+      }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it('sortable 按钮带 aria-pressed 时必有来自 sortHeaderLabel 的 aria-label', () => {
+    const violations: string[] = [];
+    const src = RAW_TSX['./components/FileView.tsx'] ?? '';
+    expect(src).toContain('sortHeaderLabel(');
+    for (const m of src.matchAll(/<button\b/g)) {
+      const start = m.index ?? 0;
+      const end = tagEnd(src, start);
+      if (end < 0) continue;
+      const tag = src.slice(start, end + 1);
+      if (!/'sortable'/.test(tag)) continue;
+      if (!/aria-pressed=/.test(tag)) continue;
+      if (!/aria-label=\{sortHeaderLabel\(/.test(tag)) {
+        violations.push(String(src.slice(0, start).split('\n').length));
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

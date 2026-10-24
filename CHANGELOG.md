@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 排序列头念出升降序——方向不再只有箭头图标（R373）
+
+- 缺口：文件列表的「文件名 / 大小」两个排序列头只有 aria-pressed（「已按下」），
+  升序还是降序只体现在按钮里的小小箭头图标上——读屏用户点了半天不知道当前方向。
+- FileView 新增导出纯函数 sortHeaderLabel(col, active, desc, t)：只有当前排序列返回
+  「列名，升序 / 降序」，非当前列返回 undefined（不覆盖按钮原文）；两个列头的
+  aria-label 都经它生成。新增 overview.fileview.sortAsc / sortDesc 两键（中英）。
+- 测试：FileView.test.ts 新增 4 条（非当前列 undefined、降序键、升序键、占位符带列名）；
+  a11y.test.ts 新增守卫「sortable 按钮带 aria-pressed 时必有来自 sortHeaderLabel 的 aria-label」
+  ——自检：删掉名称列头的 aria-label → 报红，还原后绿。
+
 ### 2026-10-24 SVG 图对读屏要么有名字、要么明说是装饰（R372）
 
 - 缺口：页面上 16 处 SVG 图（容量环形图、空间/温度趋势线、树图、压测图……），
