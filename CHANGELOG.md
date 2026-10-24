@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R399: AI 对话记录能被读屏播报——chat-scroll 加 role=log，输入中提示补 role=status
+
+- 缺口：ChatPanel 的对话区（div.chat-scroll）流式渲染 AI 回答、工具调用轨迹、输入中提示，但没有任何 live region——读屏用户全程听不到：AI 有没有在回、回了什么、还在不在想。chatBusy 的「正在打字」也没有 role=status。
+- 改动：chat-scroll 加 role="log" aria-live="polite" aria-label={t(chat.transcriptAria)}（R399 注释说明流式动态内容的播报意图）；chat-typing 加 role="status"。i18n chat.ts zh/en 各加 chat.transcriptAria（zh「AI 对话记录，新消息会自动播报」/ en "AI chat transcript — new messages are announced automatically"）。
+- 守卫：a11y.test.ts 新增「聊天记录是动态内容，要被读屏播报（R399）」——取 RAW_TSX 的 ChatPanel.tsx，先剥 JSX 注释再断言必须含 class 与 role 的真实标签（第一版守卫没剥注释、自检时删掉 role 仍通过——注释里的字面量冒充了断言，修正后自检报错红）。自检：临时把 role=log 行改回裸 div → 报 AssertionError expected ... to contain <div className=chat-scroll role=lo...、Tests 1 failed、EXIT=1，还原后全绿。
+- 验证：pnpm -C apps/desktop check 70 files / 1025 tests（1024+1）/ EXIT=0。
+
 ### R398: 最近清理面板不再整卡消失——台账为空时留头给诚实空态
 
 - 缺口：UndoPanel（Studio 侧栏「最近清理」）在台账为空时直接 return null 整卡消失——同一个台账的整页 HistoryPage 有明确的空态文案（history.empty「还没有清理记录。执行清理后，每次操作都会记录在这里」），面板侧却什么提示都没有，且空卡消失会让侧栏下方组件布局跳动。

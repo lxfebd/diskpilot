@@ -87,6 +87,7 @@ export const chat = {
     'chat.hero.aiGoSettings': '去配置 AI',
     'chat.hero.aiSamples': '配置前也能先用扫描与清理功能',
     'chat.typing': 'AI 正在打字…',
+    'chat.transcriptAria': 'AI 对话记录，新消息会自动播报',
 
     // 确认面板共用 + 工具箱 CLI 工具（中/高风险）
     'chat.confirm.remember': '本次会话免确认',
@@ -195,6 +196,7 @@ export const chat = {
     'chat.hero.aiGoSettings': 'Configure AI',
     'chat.hero.aiSamples': 'Scanning and cleanup already work before you configure it',
     'chat.typing': 'AI is typing…',
+    'chat.transcriptAria': 'AI chat transcript — new messages are announced automatically',
 
     // Shared confirm-panel chrome + Toolbelt CLI tools (medium/high risk)
     'chat.confirm.remember': 'No more confirmations this session',

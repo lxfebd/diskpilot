@@ -698,7 +698,8 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
         )}
       </div>
 
-      <div className="chat-scroll" ref={scrollerRef}>
+      {/* R399：对话是流式更新的动态内容——role="log"（aria-live=polite）让读屏播报新消息，chat-typing 补 role=status。 */}
+      <div className="chat-scroll" role="log" aria-live="polite" aria-label={t('chat.transcriptAria')} ref={scrollerRef}>
         {empty && !root && (
           <div className="chat-hero">
             <MessageSquare size={32} />
@@ -744,7 +745,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
             recycleNode={recycleNode}
           />
         ))}
-        {chatBusy && <div className="chat-typing">{t('chat.typing')}</div>}
+        {chatBusy && <div className="chat-typing" role="status">{t('chat.typing')}</div>}
       </div>
 
       {pendingCli && (

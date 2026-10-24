@@ -852,3 +852,14 @@ describe('右键菜单触发器要声明会开菜单（R396）', () => {
     expect(violations).toEqual([]);
   });
 });
+
+describe('聊天记录是动态内容，要被读屏播报（R399）', () => {
+  it('ChatPanel 的对话区必须有 role=log，输入中提示有 role=status', () => {
+    // 先剥掉 JSX 注释再断言——注释里引用的字面量不能算数（自检时就栽过一次）。
+    const chat = (RAW_TSX['./components/ChatPanel.tsx'] ?? '')
+      .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, '')
+      .replace(/<!--[\s\S]*?-->/g, '');
+    expect(chat).toContain('<div className="chat-scroll" role="log"');
+    expect(chat).toContain('className="chat-typing" role="status"');
+  });
+});
