@@ -57,14 +57,6 @@ impl UsnChange {
         const DATA_CHANGE: u32 = 1 | 2 | 4;
         self.reason & (DATA_CHANGE | USN_REASON_FILE_CREATE | USN_REASON_FILE_DELETE) != 0
     }
-
-    pub fn is_delete(&self) -> bool {
-        self.reason & USN_REASON_FILE_DELETE != 0
-    }
-
-    pub fn is_rename_old(&self) -> bool {
-        self.reason & USN_REASON_RENAME_OLD_NAME != 0
-    }
 }
 
 /// A change resolved to an absolute path via the FRN table.

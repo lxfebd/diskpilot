@@ -3,6 +3,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R402: 删掉 5 个零引用的 Rust 公共项——死代码不再挂在公共 API 上
+
+- 缺口：workspace 内 Rust 公共项全量扫描（1037 个 pub fn/struct/const 等，跳过测试模块）发现 5 个名字除定义外全仓库零引用：usn.rs 的 UsnChange::is_delete 与 is_rename_old 方法、winapp2.rs 的 reg_keys_summary（文档写明「供 UI 展示」但 UI 从未调用）、steam-inspector 的 discover_steam_root（只能在 Windows 上可能有用但无人用）、toolbelt manifest.rs 的 manifest_index（文档写「供前端/AI 注入用」同样无人用）。
+- 改动：逐个删除（含各自的 doc 注释），并清理因此变未使用的 use std::collections::HashMap 两行（winapp2.rs / manifest.rs）。保留了仍在用的 USN_REASON_RENAME_OLD_NAME 常量（usn_tests.rs 与 usn_tree.rs 都还在引用）。
+- 验证：重扫确认死项归零；cargo fmt --all -- --check EXIT=0（删完先跑了一次 fmt 修正空行）；cargo clippy --workspace --all-targets -- -D warnings EXIT=0（仅 binrw 依赖的 future-incompat note）；cargo test -p diskpilot-scanner -p diskpilot-scaffold -p diskpilot-steam-inspector -p diskpilot-toolbelt --no-fail-fast 全部 suite ok、TEST=0。
+
 ### R401: 聊天流式更新期间声明 aria-busy——读屏不再把拼到一半的半句话念完
 
 - 缺口：R399 给对话区加了 role=log + aria-live=polite，但 AI 回答逐字流式写入时读屏会把每次增量都当独立更新播报，把半句中文/半截工具名念出来；aria-busy 是 live region 的标准「更新进行中，等一等再念」信号，全仓此前只有 HwPanels 的 spinning 用过。

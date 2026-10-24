@@ -756,7 +756,7 @@ fn trim_log_drops_unparsable_lines_when_it_rewrites() {
         body.push('\n');
         if i == 1 {
             body.push_str("this line is not json");
-        body.push('\n');
+            body.push('\n');
         }
     }
     std::fs::write(&w.undo_log, body).unwrap();

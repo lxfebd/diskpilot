@@ -17,7 +17,6 @@
 //! 只有注册表探测的条目会退化为 `match.name_contains`（按名字匹配目录名）。
 
 use crate::{Match, Mode, RecycleGranularity, Risk, Scaffold, Scope};
-use std::collections::HashMap;
 
 /// 一个 Winapp2 条目（对齐 C# CleanerEntry）。
 #[derive(Debug, Clone)]
@@ -274,15 +273,6 @@ fn scope_label(fk: &FileKey, entry: &Winapp2Entry, idx: usize) -> String {
     } else {
         format!("清理 {} 文件（{}）", dir, idx + 1)
     }
-}
-
-/// 汇总一个 Winapp2 条目的注册表键（供 UI 展示「当前版本不执行」详情）。
-pub fn reg_keys_summary(entries: &[Winapp2Entry]) -> HashMap<&str, usize> {
-    entries
-        .iter()
-        .filter(|e| !e.reg_keys.is_empty())
-        .map(|e| (e.name.as_str(), e.reg_keys.len()))
-        .collect()
 }
 
 #[cfg(test)]

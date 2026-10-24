@@ -5,7 +5,6 @@
 //! 2026-08-12 生成）。参数表/示例/风险都出自权威 CLI 文档；`toolbelt.toml` 仍可
 //! 在执行层覆盖 risk/args/timeout（优先级：toml > manifest > 文档默认）。
 
-use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
@@ -134,14 +133,6 @@ pub fn find_manifest(name: &str) -> Option<&'static ToolManifest> {
         let n = m.name.to_ascii_lowercase();
         n == q || n.contains(&q) || q.contains(&n)
     })
-}
-
-/// 名字 → manifest 索引（一次算好，供前端/AI 注入用）。
-pub fn manifest_index() -> HashMap<&'static str, &'static ToolManifest> {
-    all_manifests()
-        .iter()
-        .map(|m| (m.name.as_str(), m))
-        .collect()
 }
 
 /// 按 `output.parser` 选择的解析器名（smart_csv / kv_lines / stdout）。

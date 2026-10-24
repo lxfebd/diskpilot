@@ -58,10 +58,6 @@ pub fn steam_root_candidates() -> Vec<PathBuf> {
     out
 }
 
-pub fn discover_steam_root() -> Option<PathBuf> {
-    steam_root_candidates().into_iter().find(|p| p.is_dir())
-}
-
 /// Read `HKCU\Software\Valve\Steam\SteamPath` — Steam writes this on every
 /// launch (forward-slash form). Skipped on non-Windows builds.
 #[cfg(windows)]
