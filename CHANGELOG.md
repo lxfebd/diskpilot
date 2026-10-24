@@ -1,5 +1,13 @@
 ## [未发布]
 
+### R390: 清理面板不再把「最近 50 条」说成「共 50 条」——碰上限就明说还有更早的
+
+- 缺口：`UndoPanel` 只拉最近 50 条（`api.listUndo(50)`），但头部计数文案 `cleanup.entriesCount` 直接填 `entries.length`——台账超过 50 条时（R388 后上限 5000）面板会显示「50 条」，把截断后的列表当成了全部，和 R310 修过的台账页是同一族「数据不自曝截断」问题。
+- 改动：`UndoPanel` 新增导出 `UNDO_PANEL_LIMIT = 50` 与纯函数 `undoCountInfo(entries, limit)`（复用 `historyTruncated` 的截断判定，碰上限保守视为截断）；头部计数改为 `truncated ? cleanup.entriesTruncated : cleanup.entriesCount`——截断时明说「显示最近 {n} 条（更早的在台账页）」，旁边的「查看全部」按钮天然对上了。
+- i18n：cleanup.ts zh/en 各加 `cleanup.entriesTruncated`（含 {n}，与 entriesCount 占位符一致，过 R313 守卫）。
+- 测试：新增 `components/UndoPanel.test.ts` 5 条（null/undefined→0 条不截断、不足上限如实报、恰好 50 保守截断、200 条如实报 n 且截断、limit=0 不算截断）。
+- 验证：`pnpm -C apps/desktop check` 全绿。
+
 ### R389: 扫描失败的红横幅能手动关掉了——旧错误不再一直挂着
 
 - 缺口：扫描失败时 App 顶部的错误横幅（`banner error`）只在「下一次扫描开始」时被 `setErr(null)` 清掉。用户不想立刻重扫时，旧错误会一直挂在页面顶上，既没有关闭入口，也没有任何说明（这个横幅不会被任何页面切换收起）。

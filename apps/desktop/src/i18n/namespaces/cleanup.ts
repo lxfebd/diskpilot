@@ -181,6 +181,7 @@ export const cleanup = {
     // R252：退出进程后手动重跑 preflight，横幅不再残留到换脚本。
     'cleanup.preflightRecheck': '重新检测',
     'cleanup.entriesCount': '{n} 条',
+    'cleanup.entriesTruncated': '显示最近 {n} 条（更早的在台账页）',
     'cleanup.bytesFreed': '释放 {size}',
     'cleanup.restoring': '恢复中…',
     'cleanup.restore': '恢复',
@@ -363,6 +364,7 @@ export const cleanup = {
     'cleanup.preflightRunning': 'These processes are still running — quit them before cleaning: {procs}',
     'cleanup.preflightRecheck': 'Re-check',
     'cleanup.entriesCount': '{n} entries',
+    'cleanup.entriesTruncated': 'Showing the latest {n} (earlier ones live in the ledger)',
     'cleanup.bytesFreed': 'freed {size}',
     'cleanup.restoring': 'Restoring…',
     'cleanup.restore': 'Restore',

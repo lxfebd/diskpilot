@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { RotateCcw, History, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import { restoreKind } from '../history/model';
+import { historyTruncated } from './history/HistoryPage';
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { formatBytes, formatMonthDay, formatTime } from '../format';
@@ -20,6 +21,18 @@ function fmtTime(ts: string): string {
   return `${formatMonthDay(d)} ${formatTime(d)}`;
 }
 
+
+/// 台账面板的拉取上限：只列最近 N 条，条目数碰上限时不能说「共 N 条」——
+/// 那是把截断后的列表当成了全部（R390，与 R310 的台账页同族口径）。
+export const UNDO_PANEL_LIMIT = 50;
+
+/** 面板计数标签的输入：n = 已加载条数，truncated = 是否可能还有更早的记录（碰上限保守视为截断）。 */
+export function undoCountInfo(
+  entries: readonly unknown[] | null | undefined,
+  limit: number = UNDO_PANEL_LIMIT,
+): { n: number; truncated: boolean } {
+  return { n: entries?.length ?? 0, truncated: historyTruncated(entries ?? null, limit) };
+}
 /** 文案函数类型（useT() 的返回值）：模块级纯函数按这个签名收 t，保证在渲染时求值。 */
 type TFunc = ReturnType<typeof useT>;
 
@@ -47,7 +60,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
 
   const refresh = useCallback(() => {
     setLoadErr(null);
-    api.listUndo(50).then(setEntries).catch((e) => {
+    api.listUndo(UNDO_PANEL_LIMIT).then(setEntries).catch((e) => {
       // 读取失败 ≠ 没有记录：如实显示读不到，不能伪装成空列表消失。
       setEntries([]);
       setLoadErr(String(e instanceof Error ? e.message : e));
@@ -106,12 +119,13 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
   }
 
   if (entries.length === 0) return null;
+  const countInfo = undoCountInfo(entries, UNDO_PANEL_LIMIT);
 
   return (
     <div className="undo-panel">
       <div className="studio-head">
         <span><History size={13} /> {t('cleanup.recent')}</span>
-        <span className="muted small">{t('cleanup.entriesCount', { n: entries.length })}</span>
+        <span className="muted small">{t(countInfo.truncated ? 'cleanup.entriesTruncated' : 'cleanup.entriesCount', { n: countInfo.n })}</span>
         {onOpenHistory && (
           <button type="button" className="ghost" onClick={onOpenHistory}>
             {t('cleanup.viewAll')}
