@@ -1,5 +1,14 @@
 ## [未发布]
 
+### R388: undo.jsonl 不再无限膨胀——台账固定保留最新 5000 条
+
+- 缺口：撤销台账是纯追加（write_log 逐条 append），长期使用会撑到任意大；前端每次打开台账页，后端 `list_undo` 都是「读整个 jsonl 再 take」，文件越大每次打开越慢。而 R310 的「查看全部（最多 5000）」上限实际是前端自设的——台账里可能还有更早记录没进前端（HistoryPage 注释里曾让人以为后端自带裁剪，实为笔误，R384 已修注释）。
+- 改动：`crates/executor` 新增 `UNDO_LOG_MAX = 5000` 与 `trim_log(undo_log, max)`——台账超过上限时原子重写（同目录临时文件 + rename，与 `remove_restored` 同一口径，崩溃不截半截）只留最新 N 条，返回裁掉的条数；不足上限或台账不存在零开销不动文件；坏行（无法反序列化）超限随重写丢弃（list_undo 本来就跳过它们）。`execute()` 每轮清理结束统一调用一次（只记 warn 日志，裁剪失败不阻塞清理）——五个执行入口（清理 scope/glob/AI 计划/工具箱/插件）自动受益。`remove_restored` 顺手抽出共享的 `rewrite_log` 原子重写。
+- 前端：HistoryPage 注释更新——「查看全部」看到的就是台账里真实存在的全部记录（ALL_LIMIT 与 UNDO_LOG_MAX 同值），不再有隐性缺口。
+- 测试：`crates/executor/tests/executor_ops.rs` 新增 4 条——超限裁到指定条数且最新在前、不足上限不重写不动文件（含不存在的台账 / max=0）、坏行随重写丢弃、execute 自动把超限台账收口到 UNDO_LOG_MAX（预置 5002 条再执行一次清理）。
+- 验证：cargo test -p diskpilot-executor 27 passed；cargo clippy -p diskpilot-executor --all-targets -- -D warnings 干净；`pnpm -C apps/desktop check` 65 files / 998 tests 全绿。
+
+
 ### R387: Tauri 事件监听不再有取消竞态——迟到的解绑立即生效，三处监听收进 useTauriEvent
 
 - **修复：Tauri 事件监听不再有取消竞态泄漏。** 全仓三处监听（硬件烤机进度 hw-test-progress、插件下载进度 plugin-download-progress、风扇熔断 fan-temp-breaker）是老写法 `let un; listen(..).then(fn => un = fn); return () => un?.()`——组件卸载或 effect 依赖重跑发生在 `listen()` 的 Promise settle 之前时，解绑函数还没拿到，监听器就留在那里：卸载后仍收事件（可能对已卸载组件 setState）、market 的 `[refresh, t]` 依赖重跑会叠出第二份回调。R328 在 `useAgentToolProgress` 修过一份，本轮收成可复用基建。

@@ -5,7 +5,9 @@
 //! and the safety red lines (no out-of-quarantine restore, no restore onto an
 //! existing source, no crash on missing paths).
 
-use diskpilot_executor::{execute, list_undo, remove_restored, restore_quarantined, Action, Plan};
+use diskpilot_executor::{
+    execute, list_undo, remove_restored, restore_quarantined, trim_log, Action, Plan, UNDO_LOG_MAX,
+};
 #[cfg(windows)]
 use std::os::windows::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
@@ -669,4 +671,130 @@ fn missing_path_records_none_bytes_freed() {
 
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].bytes_freed, None);
+}
+
+// ============================================================================
+// 台账保留上限（R388）
+// ============================================================================
+
+/// 预置一份「已含 N 条 delete 记录」的台账（只写台账行，不真的动文件）。
+fn seed_log(path: &Path, n: usize) {
+    let mut body = String::new();
+    for i in 0..n {
+        body.push_str(&format!(
+            r#"{{"timestamp":"2026-01-01T00:00:00Z","action":"delete","source":"C:/seed/{i}.dat","reason":"seed"}}"#
+        ));
+        body.push('\n');
+    }
+    std::fs::write(path, body).unwrap();
+}
+
+#[test]
+fn trim_log_keeps_newest_entries() {
+    let w = Workspace::new();
+    for name in ["one.dat", "two.dat", "three.dat", "four.dat", "five.dat"] {
+        execute(
+            &plan(Action::Delete, vec![w.file(name)]),
+            false,
+            &w.undo_log,
+            w.quarantine_root(),
+        )
+        .unwrap();
+    }
+
+    let pruned = trim_log(&w.undo_log, 3).unwrap();
+    assert_eq!(pruned, 2, "5 条裁到 3 条应裁掉 2 条");
+
+    let kept = list_undo(&w.undo_log).unwrap();
+    assert_eq!(kept.len(), 3);
+    assert_eq!(kept[0].source, w.src.join("five.dat"), "最新的留下且在最前");
+    assert_eq!(kept[2].source, w.src.join("three.dat"), "最旧的两条被裁掉");
+    assert!(
+        kept.iter().all(|e| e.source != w.src.join("one.dat")),
+        "第一条应已被裁掉"
+    );
+}
+
+#[test]
+fn trim_log_is_noop_under_the_limit() {
+    let w = Workspace::new();
+    execute(
+        &plan(Action::Delete, vec![w.file("a.dat")]),
+        false,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+    execute(
+        &plan(Action::Delete, vec![w.file("b.dat")]),
+        false,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+    let before = std::fs::read_to_string(&w.undo_log).unwrap();
+
+    assert_eq!(trim_log(&w.undo_log, 5).unwrap(), 0, "未超上限不裁剪");
+    assert_eq!(
+        std::fs::read_to_string(&w.undo_log).unwrap(),
+        before,
+        "未超上限时文件保持原样（不重写、不丢坏行）"
+    );
+    // 台账不存在 / max=0 都是安全空操作。
+    assert_eq!(trim_log(&w.tmp.path().join("nope.jsonl"), 3).unwrap(), 0);
+    assert_eq!(trim_log(&w.undo_log, 0).unwrap(), 0);
+}
+
+#[test]
+fn trim_log_drops_unparsable_lines_when_it_rewrites() {
+    let w = Workspace::new();
+    let mut body = String::new();
+    for i in 0..4 {
+        body.push_str(&format!(
+            r#"{{"timestamp":"2026-01-01T00:00:00Z","action":"delete","source":"C:/g/{i}.dat","reason":"g"}}"#
+        ));
+        body.push('\n');
+        if i == 1 {
+            body.push_str("this line is not json");
+        body.push('\n');
+        }
+    }
+    std::fs::write(&w.undo_log, body).unwrap();
+
+    let pruned = trim_log(&w.undo_log, 2).unwrap();
+    assert_eq!(pruned, 2, "4 条有效记录裁到 2 条");
+    let after = std::fs::read_to_string(&w.undo_log).unwrap();
+    assert!(!after.contains("not json"), "重写时坏行一并丢弃");
+    assert_eq!(list_undo(&w.undo_log).unwrap().len(), 2);
+}
+
+// clippy 的 cmp_owned 建议对 PathBuf 比较 &str 不成立（PathBuf 没有这类 PartialEq），
+// 这里按语义显式构造一次桩路径再做全量比对，属刻意为之。
+#[test]
+#[allow(clippy::cmp_owned)]
+fn execute_trims_oversized_ledger_to_the_cap() {
+    let w = Workspace::new();
+    seed_log(&w.undo_log, UNDO_LOG_MAX + 2);
+
+    execute(
+        &plan(Action::Delete, vec![w.file("fresh.dat")]),
+        false,
+        &w.undo_log,
+        w.quarantine_root(),
+    )
+    .unwrap();
+
+    let entries = list_undo(&w.undo_log).unwrap();
+    assert_eq!(entries.len(), UNDO_LOG_MAX, "执行后台账收敛到保留上限");
+    assert_eq!(
+        entries[0].source,
+        w.src.join("fresh.dat"),
+        "本次执行的记录是最新的，必须留住"
+    );
+    assert!(
+        entries
+            .iter()
+            .all(|e| e.source != PathBuf::from("C:/seed/0.dat")),
+        "最早的那条被裁掉"
+    );
 }

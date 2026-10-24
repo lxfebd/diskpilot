@@ -33,6 +33,10 @@ pub struct UndoEntry {
     pub bytes_freed: Option<u64>,
 }
 
+/// 台账保留上限（R388）：`undo.jsonl` 只保留最新这个条数。
+/// 与前端 HistoryPage 的 `ALL_LIMIT` 同值——两边对齐，「查看全部」才不是假话。
+pub const UNDO_LOG_MAX: usize = 5000;
+
 mod recycle;
 pub(crate) use recycle::recycle_one;
 pub use recycle::recycle_path;
@@ -160,6 +164,14 @@ pub fn execute(
         }
     }
 
+    // R388：一轮执行结束把台账收敛到保留上限。write_log 是纯追加，长期用下去
+    // undo.jsonl 会撑到任意大，而前端每次打开台账页 list_undo 都要整读一遍
+    // （读全文件再 take）。只在超上限时才重写，低于上限零开销；裁剪失败不阻塞
+    // 本次清理（文件已追加，下次执行还会再裁），只记日志。
+    if let Err(e) = trim_log(undo_log, UNDO_LOG_MAX) {
+        tracing::warn!("trim undo log failed: {e}");
+    }
+
     Ok(out)
 }
 
@@ -182,6 +194,48 @@ pub fn list_undo(undo_log: &Path) -> anyhow::Result<Vec<UndoEntry>> {
     }
     out.reverse();
     Ok(out)
+}
+
+/// 把台账收敛到最多保留 `max` 条（只留最新），返回被裁掉的条数。
+///
+/// - `max == 0` 或台账本来就不足 `max` → 不动文件（零开销，不重写）。
+/// - 超限时原子重写（同目录临时文件 + rename，与 `remove_restored` 同一口径，
+///   中途崩溃不会把台账截成半截）。
+/// - 坏行（无法反序列化）：不足上限时原样保留；超限时随重写一并丢弃——
+///   `list_undo` 本来就跳过它们，留着只是噪音。
+pub fn trim_log(undo_log: &Path, max: usize) -> anyhow::Result<usize> {
+    if max == 0 || !undo_log.exists() {
+        return Ok(0);
+    }
+    // list_undo 返回「最新在前」，take 前 max 条即最新 max 条。
+    let entries = list_undo(undo_log)?;
+    if entries.len() <= max {
+        return Ok(0);
+    }
+    let pruned = entries.len() - max;
+    rewrite_log(undo_log, &entries[..max])?;
+    Ok(pruned)
+}
+
+/// 原子重写台账：`entries_newest_first` 为「最新在前」，写盘时反转成旧在前。
+fn rewrite_log(undo_log: &Path, entries_newest_first: &[UndoEntry]) -> anyhow::Result<()> {
+    let parent = undo_log.parent().unwrap_or_else(|| Path::new("."));
+    std::fs::create_dir_all(parent).ok();
+    let tmp = parent.join(format!(
+        ".undo.{}.{}.tmp",
+        std::process::id(),
+        chrono::Utc::now().timestamp_millis()
+    ));
+    {
+        let mut f = std::fs::File::create(&tmp)?;
+        for e in entries_newest_first.iter().rev() {
+            writeln!(f, "{}", serde_json::to_string(e)?)?;
+        }
+        f.flush()?;
+        f.sync_all()?;
+    }
+    std::fs::rename(&tmp, undo_log)?;
+    Ok(())
 }
 
 /// Restores a single quarantined path back to its original location.
@@ -238,23 +292,7 @@ pub fn remove_restored(undo_log: &Path, restored_sources: &[PathBuf]) -> anyhow:
             })
         })
         .collect();
-    let parent = undo_log.parent().unwrap_or_else(|| Path::new("."));
-    std::fs::create_dir_all(parent).ok();
-    let tmp = parent.join(format!(
-        ".undo.{}.{}.tmp",
-        std::process::id(),
-        chrono::Utc::now().timestamp_millis()
-    ));
-    {
-        let mut f = std::fs::File::create(&tmp)?;
-        for e in remaining.iter().rev() {
-            writeln!(f, "{}", serde_json::to_string(e)?)?;
-        }
-        f.flush()?;
-        f.sync_all()?;
-    }
-    std::fs::rename(&tmp, undo_log)?;
-    Ok(())
+    rewrite_log(undo_log, &remaining)
 }
 
 mod util;
