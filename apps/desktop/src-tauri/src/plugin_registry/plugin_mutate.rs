@@ -309,7 +309,7 @@ pub(crate) async fn plugin_registry_rollback(
         None => ledger
             .iter()
             .rev()
-            .skip_while(|e| !(e.id == id.trim() && !e.kind.eq("index")))
+            .skip_while(|e| e.id != id.trim() || e.kind.eq("index"))
             .skip(1)
             .find_map(|e| {
                 if e.version != cur.version {

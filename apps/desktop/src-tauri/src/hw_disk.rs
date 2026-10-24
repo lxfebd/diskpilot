@@ -165,16 +165,15 @@ fn parse_cdi_report(txt: &str) -> Vec<serde_json::Value> {
     let lines: Vec<&str> = txt.lines().collect();
     let mut out: Vec<serde_json::Value> = Vec::new();
     let mut cur: Option<serde_json::Map<String, serde_json::Value>> = None;
+    let is_sep_line = |s: &str| s.len() >= 10 && s.chars().all(|c| c == '-' || c == '=');
     let mut i = 0usize;
     while i < lines.len() {
         let t = lines[i].trim();
-        let is_sep = t.len() >= 10 && t.chars().all(|c| c == '-' || c == '=');
+        let is_sep = is_sep_line(t);
         if is_sep {
             let nxt = lines.get(i + 1).map(|s| s.trim()).unwrap_or("");
-            let looks_name = !nxt.is_empty()
-                && !nxt.contains(':')
-                && !nxt.contains('：')
-                && !(nxt.len() >= 10 && nxt.chars().all(|c| c == '-' || c == '='));
+            let looks_name =
+                !nxt.is_empty() && !nxt.contains(':') && !nxt.contains('：') && !is_sep_line(nxt);
             if looks_name {
                 if let Some(m) = cur.take() {
                     out.push(serde_json::Value::Object(m));

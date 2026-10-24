@@ -64,7 +64,7 @@ pub(crate) fn spawn_webview_watchdog(app: AppHandle) {
             use tauri::Manager;
             let has_main = app.get_webview_window("main").is_some();
             let procs_alive = has_webview_renderer_child();
-            if (has_main && !procs_alive) || !has_main {
+            if !has_main || !procs_alive {
                 tracing::error!(
                     "webview main window gone (has_main={has_main}, procs_alive={procs_alive}) — recreating"
                 );

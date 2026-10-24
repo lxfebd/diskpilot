@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 收掉 4 处非最小布尔表达式——clippy 1.94 下 check:rust 重新全绿（R377）
+
+- clippy 1.94 的 `nonminimal_bool` 与 `absurd_extreme_comparisons`（默认 deny，CI 又叠了
+  `-D warnings`）在既存代码里指出 4 处可化简的布尔表达式，`pnpm check:rust` 因此在当前 stable
+  工具链上翻红（不是本次未提交改动引入的）：`cleanup.rs` 的 `!(tally[i].0 > 0)`、
+  `hw_disk.rs` 解析 CrystalDiskInfo 报告的 `!(nxt.len() >= 10 && all('-'|'='))`、
+  `plugin_mutate.rs` 的 `!(e.id == id.trim() && !e.kind.eq("index"))`、`webview.rs` 的
+  `(has_main && !procs_alive) || !has_main`。
+- 按等价最小形式改写：`tally[i].0 == 0`（u64 无负数，写 `<= 0` 会再触发
+  `absurd_extreme_comparisons`）、把分隔线判定提成 `is_sep_line` 闭包、
+  `e.id != id.trim() || e.kind.eq("index")`、`!has_main || !procs_alive`（吸收律）。
+- 行为不变：`cargo test --lib` 223 passed / 2 ignored / 0 failed；`cargo fmt --all` 只重排了
+  这两行；`cargo clippy --lib --tests -- -D warnings` EXIT=0。
+
 ### 2026-10-24 撤销核心恢复路径补单测（R376）
 
 - `exec_undo_core.undo_core` 是「撤销隔离」的唯一入口（恢复隔离区文件回原路径），此前只有

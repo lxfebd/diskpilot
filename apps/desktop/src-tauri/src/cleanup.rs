@@ -190,7 +190,7 @@ pub(crate) async fn cleanup_suggestions(
 
         let mut out: Vec<CleanupSuggestion> = Vec::new();
         for (i, (scaffold_id, scope_id, label, desc, path, _)) in all.iter().enumerate() {
-            if !(tally[i].0 > 0) {
+            if tally[i].0 == 0 {
                 continue;
             }
             out.push(CleanupSuggestion {
