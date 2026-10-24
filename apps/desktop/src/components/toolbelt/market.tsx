@@ -463,7 +463,7 @@ export function MarketPanel() {
         </button>
       </div>
 
-      {msg && <p className="toolbelt-market-msg">{msg}</p>}
+      {msg && <p className="toolbelt-market-msg" role="status">{msg}</p>}
 
       {tab === 'builtin' ? (
         <>

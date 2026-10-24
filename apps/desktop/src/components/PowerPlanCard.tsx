@@ -78,7 +78,7 @@ export function PowerPlanCard() {
           )}
         </span>
       </div>
-      {msg && <div className="ok">{msg}</div>}
+      {msg && <div className="ok" role="status">{msg}</div>}
       {err && <div className="error">{err}</div>}
       {loading && <div className="muted small">{t('system.startup.loading')}</div>}
       {plans && plans.schemes.length === 0 && !loading && (

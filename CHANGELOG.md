@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 页面内的「已启用 / 已切换」也念给读屏软件听（R359）
+
+- 缺口：R319 只给全局 toast 补了 `role="status"`，但应用还有第二条反馈通道——操作完就地冒出的
+  提示文案（`{msg && <div className="ok">…</div>}`）。这类元素读屏软件不会主动播报：
+  键盘用户点了「启用插件服务器」「切换电源计划」「禁用启动项」「应用风扇档位」、
+  「还原已删文件」「保存 AI 配置」「安装插件」，屏幕上看得到「已启用」，耳朵里什么都没有。
+- 8 处提示容器补 `role="status"`（隐含 `aria-live="polite"`）：`McpServers.tsx`、`PowerPlanCard.tsx`、
+  `StartupPanel.tsx`、`SystemTools.tsx`、`UndoPanel.tsx`、`history/HistoryPage.tsx`、`Settings.tsx`
+  （AI 连接测试）、`toolbelt/market.tsx`。
+- 守卫两条（`a11y.test.ts`）：① 用了 `useFlashText(` 的组件必须有 `role="status"` 容器；
+  ② 源码里任何 `{msg && <div|p …>}` 的就地提示都必须带 `role="status"`——新写的提示不会漏。
+- 自检：把 PowerPlanCard 的 `role="status"` 临时去掉 → 两条守卫同时变红并报出文件名，恢复即绿。
+- 验证：`pnpm -C apps/desktop check` 全绿（59 files / 943 tests）。
 ### 2026-10-24 连续操作时提示文案不再被上一条的定时器提前抹掉（R358）
 
 - 缺口：四处「一闪而过」的提示各自写成 `setMsg(s); setTimeout(() => setMsg(null), 3500)`——

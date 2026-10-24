@@ -271,7 +271,7 @@ function SystemToolsInner() {
 
   return (
     <div className="settings-pane sys-tools">
-      {msg && <div className="ok">{msg}</div>}
+      {msg && <div className="ok" role="status">{msg}</div>}
 
       {/* ── 启动项管理（P4-4 抽取为共用面板）── */}
       <StartupPanel />

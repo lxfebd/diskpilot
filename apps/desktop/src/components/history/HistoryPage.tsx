@@ -270,7 +270,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         ))
       )}
 
-      {msg && <div className="ok hp-msg">{msg}</div>}
+      {msg && <div className="ok hp-msg" role="status">{msg}</div>}
       {err && <div className="error hp-msg">{err}</div>}
     </div>
   );

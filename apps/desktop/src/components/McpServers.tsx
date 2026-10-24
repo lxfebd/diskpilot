@@ -467,7 +467,7 @@ function McpServersInner() {
       )}
 
       {err && <div className="error">{err}</div>}
-      {msg && <div className="ok">{msg}</div>}
+      {msg && <div className="ok" role="status">{msg}</div>}
 
       {servers === null && !err && <p className="muted small">{t('mcp.loading')}</p>}
       {servers === null && err && (

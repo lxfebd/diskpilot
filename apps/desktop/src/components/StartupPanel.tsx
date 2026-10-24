@@ -175,7 +175,7 @@ export function StartupPanel() {
           )}
         </span>
       </div>
-      {msg && <div className="ok">{msg}</div>}
+      {msg && <div className="ok" role="status">{msg}</div>}
       {startupErr && <div className="error">{startupErr}</div>}
       {startupLoading && <div className="muted small">{t('system.startup.loading')}</div>}
       {startup && startup.length === 0 && !startupLoading && (

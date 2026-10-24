@@ -163,7 +163,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
           </li>
         ))}
       </ul>
-      {msg && <div className="ok undo-msg">{msg}</div>}
+      {msg && <div className="ok undo-msg" role="status">{msg}</div>}
       {err && <div className="error undo-msg">{err}</div>}
     </div>
   );

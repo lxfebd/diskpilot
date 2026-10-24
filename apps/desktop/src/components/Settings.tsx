@@ -655,7 +655,7 @@ export function Settings({ onClose, initialTab }: Props) {
               />
             </label>
 
-            {msg && <div className="ok">{msg}</div>}
+            {msg && <div className="ok" role="status">{msg}</div>}
             {err && <div className="error">{err}</div>}
 
             <p className="muted small" style={{ marginTop: 4 }}>

@@ -205,3 +205,28 @@ describe('减少动态效果（R357）', () => {
   });
 });
 
+// ── 页面内提示文案也是 live region（R359）────────────────────────────
+// toast 在 R319 补了 role="status"；但页面里还有第二条反馈通道——操作完就地
+// 冒出的「已启用 / 已切换 / 已还原」文案，读屏软件同样一声不吭。
+describe('页面内提示文案（R359）', () => {
+  it('用 useFlashText 的组件必须有 role="status" 容器', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (src.includes('useFlashText(') && !src.includes('role="status"')) {
+        violations.push(`${path} 用了 useFlashText 却没给提示容器 role="status"`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('就地状态提示 {msg && <div|p ...>} 一律 role="status"', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/\{msg && <(div|p)\b([^>]*)>/g)) {
+        if (!/role="status"/.test(m[2])) violations.push(`${path} 的 msg 容器缺 role="status"`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
