@@ -8,7 +8,8 @@
     "tauri": "pnpm -C apps/desktop tauri",
     "lint": "pnpm -C apps/desktop lint",
     "test": "cargo test --workspace",
-    "check:docs": "node scripts/check-docs-links.mjs"
+    "check:docs": "node scripts/check-docs-links.mjs",
+    "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings"
   },
   "packageManager": "pnpm@9.12.0"
 }

@@ -175,10 +175,12 @@ pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, 
     Ok(out)
 }
 
-/// 3) 只读传感器历史（不给 sensor_trend 的默认行为——它每次调用都会追加一条
-/// 新快照，不适合纯展示读取）。本函数只读 `sensor-history.jsonl` 现有内容，
-/// 不追加、不裁剪、不触发采集。`n` 取最近 n 条（默认全部，上限 500，与文件
-/// 裁剪上限一致）；`format=json` 返回结构化数组（同 trend_point 契约）。
+/// 3) 只读传感器历史。
+///
+/// 不给 sensor_trend 的默认行为——它每次调用都会追加一条新快照，不适合纯展示读取。
+/// 本函数只读 `sensor-history.jsonl` 现有内容，不追加、不裁剪、不触发采集。
+/// `n` 取最近 n 条（默认全部，上限 500，与文件裁剪上限一致）；
+/// `format=json` 返回结构化数组（同 trend_point 契约）。
 pub fn sensor_history(n: Option<usize>, format: Option<String>) -> Result<String, String> {
     let rows = read_jsonl("sensor-history.jsonl");
     let points = points_from_rows(&rows, n);

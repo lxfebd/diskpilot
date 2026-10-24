@@ -60,6 +60,9 @@ pnpm install && pnpm tauri dev      # Studio 里看到卡片、scope 数字合�
 
 再对本机真实目录做 dry-run 预览清单，确认无误删项。
 
+全仓门前自检（与 CI 同一条命令）：`pnpm check:rust`（fmt + clippy `-D warnings`）、
+`pnpm -C apps/desktop check`（tsc + eslint + vitest）、`pnpm check:docs`（相对链接）。
+
 ## 5. 提 PR
 
 模板会带检查清单。CI 全绿（fmt / clippy / cargo test / scaffold-lint / vitest / tsc）即进入 review。

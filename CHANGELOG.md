@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 CI 的 clippy 门亮起来了——清完存量噪音、加回 -D warnings（R335）
+
+- ci.yml 注释里自称「不加 `-D warnings`，R1–R9 累积了 ~42 处存量噪音」——实测存量其实早已清光
+  （R290 之后的日常提交一直在顺手消），只剩 agent-server 的 `rep_report.rs` 3 处
+  `doc list item without indentation`（`/// 3)` 有序列表的续行没缩进）；
+- 把那 3 处改写为「编号一行 + 空行 + 正文段落」，agent-server 归零；
+- ci.yml `lint-rust` 的 clippy 步骤改 `cargo clippy --workspace --all-targets -- -D warnings`，
+  注释同步更新（0 警告口径）；
+- 新增根脚本 `pnpm check:rust`（fmt `--check` + clippy `-D warnings`，与 CI 同一条命令），
+  .github/CONTRIBUTING.md 的本地命令列表改指它；docs/scaffold-authoring.md §4 补门前自检清单
+  （check:rust / check / check:docs 三条）；
+- 验证：`pnpm check:rust` EXIT=0（binrw v0.11.3 的 future-incompat 提示是依赖侧 note，不拦）；
+  本地 `cargo clippy --workspace --all-targets` 从此是干净的。
+
 ### 2026-10-24 清死引用：scaffold-requirements 目录删了四年后没人收拾（R334）
 
 - `docs/scaffold-requirements/`（含 `_TEMPLATE.md`、`STATUS.md`）早已随 `12c6c74` 精简移除，

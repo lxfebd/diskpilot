@@ -40,11 +40,10 @@ jobs:
       # 的编译顺序不保证 agent-server 先就位，故显式先编一次（build.rs 兜底复制）。
       - run: cargo build -p agent-server
       - run: cargo fmt --all -- --check
-      # 不加 `-D warnings`：R1–R9 累积了 ~42 处存量 clippy 噪音（useless vec! /
-      # redundant closure / doc-list 缩进 / sort_by_key 等机械项），散在 desktop
-      # 与 toolbelt。本 job 的护栏是「编译通过 + fmt 干净」—— 这正是三平台可移植性
-      # 的守门人；存量清理另立专项，清完再加回 -D warnings。agent-server 已 0 警告。
-      - run: cargo clippy --workspace --all-targets
+      # R335 起加回 `-D warnings`：R1–R9 累积的 ~42 处存量 clippy 噪音已清完，
+      # 本地 `pnpm check:rust` 跑同一条命令（fmt + clippy -D warnings），
+      # 连同 agent-server 的 3 处 doc-list 缩进——worktree 现在 0 警告。
+      - run: cargo clippy --workspace --all-targets -- -D warnings
 
   # Cargo Audit：扫描依赖树已知漏洞（RustSec Advisory DB），有漏洞即红。
   # 不缓存的临时 job：cargo-audit 自己拉 Cargo.lock 附近的 advisory 数据库，

@@ -14,8 +14,7 @@ pnpm install
 pnpm tauri dev          # run desktop app
 cargo test --workspace  # test Rust crates
 pnpm lint               # eslint + prettier check
-cargo clippy --workspace -- -D warnings
-cargo fmt --all -- --check
+pnpm check:rust         # cargo fmt --check + clippy -D warnings（同 CI lint-rust）
 ```
 
 ## Branching & commits
