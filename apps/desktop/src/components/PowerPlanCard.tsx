@@ -6,6 +6,7 @@ import { RefreshCw, Zap } from 'lucide-react';
 import { api, type PowerPlanOut } from '../api';
 import { isPermEnabled } from '../permissions';
 import { useT } from '../i18n';
+import { useFlashText } from '../flash';
 
 export function PowerPlanCard() {
   const t = useT();
@@ -15,7 +16,8 @@ export function PowerPlanCard() {
   const [busy, setBusy] = useState(false);
   // 两步确认：pending 待切换计划 id；主按钮常驻为列表单选。
   const [pending, setPending] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  // R358：提示文案统一走 useFlashText（见 flash.ts）。
+  const [msg, flashMsg] = useFlashText();
 
   const perm = isPermEnabled('power.plan');
 
@@ -28,11 +30,6 @@ export function PowerPlanCard() {
   const friendlyName = (scheme: string) => {
     const lower = scheme.toLowerCase();
     return GUID_NAMES[lower] ?? scheme;
-  };
-
-  const flashMsg = (s: string) => {
-    setMsg(s);
-    setTimeout(() => setMsg(null), 3500);
   };
 
   const load = async () => {

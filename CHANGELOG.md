@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 连续操作时提示文案不再被上一条的定时器提前抹掉（R358）
+
+- 缺口：四处「一闪而过」的提示各自写成 `setMsg(s); setTimeout(() => setMsg(null), 3500)`——
+  插件服务器启停（McpServers）、电源计划切换（PowerPlanCard）、启动项启停（StartupPanel）、
+  风扇档位/驱动检查（SystemTools）。连着做两次操作时，第一条的定时器到点会把第二条的文案
+  提前清掉（本该显示 3.5 秒，实际只剩「3.5 秒 − 两次间隔」）；组件卸载后定时器也仍会对着
+  已卸载的组件 `setState`。
+- 新增 `src/flash.ts`：`FLASH_MS = 3500`、`FlashTimer`（`arm()` 先清掉上一轮再排新的，
+  `clear()` 幂等，`pending` 可查）与 `useFlashText<T>()` 钩子（返回 `[文案 | null, 显示函数]`，
+  卸载时自动 `clear()`）。
+- 四处改用钩子：`const [msg, flashMsg] = useFlashText();`，各自手写的 `flash`/`flashMsg` 函数删除。
+- 测试：`src/flash.test.ts` 4 条（到点回调一次并复位、连续两次 arm 只保留最新一次、
+  clear 取消且可重复、默认 3.5 秒），用 `vi.useFakeTimers()`。
+- 验证：`pnpm -C apps/desktop check` 全绿（59 files / 941 tests）。
 ### 2026-10-24 跟随系统「减少动态效果」——动画停、平滑滚动退回瞬间到位（R357）
 
 - 缺口：全仓 `prefers-reduced-motion` 零命中。侧栏宽度过渡、弹窗淡入、转圈加载、清理扫描灯

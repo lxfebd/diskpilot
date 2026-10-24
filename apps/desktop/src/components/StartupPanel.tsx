@@ -5,6 +5,7 @@ import { Trash2, RefreshCw, Search } from 'lucide-react';
 import { api, type StartupItem } from '../api';
 import { isPermEnabled } from '../permissions';
 import { useT } from '../i18n';
+import { useFlashText } from '../flash';
 
 // 启动项来源标签：switch 比较的是后端返回的标识符（不译），文案在渲染处求值——
 // 模块顶层求值会把中文烤死在首次 import，切语言不再生效。未知来源原样显示。
@@ -92,17 +93,13 @@ export function StartupPanel() {
   // 两步确认：pendingId 待确认项（点了「禁用/删除」先变「确认？」按钮）。
   const [pendingToggle, setPendingToggle] = useState<string | null>(null);
   const [pendingDel, setPendingDel] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  // R358：提示文案统一走 useFlashText（见 flash.ts）。
+  const [msg, flashMsg] = useFlashText();
   // R164：搜索 + 状态筛选（几十项启动项时逐行找太累）。
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<StartupFilter>('all');
 
   const startupPerm = isPermEnabled('startup.manage');
-
-  const flashMsg = (s: string) => {
-    setMsg(s);
-    setTimeout(() => setMsg(null), 3500);
-  };
 
   const loadStartup = async () => {
     setStartupLoading(true);

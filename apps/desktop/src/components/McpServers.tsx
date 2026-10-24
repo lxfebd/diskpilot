@@ -13,6 +13,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { refreshMcpTools } from '../advisor/tools';
 import { useT } from '../i18n';
 import { formatTime } from '../format';
+import { useFlashText } from '../flash';
 
 /** R339：审计日志每一行要能看出「哪个服务器 / 哪个工具」。后端 add_server /
  *  update_server 早就写了 `server_name`，前端此前没读；call_tool 只有 `server_id`，
@@ -55,7 +56,8 @@ function McpServersInner() {
   const [servers, setServers] = useState<McpServerStatus[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  // R358：提示文案统一走 useFlashText——连续两次操作时，上一条的定时器不会把新文案提前抹掉。
+  const [msg, flash] = useFlashText();
   // 测试结果弹层。
   const [testingId, setTestingId] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ id: string; tools: McpToolMeta[] } | null>(null);
@@ -75,11 +77,6 @@ function McpServersInner() {
   const [auditErr, setAuditErr] = useState<string | null>(null);
 
   const manageOk = isPermEnabled('mcp.manage');
-
-  const flash = (s: string) => {
-    setMsg(s);
-    setTimeout(() => setMsg(null), 3500);
-  };
 
   const loadAudit = useCallback(async () => {
     setAuditErr(null);

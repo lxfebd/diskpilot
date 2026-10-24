@@ -15,6 +15,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useT } from '../i18n';
 import { StartupPanel } from './StartupPanel';
 import { FAN_LEVEL_COLORS } from '../colors';
+import { useFlashText } from '../flash';
 
 // 风扇调速档位 → 语义色（urgent 红 → balanced 绿，未知灰）。
 // R108：此前在本文件硬编码 9 个 hex，是 colors.ts（W4 单源）之外的散板——
@@ -128,16 +129,12 @@ function SystemToolsInner() {
     prevFan,
   ) : null;
 
-  const [msg, setMsg] = useState<string | null>(null);
+  // R358：提示文案统一走 useFlashText（见 flash.ts）。
+  const [msg, flashMsg] = useFlashText();
 
   const fanPerm = isPermEnabled('fan.adjust');
   const fanCtrlPerm = isPermEnabled('fan.control');
   const driverPerm = isPermEnabled('driver.check');
-
-  const flashMsg = (s: string) => {
-    setMsg(s);
-    setTimeout(() => setMsg(null), 3500);
-  };
 
   const loadFan = async () => {
     setFanLoading(true);
