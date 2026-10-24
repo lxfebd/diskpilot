@@ -1250,6 +1250,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [selPath, setSelPath] = useState<string | null>(drives[0]?.path ?? null);
   const selDrive = useMemo(() => drives.find((d) => d.path === selPath) ?? drives[0] ?? null, [drives, selPath]);
 
+  // R382：异步加载的序号/当前盘镜像——快速切盘或扫描完成重拉时，先发出的请求
+  // 可能后返回；不做守卫的话旧盘的建议清理项/环比/预览会盖掉当前盘的新结果
+  // （同 key 跨盘串数据）。回调里读 ref，不读闭包里的旧 selDrive。
+  const cleanReq = useRef(0);
+  const suggReq = useRef(0);
+  const selDriveRef = useRef<string | null>(null);
+  selDriveRef.current = selDrive?.path ?? null;
+
   // ── 分类占用（R11 复盘）：根换源为「选中盘」─ 与建议清理/空间大头同一数据维度 ──
   // 原本遍历全局 root（可能是"我的电脑"全部磁盘虚拟根）：切盘后卡片仍显示全盘
   // 数据，与按选中盘的 cleanItems 对不上。现在按选中盘树聚合（顶层只认
@@ -1297,6 +1305,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   // 展开一项：dry-run 拿将删文件明细。只读（dryRun=true），绝不落盘。
   const togglePreview = async (it: CleanItem) => {
     if (!selDrive) return;
+    const reqPath = selDrive.path; // R382：记住发起时的盘，切走后迟到的结果不要
     const open = !previewOpen[it.key];
     setPreviewOpen((p) => ({ ...p, [it.key]: open }));
     if (!open) return; // 收起：不重拉
@@ -1318,11 +1327,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
       } catch {
         // 台账读失败：不显示徽标（与清理页同语义，读失败 ≠ 真没清过）。
       }
+      // R382：已切到别的盘 → 这份 dry-run 属于旧盘，写进去会让新盘预览显示错的文件。
+      if (selDriveRef.current !== reqPath) return;
       setPreviews((p) => ({
         ...p,
         [it.key]: { items: entries.map((e) => ({ path: e.source, bytes: e.bytes_freed ?? null })), err: null, lastClean },
       }));
     } catch (e) {
+      if (selDriveRef.current !== reqPath) return;
       setPreviews((p) => ({ ...p, [it.key]: { items: [], err: String(e instanceof Error ? e.message : e), lastClean: null } }));
     } finally {
       setPreviewing((p) => ({ ...p, [it.key]: false }));
@@ -1337,6 +1349,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   useEffect(() => () => { if (armTimeout.current) window.clearTimeout(armTimeout.current); }, []);
 
   const loadClean = useCallback(async (path: string) => {
+    const req = ++cleanReq.current; // R382：只有最后一次请求的响应能落地
     setCleanLoading(true);
     setCleanErr(null);
     try {
@@ -1366,6 +1379,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
           };
         }),
       );
+      // R382：旧请求（切走的盘）迟到的结果直接丢，别覆盖当前盘。
+      if (req !== cleanReq.current) return;
       setCleanItems(items);
       // R254：重拉后保留用户已有的勾选选择——之前每次 loadClean 都强制全选，
       // 用户手动取消微信项后，清理/切盘/重扫一次就全勾回来（可能误清）。
@@ -1378,10 +1393,11 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
     } catch (e) {
       // 后端统计失败不是「真没有」：记错误，让空态显示「没能读取」而不是
       // 「很干净」——读失败时说盘很干净是最误导的收尾。
+      if (req !== cleanReq.current) return; // R382：旧请求失败也别清掉新盘数据
       setCleanItems([]);
       setCleanErr(String(e instanceof Error ? e.message : e));
     } finally {
-      setCleanLoading(false);
+      if (req === cleanReq.current) setCleanLoading(false);
     }
   }, [scaffolds]);
 
@@ -1400,11 +1416,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const [suggDiff, setSuggDiff] = useState<SuggestionDiff | null>(null);
   const [suggDiffErr, setSuggDiffErr] = useState<string | null>(null);
   const loadSuggDiff = useCallback(async (path: string) => {
+    const req = ++suggReq.current; // R382：迟到的旧盘环比不许覆盖当前盘
     try {
       const d = await api.suggestionDiff(path);
+      if (req !== suggReq.current) return;
       setSuggDiff(d);
       setSuggDiffErr(null);
     } catch (e) {
+      if (req !== suggReq.current) return;
       // 读失败 ≠ 没有历史：置空并记 err，让 UI 显示"未读到"而非凭空消失。
       setSuggDiff(null);
       setSuggDiffErr(String(e instanceof Error ? e.message : e));

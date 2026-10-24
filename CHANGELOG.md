@@ -5,6 +5,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R382: 快速切盘/重扫时迟到的旧响应不再盖住当前盘——异步加载加请求序号守卫
+
+- 缺口：总览三条异步加载（建议清理项 loadClean、跨次环比 loadSuggDiff、dry-run 预览 togglePreview）都没有「迟到响应作废」逻辑。快速切盘或扫描完成重拉时，先发的请求可能后返回：旧盘的建议清理项/环比会写进当前盘，dry-run 预览同 key 跨盘串数据显示旧盘文件（R244 的 lastClean 台账也一起错）。
+- 改动：loadClean/loadSuggDiff 各持请求序号 ref（++ 后写入前比对，过期即丢）；togglePreview 记录发起时的盘路径 reqPath，写入前核对 selDriveRef 镜像（切走后旧结果不落盘）。
+- 守卫测试：新增 AssetOverview.race.test.ts 2 条源码静态断言（三条加载函数必须保留序号/镜像比对，删守卫就红）。
+- 验证：pnpm check 63 files / 986 tests；无 i18n/样式/Rust 改动。
+
 ### R381: 删掉死命令 get_auto_list_config——注册了但前端零调用
 
 - 命令面对账（正则支持嵌套泛型 invoke<Record<number,string>>('cmd')）：前端 116 个 invoke 全部后端注册、0 错拼；后端 117 个注册里唯一没被调的是 auto_list::get_auto_list_config。
