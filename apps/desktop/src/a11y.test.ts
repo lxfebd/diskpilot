@@ -115,3 +115,15 @@ describe('弹窗遮罩的对话框语义（R343）', () => {
   });
 });
 
+// ── 弹窗的 Tab 循环真的挂上了（R347）────────────────────────────
+// aria-modal 只是一句对读屏软件的承诺，浏览器不会替我们兑现。真正的 Tab 循环在
+// apps/desktop/src/dialogFocus.ts 里，由 App 入口全局挂一次。这里守住「入口确实调用了它」：
+// 被删掉时不会有任何测试变红，只会让键盘用户又开始 Tab 到背景页上去。
+describe('弹窗焦点循环已挂载（R347）', () => {
+  it('App 入口调用 useModalFocusTrap()', () => {
+    const entry = Object.entries(RAW_TSX).find(([p]) => /(^|\/)App\.tsx$/.test(p));
+    expect(entry).toBeTruthy();
+    expect(entry?.[1]).toContain('useModalFocusTrap();');
+  });
+});
+

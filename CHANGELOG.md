@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 弹窗里 Tab 不再跑到背景页——aria-modal 的承诺开始兑现（R347）
+
+- R343 给 15 处遮罩写了 `role="dialog" aria-modal="true"`，等于向读屏软件承诺「外面不可交互」；
+  但浏览器不替我们兑现：Tab 会一路走到背景页的输入框/按钮上，键盘与读屏用户被带出对话框，
+  还不知道自己在哪一页；
+- `apps/desktop/src/dialogFocus.ts` 新增四个纯函数与一个全局 hook：`focusableWithin(root)`
+  （容器内真的能 Tab 到达的元素，跳过 disabled / aria-hidden="true" / 负 tabindex）、
+  `trapTarget(current, count, shift)`（[0,count) 绕圈，焦点不在弹窗内时正向给第一个、反向给最后一个）、
+  `trapTabKey(root, e, active)`（接管一次 Tab 并 preventDefault；容器无可用元素时放手，
+  强行拦下会让人彻底按不动）、`MODAL_SEL`（与 R343 的标记一致，含通用确认框的 alertdialog）、
+  `useModalFocusTrap()`（window 级挂一次，交给 DOM 顺序最靠后的那个模态弹窗处理，嵌套弹窗总在父之后渲染）；
+- `App.tsx` 入口调用 `useModalFocusTrap()`；`a11y.test.ts` 加守卫「入口确实调用了它」——
+  删掉时不会有任何测试变红，只会让键盘用户又开始 Tab 出去；
+- 新增 12 条单测（绕圈四个边界 / 可聚焦元素过滤 / 非 Tab 与非容器放手 / 最后一个回绕 /
+  焦点在窗外时拉回 / Shift+Tab 回绕 / 选择器同时认 dialog 与 alertdialog）；
+- 验证：`pnpm -C apps/desktop check` 全绿（54 files / 900 tests）。
 ### 2026-10-24 索引校验不再挂着上一份索引的结论、跑的时候有话说（R346）
 
 - `market.tsx` 的「校验」按钮此前没有进行态：点下去到结果回来之间界面完全没反应，

@@ -18,6 +18,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import Disclaimer from './components/Disclaimer';
 import { formatBytes, ellipsizePath, normKey, driveRootOf } from './format';
 import { loadSettings, isConfigured } from './advisorClient';
+import { useModalFocusTrap } from './dialogFocus';
 import { prefs } from './theme';
 import { APP_VERSION } from './version';
 import { useT } from './i18n';
@@ -107,6 +108,9 @@ export default function App() {
   const reclaimedBytes = useStore((s) => s.reclaimedBytes);
   const toasts = useStore((s) => s.toasts);
   const dismissToast = useStore((s) => s.dismissToast);
+
+  // R347：aria-modal 只是说给读屏软件的承诺，Tab 仍会走到背景页——这里全局接管一次。
+  useModalFocusTrap();
 
   const [scanning, setScanning] = useState(false);
   const [err, setErr] = useState<string | null>(null);
