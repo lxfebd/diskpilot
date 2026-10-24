@@ -20,14 +20,6 @@ export interface ScopeSize {
   total_files: number;
 }
 
-export const ZERO_SCOPE_SIZE: ScopeSize = {
-  scope_id: '',
-  bytes: 0,
-  file_count: 0,
-  total_bytes: 0,
-  total_files: 0,
-};
-
 /** dry-run 预览的路径清单（第一步：预备态之后弹出，用户确认才真删）。 */
 export interface DryRunPreview {
   scopeIds: string[];

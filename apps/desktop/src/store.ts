@@ -775,22 +775,5 @@ export const useStore = create<AppState>((set, get) => {
   };
 });
 
-export function buildWalkQueue(root: Node, thresholdBytes: number): { node: Node; scaffoldId: string | null }[] {
-  const out: { node: Node; scaffoldId: string | null }[] = [];
-  const visit = (n: Node, depth: number) => {
-    if (!n.is_dir) return;
-    if (n.size >= thresholdBytes && depth > 0) {
-      out.push({ node: n, scaffoldId: n.scaffold_id ?? null });
-      return;
-    }
-    if (depth < 4) {
-      for (const c of n.children) visit(c, depth + 1);
-    }
-  };
-  visit(root, 0);
-  out.sort((a, b) => b.node.size - a.node.size);
-  return out;
-}
-
 // 启动异步恢复 IDB 里的整盘树（模块加载即触发；失败静默，不阻塞首屏）。
 void hydrateScanCache();

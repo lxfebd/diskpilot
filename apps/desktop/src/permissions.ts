@@ -171,7 +171,3 @@ export function hasSessionAuth(id: PermId): boolean {
 export function clearSessionAuths(): void {
   sessionAuth.clear();
 }
-
-export function permDef(id: PermId): PermDef | undefined {
-  return PERMS.find((p) => p.id === id);
-}

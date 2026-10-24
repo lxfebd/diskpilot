@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 删掉 6 个真死导出——只定义不引用（R380）
+
+- 全仓扫了 719 个导出名（`^export (const|function|class|…)`），按标识符词边界统计引用，
+  只在定义行出现的共 6 个，逐个核过无测试、无动态拼名、无脚本引用后删除：
+  `cleanup/model.ts` 的 `ZERO_SCOPE_SIZE`、`colors.ts` 的 `categoryColor` / `TEMP_RAMP_FALLBACK` /
+  `EXT_PALETTE`+`extColor`（FileView 用的是自己那份 8 色本地板，此 10 色板只被死函数引用）、
+  `permissions.ts` 的 `permDef`（`isPermEnabled` 自己 `PERMS.find`）、`store.ts` 的 `buildWalkQueue`。
+- 同法扫出的其余 87 个「仅同文件引用」候选都是被测试或同文件实现引用的正常导出，不动。
+
 ### 2026-10-24 铁律 6「禁阻塞式对话框」补上机器守卫（R379）
 
 - 规则早就写在 ConfirmDialog 头上的注释里（铁律 6：禁 window.confirm，破坏性命令必须走界面内

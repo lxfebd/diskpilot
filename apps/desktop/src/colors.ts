@@ -55,9 +55,6 @@ export const CATEGORY_COLORS: Record<string, string> = {
   [zhCategory('common.category.game')]: '#22c55e',
 };
 export const CATEGORY_FALLBACK = '#64748b';
-export function categoryColor(name: string): string {
-  return CATEGORY_COLORS[name] ?? CATEGORY_FALLBACK;
-}
 
 // 温度色阶（R116）：CPU 温度区间 → 颜色，从「清凉」到「过热」的连续感知。
 // 用于长期历史温度分布条（HeatDistributionBar）；阈值口径与 hw_report 的
@@ -69,7 +66,6 @@ export const TEMP_RAMP = [
   { label: '70-80℃', to: 80, color: '#ea8600' }, // 偏高
   { label: '≥80℃', to: Infinity, color: '#e05252' }, // 过热区
 ] as const;
-export const TEMP_RAMP_FALLBACK = '#64748b';
 
 // 内存占用色阶（R117）：占用百分比区间 → 颜色，「日常宽松」到「快满」。
 // 用于长期历史内存占用分布条；阈值口径与 sensor_alert 的内存告警一致
@@ -84,17 +80,6 @@ export const MEM_RAMP = [
 
 // 首页磁盘分类占用卡片（AssetOverview）的柱状色板
 export const CAT_COLORS = ['#8a93a6', '#5b8def', '#3fbf7f', '#9b6de0', '#f2a33c', '#e05252', '#c9d0da', '#f0a0c0'];
-
-// 文件类型 → 色相（FileView 文件行 / TreeView 文件字形）
-export const EXT_PALETTE = [
-  '#6db5ff', '#7ee2a8', '#f2a33c', '#c9a0ff', '#ff6d8f',
-  '#ff9d5c', '#ffd166', '#8fd3ff', '#a8998c', '#c9c5c0',
-];
-export function extColor(ext: string): string {
-  let h = 0;
-  for (let i = 0; i < ext.length; i++) h = (h * 31 + ext.charCodeAt(i)) | 0;
-  return EXT_PALETTE[Math.abs(h) % EXT_PALETTE.length];
-}
 
 // Treemap 文件族色 / 目录暖色板 / 工程垃圾灰
 export const FAMILY_COLORS: Array<[RegExp, string]> = [
