@@ -1,2 +1,0 @@
-05c96a5 R349: 叠层弹窗 Esc 只关最上层（escapeKey 改栈 + pickTop/pushRemove 单测）
-f714b7e R348: 键盘焦点不再被 outline:none 抹掉（输入框/下拉/弹窗标签补 :focus-visible + CSS 守卫）

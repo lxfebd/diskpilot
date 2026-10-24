@@ -1,10 +1,11 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { getHwProfile, recommendLocal, type HwProfile } from '../hwProfile';
 import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, SlidersHorizontal, ShieldCheck, RefreshCw, ExternalLink, Download, RotateCw, Wrench, Plug, Package, Bell } from 'lucide-react';
 import { api } from '../api';
 import { isTauri } from '../env';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useEscapeKey } from '../escapeKey';
+import { useReturnFocus } from '../dialogFocus';
 import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { PermissionCenter } from './PermissionCenter';
@@ -293,6 +294,15 @@ export function Settings({ onClose, initialTab }: Props) {
     else onClose();
   };
   useEscapeKey(requestClose);
+  // R355：设置窗也是「关掉要把焦点还回去」的一层——此前关掉后焦点落回 body，
+  // 键盘用户要从页面开头重新 Tab 一遍。
+  useReturnFocus(true);
+  const dlgRef = useRef<HTMLDivElement | null>(null);
+  // 打开时把焦点移到对话框本体（role=dialog 自带 aria-label）：读屏先念出「设置」标题，
+  // 再 Tab 才进第一项——而不是从 body 开始找。
+  useEffect(() => {
+    dlgRef.current?.focus();
+  }, []);
 
   // 本机性能档位对应的本地 Ollama 建议（弱机→云端，中机→可本地，强机→放心本地）。
   // 横幅配色走语义 token 类（hint-warn/hint-info/hint-ok/hint-danger），不内联浅色 hex，
@@ -401,7 +411,7 @@ export function Settings({ onClose, initialTab }: Props) {
           onCancel={() => setAskDiscard(false)}
         />
       )}
-    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={requestClose}>
+    <div ref={dlgRef} tabIndex={-1} className="modal-bg" role="dialog" aria-modal="true" aria-label={t('settings.title')} onClick={requestClose}>
       <div className="modal settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>{t('settings.title')} {saved && <CheckCircle2 size={16} style={{ verticalAlign: 'middle', marginLeft: 6, color: 'var(--accent-strong)' }} />}</div>

@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 设置窗打开把焦点移进对话框、关掉还回原处（R355）
+
+- 缺口：`components/Settings.tsx`（设置窗，含外观 / AI / 通用 / 权限 / 系统 / MCP / 市场 / 提醒）既没有
+  `useReturnFocus`，打开时也不把焦点移进对话框——焦点留在背后侧栏的按钮上，读屏软件不知道弹了窗；
+  关掉后焦点落回 `<body>`，键盘用户要从页面开头重新 Tab 一遍（R344 已给确认框 / 清理提案 / 预览 /
+  HwPanels / Studio 子弹窗补齐还焦，设置窗这层一直是空白）。
+- 打开时把焦点移到 `.modal-bg`（`role="dialog"` + `aria-label` 的对话框本体，加 `tabIndex={-1}`）：
+  读屏先念出「设置」，再 Tab 由 R347 的焦点陷阱送进第一项。
+- 关闭（X / 遮罩 / Esc / 脏草稿确认后关）统一走 `useReturnFocus(true)`——组件随开随挂、随关随卸，
+  还焦目标在挂载时记录，正是当初点开的那个按钮。
+- 这一步与 R352 的脏草稿询问不冲突：放弃确认框自己也是 `useReturnFocus` 的一层，关完窗仍回到原按钮。
+- 验证：`pnpm -C apps/desktop check` 全绿（57 files / 930 tests）。
+
 ### 2026-10-24 窗口标题跟着页面走——不再是永远一个「DiskPilot」（R354）
 
 - 缺口：`<title>` 写死在 `index.html`，切换总览 / 工作区 / 清理 / 隐私 / 历史 / 工具箱 / 系统优化
@@ -15,6 +28,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - `App.tsx` 用 `useEffect` 在页面或语言变化时写 `document.title`——切语言后标题也跟着换。
 - `nav.test.ts` 新增 3 条单测（中文标题拼接、每个页面 ID 都能拼出且互不相同、未知 ID 退回产品名）。
 - 验证：`pnpm -C apps/desktop check` 全绿（57 files / 930 tests）。
+
 ### 2026-10-24 右键菜单能用键盘走——方向键/Home/End + 焦点可见 + ARIA menu（R353）
 
 - 缺口：`components/ContextMenu.tsx`（树视图 / 文件列表 / Studio 三处右键菜单）的项虽然都是 `<button>`，
@@ -27,6 +41,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - `styles/layout.css` 给 `.ctxmenu-item` 补 `:focus` 底色与 `:focus-visible` 描边（此前只有 :hover）。
 - 新增 `components/ContextMenu.test.ts` 6 条单测（向下/向上环绕、未落点时的起点、单项、空菜单、越界下标）。
 - 验证：`pnpm -C apps/desktop check` 全绿（57 files / 927 tests）。
+
 ### 2026-10-24 AI 配置改完没保存就关窗，不再默默丢掉——先提示、再确认（R352）
 
 - 缺口：设置页 AI tab 的 base URL / API key / 模型只存在组件 state 里，点「保存」才落盘；
@@ -42,6 +57,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 新增 `components/Settings.test.ts` 5 条单测（与基线一致不脏、四字段任一不同算脏、
   清空算改动、providerOverride 由 undefined 变具体值算脏、无已保存配置时以全空为基线）。
 - 验证：`pnpm -C apps/desktop check` 全绿（56 files / 921 tests）。
+
 ### 2026-10-24 切到英文后 <html lang> 也跟着改——读屏软件不再拿中文音念英文（R351）
 
 - 缺口：`apps/desktop/index.html` 里 `<html lang="zh-CN">` 是写死的，语言切到英文后这个属性
@@ -52,6 +68,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 新增 2 条单测：`htmlLangOf` 映射；用 `vi.stubGlobal('document', …)` 模拟 documentElement，
   验证 `setLang('en')` / `setLang('zh')` 后 `<html lang>` 分别变成 en / zh-CN。
 - 验证：`pnpm -C apps/desktop check` 全绿（55 files / 916 tests）。
+
 ### 2026-10-24 英文单复数不再手写 (s)——t() 支持 {n:day|days} 复数语法（R350）
 
 - 缺口：英文文案表里有 16 处 `(s)` 硬编码单复数（“1 day(s)”是语法错误，读着也别扭），
@@ -66,6 +83,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   另新增「英文表不再手写 (s) 单复数」用例；新增 `i18n/core.test.ts` 5 条单测
   （formatPluralUnit 1/0/3/1.5、空文案、t() 复数输出、数字字符串参数、非数字参数保留占位符）。
 - 验证：`pnpm -C apps/desktop check` 全绿（55 files / 914 tests）。
+
 ### 2026-10-24 叠层弹窗按一次 Esc 不再父子一起关——Esc 改成栈，只有最上层响应（R349）
 
 - 缺口：`escapeKey.ts` 的 `useEscapeKey` 每层各挂一个 window keydown，叠层时
@@ -78,6 +96,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 新增 6 条单测：`pickTop` 空/单层/多层/不改原栈；栈的压入弹出（父层先开、子层后开 →
   栈顶是子层 → 关掉子层父层重新接管 → 弹空归零）、移除未入栈的函数不破坏栈。
 - 验证：`pnpm -C apps/desktop check` 全绿（54 files / 908 tests）。
+
 ### 2026-10-24 键盘焦点不再被 outline:none 抹掉——输入框/下拉框/弹窗标签补描边并加守卫（R348）
 
 - 缺口：`styles/layout.css` 的 `input, select { outline: none; }` 把浏览器默认焦点框一次性抹掉，
@@ -95,6 +114,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   `input:focus-visible` 替身。改前跑同一套规则报出 exactly 这两处（layout.css:959 与全局重置），
   改后归零——守卫非空转；
 - 验证：`pnpm -C apps/desktop check` 全绿（54 files / 902 tests）。
+
 ### 2026-10-24 弹窗里 Tab 不再跑到背景页——aria-modal 的承诺开始兑现（R347）
 
 - R343 给 15 处遮罩写了 `role="dialog" aria-modal="true"`，等于向读屏软件承诺「外面不可交互」；
@@ -111,6 +131,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 新增 12 条单测（绕圈四个边界 / 可聚焦元素过滤 / 非 Tab 与非容器放手 / 最后一个回绕 /
   焦点在窗外时拉回 / Shift+Tab 回绕 / 选择器同时认 dialog 与 alertdialog）；
 - 验证：`pnpm -C apps/desktop check` 全绿（54 files / 900 tests）。
+
 ### 2026-10-24 索引校验不再挂着上一份索引的结论、跑的时候有话说（R346）
 
 - `market.tsx` 的「校验」按钮此前没有进行态：点下去到结果回来之间界面完全没反应，
@@ -122,6 +143,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   图标转圈、文案改「校验中…」（新键 `toolbelt.mkt.verifying`）；`plugin_registry_refresh`
   成功与保存/清空索引地址成功后都 `setVerifyOut(null)`——索引换了，上一份结论作废；
 - 验证：`pnpm -C apps/desktop check` 全绿（54 files / 887 tests）。
+
 ### 2026-10-24 索引校验说清楚「验了多少、哪些能装但没哈希」（R345）
 
 - 后端 `plugin_registry_verify` 逐条返回 `has_url / https_url / has_sha256 / has_signer /
@@ -137,6 +159,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 新增 8 条单测（计数四态 / issue 与 noSha 可同命中 / 空·null·undefined 全零 / 行顺序与
   issue 优先 / 只缺哈希成行 / 空白 issue 不算问题）；
 - 验证：`pnpm -C apps/desktop check` 全绿（54 files / 887 tests）。
+
 ### 2026-10-24 弹窗关掉后焦点回到打开它的按钮（R344 useReturnFocus）
 
 - 此前关掉确认框/设置窗后焦点落在 body：键盘用户要从页面开头重新 Tab 一遍，读屏软件
@@ -151,6 +174,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 新增 3 条单测（可聚焦元素原样返回 / null·空对象·focus 非函数·字符串都返 null /
   归还动作只要求 focus 可调用）；
 - 验证：`pnpm -C apps/desktop check` 全绿（54 files / 879 tests）。
+
 ### 2026-10-24 弹窗遮罩补上对话框语义（role=dialog / aria-modal / aria-label，共 14 处）（R343）
 
 - 全仓 8 个文件 14 处 `className="modal-bg"` 遮罩此前只有鼠标 onClick 关闭的路子，
@@ -167,6 +191,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 验证：`pnpm -C apps/desktop check` 全绿（53 files / 876 tests）；守卫自检——临时删掉 Settings
   的 role/aria-modal 后单跑该测试，报 `./components/Settings.tsx:351 缺 role/aria-modal` 并失败，
   恢复后通过。
+
 ### 2026-10-24 toast 停留时长按「要读的量 / 要不要动手」分级（R342）
 
 - 此前所有 toast 一律 5 秒消失：带异常原文的错误读不完、带动作按钮的提示（「去调散热」
@@ -176,6 +201,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 判定收口成纯函数 `toastDuration(kind, text, hasAction)`，`store.toast` 用它设 `setTimeout`；
 - 新增 4 条单测（kind 分级 / 长文案两档加时且 60 字整不加 / 动作 +3s / 16s 封顶）；
 - 验证：`pnpm -C apps/desktop check` 全绿（53 files / 875 tests）。
+
 ### 2026-10-24 停止 agent 工具失败不再只写控制台（R341）
 
 - 「停止」按钮走 `stopAgentTool` → `api.cancelToolCalls()`，取消失败时只 `console.error`，
@@ -184,6 +210,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   `stopAgentTool` 改为返回 `boolean`（Tauri 环境外直接 true），调用方也能按结果处理；
 - 新增 2 条单测（取消失败 → false + err toast 带原因；取消成功 → true 且不打扰）；
 - 验证：`pnpm -C apps/desktop check` 全绿（53 files / 871 tests）。
+
 ### 2026-10-24 重复文件清单说清楚「另有 N 个正在用、已跳过」（R340）
 
 - 总览「重复文件」扫描会把每组保留 1 份、其余给成清理候选；被进程占用（独占打开失败）
@@ -195,6 +222,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   下方渲染一条带 caution 竖线的小字，其它提案（AI 清单、系统垃圾）不传就没有；
 - 新增纯函数 `dupRunningCount(groups)` + 3 条单测（多组累加 / null·空数组 / running 缺失）；
 - 验证：`pnpm -C apps/desktop check` 全绿（53 files / 869 tests）。
+
 ### 2026-10-24 MCP 审计日志能看出是哪个服务器，工具名不再重复两遍（R339）
 
 - 审计行里 `call_tool` 的文案是「调用 {tool}」，后面又单独渲染了一个 `<code>{tool}</code>`——
@@ -208,6 +236,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   （列表翻译 / 后端直给优先 / 服务器已删留空 / 增改取 server_name / 删除无名字）；
 - `mcp.auditCall` 去掉 `{tool}` 占位符（zh/en 同步），工具名改由 `<code>` 呈现；
 - 验证：`pnpm -C apps/desktop check` 全绿（53 files / 866 tests）。
+
 ### 2026-10-24 环比「N 天前」能对上日历了——上次统计的具体日期（R338）
 
 - 「建议清理」卡的环比行只说「距上次 21 天」，用户对不上日历（21 天前是哪天？）；
@@ -218,6 +247,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   没有可用日期时回退原 `diffGap`；
 - 测试：3 条（有上次给日期 / prev_at 0·null·undefined / gapDays null）；
 - 验证：`pnpm -C apps/desktop check` 全绿（52 files / 861 tests）。
+
 ### 2026-10-24 跨次对比的「主要变化」不再指错项——按变化量排，并补上前后值（R337）
 
 - 「建议清理」卡的环比行写着「主要在 {label}」，取的是 `scaffolds[0]`；而后端
@@ -233,6 +263,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   `suggestion_history.rs` 新增 1 条（排序 + tie-break）；
 - 验证：`pnpm -C apps/desktop check` 全绿（52 files / 858 tests）；
   `cargo test -p diskpilot-desktop diff_` 5 passed；`cargo fmt --check` 与 clippy `-D warnings` 均通过。
+
 ### 2026-10-24 前端产物收口：主包 537 → 442 kB，两条「假动态导入」警告清掉（R336）
 
 - `pnpm -C apps/desktop build` 每次都在喊 `Some chunks are larger than 500 kB`：入口 chunk 537 kB；
@@ -390,6 +421,7 @@ Steam 盘点页导出报告的那行「生成于 …」用的是 `new Date().toL
   与 `formatDateKey` 同口径（无效日期返回空串，不打印 NaN）；Steam 报表改用它；
 - `format.test.ts` 新增 4 条单测 + 一条守卫：源码里不许出现 `toLocale*('xx-XX')` 这种
   带字面量地区的调用（`.test.` 文件除外），避免以后又写死；
+
 ### 2026-10-24 聊天会话列表能用键盘切换了（R323）
 
 侧栏的会话列表每行是纯 `div` 点击：Tab 跳不过去，回车没反应，键盘用户没法切会话；
@@ -399,6 +431,7 @@ Steam 盘点页导出报告的那行「生成于 …」用的是 `new Date().toL
   行本身退回非交互容器；删除按钮不再需要 `stopPropagation`；
 - `chat.css`：把整行的内边距挪到 `.chat-session-main`（点行内任意位置仍然能切会话），
   补 `:focus-visible` 描边，并让 `:focus-within` 也把删除 X 显形（否则 Tab 到一个看不见的按钮）；
+
 ### 2026-10-24 扩展名过滤行能用键盘选；盘卡片不再嵌一个假按钮（R322）
 
 两处无障碍欠债：文件视图顶部的「按扩展名过滤」行是纯 div 点击，Tab 跳不过去、回车没反应；
@@ -410,6 +443,7 @@ HTML 里按钮不能嵌按钮，读屏软件还会念出一个永远无法聚焦
 - `settings.css` 补 `.fv-ext-row:focus-visible` 描边，键盘用户看得见焦点；
 - `DriveStrip.tsx` 的 `.ao-strip-refresh` 去掉 `role`/`tabIndex`，改 `aria-hidden="true"`
   （仍是鼠标悬停快捷方式，键盘用整卡按钮扫描），并在源码里写明原因；
+
 ### 2026-10-24 面板崩了能一键把现场交出去（R321）
 
 `ErrorBoundary` 的兜底界面只会显示报错信息和一大段堆栈：用户想反馈，只能手抄或截图；
