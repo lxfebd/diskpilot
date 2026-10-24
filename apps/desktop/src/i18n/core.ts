@@ -49,9 +49,24 @@ function effectiveLang(): Lang {
   return mode === 'system' ? detectSystemLang() : mode;
 }
 
+/** <html lang> 的取值：中文用 zh-CN、英文用 en（读屏软件与拼写检查都靠它）。 */
+export function htmlLangOf(lang: Lang): string {
+  return lang === 'zh' ? 'zh-CN' : 'en';
+}
+
+/** 把当前生效语言同步到 <html lang>——切到英文后读屏软件不该再拿中文音去念英文。 */
+function syncDocumentLang() {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = htmlLangOf(effectiveLang());
+}
+
 function emit() {
+  syncDocumentLang();
   for (const l of listeners) l();
 }
+
+// 首次加载也同步一次：index.html 里写死的是 zh-CN，「跟随系统」为英文时得改过来。
+syncDocumentLang();
 
 /** 切换语言（'zh' | 'en' | 'system'），持久化 + 通知所有组件。 */
 export function setLang(next: 'zh' | 'en' | 'system') {

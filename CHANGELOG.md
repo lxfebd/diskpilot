@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 切到英文后 <html lang> 也跟着改——读屏软件不再拿中文音念英文（R351）
+
+- 缺口：`apps/desktop/index.html` 里 `<html lang="zh-CN">` 是写死的，语言切到英文后这个属性
+  从不变化——读屏软件会继续用中文发音念整页英文，浏览器的拼写检查、断词规则也还是中文的。
+- `i18n/core.ts`：新增 `htmlLangOf(lang)`（zh → "zh-CN"、en → "en"）与内部 `syncDocumentLang()`；
+  `emit()` 里先同步 `<html lang>` 再通知组件，模块首次加载也同步一次
+  （覆盖 index.html 的默认值 + 「跟随系统」解析为英文的情况）。
+- 新增 2 条单测：`htmlLangOf` 映射；用 `vi.stubGlobal('document', …)` 模拟 documentElement，
+  验证 `setLang('en')` / `setLang('zh')` 后 `<html lang>` 分别变成 en / zh-CN。
+- 验证：`pnpm -C apps/desktop check` 全绿（55 files / 916 tests）。
 ### 2026-10-24 英文单复数不再手写 (s)——t() 支持 {n:day|days} 复数语法（R350）
 
 - 缺口：英文文案表里有 16 处 `(s)` 硬编码单复数（“1 day(s)”是语法错误，读着也别扭），

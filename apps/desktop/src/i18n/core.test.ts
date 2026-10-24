@@ -1,5 +1,5 @@
-import { describe, it, expect, afterAll } from 'vitest';
-import { formatPluralUnit, setLang, t } from './core';
+import { describe, it, expect, afterAll, vi } from 'vitest';
+import { formatPluralUnit, htmlLangOf, setLang, t } from './core';
 
 describe('英文单复数（R350）', () => {
   it('formatPluralUnit 只在 1 时用单数', () => {
@@ -34,6 +34,25 @@ describe('英文单复数（R350）', () => {
     setLang('en');
     expect(t('overview.clean.peekFiles', {})).toBe('{n:file|files}');
     expect(t('overview.clean.peekFiles', { n: 'many' })).toBe('{n:file|files}');
+  });
+
+  it('htmlLangOf 把语言映射成 html lang 值', () => {
+    expect(htmlLangOf('zh')).toBe('zh-CN');
+    expect(htmlLangOf('en')).toBe('en');
+  });
+
+  it('切语言时顺手改 <html lang>（读屏软件靠它选发音）', () => {
+    const el = { lang: 'zh-CN' };
+    vi.stubGlobal('document', { documentElement: el });
+    try {
+      setLang('en');
+      expect(el.lang).toBe('en');
+      setLang('zh');
+      expect(el.lang).toBe('zh-CN');
+    } finally {
+      vi.unstubAllGlobals();
+      setLang('zh');
+    }
   });
 
   afterAll(() => {
