@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R396: 右键菜单触发器声明会开菜单——读屏听得到 4 处右键入口；顺手删死类型 ToolModule
+
+- 缺口：全仓 4 处上下文菜单触发器（树视图行 TreeView.tsx、文件行 FileView.tsx、工作室路径/子项 Studio.tsx 两处）虽有 R368 的菜单键/Shift+F10 键盘入口，但元素没声明 aria-haspopup，读屏软件不知道「这里能唤出菜单」。
+- 改动：4 处触发器各加 aria-haspopup="menu"（R396 注释）；删掉 toolbelt/shared.ts 里零引用的死接口 ToolModule（连带清掉只被它用的 LucideIcon import）。
+- 守卫：a11y.test.ts 新增「右键菜单触发器要声明会开菜单（R396）」——逐文件对每个 onContextMenu 定位所在标签（lastIndexOf 找 < 起点 + 花括号/引号跟踪找 > 结尾），标签内必须有 aria-haspopup="menu"；ContextMenu.tsx 豁免（菜单本体，onContextMenu 只是吞原生菜单）。自检：删 TreeView 的 aria-haspopup → 报 ./components/TreeView.tsx:308、EXIT=1，还原后全绿。
+- 验证：pnpm -C apps/desktop check 69 files / 1023 tests / EXIT=0。
+
 ### R395: 启动/渲染路径的本地存储读写全部兜底——存取出错不再能让整个应用崩掉
 
 - 缺口：App.tsx 的 10 处 useState 初始化器/effect 与 LeftPanel、Settings（跳过更新版本）、toolwall（隐藏推广）共 15 处直接调 localStorage.getItem/setItem/removeItem 且没包 try/catch。其它路径（store/theme/i18n/permissions 等）都遵循「存储不可用就静默降级」，唯独启动引导路径例外：隐私模式/存储被禁用的浏览器预览里，读取抛错会让整个应用渲染失败（连到根 ErrorBoundary），点「同意」写失败会让事件处理直接崩。

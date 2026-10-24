@@ -815,3 +815,40 @@ describe('字段校验错误要报给读屏（R391）', () => {
     expect(violations).toEqual([]);
   });
 });
+
+describe('右键菜单触发器要声明会开菜单（R396）', () => {
+  // ContextMenu 自己是菜单本体，它的 onContextMenu 只是吞掉浏览器原生菜单。
+  const EXEMPT = ['ContextMenu.tsx'];
+  const tagEndOf = (s: string, start: number): number => {
+    let depth = 0;
+    let quote = '';
+    for (let i = start; i < s.length; i++) {
+      const c = s[i];
+      if (quote) { if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'") { quote = c; continue; }
+      if (c === '{') depth++;
+      else if (c === '}') depth--;
+      else if (c === '>' && depth <= 0) return i;
+    }
+    return -1;
+  };
+
+  it('带 onContextMenu 的元素必须声明 aria-haspopup="menu"', () => {
+    const violations: string[] = [];
+    for (const [rel, src] of Object.entries(RAW_TSX)) {
+      if (EXEMPT.some((x) => rel.endsWith(x))) continue;
+      for (const m of src.matchAll(/onContextMenu=/g)) {
+        const idx = m.index ?? 0;
+        const start = src.lastIndexOf('<', idx);
+        if (start < 0) continue;
+        const end = tagEndOf(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/aria-haspopup="menu"/.test(tag)) {
+          violations.push(rel + ':' + src.slice(0, idx).split('\n').length);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

@@ -300,6 +300,8 @@ const FileRow = memo(function FileRow({
       className={'fileview-row' + (selected ? ' selected' : '')}
       role="button"
       tabIndex={0}
+      // R396：右键 / 菜单键都能唤出上下文菜单，声明给读屏。
+      aria-haspopup="menu"
       onClick={() => onSelect(f.path)}
       onKeyDown={(e) => {
         // R368：菜单键 / Shift+F10 唤出右键菜单（复制路径 / 打开位置 / 移入回收站）。

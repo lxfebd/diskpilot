@@ -644,6 +644,8 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
                       }}
                       onContextMenu={(e) => { e.preventDefault(); openCtx({ x: e.clientX, y: e.clientY }, m.path); }}
                       tabIndex={0}
+                      // R396：右键 / 菜单键都能唤出上下文菜单，声明给读屏。
+                      aria-haspopup="menu"
                       onKeyDown={(e) => { ctxKeyDown(e, m.path); }}
                       title={t('studio.dragTip')}
                     >
@@ -694,6 +696,8 @@ function Card({ card, expanded, onToggle, onAsk, onOpenCleanup }: { card: CardDa
                         }}
                         onContextMenu={(e) => { e.preventDefault(); openCtx({ x: e.clientX, y: e.clientY }, c.path); }}
                         tabIndex={0}
+                        // R396：右键 / 菜单键都能唤出上下文菜单，声明给读屏。
+                        aria-haspopup="menu"
                         onKeyDown={(e) => { ctxKeyDown(e, c.path); }}
                         title={t('studio.childTip', { path: c.path })}
                       >
