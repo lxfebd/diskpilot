@@ -5,6 +5,7 @@ import { TreeView } from './TreeView';
 import { Treemap } from './Treemap';
 import { FileView } from './FileView';
 import { useT } from '../i18n';
+import { safeGetItem, safeSetItem } from '../safeStorage';
 
 type View = 'tree' | 'treemap' | 'files';
 
@@ -25,13 +26,13 @@ const viewTabs = (t: (key: string) => string) => [
 export function LeftPanel({ root, selectedPath, onSelect }: Props) {
   const t = useT();
   const [view, setView] = useState<View>(() => {
-    const saved = localStorage.getItem('diskpilot.leftView');
+    const saved = safeGetItem('diskpilot.leftView');
     return saved === 'treemap' || saved === 'files' ? saved : 'tree';
   });
 
   const persist = (v: View) => {
     setView(v);
-    try { localStorage.setItem('diskpilot.leftView', v); } catch { /* ignore */ }
+    safeSetItem('diskpilot.leftView', v);
   };
 
   // 树状图需要实际像素尺寸：用 ref 在挂载后量取容器尺寸，避免用 0 尺寸渲染

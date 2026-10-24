@@ -5,6 +5,7 @@ import { api } from '../api';
 import { isTauri } from '../env';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useEscapeKey } from '../escapeKey';
+import { safeGetItem, safeRemoveItem, safeSetItem } from '../safeStorage';
 import { cycleIndex } from '../a11y';
 import { useReturnFocus } from '../dialogFocus';
 import { openDataDirWithToast } from '../reveal';
@@ -203,17 +204,17 @@ export function Settings({ onClose, initialTab }: Props) {
   // 反复提示；出现更新的版本时重新提示（跳过是版本相关的，不是永久静音）。
   // R161：记录里带跳过时刻，超过 UPDATE_SKIP_DAYS 天同样重新提示（跳过
   // 不该是永久静音；旧格式纯版本串仍能读）。
-  const [skipRec, setSkipRec] = useState(() => parseSkipRecord(localStorage.getItem(UPDATE_SKIP_KEY)));
+  const [skipRec, setSkipRec] = useState(() => parseSkipRecord(safeGetItem(UPDATE_SKIP_KEY)));
   const skippedVer = skipRec?.version ?? null;
 
   const skipThisVersion = (ver: string) => {
     const rec = { version: ver, atMs: Date.now() };
-    localStorage.setItem(UPDATE_SKIP_KEY, formatSkipRecord(rec.version, rec.atMs));
+    safeSetItem(UPDATE_SKIP_KEY, formatSkipRecord(rec.version, rec.atMs));
     setSkipRec(rec);
   };
 
   const unskipVersion = () => {
-    localStorage.removeItem(UPDATE_SKIP_KEY);
+    safeRemoveItem(UPDATE_SKIP_KEY);
     setSkipRec(null);
   };
 

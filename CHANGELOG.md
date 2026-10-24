@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R395: 启动/渲染路径的本地存储读写全部兜底——存取出错不再能让整个应用崩掉
+
+- 缺口：App.tsx 的 10 处 useState 初始化器/effect 与 LeftPanel、Settings（跳过更新版本）、toolwall（隐藏推广）共 15 处直接调 localStorage.getItem/setItem/removeItem 且没包 try/catch。其它路径（store/theme/i18n/permissions 等）都遵循「存储不可用就静默降级」，唯独启动引导路径例外：隐私模式/存储被禁用的浏览器预览里，读取抛错会让整个应用渲染失败（连到根 ErrorBoundary），点「同意」写失败会让事件处理直接崩。
+- 改动：新增 apps/desktop/src/safeStorage.ts（safeGetItem / safeSetItem / safeRemoveItem 三个 try/catch 兜底函数），App.tsx（aiOpen/aiWidth/sidebarExpanded/leftWidth/rightWidth 的读写）、LeftPanel（leftView 读写）、Settings（skipRec 读/写/删）、toolwall（hidePromo 读写、readRecent/pushRecent 收口）全部改走 safe*。
+- 测试：新建 safeStorage.test.ts 2 条单测（直通 / 读失败回 null·写删失败静默）+ 1 条迁移守卫（App.tsx / LeftPanel / Settings / toolwall 四个启动路径文件不许再出现裸 localStorage.getItem|setItem|removeItem）；自检：临时把 App.tsx 一处改回裸调用 → 报 ./App.tsx:159、EXIT=1，还原后全绿。
+- 验证：pnpm -C apps/desktop check 69 files / 1022 tests / EXIT=0。
+
 ### R394: 工具箱页 / AI 助手 / 设置窗补上错误兜底——懒加载不再能让整棵树崩掉
 
 - 缺口：App.tsx 里 Toolbelt、ChatPanel、Settings 三个懒加载挂载点只有 Suspense 没有 ErrorBoundary。Suspense 只接 loading 不接错误：chunk 取不到、渲染抛错时错误会一路冒到根，整个应用树被 React 卸载（其它页面早在 709/762/770/778/786/822/831 行都有兜底，这三处一直漏着）。

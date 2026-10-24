@@ -17,6 +17,7 @@ import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { useEscapeKey } from '../../escapeKey';
 import { useStore } from '../../store';
+import { safeGetItem, safeSetItem } from '../../safeStorage';
 import { openExternal } from '../../external';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
@@ -665,14 +666,14 @@ const RECENT_KEY = 'diskpilot.toolwall.recent';
 
 function readRecent(): string[] {
   try {
-    const raw = localStorage.getItem(RECENT_KEY);
+    const raw = safeGetItem(RECENT_KEY);
     const arr = raw ? (JSON.parse(raw) as string[]) : [];
     return Array.isArray(arr) ? arr.slice(0, 12) : [];
   } catch { return []; }
 }
 function pushRecent(name: string): string[] {
   const next = [name, ...readRecent().filter((n) => n !== name)].slice(0, 12);
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  safeSetItem(RECENT_KEY, JSON.stringify(next));
   return next;
 }
 
@@ -706,7 +707,7 @@ export function CatalogWall({
   const [agentDetail, setAgentDetail] = useState<AgentToolMeta | null>(null);
   // 「隐藏推广」开关：图吧包内自带流量卡/加速器返利链等纯推广 .bat，
   // 标 is_promotion 后默认**隐藏**（用户明确要求去推广）；可手动切回显示。
-  const [hidePromo, setHidePromo] = useState<boolean>(() => localStorage.getItem('toolwall.hidePromo') !== '0');
+  const [hidePromo, setHidePromo] = useState<boolean>(() => safeGetItem('toolwall.hidePromo') !== '0');
   // R171：AI 分区按写入权限筛选（只读无需确认、写操作改系统状态）。
   const [aiPerm, setAiPerm] = useState<AiPermFilter>('all');
   // R172：按风险等级筛（安全敏感用户想只看低风险）。
@@ -935,7 +936,7 @@ export function CatalogWall({
             onClick={() => {
               const next = !hidePromo;
               setHidePromo(next);
-              localStorage.setItem('toolwall.hidePromo', next ? '1' : '0');
+              safeSetItem('toolwall.hidePromo', next ? '1' : '0');
             }}
             title={hidePromo ? t('toolbelt.wall.promoHidden') : t('toolbelt.wall.promoShow')}
           >

@@ -21,6 +21,7 @@ import { formatBytes, ellipsizePath, normKey, driveRootOf } from './format';
 import { loadSettings, isConfigured } from './advisorClient';
 import { useModalFocusTrap } from './dialogFocus';
 import { prefs } from './theme';
+import { safeGetItem, safeSetItem } from './safeStorage';
 import { APP_VERSION } from './version';
 import { useT } from './i18n';
 import {
@@ -155,13 +156,13 @@ export default function App() {
   const lastSetRootMs = useRef(0);
 
   // ── 全局 AI 侧栏（贯穿所有页面）──
-  const [aiOpen, setAiOpen] = useState<boolean>(() => localStorage.getItem('diskpilot.aiOpen') !== '0');
+  const [aiOpen, setAiOpen] = useState<boolean>(() => safeGetItem('diskpilot.aiOpen') !== '0');
   const [aiWidth, setAiWidth] = useState<number>(() => {
-    const v = Number(localStorage.getItem('diskpilot.aiWidth'));
+    const v = Number(safeGetItem('diskpilot.aiWidth'));
     return Number.isFinite(v) && v >= 260 ? v : 300;
   });
-  useEffect(() => { localStorage.setItem('diskpilot.aiOpen', aiOpen ? '1' : '0'); }, [aiOpen]);
-  useEffect(() => { localStorage.setItem('diskpilot.aiWidth', String(aiWidth)); }, [aiWidth]);
+  useEffect(() => { safeSetItem('diskpilot.aiOpen', aiOpen ? '1' : '0'); }, [aiOpen]);
+  useEffect(() => { safeSetItem('diskpilot.aiWidth', String(aiWidth)); }, [aiWidth]);
 
   // 关窗/刷新前归档活动对话：活动 turns 平时不逐条落盘，不归档会在
   // 关闭后整段丢失。用 getState 取最新状态，避免 effect 闭包过期。
@@ -174,7 +175,7 @@ export default function App() {
   // ── 导航侧栏折叠三态（响应式 + 用户显式选择，见 nav.ts）──
   // 显式收起/展开跨会话记住（与 AI 栏 aiOpen 同款存储）；缺省展开。
   const [sidebar, setSidebar] = useState(() =>
-    createSidebarLayoutState(window.innerWidth, localStorage.getItem('diskpilot.sidebarExpanded') !== '0'),
+    createSidebarLayoutState(window.innerWidth, safeGetItem('diskpilot.sidebarExpanded') !== '0'),
   );
   useEffect(() => {
     const onResize = () => setSidebar((s) => resizeSidebarLayout(s, window.innerWidth));
@@ -182,7 +183,7 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
   useEffect(() => {
-    localStorage.setItem('diskpilot.sidebarExpanded', sidebar.preferredExpanded ? '1' : '0');
+    safeSetItem('diskpilot.sidebarExpanded', sidebar.preferredExpanded ? '1' : '0');
   }, [sidebar.preferredExpanded]);
   const toggleSidebar = () => setSidebar(toggleSidebarLayout);
   // 侧栏占的横向宽度（含 1px 右边框）：下面所有内容区宽度预算都要扣掉它，
@@ -239,16 +240,16 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize);
   }, [aiFootprint, sidebarFootprint]);
   const [leftWidth, setLeftWidth] = useState<number>(() => {
-    const v = Number(localStorage.getItem('diskpilot.leftWidth'));
+    const v = Number(safeGetItem('diskpilot.leftWidth'));
     return Number.isFinite(v) && v > MIN_LEFT ? v : DEFAULT_LEFT;
   });
   const [rightWidth, setRightWidth] = useState<number>(() => {
-    const v = Number(localStorage.getItem('diskpilot.rightWidth'));
+    const v = Number(safeGetItem('diskpilot.rightWidth'));
     return Number.isFinite(v) && v > MIN_RIGHT ? v : DEFAULT_RIGHT;
   });
 
-  useEffect(() => { localStorage.setItem('diskpilot.leftWidth', String(leftWidth)); }, [leftWidth]);
-  useEffect(() => { localStorage.setItem('diskpilot.rightWidth', String(rightWidth)); }, [rightWidth]);
+  useEffect(() => { safeSetItem('diskpilot.leftWidth', String(leftWidth)); }, [leftWidth]);
+  useEffect(() => { safeSetItem('diskpilot.rightWidth', String(rightWidth)); }, [rightWidth]);
 
   // 窗口缩放（或 AI 栏开合）后，若三栏总和超出可用宽度，自动把左栏先收缩、
   // 右栏兜底，让中间始终保底 MIN_CENTER，避免工作台溢出被裁。
