@@ -46,6 +46,8 @@ export const shell = {
     'shell.sidebar.collapse': '收起侧边栏',
     'shell.sidebar.expand': '展开侧边栏',
     'shell.sidebar.ariaLabel': '主导航',
+    'shell.leftPanel.aria': '左侧文件面板',
+    'shell.rightPanel.aria': '右侧整理面板',
 
     // 全局 AI 侧栏
     'shell.airail.title': 'AI 顾问',
@@ -228,6 +230,8 @@ export const shell = {
     'shell.sidebar.collapse': 'Collapse sidebar',
     'shell.sidebar.expand': 'Expand sidebar',
     'shell.sidebar.ariaLabel': 'Main navigation',
+    'shell.leftPanel.aria': 'File panel on the left',
+    'shell.rightPanel.aria': 'Studio panel on the right',
 
     // 全局 AI 侧栏
     'shell.airail.title': 'AI Advisor',

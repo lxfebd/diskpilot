@@ -145,7 +145,7 @@ export function CleanupPage({ tagFilter, onOpenHistory }: { tagFilter?: string; 
   return (
     <div className="cleanup-page">
       <div className="cp-shell">
-        <aside className="cp-list">
+        <aside className="cp-list" aria-label={t('cleanup.scriptsTitle')}>
           <div className="cp-list-head">
             <span>{t('cleanup.scriptsTitle')}</span>
             <span className="muted small">{t('cleanup.scriptsCount', { n: cards.length })}</span>

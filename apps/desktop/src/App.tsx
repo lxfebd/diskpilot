@@ -786,7 +786,7 @@ export default function App() {
             />
           </div>
         )}
-        <aside className="left">
+        <aside className="left" aria-label={t('shell.leftPanel.aria')}>
           {root ? <LeftPanel root={root} selectedPath={selectedPath} onSelect={select} /> : <EmptyLeft />}
         </aside>
 
@@ -801,7 +801,7 @@ export default function App() {
         <Splitter onDrag={dragRight} onDoubleClick={() => setRightWidth(DEFAULT_RIGHT)} />
 
         {rightVisible && (
-        <aside className="right">
+        <aside className="right" aria-label={t('shell.rightPanel.aria')}>
           <ErrorBoundary fallbackLabel={t('shell.boundary.studioFailed')}>
             <Suspense fallback={<PageFallback />}>
               <Studio onOpenCleanup={(id) => openCleanup(id)} onOpenHistory={openHistory} />

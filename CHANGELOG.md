@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 五个 aside 地标补名字——读屏不再念出五个无名的「补充地标」（R370）
+
+- 缺口：页面上有 5 个 `<aside>`（左右侧栏、清理脚本列表、Steam 筛选与详情）都只有 className、
+  没有 aria-label——读屏软件只能报「补充地标」，两个以上叠在一起就分不清谁是谁。
+  导航 `<nav>` 早就带了 aria-label（主导航），aside 反而一直裸着。
+- 逐个补名：左右侧栏用 shell.leftPanel.aria / shell.rightPanel.aria（左侧文件面板 / 右侧整理面板），
+  清理脚本列表复用 cleanup.scriptsTitle（清理脚本），Steam 两处新增 steam.filtersAria / steam.detailAria
+  （筛选与视角 / 游戏详情）。
+- 守卫：a11y.test.ts 新增「每个 aside / nav 都带 aria-label」——开标签必须含
+  aria-label 或 aria-labelledby。自检：删掉清理页 aside 的标签 → 报 `./components/cleanup/CleanupPage.tsx:148` 并红。
+
 ### 2026-10-24 其余 32 个 active 类按钮也报选中态——筛选芯片/排序列头/主题色板/页签全补 aria-pressed（R369）
 
 - 接在 R366 之后：当时只补了 `seg-opt` 分段单选 16 处，全仓扫一遍发现还有 32 个按钮

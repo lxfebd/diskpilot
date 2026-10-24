@@ -512,7 +512,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
       {!loading && !error && inventory && inventory.steam_root && (totalGames > 0 || residueItems.length > 0) && (
         <div className="steam-body">
           {/* LEFT: filters & pivots */}
-          <aside className="steam-filters">
+          <aside className="steam-filters" aria-label={t('steam.filtersAria')}>
             <div className="steam-filter-section">
               <h4>{t('steam.libraries')}</h4>
               {inventory.libraries.map((lib) => (
@@ -787,7 +787,7 @@ function SteamDetailRail({
 }) {
   const t = useT();
   return (
-    <aside className="steam-detail">
+    <aside className="steam-detail" aria-label={t('steam.detailAria')}>
       <div className="steam-detail-head">
         <div className="steam-detail-title">{nameCn ?? game.name_en}</div>
         {nameCn && <div className="steam-detail-subtitle">{game.name_en}</div>}

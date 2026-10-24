@@ -581,3 +581,36 @@ describe('active 类按钮都要报选中态（R369）', () => {
     expect(violations).toEqual([]);
   });
 });
+// R370：页面里有 5 个 <aside>（左右侧栏、清理脚本列表、Steam 筛选/详情）都没有名字——
+// 读屏软件只能念「补充地标」，叠在一起就分不清哪个是哪个。nav 早就带了 aria-label，
+// 守卫要求每个 aside / nav 都必须有 aria-label 或 aria-labelledby。
+describe('地标要有名字（R370）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) { if (c === '\\') j++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it('每个 aside / nav 都带 aria-label', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<(aside|nav)\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/aria-label=|aria-labelledby=/.test(tag)) {
+          violations.push(path + ':' + src.slice(0, start).split('\n').length + ' <' + m[1] + '>');
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
