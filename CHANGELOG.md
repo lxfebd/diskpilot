@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 分隔条能用键盘调宽了——role=separator + 方向键（R371）
+
+- 缺口：左/右/ AI 栏之间的三条分隔条只响应鼠标拖动（onMouseDown）与双击复位，
+  键盘用户根本没法调面板宽窄（Tab 会跳过它、方向键无反应）。
+- 新增 apps/desktop/src/splitterKeys.ts：SPLITTER_STEP=12 / SPLITTER_STEP_LARGE=48，
+  纯函数 splitterDelta(e) 把 ←/→ 映射成像素增量（Shift 走大步），其它键返回 null 不拦截。
+- Splitter 改为可聚焦的分隔条控件：role="separator" + aria-orientation="vertical" +
+  aria-label（新增 shell.splitter.aria，中英）+ tabIndex=0 + aria-valuenow/aria-valuemin
+  （App 把 leftWidth/rightWidth/aiWidth 与各自 MIN 传进来）；方向键走 splitterDelta，
+  Enter = 双击重置的键盘等价物（有 onDoubleClick 时才生效）。
+- CSS：.splitter:hover/active 组接上 :focus-visible::before，另补 .splitter:focus-visible
+  描边（outline 2px accent + radius-xs），键盘焦点看得见。
+- 测试：splitterKeys.test.ts 5 条纯函数单测；a11y.test.ts 新增「分隔条要能键盘调宽（R371）」
+  2 条守卫（Splitter 必含 role=separator/aria-orientation/tabIndex/splitterDelta；
+  CSS 必有 .splitter:focus-visible）——自检：删 tabIndex → 报红，还原后绿。
+
 ### 2026-10-24 五个 aside 地标补名字——读屏不再念出五个无名的「补充地标」（R370）
 
 - 缺口：页面上有 5 个 `<aside>`（左右侧栏、清理脚本列表、Steam 筛选与详情）都只有 className、

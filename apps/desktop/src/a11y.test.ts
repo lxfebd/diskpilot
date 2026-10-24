@@ -614,3 +614,20 @@ describe('地标要有名字（R370）', () => {
     expect(violations).toEqual([]);
   });
 });
+
+// R371：分隔条原本只有鼠标拖动（onMouseDown）与双击复位，键盘用户没法调面板宽窄。
+// 补 role=separator + tabIndex + 方向键（splitterDelta）后，才是一个键盘可用的分隔条控件。
+describe('分隔条要能键盘调宽（R371）', () => {
+  it('Splitter 是可聚焦的 separator，方向键交给 splitterDelta', () => {
+    const src = RAW_TSX['./components/Splitter.tsx'] ?? '';
+    expect(src).toContain('role="separator"');
+    expect(src).toContain('aria-orientation="vertical"');
+    expect(src).toContain('tabIndex={0}');
+    expect(src).toContain('splitterDelta');
+  });
+
+  it('分隔条有键盘聚焦样式（outline 不许被吞掉）', () => {
+    const cssAll = Object.values(RAW_CSS).join('\n');
+    expect(cssAll).toMatch(/\.splitter:focus-visible\s*\{/);
+  });
+});

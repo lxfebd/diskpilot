@@ -141,6 +141,7 @@ export const shell = {
     'shell.progressbutton.cleaning': '清理中',
     'shell.progressbutton.failed': '失败',
     'shell.splitter.hint': '拖动调整 · 双击重置',
+    'shell.splitter.aria': '调整面板宽度（←/→ 调宽窄，Shift 大步，Enter 重置）',
 
     // 文件树右键菜单
     'shell.tooltree.openInExplorer': '在文件管理器中打开',
@@ -326,6 +327,7 @@ export const shell = {
     'shell.progressbutton.cleaning': 'Cleaning',
     'shell.progressbutton.failed': 'Failed',
     'shell.splitter.hint': 'Drag to resize · double-click to reset',
+    'shell.splitter.aria': 'Resize panel (arrow keys adjust, Shift for bigger steps, Enter resets)',
 
     // 文件树右键菜单
     'shell.tooltree.openInExplorer': 'Open in File Explorer',

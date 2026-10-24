@@ -620,7 +620,7 @@ export default function App() {
           </Suspense>
         </div>
       </div>
-      {aiOpen && <Splitter onDrag={dragAi} />}
+      {aiOpen && <Splitter onDrag={dragAi} value={aiWidth} min={260} />}
 
       <div className="app-content">
       <PageHeader
@@ -790,7 +790,7 @@ export default function App() {
           {root ? <LeftPanel root={root} selectedPath={selectedPath} onSelect={select} /> : <EmptyLeft />}
         </aside>
 
-        <Splitter onDrag={dragLeft} onDoubleClick={() => setLeftWidth(DEFAULT_LEFT)} />
+        <Splitter onDrag={dragLeft} onDoubleClick={() => setLeftWidth(DEFAULT_LEFT)} value={leftWidth} min={MIN_LEFT} />
 
         <section className="center">
           <ErrorBoundary fallbackLabel={t('shell.boundary.detailFailed')}>
@@ -798,7 +798,7 @@ export default function App() {
           </ErrorBoundary>
         </section>
 
-        <Splitter onDrag={dragRight} onDoubleClick={() => setRightWidth(DEFAULT_RIGHT)} />
+        <Splitter onDrag={dragRight} onDoubleClick={() => setRightWidth(DEFAULT_RIGHT)} value={rightWidth} min={MIN_RIGHT} />
 
         {rightVisible && (
         <aside className="right" aria-label={t('shell.rightPanel.aria')}>

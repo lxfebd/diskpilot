@@ -409,10 +409,15 @@ aside.right { background: var(--paper); border-left: 0; }
   border-radius: 2px;
   transition: background .12s, width .12s;
 }
-.splitter:hover::before, .splitter:active::before { background: var(--accent-strong); width: 3px; }
+.splitter:hover::before, .splitter:active::before, .splitter:focus-visible::before { background: var(--accent-strong); width: 3px; }
 .splitter > span {
   position: absolute;
   inset: 0 -4px;
+}
+.splitter:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+  border-radius: var(--radius-xs);
 }
 section.center {
   overflow: hidden;
