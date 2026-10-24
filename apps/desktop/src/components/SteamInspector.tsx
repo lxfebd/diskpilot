@@ -22,6 +22,7 @@ import type { SteamGame, SteamInventory } from '../types';
 import { formatBytes, formatDateTime, formatDateKey } from '../format';
 import { t, useT } from '../i18n';
 import { SteamWorkshopModal } from './SteamWorkshopModal';
+import { scrollBehavior } from '../motion';
 
 type Pivot = 'sleep' | 'size' | 'library' | 'lastplayed';
 
@@ -379,7 +380,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
       requestAnimationFrame(() => {
         listRef.current
           ?.querySelector(`[data-appid="${allGames[nextIdx].appid}"]`)
-          ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          ?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
       });
     },
     [allGames, selectedAppid],

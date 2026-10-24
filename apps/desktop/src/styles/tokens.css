@@ -124,3 +124,18 @@ code, .mono {
   overflow: hidden;
 }
 
+/* ── 减少动态效果（R357）──────────────────────────────────────────
+   用户开了系统的「减少动态效果」时，动画 / 过渡全部收敛到「一帧到站」：
+   无限旋转的转圈、脉冲（清理扫描灯）、扫描线、按钮 shimmer 都停住，
+   避免诱发晕动（前庭障碍用户）。JS 里的平滑滚动另行自觉（src/motion.ts）。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

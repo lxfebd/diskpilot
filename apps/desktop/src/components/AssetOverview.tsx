@@ -9,6 +9,7 @@ import { useStore, type CleanupProposalItem } from '../store';
 import { isPermEnabled } from '../permissions';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, type DriveEntry } from '../drives';
 import { TEMP_WARN_C, SCAN_STALE_WARN_DAYS } from '../thresholds';
+import { scrollBehavior } from '../motion';
 
 // 迁移后仍从这里导出，既有 import 与单测不用改。
 export { driveUsagePct } from '../drives';
@@ -1535,7 +1536,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   // 红盘救援横幅的「查看可清理项」按钮：滚动到建议清理卡片（ao-clean-card）。
   const resqHintRef = useRef<HTMLDivElement | null>(null);
   const scrollToClean = () => {
-    resqHintRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    resqHintRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
   };
 
   // R305/R307：体检条「红盘格」与「扫描时效格」共用一个落点 = 选中指定那块盘并
@@ -1544,14 +1545,14 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
   const stripRef = useRef<HTMLDivElement | null>(null);
   const goDrive = (path: string) => {
     setSelPath(path);
-    stripRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    stripRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
   };
 
   // R308：体检条温度格的落点 = 本页「温度采样历史」卡。这一格原本是不可点的 div，
   // 说了最高温却不给任何去向；现在与红盘格/扫描时效格同口径——点了就把用户带到能看
   // 明细的地方（采样点、区间峰值、最新采样时间），不新造任何磁盘/温度扫描。
   const thermalRef = useRef<HTMLDivElement | null>(null);
-  const goThermal = () => thermalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const goThermal = () => thermalRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'nearest' });
 
   const cap: [string, string, string] = selDrive
     ? formatBytesTriple(selDrive.total_bytes, selDrive.used_bytes, selDrive.free_bytes)

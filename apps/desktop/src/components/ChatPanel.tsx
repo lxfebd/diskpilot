@@ -12,6 +12,7 @@ import { agentChat, overviewChat, resolveCliTool, resolveStress, resolveSessionC
 import { grantSessionAuth, clearSessionAuths, PERMS } from '../permissions';
 import { deriveChatHistory } from '../advisor/chatHistory';
 import { lastToolCall, runningSecs } from '../advisor/traceTimer';
+import { scrollBehavior } from '../motion';
 import { prefs } from '../theme';
 import type { Node, AdvisorResponse, Scaffold } from '../types';
 import { HwReportCard, StressConfirmPanel, HwTestMonitor, useHwTestMonitor, type StressConfirm } from './HwPanels';
@@ -260,7 +261,8 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   }, [studioRequest?.ts]);
 
   useEffect(() => {
-    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: 'smooth' });
+    // R357：系统开了「减少动态效果」就瞬间到位（scrollBehavior 内部判断）。
+    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: scrollBehavior() });
   }, [turns.length, chatBusy]);
 
   // Walk root, collect ALL nodes tagged with this scaffold. Mirrors Studio's

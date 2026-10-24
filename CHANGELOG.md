@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 跟随系统「减少动态效果」——动画停、平滑滚动退回瞬间到位（R357）
+
+- 缺口：全仓 `prefers-reduced-motion` 零命中。侧栏宽度过渡、弹窗淡入、转圈加载、清理扫描灯
+  （`pulse-armed`）、按钮 shimmer（`progress-button-shimmer`）、`scanslide` 扫描线等 14 条
+  动画/过渡一律播放；JS 里 5 处平滑滚动（聊天自动滚到底、总览三处落点、Steam 列表选中项）
+  也无视这个系统设置。前庭障碍用户（晕动症）会在这些位移里难受，而关掉系统动效是本该生效的意愿。
+- `styles/tokens.css` 末尾加全局兜底块 `@media (prefers-reduced-motion: reduce)`：
+  `animation-duration` / `transition-duration` 收敛到 `0.01ms`、`animation-iteration-count: 1`
+  （无限转圈不再转）、`scroll-behavior: auto`——一条规则覆盖全部样式表，不必逐条改。
+- 新增 `src/motion.ts`：`prefersReducedMotion()`（无 `window` / 无 `matchMedia` 时保守返回 false）
+  与 `scrollBehavior(preferred = 'smooth')`（系统开了减少动效即退回 `'auto'`）。
+- 5 处裸 `behavior: 'smooth'` 改走 `scrollBehavior()`：`components/ChatPanel.tsx` 聊天滚动、
+  `components/AssetOverview.tsx` 三处落点（救援横幅「查看可清理项」、R305/R307 的盘条落点、R308 温度卡）、
+  `components/SteamInspector.tsx` 方向键选中项滚进视野。
+- 守卫两条（`a11y.test.ts`）：① 全局 CSS 必须存在 `prefers-reduced-motion: reduce` 块且含
+  `animation-duration` / `transition-duration` / `scroll-behavior`；② 源码不许再出现裸
+  `behavior: 'smooth'`（须经 `scrollBehavior()`）。两条都做了自检：塞探针后变红并按文件名报出，删掉恢复。
+- 验证：`pnpm -C apps/desktop check` 全绿（58 files / 937 tests，含 `motion.test.ts` 4 条 + 2 条守卫）。
 ### 2026-10-24 最后三处手写 Esc 收编进栈，并加守卫防它长回来（R356）
 
 - 缺口：R349 把 Esc 收敛成一个模块级栈（叠层时只有最上层响应），但仍有 3 处自己挂

@@ -182,3 +182,26 @@ describe('Esc 不许绕过 R349 的栈（R356）', () => {
   });
 });
 
+// ── 减少动态效果（R357）──────────────────────────────────────────────
+// 系统「减少动态效果」开着时，CSS 动画/过渡要停、JS 的平滑滚动要退回瞬间到位。
+// 两者都不会让任何断言变红（只是晕动用户难受），所以这里守住口径。
+describe('减少动态效果（R357）', () => {
+  it('全局 CSS 有 prefers-reduced-motion 兜底块（停动画 / 停过渡 / 停平滑滚动）', () => {
+    const cssAll = Object.values(RAW_CSS).join('\n');
+    const block = cssAll.match(/@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{([\s\S]*?)\}/);
+    expect(block).toBeTruthy();
+    expect(block?.[1]).toMatch(/animation-duration/);
+    expect(block?.[1]).toMatch(/transition-duration/);
+    expect(block?.[1]).toMatch(/scroll-behavior/);
+  });
+
+  it('JS 不再裸写 behavior: smooth——一律经 scrollBehavior() 判断', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (!src.includes("behavior: 'smooth'")) continue;
+      violations.push(`${path} 裸写 smooth——改 import { scrollBehavior } from '../motion'`);
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
