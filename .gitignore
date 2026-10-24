@@ -86,6 +86,9 @@ visual-check.*
 *.visual-check.*
 crates/agent-server-docs-tmp/
 *.wxs
+# 根目录散落的临时笔记 / 排查产出（下划线前缀顺手文件名，如 UI 排查留下的
+# _ctx.txt / _titles.txt / _tl.txt）。锚定仓库根，避免误伤深层源码同名文件。
+/_*.txt
 
 # Local dev metadata / stray backups (never commit)
 .mellos/
