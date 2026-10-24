@@ -4,6 +4,7 @@ version.workspace     = true
 edition.workspace     = true
 license.workspace     = true
 repository.workspace  = true
+description = "跨平台磁盘扫描：NTFS MFT 直读、USN 日志增量与 jwalk 并行兜底，产出目录树与体积统计"
 
 [features]
 # 真实卷快/慢路径计时对比：cargo run -p diskpilot-scanner --features bench -- bench C

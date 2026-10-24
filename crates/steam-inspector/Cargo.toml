@@ -4,6 +4,7 @@ version.workspace     = true
 edition.workspace     = true
 license.workspace     = true
 repository.workspace  = true
+description = "Steam 库只读盘点：解析 appmanifest_*.acf 与 libraryfolders.vdf，只读元数据、绝不动游戏文件"
 
 [dependencies]
 serde.workspace        = true

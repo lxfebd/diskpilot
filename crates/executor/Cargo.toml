@@ -4,6 +4,7 @@ version.workspace     = true
 edition.workspace     = true
 license.workspace     = true
 repository.workspace  = true
+description = "清理动作的安全执行层：系统回收站 / quarantine / 永久删除，逐条追加 undo.jsonl 撤销台账"
 
 [dependencies]
 serde.workspace      = true

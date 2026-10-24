@@ -4,6 +4,7 @@ version.workspace     = true
 edition.workspace     = true
 license.workspace     = true
 repository.workspace  = true
+description = "清理脚本静态校验器（CI 门禁）：schema、scope glob 非空、红线匹配、recycle_granularity 陷阱"
 
 [[bin]]
 name = "diskpilot-scaffold-lint"

@@ -1,7 +1,7 @@
 # DiskPilot 架构总设计
 
 > 适用于：想读懂源码、修 bug、加功能的开发者。
-> 代码位置：`apps/desktop/`（前端 + Tauri 后端）、`crates/`（7 个 Rust crate）、`scaffolds/`（清理脚本 TOML）。
+> 代码位置：`apps/desktop/`（前端 + Tauri 后端）、`crates/`（8 个 Rust crate）、`scaffolds/`（清理脚本 TOML）。
 
 ## 1. 总体分层
 
@@ -17,9 +17,9 @@
 └──────────────────────┬─────────────────────────────┘
                        │ 依赖
 ┌──────────────────────┴─────────────────────────────┐
-│  Rust workspace 7 crates（纯逻辑，可独立测试）        │
+│  Rust workspace 8 crates（纯逻辑，可独立测试）        │
 │  scanner · scaffold · scaffold-lint · executor      │
-│  steam-inspector · toolbelt · agent-server          │
+│  steam-inspector · toolbelt · agent-server · psutil  │
 └────────────────────────────────────────────────────┘
         独立进程：agent-server（MCP stdio，可被外部 AI 挂接）
 ```

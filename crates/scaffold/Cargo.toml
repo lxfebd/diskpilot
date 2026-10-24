@@ -4,6 +4,7 @@ version.workspace     = true
 edition.workspace     = true
 license.workspace     = true
 repository.workspace  = true
+description = "清理脚本装载与匹配：TOML 清单解析、红线单一尺子、WinApp2 规则支持、scaffold 生成器"
 
 [dependencies]
 serde.workspace        = true
