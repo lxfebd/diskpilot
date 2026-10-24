@@ -85,3 +85,33 @@ describe('aria-label 走文案表（R319）', () => {
     expect(violations).toEqual([]);
   });
 });
+
+// ── 弹窗遮罩要说自己是对话框（R343）─────────────────────────
+// 全仓 14 处 `className="modal-bg"` 遮罩此前只有鼠标 onClick 关闭，没有角色/模态语义：
+// 读屏软件不知道弹出的是对话框，也不会把焦点限制在弹窗内。通用 ConfirmDialog 早已是
+// role="alertdialog" aria-modal，这里把其余弹窗拉齐，并守住不许退回。
+describe('弹窗遮罩的对话框语义（R343）', () => {
+  it('每处 modal-bg 都带 role="dialog" / aria-modal="true" / aria-label', () => {
+    const violations: string[] = [];
+    let scanned = 0;
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (/\.test\.tsx$/.test(path)) continue;
+      const re = /<div\b[^>]*className="[^"]*modal-bg[^"]*"[^>]*>/g;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src))) {
+        const tag = m[0];
+        scanned += 1;
+        const missing: string[] = [];
+        if (!/role="dialog"/.test(tag)) missing.push('role');
+        if (!/aria-modal="true"/.test(tag)) missing.push('aria-modal');
+        if (!/aria-label=/.test(tag)) missing.push('aria-label');
+        if (missing.length === 0) continue;
+        const line = src.slice(0, m.index).split('\n').length;
+        violations.push(`${path}:${line} 缺 ${missing.join('/')}`);
+      }
+    }
+    expect(scanned).toBeGreaterThan(0); // 正则失配不能变成空转通过
+    expect(violations).toEqual([]);
+  });
+});
+

@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 弹窗遮罩补上对话框语义（role=dialog / aria-modal / aria-label，共 14 处）（R343）
+
+- 全仓 8 个文件 14 处 `className="modal-bg"` 遮罩此前只有鼠标 onClick 关闭的路子，
+  既没有 `role="dialog"` 也没有 `aria-modal="true"`：读屏软件念到的是普通 div，
+  不知道弹出了对话框，也不会把浏览范围限制在弹窗里；通用 ConfirmDialog 早就写了
+  `role="alertdialog" aria-modal="true" aria-label`，其余弹窗一直没对齐；
+- 现在 14 处遮罩都带上 `role="dialog" aria-modal="true"` 与一个走文案表的 `aria-label`：
+  Settings（settings.title）、Studio 安装弹窗（studio.installHead）、市场确认（confirmAsk.title）、
+  烤机压测（hw.stressTitle）、清理提案（cleanup.proposalHead）、dry-run 预览（cleanup.previewHead）、
+  跑分三处确认（toolbelt.bench.stress/disk/donut.confirmTitle）、工具箱详情与导出/移除/启动/
+  Agent 详情五处（tool.name 与 toolbelt.detail.* / toolbelt.wall.* 键）；
+- 新增源码守卫（`src/a11y.test.ts`）：扫全部 .tsx，每处 `modal-bg` 缺任何一个属性即失败，
+  并断言扫到的弹窗数 > 0，避免正则失配变成空转通过；
+- 验证：`pnpm -C apps/desktop check` 全绿（53 files / 876 tests）；守卫自检——临时删掉 Settings
+  的 role/aria-modal 后单跑该测试，报 `./components/Settings.tsx:351 缺 role/aria-modal` 并失败，
+  恢复后通过。
 ### 2026-10-24 toast 停留时长按「要读的量 / 要不要动手」分级（R342）
 
 - 此前所有 toast 一律 5 秒消失：带异常原文的错误读不完、带动作按钮的提示（「去调散热」

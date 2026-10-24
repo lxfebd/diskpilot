@@ -292,7 +292,7 @@ export function StressConfirmPanel({ t: stress, onClose, onConfirm }: { t: Stres
   useEscapeKey(onClose);
 
   return (
-    <div className="modal-bg" onClick={onClose}>
+    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('hw.stressTitle')} onClick={onClose}>
       <div className="modal stress-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <span><Zap size={14} /> {t('hw.stressTitle')}</span>

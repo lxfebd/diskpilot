@@ -149,7 +149,7 @@ export function CleanupProposalDialog() {
   })).filter((g) => g.list.length > 0);
 
   return (
-    <div className="modal-bg" onClick={close}>
+    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('cleanup.proposalHead', { title: proposal.title })} onClick={close}>
       <div className="modal proposal-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <span>

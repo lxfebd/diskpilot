@@ -783,7 +783,7 @@ export function MarketPanel() {
       )}
 
       {confirmAsk && (
-        <div className="modal-bg" onClick={() => setConfirmAsk(null)}>
+        <div className="modal-bg" role="dialog" aria-modal="true" aria-label={confirmAsk.title} onClick={() => setConfirmAsk(null)}>
           <div className="modal recycle-confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <div><ShieldAlert size={15} style={{ verticalAlign: '-2px', marginRight: 6 }} />{confirmAsk.title}</div>

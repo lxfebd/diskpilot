@@ -406,7 +406,7 @@ function ToolDetailModal({
   };
 
   return (
-    <div className="modal-bg" onClick={onClose}>
+    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={tool.name} onClick={onClose}>
       <div className="modal tool-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <span className="tdm-title">
@@ -605,7 +605,7 @@ function ToolDetailModal({
         {recycleMsg && <p className="toolbelt-market-msg" style={{ marginTop: 8 }}>{recycleMsg}</p>}
 
         {exportAsk && (
-          <div className="modal-bg" onClick={() => !exporting && setExportAsk(null)}>
+          <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.detail.exportConfirmTitle', { name: tool.name })} onClick={() => !exporting && setExportAsk(null)}>
             <div className="modal recycle-confirm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <div><Package size={15} style={{ verticalAlign: '-2px', marginRight: 6 }} />{t('toolbelt.detail.exportConfirmTitle', { name: tool.name })}</div>
@@ -629,7 +629,7 @@ function ToolDetailModal({
         )}
 
         {recycleAsk && (
-          <div className="modal-bg" onClick={() => !recycling && setRecycleAsk(false)}>
+          <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.detail.removeConfirmTitle', { name: tool.name })} onClick={() => !recycling && setRecycleAsk(false)}>
             <div className="modal recycle-confirm" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <div><Trash2 size={15} style={{ verticalAlign: '-2px', marginRight: 6 }} />{t('toolbelt.detail.removeConfirmTitle', { name: tool.name })}</div>
@@ -1140,7 +1140,7 @@ export function CatalogWall({
 
       {/* 就地启动确认（中/高危）：覆盖在卡片上方，非整屏 modal */}
       {confirmLaunch && (
-        <div className="toolwall-inline-confirm modal-bg" onClick={() => setConfirmLaunch(null)}>
+        <div className="toolwall-inline-confirm modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.wall.launchConfirmTitle')} onClick={() => setConfirmLaunch(null)}>
           <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <span><ShieldAlert size={14} /> {t('toolbelt.wall.launchConfirmTitle')}</span>
@@ -1208,7 +1208,7 @@ export function CatalogWall({
 
       {/* 「AI 可操作」工具说明（只读 MCP 工具详情） */}
       {agentDetail && (
-        <div className="modal-bg" onClick={() => setAgentDetail(null)}>
+        <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.wall.aiDetailTitle', { name: agentDetail.name })} onClick={() => setAgentDetail(null)}>
           <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal-head">
               <span><Bot size={14} /> {t('toolbelt.wall.aiDetailTitle', { name: agentDetail.name })}</span>

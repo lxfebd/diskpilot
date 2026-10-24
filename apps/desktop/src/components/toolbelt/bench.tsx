@@ -560,7 +560,7 @@ export function BenchPanel() {
 
       {/* 压测两步确认（写操作）——非 window.confirm，符合破坏性命令 UI 约定 */}
       {confirmStress && (
-        <div className="modal-bg" onClick={() => setConfirmStress(false)}>
+        <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.bench.stress.confirmTitle')} onClick={() => setConfirmStress(false)}>
           <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <span><ShieldAlert size={14} /> {t('toolbelt.bench.stress.confirmTitle')}</span>
@@ -585,7 +585,7 @@ export function BenchPanel() {
       {/* 磁盘基准真跑两步确认（写操作：在目标目录写临时文件测后即删）——
         非 window.confirm，符合破坏性命令 UI 约定 */}
       {confirmDiskRun && (
-        <div className="modal-bg" onClick={() => setConfirmDiskRun(false)}>
+        <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.bench.disk.confirmTitle')} onClick={() => setConfirmDiskRun(false)}>
           <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <span><ShieldAlert size={14} /> {t('toolbelt.bench.disk.confirmTitle')}</span>
@@ -612,7 +612,7 @@ export function BenchPanel() {
 
       {/* GPU 甜甜圈压测两步确认（写操作）——非 window.confirm，符合破坏性命令 UI 约定 */}
       {confirmDonut && (
-        <div className="modal-bg" onClick={() => setConfirmDonut(false)}>
+        <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('toolbelt.bench.donut.confirmTitle')} onClick={() => setConfirmDonut(false)}>
           <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <span><ShieldAlert size={14} /> {t('toolbelt.bench.donut.confirmTitle')}</span>

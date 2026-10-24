@@ -303,7 +303,7 @@ function InstallScaffoldModal({
   };
 
   return (
-    <div className="modal-bg" onClick={onClose}>
+    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('studio.installHead')} onClick={onClose}>
       <div className="modal scaffold-install-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <span>{t('studio.installHead')}</span>

@@ -140,7 +140,7 @@ export function DryRunPreviewDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
   return (
-    <div className="modal-bg" onClick={onCancel} style={{ zIndex: 60 }}>
+    <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('cleanup.previewHead')} onClick={onCancel} style={{ zIndex: 60 }}>
       <div className="modal cleanup-preview-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div>{t('cleanup.previewHead')}</div>
