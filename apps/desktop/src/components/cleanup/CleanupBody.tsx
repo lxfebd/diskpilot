@@ -330,7 +330,7 @@ export function CleanupBody({ onOpenHistory }: { onOpenHistory?: () => void }) {
               )}
             </div>
           )}
-          {s.err && <div className="error">{s.err}</div>}
+          {s.err && <div className="error" role="alert">{s.err}</div>}
         </>
       )}
 

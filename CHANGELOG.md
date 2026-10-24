@@ -1,5 +1,12 @@
 ## [未发布]
 
+### R384: 错误横幅能被读屏念出来——32 处错误文本补 role=alert + 源码守卫
+
+- 缺口：`role="alert"` 此前全仓为零（R359 只给「成功提示」补了 `role="status"`，错误是反过来的缺失）。扫描失败（App 顶部 banner）、台账加载失败（HistoryPage/UndoPanel）、连接/测试失败（McpServers/Settings/PowerPlanCard）、散热与驱动控制失败（SystemTools/StartupPanel）、安装失败（Studio）、市场加载失败（market/services）、趋势读取失败（bench/HwPanels）、auto_list 规则检查失败（ReminderSettings）——全都只是红色小字，读屏软件不主动念，错误发生时用户可能完全没察觉。
+- 改动：32 处错误文本容器补 `role="alert"`（断言式播报，出现即念）：App banner error、AssetOverview ao-diff-err / ao-clean-preview-note err、HistoryPage ×2、HwPanels ×3、McpServers ×4、PowerPlanCard、ReminderSettings ×3、Settings、StartupPanel、SystemTools ×4、Studio ×3、bench ×2（longNote 静态说明用 `role="note"` 区分，不按错误念）、UndoPanel ×2、market ×2、services、CleanupBody。
+- 守卫：a11y.test.ts 新增 describe「错误横幅要能被读屏念出来（R384）」——扫 RAW_TSX，className 含 `err`/`error`/`-err` 词元的 div/p/span 必须带 `role="alert"`、`role="note"` 或 `aria-hidden`（自检：删任意一处即红）。
+- 顺手修正：HistoryPage.tsx 头部注释「undo.jsonl 自带裁剪」与事实不符（后端是读整个 jsonl 再 take，台账没有裁剪；R310 的截断横幅才是真实口径）。
+- 验证：`pnpm -C apps/desktop check` 64 files / 990 tests 全绿。
 ### R383: 扫描不再能并发跑两份——加单飞闸门，页脚「重扫」不再踢起第二个扫描
 
 - 缺口：`scan` 没有任何并发守卫，而扫描入口有五处（总览盘卡片、盘条「扫描全部」、体检红盘格、救援横幅、页脚「重扫」）。前四处带 `disabled={scanning}`，唯独页脚重扫（R314 改成可聚焦的 `role="button"` span）没有——扫描中点它就会再起一份扫描：两份同时读盘、`scan-progress` 事件互相覆盖，先结束的那份 `finally` 把 `scanning` 置回 false，界面显示「未扫描」而后端还在遍历。后端 `scan.rs` 也没有「已有扫描在进行」的拦截，靠 UI 的 disabled 拦不住所有路径（R314 之后新增的入口都可能漏）。

@@ -213,7 +213,7 @@ function CommunityScaffolds({ onInstalled }: { onInstalled: (id: string) => void
   return (
     <div className="studio-community-list">
       {warning && <div className="muted small">{warning}</div>}
-      {error && <div className="studio-community-err">{error}</div>}
+      {error && <div className="studio-community-err" role="alert">{error}</div>}
       {items.length === 0 && <div className="muted small">{t('studio.registryEmpty')}</div>}
       {items.map((item) => {
         const ready = !!item.url.trim();
@@ -335,7 +335,7 @@ function InstallScaffoldModal({
                 onChange={(e) => setToml(e.target.value)}
                 spellCheck={false}
               />
-              {err && <div className="install-err">{err}</div>}
+              {err && <div className="install-err" role="alert">{err}</div>}
             </div>
             <div className="modal-foot">
               <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
@@ -437,7 +437,7 @@ function Winapp2ImportPanel({
           onChange={(e) => setIni(e.target.value)}
           spellCheck={false}
         />
-        {err && <div className="install-err">{err}</div>}
+        {err && <div className="install-err" role="alert">{err}</div>}
         {items !== null && items.length > 0 && (
           <div className="winapp2-preview">
             <div className="winapp2-preview-head">

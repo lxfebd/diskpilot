@@ -685,7 +685,7 @@ export default function App() {
           {t('shell.previewBanner')}
         </div>
       )}
-      {err && <div className="banner error">{err}</div>}
+      {err && <div className="banner error" role="alert">{err}</div>}
       {!err && !scanning && diag?.backend?.mode === 'walkdir' && (
         <div className="hint">{t('shell.scan.adminHint')}</div>
       )}

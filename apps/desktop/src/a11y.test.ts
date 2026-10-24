@@ -708,3 +708,46 @@ describe('排序列头报出升降序（R373）', () => {
     expect(violations).toEqual([]);
   });
 });
+// R384：错误横幅此前只是红色小字，读屏软件不会主动念——扫描失败、台账加载失败、
+// 连接测试失败、安装失败都静默。错误样式的文本容器必须带 role="alert"（静态说明
+// 用 role="note" 区分，纯装饰用 aria-hidden）。这条守卫兜住将来新加的错误行。
+describe('错误横幅要能被读屏念出来（R384）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) {
+        if (c === '\\') j++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "\'" || c === '`') {
+        quote = c;
+        continue;
+      }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it("错误样式的 div/p/span 必须带 role 或 aria-hidden", () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<(div|p|span)\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        const cm = tag.match(/className="([^"]*)"/);
+        if (!cm) continue;
+        const isErr = cm[1].split(/\s+/).some((tok) => tok === 'err' || tok === 'error' || tok.endsWith('-err'));
+        if (!isErr) continue;
+        const ok = /role="alert"/.test(tag) || /role="note"/.test(tag) || /aria-hidden/.test(tag);
+        if (!ok) violations.push(path + ':' + src.slice(0, start).split('\n').length);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+})

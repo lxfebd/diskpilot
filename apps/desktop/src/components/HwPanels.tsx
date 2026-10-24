@@ -517,7 +517,7 @@ export function HwHistorySection() {
       <div className="hw-hist">
         <div className="hw-hist-title"><Clock size={13} /> {t('hw.histTitle')}</div>
         {error
-          ? <div className="hw-hist-err small">{t('hw.histLoadFailed', { msg: error })}</div>
+          ? <div className="hw-hist-err small" role="alert">{t('hw.histLoadFailed', { msg: error })}</div>
           : <div className="hw-hist-empty muted small"><Loader2 size={12} className="spin" /> {t('hw.histLoading')}</div>}
       </div>
     );
@@ -562,7 +562,7 @@ export function HwHistorySection() {
         </label>
       </div>
 
-      {error && <div className="hw-hist-err small">{error}</div>}
+      {error && <div className="hw-hist-err small" role="alert">{error}</div>}
 
       {compare && compare.disks.length > 0 && (
         <div className="hw-hist-compare">
@@ -642,7 +642,7 @@ export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: s
         {n > 0 && <span className="muted small"> · {t('hw.trendSamples', { n, first, last })}</span>}
       </div>
       {err && (
-        <div className="hw-trend-err small">{t('hw.trendFailed', { msg: err })}</div>
+        <div className="hw-trend-err small" role="alert">{t('hw.trendFailed', { msg: err })}</div>
       )}
       {!err && temps.length >= 2 && (
         <div className="hw-trend-row">

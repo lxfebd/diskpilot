@@ -503,7 +503,7 @@ export function MarketPanel() {
           )}
 
           {marketErr !== null ? (
-            <p className="error">{t('toolbelt.mkt.builtinLoadFailed', { msg: marketErr })}</p>
+            <p className="error" role="alert">{t('toolbelt.mkt.builtinLoadFailed', { msg: marketErr })}</p>
           ) : market === null ? (
             <p className="muted">{t('toolbelt.mkt.loading')}</p>
           ) : filtered.length === 0 ? (
@@ -672,7 +672,7 @@ export function MarketPanel() {
             <div className="toolbelt-market-list" style={{ marginTop: 8, maxHeight: 220, overflowY: 'auto' }}>
               {installed === null ? (
                 installedErr !== null
-                  ? <p className="muted small error">{t('toolbelt.mkt.installedLoadFailed', { msg: installedErr })}</p>
+                  ? <p className="muted small error" role="alert">{t('toolbelt.mkt.installedLoadFailed', { msg: installedErr })}</p>
                   : <p className="muted small">{t('toolbelt.mkt.loading')}</p>
               ) : installed.length === 0 ? (
                 <p className="muted small">{t('toolbelt.mkt.installedEmpty')}</p>

@@ -683,7 +683,7 @@ export function Settings({ onClose, initialTab }: Props) {
             </label>
 
             {msg && <div className="ok" role="status">{msg}</div>}
-            {err && <div className="error">{err}</div>}
+            {err && <div className="error" role="alert">{err}</div>}
 
             <p className="muted small" style={{ marginTop: 4 }}>
               {t('settings.ai.privacy')}

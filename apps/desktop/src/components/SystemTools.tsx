@@ -292,7 +292,7 @@ function SystemToolsInner() {
           )}
         </span>
       </div>
-      {fanErr && <div className="error">{fanErr}</div>}
+      {fanErr && <div className="error" role="alert">{fanErr}</div>}
       {fanLoading && <div className="muted small">{t('system.fan.loading')}</div>}
       {fan && (
         <div className="sys-fan" style={{ borderLeftColor: LEVEL_COLOR[fan.level] ?? 'var(--accent)' }}>
@@ -357,11 +357,11 @@ function SystemToolsInner() {
             )}
           </div>
           {fanBreakerNote && (
-            <div className="error" style={{ marginTop: 6 }}>
+            <div className="error" role="alert" style={{ marginTop: 6 }}>
               <AlertTriangle size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{fanBreakerNote}
             </div>
           )}
-          {fanCtrlErr && <div className="error" style={{ marginTop: 6 }}>{fanCtrlErr}</div>}
+          {fanCtrlErr && <div className="error" role="alert" style={{ marginTop: 6 }}>{fanCtrlErr}</div>}
           {fanStatus?.guard_running && (
             <div className="muted small" style={{ marginTop: 6 }}>
               {t('system.fan.guardRunning')}
@@ -431,7 +431,7 @@ function SystemToolsInner() {
           )}
         </span>
       </div>
-      {drvErr && <div className="error">{drvErr}</div>}
+      {drvErr && <div className="error" role="alert">{drvErr}</div>}
       {drvLoading && <div className="muted small">{t('system.driver.loading')}</div>}
       {drivers && (
         <div className="muted small" style={{ marginBottom: 4 }}>

@@ -99,7 +99,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
           <span><History size={13} /> {t('cleanup.recent')}</span>
           <span className="muted small">{t('cleanup.loadFailedShort')}</span>
         </div>
-        <div className="error undo-msg">{t('cleanup.loadFailedMsg', { msg: loadErr })}</div>
+        <div className="error undo-msg" role="alert">{t('cleanup.loadFailedMsg', { msg: loadErr })}</div>
         <button type="button" className="ghost" onClick={refresh}>{t('cleanup.retry')}</button>
       </div>
     );
@@ -164,7 +164,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
         ))}
       </ul>
       {msg && <div className="ok undo-msg" role="status">{msg}</div>}
-      {err && <div className="error undo-msg">{err}</div>}
+      {err && <div className="error undo-msg" role="alert">{err}</div>}
     </div>
   );
 }

@@ -394,7 +394,7 @@ export function BenchPanel() {
                 </b>
               )}
             </div>
-            {liveTemp.err && <p className="muted small bench-trend-err">{liveTemp.err}</p>}
+            {liveTemp.err && <p className="muted small bench-trend-err" role="alert">{liveTemp.err}</p>}
             {liveTemp.points.length >= 2 && <TrendChart points={liveTemp.points} />}
             {liveTemp.points.length < 2 && !liveTemp.err && (
               <p className="muted small">{t('toolbelt.bench.stress.liveWaiting')}</p>
@@ -500,11 +500,11 @@ export function BenchPanel() {
             <History size={13} /> {t('toolbelt.bench.trend.longBtn')}
           </button>
         </div>
-        {trendError && <p className="muted small bench-trend-err">{trendError}</p>}
+        {trendError && <p className="muted small bench-trend-err" role="alert">{trendError}</p>}
         {trendData && trendData.points.length > 0 && (
           <>
             {trendData.range === 'long' && (
-              <div className="bench-trend-err muted small">{t('toolbelt.bench.trend.longNote')}</div>
+              <div className="bench-trend-err muted small" role="note">{t('toolbelt.bench.trend.longNote')}</div>
             )}
             <TrendChart points={trendData.points} />
             {/* R118：长期健康度评级卡——温度/内存高值占比汇总成人话结论。

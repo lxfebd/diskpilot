@@ -198,7 +198,7 @@ export function SysInfoPanel({ ctx: _ctx }: { ctx: ToolContext }) {
                 ? t('toolbelt.sys.procsRefresh')
                 : t('toolbelt.sys.procsShow')}
           </button>
-          {procsErr && <div className="error small">{procsErr}</div>}
+          {procsErr && <div className="error small" role="alert">{procsErr}</div>}
           {procs && procs.length === 0 && (
             <div className="muted small">{t('toolbelt.sys.procsEmpty')}</div>
           )}

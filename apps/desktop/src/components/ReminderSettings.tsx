@@ -255,7 +255,7 @@ export function ReminderSettings() {
   if (cfgErr) {
     return (
       <div className="settings-pane" role="tabpanel" id="settings-pane-reminder" aria-labelledby="settings-tab-reminder">
-        <div className="error small">{t('system.reminder.loadFailed', { err: cfgErr })}</div>
+        <div className="error small" role="alert">{t('system.reminder.loadFailed', { err: cfgErr })}</div>
       </div>
     );
   }
@@ -491,7 +491,7 @@ export function ReminderSettings() {
             return <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.startupNoHistory')}</div>;
           }
           if (s.kind === 'unread') {
-            return <div className="error small" style={{ marginTop: 8 }}>{t('system.reminder.loadFailed', { err: startupErr ?? '' })}</div>;
+            return <div className="error small" role="alert" style={{ marginTop: 8 }}>{t('system.reminder.loadFailed', { err: startupErr ?? '' })}</div>;
           }
           if (s.kind === 'same') {
             return <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.startupSame')}</div>;
@@ -509,7 +509,7 @@ export function ReminderSettings() {
         <TrendingUp size={13} /> {forecastBusy ? t('system.reminder.forecastChecking') : t('system.reminder.forecastCheck')}
       </button>
       {forecastErr && (
-        <div className="error small" style={{ marginTop: 8 }}>
+        <div className="error small" role="alert" style={{ marginTop: 8 }}>
           {t('system.reminder.loadFailed', { err: forecastErr })}
         </div>
       )}
@@ -579,7 +579,7 @@ export function ReminderSettings() {
       </div>
 
       {autoListErr ? (
-        <div className="muted small err" style={{ marginTop: 8 }}>{autoListErr}</div>
+        <div className="muted small err" role="alert" style={{ marginTop: 8 }}>{autoListErr}</div>
       ) : !autoList ? (
         <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.loading')}</div>
       ) : (

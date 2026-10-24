@@ -18,7 +18,8 @@ import {
   type UndoActionFilter,
 } from '../../history/model';
 
-// 后端 list_undo 在 take 上限内尽量多取；undo.jsonl 自带裁剪，正常远小于此。
+// 后端 list_undo 是「读整个 jsonl 再 take」，台账本身没有裁剪——R310 之前这里写的
+// 「undo.jsonl 自带裁剪」与事实不符，条数够到上限时靠下面的截断横幅说明。
 const LOAD_LIMIT = 500;
 // R310：台账条数够到上限时，页面此前把 500 当成「共 N 条」——更早的记录既看不见也
 // 不说没加载。点「查看全部」按更大上限重拉一次（后端本来就是读整个 jsonl 再 take，
@@ -176,7 +177,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         </label>
       </div>
 
-      {loadErr && <div className="error hp-msg">{loadErr}</div>}
+      {loadErr && <div className="error hp-msg" role="alert">{loadErr}</div>}
 
       {/* R310：条数够到拉取上限时明说——「共 N 条 / 最早日期」都只是已加载部分，
           不让人把 500 当全量台账。有“查看全部”→ 放宽上限重拉一次。 */}
@@ -271,7 +272,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
       )}
 
       {msg && <div className="ok hp-msg" role="status">{msg}</div>}
-      {err && <div className="error hp-msg">{err}</div>}
+      {err && <div className="error hp-msg" role="alert">{err}</div>}
     </div>
   );
 }

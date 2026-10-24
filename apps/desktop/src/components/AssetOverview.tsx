@@ -1901,7 +1901,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                 )}
               </div>
             ) : suggDiffErr !== null ? (
-              <div className="ao-clean-diff ao-diff-err">
+              <div className="ao-clean-diff ao-diff-err" role="alert">
                 <AlertTriangle size={13} />
                 {t('overview.clean.diffUnread', { msg: suggDiffErr })}
               </div>
@@ -1968,7 +1968,7 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                             <div className="ao-clean-preview-note"><RefreshCw size={12} className="ao-spin" />{t('overview.clean.peekLoading')}</div>
                           ) : st === 'error' ? (
                             // 读失败 ≠ 空清单：明确说明预览失败（不代表没有文件）。
-                            <div className="ao-clean-preview-note err">{t('overview.clean.peekFailed', { msg: previews[it.key]!.err ?? '' })}</div>
+                            <div className="ao-clean-preview-note err" role="alert">{t('overview.clean.peekFailed', { msg: previews[it.key]!.err ?? '' })}</div>
                           ) : st === 'empty' ? (
                             <div className="ao-clean-preview-note">{t('overview.clean.peekEmpty')}</div>
                           ) : (

@@ -371,7 +371,7 @@ function McpServersInner() {
               <XCircle size={14} />
             </button>
           </div>
-          {auditErr && <div className="error" style={{ marginTop: 4 }}>{auditErr}</div>}
+          {auditErr && <div className="error" role="alert" style={{ marginTop: 4 }}>{auditErr}</div>}
           {audit === null && <p className="muted small">{t('mcp.loading')}</p>}
           {audit !== null && audit.length === 0 && (
             <p className="muted small">{t('mcp.auditEmpty')}</p>
@@ -442,7 +442,7 @@ function McpServersInner() {
               {t('mcp.collapse')}
             </button>
           </div>
-          {jsonErr && <div className="error" style={{ marginTop: 6 }}>{jsonErr}</div>}
+          {jsonErr && <div className="error" role="alert" style={{ marginTop: 6 }}>{jsonErr}</div>}
           {parsedJson && parsedJson.length > 0 && (
             <ul className="mcp-json-preview" style={{ marginTop: 6 }}>
               {parsedJson.map((item, i) => (
@@ -468,7 +468,7 @@ function McpServersInner() {
         </div>
       )}
 
-      {err && <div className="error">{err}</div>}
+      {err && <div className="error" role="alert">{err}</div>}
       {msg && <div className="ok" role="status">{msg}</div>}
 
       {servers === null && !err && <p className="muted small">{t('mcp.loading')}</p>}
@@ -763,7 +763,7 @@ function ServerForm(props: {
   return (
     <div className="mcp-form">
       <div className="switch-label">{editingId ? t('mcp.formEditTitle') : t('mcp.formAddTitle')}</div>
-      {err && <div className="error" style={{ marginTop: 6 }}>{err}</div>}
+      {err && <div className="error" role="alert" style={{ marginTop: 6 }}>{err}</div>}
 
       <label className="field">
         <span>{t('mcp.fName')}</span>
