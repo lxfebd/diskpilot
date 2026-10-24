@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { t } from '../i18n';
 import { useEscapeKey } from '../escapeKey';
+import { useReturnFocus } from '../dialogFocus';
 
 // 破坏性命令的两步确认面板（铁律 6：禁 window.confirm，必须界面内二次确认）。
 // 轻量实现：遮罩 + 卡片，复用 chat 的 cli-confirm 样式。默认文案走 common 表，
@@ -19,6 +20,8 @@ export function ConfirmDialog({ title, body, confirmLabel, cancelLabel, onConfir
   // R315：Esc = 取消（破坏性确认里取消永远是安全方向）；焦点先落到取消按钮，
   // 免得用户一路 Tab 或回车时误触「确认」。
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  // R344：先记下落点再聚焦「取消」，顺序反了记到的就是取消按钮自己。
+  useReturnFocus(true);
   useEscapeKey(onCancel);
   useEffect(() => {
     cancelRef.current?.focus();

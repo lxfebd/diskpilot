@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { ProgressButton } from '../ProgressButton';
 import { useEscapeKey } from '../../escapeKey';
+import { useReturnFocus } from '../../dialogFocus';
 import { formatBytes } from '../../format';
 import { useT } from '../../i18n';
 import { api, type HwDiskHealth } from '../../api';
@@ -44,6 +45,8 @@ export function DryRunPreviewDialog({
   onCancelCleanup,
 }: Props) {
   const t = useT();
+  // R344：预览窗关掉后焦点回到「清理」按钮，键盘用户不必从头 Tab。
+  useReturnFocus(true);
   const [armed, setArmed] = useState(false);
   // 要清的盘若健康可疑，确认前必须显式承认「我有备份」——与 AI 提案窗同一口径。
   // 健康数据只在预览窗打开时读一次（共享缓存有就直接用）；读不到不编造、也不拦。

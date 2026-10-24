@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 弹窗关掉后焦点回到打开它的按钮（R344 useReturnFocus）
+
+- 此前关掉确认框/设置窗后焦点落在 body：键盘用户要从页面开头重新 Tab 一遍，读屏软件
+  也从页首念起；弹窗有了 dialog 语义（R343）之后这个断点更明显；
+- 新增 `src/dialogFocus.ts`：`focusReturnTarget(el)` 纯函数只认「有 focus 方法的对象」，
+  `useReturnFocus(open)` 在 open 由 false 变 true 时记下 `document.activeElement`，
+  关闭或组件卸载时 `focus()` 回来；元素已被移除就静默跳过（不编造落点）；
+- 接入 5 个条件挂载的弹窗：ConfirmDialog（先记落点再聚焦「取消」，顺序反了就记成按钮自己）、
+  CleanupProposalDialog（常驻挂载，按 `proposal !== null` 判定）、DryRunPreviewDialog、
+  StressConfirmPanel、Studio 的 InstallScaffoldModal；工具箱/跑分/市场里内联在父组件的弹窗
+  暂无独立 mount 时机，注释里记了留给后续抽公共弹窗组件时再统一；
+- 新增 3 条单测（可聚焦元素原样返回 / null·空对象·focus 非函数·字符串都返 null /
+  归还动作只要求 focus 可调用）；
+- 验证：`pnpm -C apps/desktop check` 全绿（54 files / 879 tests）。
 ### 2026-10-24 弹窗遮罩补上对话框语义（role=dialog / aria-modal / aria-label，共 14 处）（R343）
 
 - 全仓 8 个文件 14 处 `className="modal-bg"` 遮罩此前只有鼠标 onClick 关闭的路子，

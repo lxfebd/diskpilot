@@ -15,6 +15,7 @@ import { UndoPanel } from './UndoPanel';
 import { copyPathWithToast } from '../clipboard';
 import { revealWithToast } from '../reveal';
 import { useEscapeKey } from '../escapeKey';
+import { useReturnFocus } from '../dialogFocus';
 
 const FEATURED_IDS = [
   'wechat-pc',
@@ -284,6 +285,8 @@ function InstallScaffoldModal({
   const [err, setErr] = useState<string | null>(null);
   // R320：Esc 关闭（与点遮罩 / 右上角 X 一致）。
   useEscapeKey(onClose);
+  // R344：装完/关掉后焦点回到「安装」入口。
+  useReturnFocus(true);
 
   const install = async () => {
     if (!toml.trim()) {

@@ -8,6 +8,7 @@ import { driveLettersOf, gradeDiskHealth } from '../diskHealth';
 import { t, useT } from '../i18n';
 import type { HwInfo, HwDiskHealth, HwSnapshotMeta, HwCompareOut, HwSeriesPoint } from '../api';
 import { useEscapeKey } from '../escapeKey';
+import { useReturnFocus } from '../dialogFocus';
 
 /// 硬件报告 GPU 实时行来源标签：按 `gpu_live.name` 判定厂商（desktop 端 AMD ADL
 /// 兜底时 name 以「AMD 显卡（…」开头，NVIDIA 则 nvidia-smi）。无 live → 空串。
@@ -290,6 +291,8 @@ export function StressConfirmPanel({ t: stress, onClose, onConfirm }: { t: Stres
   const ok = input.trim() === STRESS_CONFIRM_WORD;
   // R315：Esc = 取消（与点遮罩/右上角 X 同义，压测不会因此启动）。
   useEscapeKey(onClose);
+  // R344：取消压测后焦点回到触发它的按钮。
+  useReturnFocus(true);
 
   return (
     <div className="modal-bg" role="dialog" aria-modal="true" aria-label={t('hw.stressTitle')} onClick={onClose}>
