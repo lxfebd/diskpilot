@@ -3,6 +3,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R403: 自定义可聚焦控件的焦点样式对账守卫——没有 :focus-visible 的就报红
+
+- 背景：原生 button/input 有浏览器默认焦点环（app-shell.css 也统一过 :focus-visible 口径），但 role="button" / tabIndex={0} 的 div/span/li 什么都没有——键盘 Tab 过去时屏幕上看不出焦点在哪。R314/R322/R368/R371 都是逐个补的焦点样式，没有机器守卫，新控件很容易漏。
+- 新增 apps/desktop/src/focusVisible.test.ts：扫全部 TSX（剥 JSX/行注释防注释冒充标签，花括号深度 + 引号跟踪取完整标签），凡带 tabIndex={0} 或 role="button" 的标签，取其静态类名（没有就回看紧邻父层 className，如 li 在 ul[className] 里），必须在某个 CSS 的 :focus-visible 选择器里出现过，否则报 文件:行号 + 类名。
+- 自检两道：① 扫到的源码 >20 份、covered 类 ≥5 个（守卫不是空转）；② 假数据（只有 .other:focus-visible 的样式 + class="no-focus" 的 button）必须命中「没有 :focus-visible 规则」。
+- 当前全仓 15 个 covered 类 / 0 违规（ao-top-row、ao-foot-refresh、fv-ext-row、fileview-row、splitter、studio-detail-path、studio-children、tree-row、banner-dismiss、ctxmenu-item、chat-session-main、skip-link 等）。
+- 验证：pnpm -C apps/desktop check EXIT=0，71 files / 1028 tests。
+
 ### R402: 删掉 5 个零引用的 Rust 公共项——死代码不再挂在公共 API 上
 
 - 缺口：workspace 内 Rust 公共项全量扫描（1037 个 pub fn/struct/const 等，跳过测试模块）发现 5 个名字除定义外全仓库零引用：usn.rs 的 UsnChange::is_delete 与 is_rename_old 方法、winapp2.rs 的 reg_keys_summary（文档写明「供 UI 展示」但 UI 从未调用）、steam-inspector 的 discover_steam_root（只能在 Windows 上可能有用但无人用）、toolbelt manifest.rs 的 manifest_index（文档写「供前端/AI 注入用」同样无人用）。
