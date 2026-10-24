@@ -16,6 +16,7 @@ import { scrollBehavior } from '../motion';
 import { prefs } from '../theme';
 import type { Node, AdvisorResponse, Scaffold } from '../types';
 import { HwReportCard, StressConfirmPanel, HwTestMonitor, useHwTestMonitor, type StressConfirm } from './HwPanels';
+import { ConfirmDialog } from './ConfirmDialog';
 import { useAgentToolProgress, AgentProgressCard } from './AgentProgressMonitor';
 
 // 后端进度 label（agent-server blocking_call_progress 固定中文）→ i18n 键。
@@ -140,6 +141,8 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   // 待用户两步确认的「回收此项」（AI 建议卡上的回收按钮 —— 点一下只挂确认面板，
   // 面板里再点「确认回收」才真正落盘）。
   const [pendingRecycle, setPendingRecycle] = useState<{ path: string; name: string; size: number; reason: string } | null>(null);
+  // R378：删除会话是破坏性操作（本机对话记录直接没），先过 ConfirmDialog 再删。
+  const [pendingDeleteChat, setPendingDeleteChat] = useState<{ id: string; title: string } | null>(null);
   // AI 调用 get_hardware_info / analyze_disk_health 时的结构化数据，渲染为卡片。
   const [hwCard, setHwCard] = useState<{ info: HwInfo | null; health: import('../api').HwDiskHealth | null } | null>(null);
   // 当前进行中 AI 请求的取消控制器（beginReq 创建、endReq 清空）：停止按钮
@@ -663,7 +666,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
                 <button
                   className="ghost icon chat-session-del"
                   title={t('chat.sessions.deleteTitle')}
-                  onClick={() => deleteChat(sess.id)}
+                  onClick={() => setPendingDeleteChat({ id: sess.id, title: sess.title || t('chat.sessions.untitled') })}
                 >
                   <X size={10} />
                 </button>
@@ -824,6 +827,16 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
             <button className="primary" onClick={() => confirmRecycle(true)}><Trash2 size={13} /> {t('chat.recycle.confirm')}</button>
           </div>
         </div>
+      )}
+
+      {pendingDeleteChat && (
+        <ConfirmDialog
+          title={t('chat.sessions.deleteAskTitle')}
+          body={t('chat.sessions.deleteAskBody', { title: pendingDeleteChat.title })}
+          confirmLabel={t('chat.sessions.deleteConfirm')}
+          onConfirm={() => { deleteChat(pendingDeleteChat.id); setPendingDeleteChat(null); }}
+          onCancel={() => setPendingDeleteChat(null)}
+        />
       )}
 
       <div className="chat-input-wrap">

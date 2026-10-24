@@ -5,6 +5,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 删除会话要过确认——X 按钮不再一按就清空本机对话记录（R378）
+
+- 会话列表每行的删除按钮此前直接调 `deleteChat`，点一下就删——本机存储的对话记录
+  没有回收站、无法恢复，也没有第二次机会（R323 把它拆成真按钮时一并带进来的）。
+- 现在点删除先弹 `ConfirmDialog`（复用 R315 的确认组件：Esc=取消、焦点先落取消）：
+  标题「删除这个会话？」、正文点名会话标题「「{title}」的全部对话记录会从本机删除，无法恢复。」、
+  确认按钮「删除」。确认后才执行原有 `deleteChat`（含活动会话清空与 localStorage 持久化）。
+- 新增 i18n 键 `chat.sessions.deleteAskTitle` / `deleteAskBody` / `deleteConfirm`（zh/en 同步，
+  `deleteTitle` 仍是行内 X 按钮的 tooltip）。
+- `pnpm -C apps/desktop check` 61 files / 983 tests 全绿（i18n 覆盖守卫验证 zh/en 键集一致）。
+
 ### 2026-10-24 收掉 4 处非最小布尔表达式——clippy 1.94 下 check:rust 重新全绿（R377）
 
 - clippy 1.94 的 `nonminimal_bool` 与 `absurd_extreme_comparisons`（默认 deny，CI 又叠了
