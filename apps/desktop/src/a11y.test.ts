@@ -631,3 +631,39 @@ describe('分隔条要能键盘调宽（R371）', () => {
     expect(cssAll).toMatch(/\.splitter:focus-visible\s*\{/);
   });
 });
+
+// R372：SVG 图（环形图/趋势线/树图）对读屏要么是自描述的图（role=img + aria-label），
+// 要么是旁边已有等价文字的纯装饰（aria-hidden）——不能什么都不说地挂在页面上。
+describe('SVG 图要么有名字要么是装饰（R372）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let i = start; i < src.length; i++) {
+      const c = src[i];
+      if (quote) {
+        if (c === '\\') i++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return i;
+    }
+    return -1;
+  };
+  it('每个 <svg> 都有 aria-hidden 或 (role + aria-label)', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<svg\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        const ok = /aria-hidden/.test(tag) || (/role=/.test(tag) && /aria-label=/.test(tag));
+        if (!ok) violations.push(path + ':' + src.slice(0, start).split('\n').length);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

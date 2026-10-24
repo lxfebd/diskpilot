@@ -72,7 +72,7 @@ export const Treemap = memo(function Treemap({ node, width, height, onSelect, se
   }, [node, width, height]);
 
   return (
-    <svg width={width} height={height} className="treemap">
+    <svg width={width} height={height} className="treemap" role="img" aria-label={t('overview.treemap.aria')}>
       {layout.map((d, i) => {
         const x = d.x0;
         const y = d.y0;

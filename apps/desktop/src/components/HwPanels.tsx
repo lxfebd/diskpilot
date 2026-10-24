@@ -647,7 +647,7 @@ export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: s
       {!err && temps.length >= 2 && (
         <div className="hw-trend-row">
           <span className="hw-trend-label">{t('hw.trendTemp')}</span>
-          <svg viewBox={`0 0 240 40`} className="hw-trend-svg" aria-label={t('hw.trendTemp')}>
+          <svg viewBox={`0 0 240 40`} className="hw-trend-svg" role="img" aria-label={t('hw.trendTemp')}>
             <path d={hwSeriesPath(temps)} className="hw-trend-line temp" fill="none" />
           </svg>
           <span className="hw-trend-max muted small">{Math.round(Math.max(...temps))}°C</span>
@@ -663,7 +663,7 @@ export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: s
       {!err && powers.length >= 2 && (
         <div className="hw-trend-row">
           <span className="hw-trend-label">{t('hw.trendPower')}</span>
-          <svg viewBox={`0 0 240 40`} className="hw-trend-svg" aria-label={t('hw.trendPower')}>
+          <svg viewBox={`0 0 240 40`} className="hw-trend-svg" role="img" aria-label={t('hw.trendPower')}>
             <path d={hwSeriesPath(powers)} className="hw-trend-line power" fill="none" />
           </svg>
           <span className="hw-trend-max muted small">{Math.round(Math.max(...powers))}h</span>

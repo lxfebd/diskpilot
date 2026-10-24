@@ -102,7 +102,7 @@ function DriveGauge({ usedBytes, totalBytes }: { usedBytes: number; totalBytes: 
   const color = !known ? 'var(--paper-3)' : isDriveCritical(usedBytes, totalBytes) ? 'var(--risk-danger)' : rawPct >= DRIVE_CAUTION_PCT ? 'var(--risk-caution)' : 'var(--risk-safe)';
   return (
     <div className="ao-gauge">
-      <svg viewBox="0 0 140 140">
+      <svg viewBox="0 0 140 140" role="img" aria-label={known ? t('overview.gauge.aria', { pct }) : t('overview.gauge.unknown')}>
         <circle cx="70" cy="70" r={R} fill="none" stroke="var(--paper-3)" strokeWidth="16" />
         <circle
           cx="70"
@@ -689,7 +689,7 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
                 {drive.replace('\\', '')}
                 <small>{t('overview.trend.driveUnit')}</small>
               </span>
-              <svg className="ao-trend-svg" viewBox="0 0 120 34" preserveAspectRatio="none">
+              <svg className="ao-trend-svg" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--accent-strong)" stopOpacity="0.30" />
@@ -788,7 +788,7 @@ function ThermalHistoryCard() {
       {sum.state !== 'unread' && sum.state !== 'empty' && (
         <div className="ao-thermal-body">
           {line ? (
-            <svg className="ao-trend-svg ao-thermal-svg" viewBox="0 0 120 34" preserveAspectRatio="none">
+            <svg className="ao-trend-svg ao-thermal-svg" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">
               <path d={line} fill="none" stroke={hotspot ? 'var(--risk-caution)' : 'var(--accent-strong)'} strokeWidth="2" />
             </svg>
           ) : null}

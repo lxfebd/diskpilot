@@ -20,6 +20,7 @@ export const overview = {
     // 磁盘详情卡（含使用率环）
     'overview.gauge.used': '已使用',
     'overview.gauge.unknown': '未读到',
+    'overview.gauge.aria': '已用 {pct}%',
     'overview.detail.title': '磁盘详情',
     'overview.detail.name': '{drive} 盘',
     'overview.detail.scanned': '{path} · 容量为系统实时 · 明细已扫描',
@@ -231,6 +232,7 @@ export const overview = {
     'overview.treemap.tip': '{path}\n{size} · {share}% of 父级',
     // R312：空间图只画根的前 300 个子项，折叠目录也没展开——说出来并指向树视图
     'overview.treemap.folded': '只画前 300 项、折叠目录未展开 · 完整清单见树视图',
+    'overview.treemap.aria': '空间占用图（面积即大小；只画前 300 项，折叠目录未展开，完整清单见树视图）',
 
     // 文件列表
     'overview.fileview.search': '搜索文件… 支持 *  ?  通配符',
@@ -257,6 +259,7 @@ export const overview = {
     // Drive detail card (with the usage ring)
     'overview.gauge.used': 'Used',
     'overview.gauge.unknown': 'Not read',
+    'overview.gauge.aria': 'Used {pct}%',
     'overview.detail.title': 'Drive details',
     'overview.detail.name': '{drive} drive',
     'overview.detail.scanned': '{path} · capacity is live from Windows · contents scanned',
@@ -468,6 +471,7 @@ export const overview = {
     'overview.treemap.tip': '{path}\n{size} · {share}% of parent',
     // R312: the map lays out only the first 300 top-level items and folded folders stay collapsed
     'overview.treemap.folded': 'Top 300 items only, folded folders collapsed · see Tree view for all',
+    'overview.treemap.aria': 'Space usage map (area = size; top 300 items only, folded folders collapsed, see Tree view for all)',
 
     // File list
     'overview.fileview.search': 'Search files… * and ? wildcards work',

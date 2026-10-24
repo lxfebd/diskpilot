@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 SVG 图对读屏要么有名字、要么明说是装饰（R372）
+
+- 缺口：页面上 16 处 SVG 图（容量环形图、空间/温度趋势线、树图、压测图……），
+  工具箱的图表早已带 role=img + aria-label，但总览的环形图、空间趋势线、温度趋势线、
+  树图和硬件温度/功耗趋势线什么都没标——读屏要么静默、要么把内部散字（72% 已用）当正文念。
+- 总览容量环形图（DriveGauge）补 role=img + aria-label：已用 {pct}%（overview.gauge.aria），
+  容量未读到沿用 overview.gauge.unknown；空间趋势线（ao-trend-svg）与温度趋势线
+  （ao-thermal-svg）旁边已有等价数字（百分比/已用/增量/区间峰值），标 aria-hidden 当装饰；
+  树图补 role=img + overview.treemap.aria（空间占用图 · 只画前 300 项，完整清单见树视图——
+  树图没有逐块键盘导航，读屏用户靠树视图看明细）；硬件温度/功耗趋势线补 role=img。
+- 守卫：a11y.test.ts「每个 <svg> 都有 aria-hidden 或 (role + aria-label)」——自检：
+  删掉空间趋势线的 aria-hidden → 报 `./components/AssetOverview.tsx:692` 并红。
+
 ### 2026-10-24 分隔条能用键盘调宽了——role=separator + 方向键（R371）
 
 - 缺口：左/右/ AI 栏之间的三条分隔条只响应鼠标拖动（onMouseDown）与双击复位，
