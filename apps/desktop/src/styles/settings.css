@@ -793,6 +793,13 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   background: var(--card);
   border: 1px solid var(--border);
 }
+.sys-row-active {
+  /* R374：当前生效的电源方案。此前 className 就带这个修饰类但任何 CSS 都没定义
+     （有类无样式），当前项只能靠行里的 Zap 图标和「当前」小字辨认；补高亮边框
+     + 浅色底，让当前方案在列表里一眼可见。配色全走 tokens.css。 */
+  border-color: var(--accent-strong);
+  background: var(--accent-bg);
+}
 .sys-row-off { opacity: 0.55; }
 .sys-row-main { min-width: 0; flex: 1; }
 .sys-name { display: block; font-weight: 700; font-size: calc(12.5px * var(--font-scale, 1)); word-break: break-all; }

@@ -1071,7 +1071,7 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
       {scanning && (
         <div className="scan-bar">
           <div
-            className={'scan-bar-fill' + (complete ? ' determinate' : ' indeterminate')}
+            className={'scan-bar-fill' + (complete ? '' : ' indeterminate')}
             role="progressbar"
             aria-label={t('shell.scanbar.aria')}
             aria-valuemin={0}

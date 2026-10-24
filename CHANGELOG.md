@@ -5,6 +5,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 三处死类名收口 + 电源方案当前项高亮（R374）
+
+- 扫描进度条 `scan-bar-fill` 的 `determinate` 修饰类没有任何 CSS 定义（真正有样式的是
+  `indeterminate` 与 `done`），有百分比时靠内联 width 撑开——删掉这个死段，语义不变。
+- 工具箱卡片的 `toolwall-builtin` 修饰类同样无 CSS：内置链接已有 `toolwall-link-badge`
+  徽标 + 卡片 title 里的「内置操作」说明，删死段后卡片信息不减。
+- 电源方案行的 `sys-row-active` 此前是「有类无样式」——当前生效方案只能靠 ⚡ 图标和
+  「当前」小字辨认。补上 `.sys-row-active` 规则（accent 描边 + 浅色底），当前项一眼可见。
+
 ### 2026-10-24 排序列头念出升降序——方向不再只有箭头图标（R373）
 
 - 缺口：文件列表的「文件名 / 大小」两个排序列头只有 aria-pressed（「已按下」），

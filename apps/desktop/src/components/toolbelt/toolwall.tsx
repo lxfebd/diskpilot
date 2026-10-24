@@ -1307,7 +1307,7 @@ function ToolCard({
 
   return (
     <div
-      className={'toolwall-card' + (tool.is_builtin_link ? ' toolwall-builtin' : '') + (clickable ? ' clickable' : '') + (isPromo ? ' toolwall-promo' : '')}
+      className={'toolwall-card' + (clickable ? ' clickable' : '') + (isPromo ? ' toolwall-promo' : '')}
       onClick={() => onOpenDetail(tool)}
       onDoubleClick={() => clickable && !isPromo && !launching && onLaunch()}
       title={clickable ? `${tool.name}\n${t('toolbelt.card.clickHint')}${isPromo ? '\n' + t('toolbelt.card.promoHint') : ''}${adNotice ? ' · ' + adNotice : ''}` : `${tool.name}\n${t('toolbelt.card.builtinOp')}`}
