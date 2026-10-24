@@ -299,9 +299,37 @@ select:focus-visible {
   background: var(--sun);
   color: var(--ink);
 }
+/* 错误横幅：横排（文本占满 + 右侧关闭 X），R389 让旧错误可以立刻收起 */
 .banner.error {
   background: var(--err);
   color: var(--ink);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.banner-msg {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+.banner-dismiss {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 1px 3px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+.banner-dismiss:hover {
+  opacity: 1;
+}
+.banner-dismiss:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+  border-radius: var(--radius-xs);
 }
 
 /* ── Main layout ───────────────────────────────────────────────────── */

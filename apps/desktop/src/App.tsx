@@ -685,7 +685,21 @@ export default function App() {
           {t('shell.previewBanner')}
         </div>
       )}
-      {err && <div className="banner error" role="alert">{err}</div>}
+      {/* R389：扫描失败的红横幅此前只有「下一次扫描开始」才消失，没有关闭入口，
+          读屏/鼠标用户都得一直看着旧错误。给它一个 X，点了立刻清掉。 */}
+      {err && (
+        <div className="banner error" role="alert">
+          <span className="banner-msg">{err}</span>
+          <button
+            className="banner-dismiss"
+            onClick={() => setErr(null)}
+            aria-label={t('common.close')}
+            title={t('common.close')}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
       {!err && !scanning && diag?.backend?.mode === 'walkdir' && (
         <div className="hint">{t('shell.scan.adminHint')}</div>
       )}

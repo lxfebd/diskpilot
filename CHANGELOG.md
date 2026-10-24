@@ -1,5 +1,12 @@
 ## [未发布]
 
+### R389: 扫描失败的红横幅能手动关掉了——旧错误不再一直挂着
+
+- 缺口：扫描失败时 App 顶部的错误横幅（`banner error`）只在「下一次扫描开始」时被 `setErr(null)` 清掉。用户不想立刻重扫时，旧错误会一直挂在页面顶上，既没有关闭入口，也没有任何说明（这个横幅不会被任何页面切换收起）。
+- 改动：错误横幅改为横排（flex），左侧错误文本（`.banner-msg`，flex:1 自动换行），右侧加 X 关闭按钮——`onClick={() => setErr(null)}` 立刻收起，`aria-label` 复用 `common.close`（R319 键），`:focus-visible` 有可见描边（读屏用户照常收到 `role=alert` 播报，之后能用键盘把横幅收掉）。
+- 守卫：`a11y.test.ts` 新增 describe「错误横幅要能手动关闭（R389）」2 条——App.tsx 的 `banner error` 块内必须含 `setErr(null)`、`banner-dismiss` 与关闭 `aria-label`；layout.css 必须含 `.banner-dismiss:focus-visible` 焦点样式（不许再退化成无入口的常驻错误）。
+- 验证：`pnpm -C apps/desktop check` 全绿。
+
 ### R388: undo.jsonl 不再无限膨胀——台账固定保留最新 5000 条
 
 - 缺口：撤销台账是纯追加（write_log 逐条 append），长期使用会撑到任意大；前端每次打开台账页，后端 `list_undo` 都是「读整个 jsonl 再 take」，文件越大每次打开越慢。而 R310 的「查看全部（最多 5000）」上限实际是前端自设的——台账里可能还有更早记录没进前端（HistoryPage 注释里曾让人以为后端自带裁剪，实为笔误，R384 已修注释）。

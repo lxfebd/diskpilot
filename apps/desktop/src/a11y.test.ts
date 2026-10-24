@@ -751,3 +751,20 @@ describe('错误横幅要能被读屏念出来（R384）', () => {
     expect(violations).toEqual([]);
   });
 })
+
+// ── 扫描错误横幅要能手动关闭（R389）──────────────────────────────
+describe('错误横幅要能手动关闭（R389）', () => {
+  it('App.tsx 的 banner error 里有关闭按钮（点了直接清空 err）', () => {
+    const appSrc = RAW_TSX['./App.tsx'] ?? '';
+    const at = appSrc.indexOf("className=\"banner error\"");
+    expect(at).toBeGreaterThan(-1);
+    const block2 = appSrc.slice(at, at + 900);
+    expect(block2).toContain('setErr(null)');
+    expect(block2).toContain('banner-dismiss');
+    expect(block2).toContain('aria-label={t(');
+  });
+  it('关闭按钮有可见的键盘焦点样式（layout.css）', () => {
+    const css = Object.values(RAW_CSS).join('\n');
+    expect(css).toMatch(/\.banner-dismiss:focus-visible\s*\{/);
+  });
+});
