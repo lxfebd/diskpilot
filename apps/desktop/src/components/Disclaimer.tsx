@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ShieldAlert, Github, Mail, MessageCircle, User } from 'lucide-react';
 import { useT } from '../i18n';
+import { openExternal } from '../external';
 
 /** 开屏免责声明弹窗：首次启动强制显示。
  *  - 10 秒倒计时未走完时「同意」不可点（保证用户读够时间）
@@ -94,8 +95,8 @@ export default function Disclaimer({ onAccept }: { onAccept?: () => void }) {
             <ul>
               <li><b>{t('shell.disclaimer.authorLabel')}</b>{t('shell.disclaimer.authorName')}</li>
               <li><b>{t('shell.disclaimer.qqLabel')}</b>3167245951</li>
-              <li><b>{t('shell.disclaimer.emailLabel')}</b><a href="mailto:3167245951@qq.com">3167245951@qq.com</a></li>
-              <li><b>{t('shell.disclaimer.githubLabel')}</b><a href="https://github.com/lxfebd" target="_blank" rel="noreferrer">https://github.com/lxfebd</a></li>
+              <li><b>{t('shell.disclaimer.emailLabel')}</b><a href="mailto:3167245951@qq.com" onClick={(e) => { e.preventDefault(); void openExternal('mailto:3167245951@qq.com'); }}>3167245951@qq.com</a></li>
+              <li><b>{t('shell.disclaimer.githubLabel')}</b><a href="https://github.com/lxfebd" onClick={(e) => { e.preventDefault(); void openExternal('https://github.com/lxfebd'); }}>https://github.com/lxfebd</a></li>
             </ul>
           </section>
 

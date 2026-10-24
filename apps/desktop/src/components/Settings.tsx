@@ -6,6 +6,7 @@ import { isTauri } from '../env';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useEscapeKey } from '../escapeKey';
 import { useReturnFocus } from '../dialogFocus';
+import { openExternal } from '../external';
 import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { PermissionCenter } from './PermissionCenter';
@@ -774,7 +775,7 @@ export function Settings({ onClose, initialTab }: Props) {
                   <p className="muted small update-notes">{update.notes}</p>
                 )}
                 {update !== null && typeof update === 'object' && update.available && (
-                  <a className="ghost small" href={update.url} target="_blank" rel="noreferrer" style={{ marginTop: 4, display: 'inline-block' }}>
+                  <a className="ghost small" href={update.url} onClick={(e) => { e.preventDefault(); void openExternal(update.url); }} style={{ marginTop: 4, display: 'inline-block' }}>
                     {t('settings.general.updateGo')} <ExternalLink size={11} style={{ verticalAlign: '-1px' }} />
                   </a>
                 )}

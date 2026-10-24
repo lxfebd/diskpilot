@@ -95,6 +95,19 @@ export const systemExtApi = {
     return invoke<void>('open_steam_url', { action, appid });
   },
 
+  /**
+   * 打开外部链接。桌面端（Tauri/WebView2）里 `<a target="_blank">` 会被静默吞掉
+   * ——wry 没有 on_new_window 处理器时直接取消新窗口请求，所以外链必须交给系统
+   * 浏览器；浏览器预览保持 window.open。
+   */
+  openExternalUrl: (url: string) => {
+    if (!isTauri) {
+      window.open(url, '_blank', 'noopener');
+      return Promise.resolve();
+    }
+    return invoke<void>('open_external_url', { url });
+  },
+
   // ── 系统探测 ──
   runSystemProbe: (sample = false) =>
     isTauri

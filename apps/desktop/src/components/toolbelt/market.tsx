@@ -16,6 +16,7 @@ import { invalidateToolbeltCache } from '../../advisor/tools';
 import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
 import { APP_VERSION } from '../../version';
 import { useEscapeKey } from '../../escapeKey';
+import { openExternal } from '../../external';
 
 /** 索引是否"全占位"：有条目但无一提供下载地址（发布者填 URL 前展示引导）。 */
 export function communityComingSoon(community: readonly RegistryPlugin[], indexed: boolean): boolean {
@@ -822,7 +823,7 @@ export function MarketPanel() {
                     )}
                     <p className="muted small">
                       {p.category} · {t('toolbelt.mkt.authorPrefix')}{p.author || t('toolbelt.common.unknown')}{p.downloads > 0 ? ` · ${t('toolbelt.mkt.downloads', { n: p.downloads })}` : ''}
-                      {p.homepage ? <> · <a href={p.homepage} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{t('toolbelt.mkt.homepage')}</a></> : ''}
+                      {p.homepage ? <> · <a href={p.homepage} onClick={(e) => { e.stopPropagation(); e.preventDefault(); void openExternal(p.homepage || ''); }}>{t('toolbelt.mkt.homepage')}</a></> : ''}
                     </p>
                     {/* R168：应用版本不满足插件声明要求——如实说清并拦下安装 */}
                     {!minAppOk && (

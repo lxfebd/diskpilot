@@ -17,6 +17,7 @@ import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { useEscapeKey } from '../../escapeKey';
 import { useStore } from '../../store';
+import { openExternal } from '../../external';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
 import type { SettingsTab } from '../Settings';
@@ -507,12 +508,12 @@ function ToolDetailModal({
               {(tool.tutorial_url || tool.download_url || manifest?.tutorial_url || manifest?.download_hint) && (
                 <div className="tdm-links">
                   {(tool.tutorial_url || manifest?.tutorial_url) && (
-                    <a className="ghost small" href={tool.tutorial_url || manifest?.tutorial_url} target="_blank" rel="noreferrer">
+                    <a className="ghost small" href={tool.tutorial_url || manifest?.tutorial_url} onClick={(e) => { e.preventDefault(); void openExternal(tool.tutorial_url || manifest?.tutorial_url || ''); }}>
                       <ExternalLink size={12} /> {t('toolbelt.detail.tutorial')}
                     </a>
                   )}
                   {(tool.download_url || manifest?.download_hint) && (
-                    <a className="ghost small" href={tool.download_url || manifest?.download_hint} target="_blank" rel="noreferrer">
+                    <a className="ghost small" href={tool.download_url || manifest?.download_hint} onClick={(e) => { e.preventDefault(); void openExternal(tool.download_url || manifest?.download_hint || ''); }}>
                       <ExternalLink size={12} /> {t('toolbelt.detail.download')}
                     </a>
                   )}

@@ -5,6 +5,27 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 外链点了真的会打开——`target="_blank"` 改走系统浏览器（R360）
+
+- 缺口：免责声明的 GitHub、设置里的「打开发布页 / 下载更新」、工具箱的教程/下载、
+  插件市场的插件主页、声明里的邮箱，全部是 `<a href="…" target="_blank">`。
+  Tauri/WebView2 没有注册 `on_new_window` 时，wry（0.55 `webview2/mod.rs`）对新窗口
+  请求直接 `args.SetHandled(true)`——既不建新窗，也不交给系统浏览器，点了毫无反应。
+- 新增 Rust 命令 `open_external_url`（`apps/desktop/src-tauri/src/external.rs`）：
+  交给系统默认打开器（Windows `explorer.exe` / macOS `open` / Linux `xdg-open`），
+  不经 shell 解释；协议白名单只放 `http(s):`、`mailto:`、`steam:`，其余（`file:`、
+  `ms-settings:`、`javascript:`…）一律拒绝——URL 由前端拼，不做白名单等于给了
+  webview 一个「任意协议执行器」。3 条单测锁白名单（大小写/空白/换行/非法协议）。
+- 前端新增 `apps/desktop/src/external.ts` 的 `openExternal()`：浏览器预览仍走
+  `window.open`，桌面端走命令；失败弹 `common.openLinkFailed`「打不开链接：{msg}」
+  而不是静默。`api.openExternalUrl()` 在 `api/system-ext.ts`。
+- 6 处 `<a>` 改为 `onClick` 里 `preventDefault()` + `openExternal`：声明页的邮箱与
+  GitHub、设置页更新下载、工具箱教程/下载、插件市场主页。
+- 守卫两条（`a11y.test.ts`）：① 源码不许再出现 `target="_blank"`；② 每个 `<a>` 必须
+  在 onClick 里接管（拦下默认导航）。新写的链接不会又退回「点了没反应」。
+- 验证：`pnpm -C apps/desktop check` 全绿（60 files / 949 tests）；
+  `cargo test -p diskpilot-desktop external` 3 passed；`cargo fmt --all` +
+  `cargo clippy -p diskpilot-desktop --all-targets -- -D warnings` 0 警告。
 ### 2026-10-24 页面内的「已启用 / 已切换」也念给读屏软件听（R359）
 
 - 缺口：R319 只给全局 toast 补了 `role="status"`，但应用还有第二条反馈通道——操作完就地冒出的

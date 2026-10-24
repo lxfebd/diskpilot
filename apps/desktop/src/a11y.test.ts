@@ -230,3 +230,29 @@ describe('页面内提示文案（R359）', () => {
   });
 });
 
+// ── 外链交给系统浏览器（R360）──────────────────────────────────────
+// Tauri/WebView2 里 `<a target="_blank">` 会被静默取消：wry 没注册 on_new_window
+// 时直接 `args.SetHandled(true)`，既不建新窗也不交给系统浏览器——点了没反应。
+// 外链一律 onClick preventDefault + openExternal（Rust 侧再走协议白名单）。
+describe('外链交给系统浏览器（R360）', () => {
+  it('不再用 target="_blank"', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (src.includes('target="_blank"')) {
+        violations.push(`${path} 用了 target="_blank"——桌面端会被吞，改 onClick + openExternal`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('每个 <a> 都拦下默认导航并走 openExternal', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<a\s[^>]*>/g)) {
+        if (!m[0].includes('onClick=')) violations.push(`${path} 的 <a> 没有 onClick`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+

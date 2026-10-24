@@ -10,6 +10,7 @@ mod drivers;
 mod drives;
 mod dups;
 mod executor;
+mod external;
 mod general_tray;
 pub(crate) mod hw;
 mod hw_history;
@@ -235,6 +236,7 @@ pub fn run() {
             conda::list_conda_envs,
             conda::inspect_path,
             conda::reveal_in_explorer,
+            external::open_external_url,
             executor::exec_glob::recycle_paths,
             executor::exec_glob::open_recycle_bin,
             executor::exec_aiplan::execute_ai_plan,
