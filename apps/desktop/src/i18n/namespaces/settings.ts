@@ -3,6 +3,7 @@ export const settings = {
   ns: 'settings',
   zh: {
     'settings.title': '设置',
+    'settings.tabsAria': '设置分栏',
     'settings.appearance': '外观',
     'settings.language': '语言',
     'settings.language.follow': '跟随系统',
@@ -127,6 +128,7 @@ export const settings = {
   },
   en: {
     'settings.title': 'Settings',
+    'settings.tabsAria': 'Settings sections',
     'settings.appearance': 'Appearance',
     'settings.language': 'Language',
     'settings.language.follow': 'Follow system',

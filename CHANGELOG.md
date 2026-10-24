@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 设置窗 8 个分栏是真正的 tabs——选中态可听、方向键可切（R365）
+
+- 缺口：`Settings.tsx` 的 8 个分栏只是带 `active` 类的普通按钮——读屏听不出
+  「当前在哪一栏、总共几栏」，键盘要 Tab 八次才能到最后一个分栏，也没有方向键切换。
+- 改成 WAI-ARIA tabs 模式：`role="tablist"` + 每个分栏 `role="tab"` / `aria-selected` /
+  `id` / `aria-controls`，roving tabindex（Tab 只进当前栏一次）；方向键 ←/→ 移动、
+  Home/End 跳首尾，用新纯函数 `cycleIndex`（a11y.ts，带环绕）算落点并把焦点带过去。
+- 8 个内容面板（appearance/ai/general/perms/market + SystemTools/McpServers/
+  ReminderSettings 的根 div）补 `role="tabpanel"` + `id` + `aria-labelledby`，与 tab 配对；
+  ReminderSettings 三个渲染分支（错误/加载/正常）都带同一身份——同一时刻只渲染一个。
+- 新增 i18n `settings.tabsAria`（设置分栏 / Settings sections）。
+- 守卫（a11y.test.ts 2 条）：Settings.tsx 必须含 tablist/aria-selected/roving tabindex；
+  每处 `settings-pane` 内容面板必须带 tabpanel 身份与自己的 aria-labelledby。
+  另有 cycleIndex 单测 3 条（环绕 / 越界从端点起算 / 空列表 -1）。
+- 验证：`pnpm -C apps/desktop check` 全绿（60 files / 962 tests）。
+
 ### 2026-10-24 相同提醒不再堆一摞——toast 按「文本+级别+动作」去重（R364）
 
 - 缺口：`store.ts` 的 `toast()` 每次直接 append——连续几次保存失败、反复触发同一提醒

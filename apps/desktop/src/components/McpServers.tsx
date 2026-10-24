@@ -307,7 +307,8 @@ function McpServersInner() {
   };
 
   return (
-    <div className="settings-pane">
+    // R365：作为设置窗「分栏」的内容面板（tabpanel），id 与 Settings.tsx 的 tab 一一对应。
+    <div className="settings-pane" role="tabpanel" id="settings-pane-mcp" aria-labelledby="settings-tab-mcp">
       <p className="hint">
         <Info size={12} />
         <span>{t('mcp.hint')}</span>

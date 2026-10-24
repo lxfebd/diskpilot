@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { activateOnKey, isActivationKey } from './a11y';
+import { activateOnKey, cycleIndex, isActivationKey } from './a11y';
 
 describe('键盘激活口径（R314）', () => {
   it('只有 Enter 与空格算激活键（对齐原生 button）', () => {
@@ -387,5 +387,52 @@ describe('页面主区能接住程序化焦点（R363）', () => {
     expect(app).toContain('className="skip-link" href="#main-content"');
     const css = Object.values(RAW_CSS).join('\n');
     expect(css).toContain('.skip-link');
+  });
+});
+describe('cycleIndex（R365）', () => {
+  it('普通移动带环绕：右移到尾回到 0、左移到头回到末尾', () => {
+    expect(cycleIndex(0, 4, 1)).toBe(1);
+    expect(cycleIndex(3, 4, 1)).toBe(0);
+    expect(cycleIndex(0, 4, -1)).toBe(3);
+    expect(cycleIndex(2, 4, -1)).toBe(1);
+  });
+
+  it('current 越界/未选中时从最近的端点起算', () => {
+    expect(cycleIndex(-1, 4, 1)).toBe(0);
+    expect(cycleIndex(-1, 4, -1)).toBe(3);
+    expect(cycleIndex(9, 4, 1)).toBe(0);
+    expect(cycleIndex(9, 4, -1)).toBe(3);
+  });
+
+  it('空列表没有可落的位置（-1）', () => {
+    expect(cycleIndex(0, 0, 1)).toBe(-1);
+    expect(cycleIndex(-1, 0, -1)).toBe(-1);
+  });
+});
+
+// R365：设置窗的 8 个分栏必须是真正的 tabs——读屏要能听到选中态、
+// 方向键要能移动。守卫落在 Settings.tsx：tablist 存在、每个 tab 有 aria-selected，
+// 且每一处 settings-pane 内容面板都带着自己的 tabpanel 身份。
+describe('设置窗分栏是真正的 tabs（R365）', () => {
+  it('Settings.tsx 有 tablist，tab 生成带 aria-selected 与 roving tabindex', () => {
+    const app = RAW_TSX['./components/Settings.tsx'] ?? '';
+    expect(app).toContain('role="tablist"');
+    expect(app).toContain('aria-selected={on}');
+    expect(app).toContain('tabIndex={on ? 0 : -1}');
+    expect(app).toContain('onTabKey(e, idx)');
+    expect(app).toContain('id={`settings-tab-${tb.id}`}');
+  });
+
+  it('每处 settings-pane 内容面板都有 tabpanel 身份与自己的 aria-labelledby', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<div\b([^>]*className="settings-pane[^"]*"[^>]*)>/g)) {
+        const tag = m[0];
+        if (!/role="tabpanel"/.test(tag) || !/aria-labelledby="settings-tab-/.test(tag)) {
+          violations.push(`${path}:${src.slice(0, m.index ?? 0).split('\n').length}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
   });
 });

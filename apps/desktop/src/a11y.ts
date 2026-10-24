@@ -25,3 +25,13 @@ export function activateOnKey(handler: () => void) {
     handler();
   };
 }
+/**
+ * R365：在一组等长控件里按 delta 移动并环绕（tab / 菜单 / 分段控件通用）。
+ * current 越界或为负时从最近的端点算起：delta>=0 → 0，否则 len-1。
+ * len<=0 返回 -1（没有可落的位置）。纯函数，便于单测钉住环绕语义。
+ */
+export function cycleIndex(current: number, len: number, delta: number): number {
+  if (len <= 0) return -1;
+  if (current < 0 || current >= len) return delta >= 0 ? 0 : len - 1;
+  return (current + delta + len) % len;
+}

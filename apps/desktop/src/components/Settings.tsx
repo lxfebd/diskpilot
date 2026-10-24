@@ -1,10 +1,11 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { getHwProfile, recommendLocal, type HwProfile } from '../hwProfile';
 import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, SlidersHorizontal, ShieldCheck, RefreshCw, ExternalLink, Download, RotateCw, Wrench, Plug, Package, Bell } from 'lucide-react';
 import { api } from '../api';
 import { isTauri } from '../env';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useEscapeKey } from '../escapeKey';
+import { cycleIndex } from '../a11y';
 import { useReturnFocus } from '../dialogFocus';
 import { openExternal } from '../external';
 import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
@@ -61,6 +62,20 @@ const PROVIDER_LABEL_SHORT: Record<Provider, string> = {
 };
 
 export type SettingsTab = 'appearance' | 'ai' | 'general' | 'perms' | 'system' | 'mcp' | 'market' | 'reminder';
+
+// R365：8 个分栏按 WAI-ARIA tabs 模式接线——读屏能念出「当前是哪一栏、共几栏」，
+// 方向键在分栏之间移动（Home/End 跳首尾），Tab 键只在当前栏进一次。
+// 此前只是 8 个带 active 类的普通按钮：选中态对读屏不可见，键盘要 Tab 八次。
+const SETTINGS_TABS: { id: SettingsTab; labelKey: string; icon: typeof Palette }[] = [
+  { id: 'appearance', labelKey: 'settings.appearance', icon: Palette },
+  { id: 'ai', labelKey: 'settings.ai', icon: Sparkles },
+  { id: 'general', labelKey: 'settings.general', icon: SlidersHorizontal },
+  { id: 'perms', labelKey: 'settings.perms', icon: ShieldCheck },
+  { id: 'system', labelKey: 'settings.system', icon: Wrench },
+  { id: 'mcp', labelKey: 'settings.mcp', icon: Plug },
+  { id: 'market', labelKey: 'settings.market', icon: Package },
+  { id: 'reminder', labelKey: 'settings.reminder', icon: Bell },
+];
 
 /** R352：AI 配置的草稿——改完点「保存」才落盘，点 X / 按 Esc 关窗就会丢。 */
 export interface AiDraft {
@@ -128,6 +143,22 @@ const themeLabel = (id: ThemeId, t: (k: string) => string): string => t(THEME_LA
 export function Settings({ onClose, initialTab }: Props) {
   const t = useT();
   const [tab, setTab] = useState<SettingsTab>(initialTab ?? 'appearance');
+
+  // R365：分栏之间的键盘移动。只换选中项并把焦点带过去（roving tabindex），
+  // 不做「焦点进但内容不换」的半套行为。
+  const onTabKey = (e: ReactKeyboardEvent<HTMLButtonElement>, idx: number) => {
+    const len = SETTINGS_TABS.length;
+    let next = -1;
+    if (e.key === 'ArrowRight') next = cycleIndex(idx, len, 1);
+    else if (e.key === 'ArrowLeft') next = cycleIndex(idx, len, -1);
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = len - 1;
+    if (next < 0) return;
+    e.preventDefault();
+    const id = SETTINGS_TABS[next].id;
+    setTab(id);
+    document.getElementById(`settings-tab-${id}`)?.focus();
+  };
   const [lang, setLangState] = useState<'system' | Lang>(getLangMode());
 
   // ── AI tab state ──
@@ -419,35 +450,30 @@ export function Settings({ onClose, initialTab }: Props) {
           <button className="ghost icon" onClick={requestClose} title={t('settings.close')} aria-label={t('settings.close')}><X size={16} /></button>
         </div>
 
-        <div className="settings-tabs">
-          <button className={`settings-tab${tab === 'appearance' ? ' active' : ''}`} onClick={() => setTab('appearance')}>
-            <Palette size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.appearance')}
-          </button>
-          <button className={`settings-tab${tab === 'ai' ? ' active' : ''}`} onClick={() => setTab('ai')}>
-            <Sparkles size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.ai')}
-          </button>
-          <button className={`settings-tab${tab === 'general' ? ' active' : ''}`} onClick={() => setTab('general')}>
-            <SlidersHorizontal size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.general')}
-          </button>
-          <button className={`settings-tab${tab === 'perms' ? ' active' : ''}`} onClick={() => setTab('perms')}>
-            <ShieldCheck size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.perms')}
-          </button>
-          <button className={`settings-tab${tab === 'system' ? ' active' : ''}`} onClick={() => setTab('system')}>
-            <Wrench size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.system')}
-          </button>
-          <button className={`settings-tab${tab === 'mcp' ? ' active' : ''}`} onClick={() => setTab('mcp')}>
-            <Plug size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.mcp')}
-          </button>
-          <button className={`settings-tab${tab === 'market' ? ' active' : ''}`} onClick={() => setTab('market')}>
-            <Package size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.market')}
-          </button>
-          <button className={`settings-tab${tab === 'reminder' ? ' active' : ''}`} onClick={() => setTab('reminder')}>
-            <Bell size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.reminder')}
-          </button>
+        <div className="settings-tabs" role="tablist" aria-label={t('settings.tabsAria')}>
+          {SETTINGS_TABS.map((tb, idx) => {
+            const Icon = tb.icon;
+            const on = tab === tb.id;
+            return (
+              <button
+                key={tb.id}
+                id={`settings-tab-${tb.id}`}
+                role="tab"
+                aria-selected={on}
+                aria-controls={`settings-pane-${tb.id}`}
+                tabIndex={on ? 0 : -1}
+                className={`settings-tab${on ? ' active' : ''}`}
+                onClick={() => setTab(tb.id)}
+                onKeyDown={(e) => onTabKey(e, idx)}
+              >
+                <Icon size={13} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t(tb.labelKey)}
+              </button>
+            );
+          })}
         </div>
 
         {tab === 'appearance' && (
-          <div className="settings-pane">
+          <div className="settings-pane" role="tabpanel" id="settings-pane-appearance" aria-labelledby="settings-tab-appearance">
             <label className="field">
               <span>{t('settings.language')}</span>
               <div className="seg seg-3">
@@ -559,7 +585,7 @@ export function Settings({ onClose, initialTab }: Props) {
         )}
 
         {tab === 'ai' && (
-          <div className="settings-pane">
+          <div className="settings-pane" role="tabpanel" id="settings-pane-ai" aria-labelledby="settings-tab-ai">
             <p className="hint">
               <Info size={12} />
               <span>{t('settings.ai.hint')}</span>
@@ -678,7 +704,7 @@ export function Settings({ onClose, initialTab }: Props) {
         )}
 
         {tab === 'general' && (
-          <div className="settings-pane">
+          <div className="settings-pane" role="tabpanel" id="settings-pane-general" aria-labelledby="settings-tab-general">
             <div className="settings-group-title">{t('settings.general.ai')}</div>
             <div className="switch-row">
               <div>
@@ -840,7 +866,7 @@ export function Settings({ onClose, initialTab }: Props) {
         )}
 
         {tab === 'perms' && (
-          <div className="settings-pane">
+          <div className="settings-pane" role="tabpanel" id="settings-pane-perms" aria-labelledby="settings-tab-perms">
             <p className="hint">
               <ShieldCheck size={12} />
               <span>
@@ -859,7 +885,7 @@ export function Settings({ onClose, initialTab }: Props) {
         {tab === 'mcp' && <McpServers />}
 
         {tab === 'market' && (
-          <div className="settings-pane">
+          <div className="settings-pane" role="tabpanel" id="settings-pane-market" aria-labelledby="settings-tab-market">
             <MarketPanel />
           </div>
         )}

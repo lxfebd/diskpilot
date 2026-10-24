@@ -270,7 +270,8 @@ function SystemToolsInner() {
   }, [fanCtrlPerm, t]);
 
   return (
-    <div className="settings-pane sys-tools">
+    // R365：作为设置窗「分栏」的内容面板（tabpanel），id 与 Settings.tsx 的 tab 一一对应。
+    <div className="settings-pane sys-tools" role="tabpanel" id="settings-pane-system" aria-labelledby="settings-tab-system">
       {msg && <div className="ok" role="status">{msg}</div>}
 
       {/* ── 启动项管理（P4-4 抽取为共用面板）── */}

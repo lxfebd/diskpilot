@@ -254,18 +254,18 @@ export function ReminderSettings() {
 
   if (cfgErr) {
     return (
-      <div className="settings-pane">
+      <div className="settings-pane" role="tabpanel" id="settings-pane-reminder" aria-labelledby="settings-tab-reminder">
         <div className="error small">{t('system.reminder.loadFailed', { err: cfgErr })}</div>
       </div>
     );
   }
 
   if (!cfg) {
-    return <div className="settings-pane"><div className="muted">{t('system.reminder.loading')}</div></div>;
+    return <div className="settings-pane" role="tabpanel" id="settings-pane-reminder" aria-labelledby="settings-tab-reminder"><div className="muted">{t('system.reminder.loading')}</div></div>;
   }
 
   return (
-    <div className="settings-pane">
+    <div className="settings-pane" role="tabpanel" id="settings-pane-reminder" aria-labelledby="settings-tab-reminder">
       <div className="settings-group-title">{t('system.reminder.title')}</div>
       <div className="switch-row">
         <div>
