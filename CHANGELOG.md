@@ -5,6 +5,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 叠层弹窗按一次 Esc 不再父子一起关——Esc 改成栈，只有最上层响应（R349）
+
+- 缺口：`escapeKey.ts` 的 `useEscapeKey` 每层各挂一个 window keydown，叠层时
+  （工具箱详情上再弹导出确认、设置窗里再弹市场确认框、清理提案上再弹预览）一次 Esc
+  会把父子两层一起关掉——用户按一下，两个窗都没了；R320 因此没敢给设置窗补 Esc。
+- `escapeKey.ts` 改为模块级栈：`pushEscapeLayer` / `removeEscapeLayer` / `escapeStackDepth` /
+  `escapeStackTop` 四个不进 DOM 的操作导出成可单测函数，`pickTop(stack)` 是纯函数；
+  window keydown 只在栈非空时挂一次，且只调用栈顶那一层（`preventDefault` 照旧）；
+  退栈按引用定位，同一组件两次挂载互不干扰，栈空时摘掉监听。
+- 新增 6 条单测：`pickTop` 空/单层/多层/不改原栈；栈的压入弹出（父层先开、子层后开 →
+  栈顶是子层 → 关掉子层父层重新接管 → 弹空归零）、移除未入栈的函数不破坏栈。
+- 验证：`pnpm -C apps/desktop check` 全绿（54 files / 908 tests）。
 ### 2026-10-24 键盘焦点不再被 outline:none 抹掉——输入框/下拉框/弹窗标签补描边并加守卫（R348）
 
 - 缺口：`styles/layout.css` 的 `input, select { outline: none; }` 把浏览器默认焦点框一次性抹掉，
