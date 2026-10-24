@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 前端产物收口：主包 537 → 442 kB，两条「假动态导入」警告清掉（R336）
+
+- `pnpm -C apps/desktop build` 每次都在喊 `Some chunks are larger than 500 kB`：入口 chunk 537 kB；
+  顺手还报两条 `env.ts is dynamically imported … but also statically imported`——
+  `hwProfile.ts` 里 `await import('./env')` / `await import('./hwCache')` 想按需加载，
+  但两个模块早被 App 与一堆组件静态引用，动态导入只会让 Vite 提醒「不会拆出去」；
+- `hwProfile.ts` 改成普通静态 import（`isTauri` / `ensureSysProbe`），行为不变，两条警告消失；
+- `vite.config.ts` 的 manualChunks 补两块：`vendor-icons`（lucide-react，50.6 kB）与
+  `app-mocks`（浏览器预览用的假数据 78.7 kB——桌面正式包永远走 invoke，没必要挤在主包里）；
+- 结果：入口 chunk **537.25 kB → 441.93 kB**（gzip 194 → 169），>500 kB 的告警消失，
+  dist 里多出 `vendor-icons-*.js` / `app-mocks-*.js` 两块可长期缓存；
+- 验证：`pnpm -C apps/desktop build` 无 warning；`pnpm -C apps/desktop check` 全绿
+  （52 files / 853 tests）。
+
 ### 2026-10-24 CI 的 clippy 门亮起来了——清完存量噪音、加回 -D warnings（R335）
 
 - ci.yml 注释里自称「不加 `-D warnings`，R1–R9 累积了 ~42 处存量噪音」——实测存量其实早已清光

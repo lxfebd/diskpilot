@@ -23,6 +23,12 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom'],
           'vendor-tauri': ['@tauri-apps/api', '@tauri-apps/plugin-dialog', '@tauri-apps/plugin-fs', '@tauri-apps/plugin-shell'],
           'vendor-markdown': ['react-markdown', 'remark-gfm'],
+          // 图标库单独成块：lucide-react 的按需 re-export 表跟着主 chunk 走会让
+          // 首屏入口包压到 500 kB 以上（R336 前 537 kB），拆出来主包回落到阈值内。
+          'vendor-icons': ['lucide-react'],
+          // 浏览器预览（非 Tauri）用的假数据：165 kB 源码全量躺在主 chunk 里，
+          // 桌面正式包永远走 invoke，不需要它首屏就位——单开一块，主包才能进阈值。
+          'app-mocks': ['./src/mocks.ts'],
         },
       },
     },

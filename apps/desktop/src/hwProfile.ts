@@ -8,6 +8,8 @@
 // 文案口径：label / tierLabel 是给用户看的，走文案表**在调用点求值**；
 // perfContextLine 是发给模型的 prompt 文本，按约定保持中文不译。
 import { t } from './i18n';
+import { isTauri } from './env';
+import { ensureSysProbe } from './hwCache';
 
 export type PerfTier = 'weak' | 'medium' | 'strong';
 
@@ -39,9 +41,10 @@ async function detect(): Promise<HwProfile> {
   // 复用 hwCache 的共享探针（Win32 真实值 + 5s 缓存），不重复采样。
   let backend: { cores: number; memGb: number } | null = null;
   try {
-    const { isTauri } = await import('./env');
+    // env / hwCache 都在主 chunk 的静态依赖里（App 与多处组件直接 import），
+    // 这里原本写成 await import() 想「按需加载」，只会让 Vite 报
+    // 「dynamically imported but also statically imported」——没有任何拆包收益。
     if (isTauri) {
-      const { ensureSysProbe } = await import('./hwCache');
       const p = await ensureSysProbe(false);
       backend = { cores: p.cpu_cores, memGb: p.mem_total_bytes / (1024 ** 3) };
     }
