@@ -354,6 +354,21 @@ function InstallScaffoldModal({
   );
 }
 
+/// R393：面板阶段。idle = 还没粘内容；ready = 有内容待解析；preview = 预览与当前
+/// 输入一致（可以勾选安装）；stale = 解析之后输入又改了——旧预览、旧勾选都不作数，
+/// 只能重新解析。此前这两种情况都显示旧列表和「安装 N 条」，用户会拿着改过的规则
+/// 装上一份旧选择。
+export type W2Stage = 'idle' | 'ready' | 'preview' | 'stale';
+
+export function winapp2Stage(
+  ini: string,
+  items: readonly unknown[] | null,
+  parsedIni: string,
+): W2Stage {
+  if (items === null) return ini.trim() ? 'ready' : 'idle';
+  return ini === parsedIni ? 'preview' : 'stale';
+}
+
 /// Winapp2.ini 社区规则导入：粘贴 → 解析预览（危险条目红线标注）→ 勾选入库。
 /// 全程只读预览 + installScaffold（后端红线闸二次校验），不直接执行任何清理。
 function Winapp2ImportPanel({
@@ -366,6 +381,8 @@ function Winapp2ImportPanel({
   const t = useT();
   const toast = useStore((s) => s.toast);
   const [ini, setIni] = useState('');
+  // R393：记住「这份预览是按哪个输入解析出来的」，用来判断预览是否过期。
+  const [parsedIni, setParsedIni] = useState('');
   const [items, setItems] = useState<Winapp2PreviewItem[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
@@ -378,6 +395,7 @@ function Winapp2ImportPanel({
     try {
       const list = await api.parseWinapp2(ini);
       setItems(list);
+      setParsedIni(ini);
       setSelected(new Set(list.filter((i) => !i.red_line).map((i) => i.id)));
     } catch (e) {
       // R309：此前直接丢原始异常文本（英文），这里用专用键包一层
@@ -426,6 +444,7 @@ function Winapp2ImportPanel({
 
   const safeCount = items?.filter((i) => !i.red_line).length ?? 0;
   const blockedCount = items ? items.length - safeCount : 0;
+  const stage = winapp2Stage(ini, items, parsedIni);
 
   return (
     <>
@@ -442,7 +461,10 @@ function Winapp2ImportPanel({
           aria-describedby="studio-winapp2-err"
         />
         {err && <div id="studio-winapp2-err" className="install-err" role="alert">{err}</div>}
-        {items !== null && items.length > 0 && (
+        {stage === 'stale' && (
+          <div className="winapp2-preview muted small">{t('studio.winapp2Stale')}</div>
+        )}
+        {stage === 'preview' && items !== null && items.length > 0 && (
           <div className="winapp2-preview">
             <div className="winapp2-preview-head">
               <span className="muted small">
@@ -474,20 +496,25 @@ function Winapp2ImportPanel({
         )}
         {/* R309：解析出 0 条（只含注册表项/内容为空）时，不要拿「全部安全」唱空结论——
             那是 0 条的数据，不是健康结论。此前该键写了没人渲染。 */}
-        {items !== null && items.length === 0 && (
+        {stage === 'preview' && items !== null && items.length === 0 && (
           <div className="winapp2-preview muted small">{t('studio.winapp2Empty')}</div>
         )}
       </div>
       <div className="modal-foot">
         <button className="ghost" onClick={onClose} disabled={busy}>{t('studio.cancel')}</button>
         {/* R309：没有安全可装的条目（如全被红线拒绝）时按钮禁用，不让用户点了才吃一个错误提示 */}
-        {items === null ? (
-          <button className="primary" onClick={() => void parse()} disabled={busy || !ini.trim()}>
-            {busy ? t('studio.winapp2Parsing') : t('studio.winapp2Parse')}
-          </button>
-        ) : (
+        {stage === 'preview' ? (
           <button className="primary" onClick={() => void installSelected()} disabled={busy || selected.size === 0}>
             {busy ? t('studio.winapp2Installing') : t('studio.winapp2InstallSelected', { n: selected.size })}
+          </button>
+        ) : stage === 'stale' ? (
+          /* R393：改过输入就只给「重新解析」——旧预览与旧勾选不作数，不让用户误装旧选择。 */
+          <button className="primary" onClick={() => void parse()} disabled={busy || !ini.trim()}>
+            {busy ? t('studio.winapp2Parsing') : t('studio.winapp2Reparse')}
+          </button>
+        ) : (
+          <button className="primary" onClick={() => void parse()} disabled={busy || !ini.trim()}>
+            {busy ? t('studio.winapp2Parsing') : t('studio.winapp2Parse')}
           </button>
         )}
       </div>

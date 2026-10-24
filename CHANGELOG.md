@@ -3,6 +3,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R393: winapp2 导入解析完又改内容？旧预览不再冒充现值
+
+- 缺口：Studio 的 winapp2 导入面板解析成功后预览一直挂在那儿——用户再往输入框加删内容，预览和「安装 N 条」按钮仍是按旧文本算的，选中的勾也不作数；解析出 0 条时预览区只剩一条空态说明，「解析预览」按钮却再不出现，没别的入口。
+- 改动：新增导出纯函数 `winapp2Stage(ini, items, parsedIni)` → idle / ready / preview / stale 四阶段；组件记住解析时的文本快照，输入一变就进 stale——预览上方挂一条说明（旧预览按旧内容算），底部按钮从「安装 N 条」换成「重新解析」，不让旧选择误装。
+- i18n：新增 `studio.winapp2Stale`（输入已改动…）与 `studio.winapp2Reparse`（重新解析 / Re-parse），zh/en 同步。
+- 测试：新建 Studio.test.ts 5 条（idle/ready/preview/stale/0 条仍算 preview）。
+- 验证：pnpm -C apps/desktop check 全绿。
+
 ### R392: CHANGELOG 结构修整——重复的 [未发布]、错位文件头、9 处标题前缺空行
 
 - 缺陷：清单中段出现第二个 `## [未发布]`（R382 起整段被错误地再分一层）；文件头简介两行被挪到了中段；9 处 `###` 标题前没有空行。Markdown 渲染不报错，但结构索引、diff 和脚本解析都会踩。
