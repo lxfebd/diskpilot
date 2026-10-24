@@ -5,6 +5,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R381: 删掉死命令 get_auto_list_config——注册了但前端零调用
+
+- 命令面对账（正则支持嵌套泛型 invoke<Record<number,string>>('cmd')）：前端 116 个 invoke 全部后端注册、0 错拼；后端 117 个注册里唯一没被调的是 auto_list::get_auto_list_config。
+- 前端全部走 get_auto_list_config_with_status（内部直接调 config_at(&app)，不经过该命令）；全仓 TS/RS 裸名残留 0。
+- 删 auto_list.rs 的 #[tauri::command] fn 定义与 lib.rs generate_handler 注册行（留着会因 dead_code 挡 -D warnings）。
+- cargo check/clippy --all-targets -D warnings 与 pnpm check 均通过。
+
 ### 2026-10-24 删掉 6 个真死导出——只定义不引用（R380）
 
 - 全仓扫了 719 个导出名（`^export (const|function|class|…)`），按标识符词边界统计引用，

@@ -252,7 +252,6 @@ pub fn run() {
             scan_stamp::scan_staleness_cmd,
             thermal_history::get_thermal_history,
             reminder::check_space_forecast_cmd,
-            auto_list::get_auto_list_config,
             auto_list::set_auto_list_config,
             auto_list::get_auto_list_config_with_status,
             weekly_report::generate_weekly_report_cmd,

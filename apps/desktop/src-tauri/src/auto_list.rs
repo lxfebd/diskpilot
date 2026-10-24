@@ -67,12 +67,6 @@ pub(crate) fn set_config(app: &AppHandle, next: AutoListConfig) -> Result<AutoLi
     Ok(next)
 }
 
-/// 读配置（命令层）。
-#[tauri::command]
-pub(crate) fn get_auto_list_config(app: AppHandle) -> AutoListConfig {
-    config_at(&app)
-}
-
 /// 写配置（命令层）。total 覆写：设置页持有的就是完整规则集。
 #[tauri::command]
 pub(crate) fn set_auto_list_config(
