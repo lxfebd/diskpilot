@@ -627,9 +627,12 @@ export default function App() {
           <button className="ghost icon" onClick={() => setAiOpen(false)} title={t('shell.airail.collapse')}><X size={14} /></button>
         </div>
         <div className="ai-rail-body">
-          <Suspense fallback={<PageFallback />}>
-            <ChatPanel onOpenSettings={() => { setSettingsTab('ai'); setShowSettings(true); }} />
-          </Suspense>
+          {/* R394：AI 助手是常驻面板，出错此前会让整棵树崩掉（Suspense 不接错误）。 */}
+          <ErrorBoundary fallbackLabel={t('shell.boundary.chatFailed')}>
+            <Suspense fallback={<PageFallback />}>
+              <ChatPanel onOpenSettings={() => { setSettingsTab('ai'); setShowSettings(true); }} />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
       {aiOpen && <Splitter onDrag={dragAi} value={aiWidth} min={260} />}
@@ -746,6 +749,7 @@ export default function App() {
         </main>
       ) : view === 'tools' ? (
         <main id="main-content" ref={mainRef} tabIndex={-1} className="overview">
+          <ErrorBoundary fallbackLabel={t('shell.boundary.toolbeltFailed')}>
           <Suspense fallback={<PageFallback />}>
             <Toolbelt
               drives={drives}
@@ -756,6 +760,7 @@ export default function App() {
               onOpenSettings={(tab) => { setSettingsTab(tab); setShowSettings(true); }}
             />
           </Suspense>
+          </ErrorBoundary>
         </main>
       ) : view === 'cleanup' ? (
         <main id="main-content" ref={mainRef} tabIndex={-1} className="cleanup-page">
@@ -852,9 +857,12 @@ export default function App() {
       )}
 
       {showSettings && (
-        <Suspense fallback={<PageFallback />}>
-          <Settings onClose={() => { setShowSettings(false); refreshAdvisorTag(); }} initialTab={settingsTab} />
-        </Suspense>
+        /* R394：设置窗是懒加载页面，出错此前同样没有兜底。 */
+        <ErrorBoundary fallbackLabel={t('shell.boundary.settingsFailed')}>
+          <Suspense fallback={<PageFallback />}>
+            <Settings onClose={() => { setShowSettings(false); refreshAdvisorTag(); }} initialTab={settingsTab} />
+          </Suspense>
+        </ErrorBoundary>
       )}
       <CleanupProposalDialog />
 

@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R394: 工具箱页 / AI 助手 / 设置窗补上错误兜底——懒加载不再能让整棵树崩掉
+
+- 缺口：App.tsx 里 Toolbelt、ChatPanel、Settings 三个懒加载挂载点只有 Suspense 没有 ErrorBoundary。Suspense 只接 loading 不接错误：chunk 取不到、渲染抛错时错误会一路冒到根，整个应用树被 React 卸载（其它页面早在 709/762/770/778/786/822/831 行都有兜底，这三处一直漏着）。
+- 改动：三处各包一层 ErrorBoundary（AI 侧栏 ChatPanel、view===tools 的 Toolbelt、showSettings 的 Settings 弹窗），新增 i18n 键 shell.boundary.toolbeltFailed / chatFailed / settingsFailed（zh/en）。
+- 守卫：新建 lazyBoundary.test.ts——对 AssetOverview/Toolbelt/CleanupPage/OptimizerPage/HistoryPage/ChatPanel/Studio/Settings 每个挂载点取之前 400 字符窗口，必须有 ErrorBoundary；自检（临时摘掉 ChatPanel 的兜底）报 ChatPanel @631 不在兜底内、EXIT=1，还原后全绿。
+- 验证：pnpm -C apps/desktop check 68 files / 1019 tests / EXIT=0。
+
 ### R393: winapp2 导入解析完又改内容？旧预览不再冒充现值
 
 - 缺口：Studio 的 winapp2 导入面板解析成功后预览一直挂在那儿——用户再往输入框加删内容，预览和「安装 N 条」按钮仍是按旧文本算的，选中的勾也不作数；解析出 0 条时预览区只剩一条空态说明，「解析预览」按钮却再不出现，没别的入口。

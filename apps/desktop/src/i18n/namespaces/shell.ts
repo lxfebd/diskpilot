@@ -138,6 +138,9 @@ export const shell = {
     'shell.boundary.cleanupFailed': '清理页渲染失败',
     'shell.boundary.historyFailed': '操作历史页渲染失败',
     'shell.boundary.optimizerFailed': '系统优化页渲染失败',
+    'shell.boundary.toolbeltFailed': '工具箱页渲染失败',
+    'shell.boundary.chatFailed': 'AI 助手面板渲染失败',
+    'shell.boundary.settingsFailed': '设置窗口渲染失败',
     // 进度按钮 / 分隔条
     'shell.progressbutton.cleaning': '清理中',
     'shell.progressbutton.failed': '失败',
@@ -324,6 +327,9 @@ export const shell = {
     'shell.boundary.cleanupFailed': 'Cleanup page failed to render',
     'shell.boundary.historyFailed': 'History page failed to render',
     'shell.boundary.optimizerFailed': 'Optimizer page failed to render',
+    'shell.boundary.toolbeltFailed': 'Toolbelt page failed to render',
+    'shell.boundary.chatFailed': 'AI assistant panel failed to render',
+    'shell.boundary.settingsFailed': 'Settings failed to render',
 
     // 进度按钮 / 分隔条
     'shell.progressbutton.cleaning': 'Cleaning',
