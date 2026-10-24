@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 MCP 审计日志能看出是哪个服务器，工具名不再重复两遍（R339）
+
+- 审计行里 `call_tool` 的文案是「调用 {tool}」，后面又单独渲染了一个 `<code>{tool}</code>`——
+  工具名连出两遍；`add_server` / `update_server` 行则完全不显示服务器名（后端 `server_name`
+  早就写了，前端没读），看不出改的是哪一台；
+- 现在：调用行 = 「调用 <code>工具</code> · <code>服务器</code>」，服务器名用 `server_id`
+  从当前服务器列表翻；服务器已删翻不出来就留空，不猜名字；
+- 增删改行 = 「添加服务器 <code>名字</code>」/「编辑服务器 <code>名字</code>」；
+  `remove_server` 后端不记名字（配置已删）→ 只显示动作，不编造归属；
+- 新增纯函数 `auditNames(entry, servers)` 承载这套「取哪个当主语」的判定，配 5 条单测
+  （列表翻译 / 后端直给优先 / 服务器已删留空 / 增改取 server_name / 删除无名字）；
+- `mcp.auditCall` 去掉 `{tool}` 占位符（zh/en 同步），工具名改由 `<code>` 呈现；
+- 验证：`pnpm -C apps/desktop check` 全绿（53 files / 866 tests）。
 ### 2026-10-24 环比「N 天前」能对上日历了——上次统计的具体日期（R338）
 
 - 「建议清理」卡的环比行只说「距上次 21 天」，用户对不上日历（21 天前是哪天？）；

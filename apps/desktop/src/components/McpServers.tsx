@@ -14,6 +14,28 @@ import { refreshMcpTools } from '../advisor/tools';
 import { useT } from '../i18n';
 import { formatTime } from '../format';
 
+/** R339：审计日志每一行要能看出「哪个服务器 / 哪个工具」。后端 add_server /
+ *  update_server 早就写了 `server_name`，前端此前没读；call_tool 只有 `server_id`，
+ *  就用当前服务器列表把 id 翻成名字（服务器已删 → 翻不出来，如实留空，不猜）。
+ *  纯函数便于单测。 */
+export interface AuditNames {
+  /** 这行的主语：工具调用是工具名，增删改是服务器名（后端没给就是 null）。 */
+  subject: string | null;
+  /** 工具调用额外的服务器名（call_tool 行专用）。 */
+  server: string | null;
+}
+
+export function auditNames(
+  e: McpAuditEntry,
+  servers: readonly { id: string; name: string }[] | null,
+): AuditNames {
+  if (e.op !== 'call_tool') {
+    return { subject: e.server_name ?? null, server: null };
+  }
+  const server = e.server_name ?? servers?.find((s) => s.id === e.server_id)?.name ?? null;
+  return { subject: e.tool ?? null, server };
+}
+
 /**
  * 设置页「MCP」标签：管理用户添加的通用 MCP 服务器（stdio 进程 / 远程
  * streamable HTTP）。服务器工具会自动注册进 AI 工具表（dynamicMcpTools）。
@@ -361,15 +383,22 @@ function McpServersInner() {
               {audit.map((e, i) => {
                 const time = formatTime(new Date(e.ts * 1000), true);
                 const tag = e.op === 'call_tool'
-                  ? t('mcp.auditCall', { tool: e.tool ?? '' })
+                  ? t('mcp.auditCall')
                   : e.op === 'add_server' ? t('mcp.auditAddServer')
                     : e.op === 'update_server' ? t('mcp.auditUpdateServer')
                       : e.op === 'remove_server' ? t('mcp.auditRemoveServer') : e.op;
+                const names = auditNames(e, servers);
                 return (
                   <li key={i} style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
                     <code className="muted small">{time}</code>
                     <span className="muted small">{tag ?? ''}</span>
-                    {e.tool && <code>{e.tool}</code>}
+                    {names.subject && <code>{names.subject}</code>}
+                    {names.server && (
+                      <>
+                        <span className="muted small">·</span>
+                        <code className="muted">{names.server}</code>
+                      </>
+                    )}
                     {e.perm && <span className={`badge ${e.perm === 'L0' ? 'ok' : e.perm === 'L3' ? '' : 'warn'}`} style={{ marginLeft: 2 }}>{e.perm}</span>}
                     {e.granted === false && <span className="badge" style={{ borderColor: '#e05c51' }}>{t('mcp.auditDenied')}</span>}
                     {e.args != null && typeof e.args === 'object' && 'keys' in (e.args as object) && (
