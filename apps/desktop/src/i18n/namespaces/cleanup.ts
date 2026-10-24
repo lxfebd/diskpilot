@@ -68,6 +68,7 @@ export const cleanup = {
     'cleanup.cancelledNone': '已取消 · 还没清掉任何文件（回收站里没有新增）',
     // R178：执行中的实时进度（已清批次 / 总批次 · 已释放字节）。
     'cleanup.progressInfo': '正在清理 · {done}/{total} 项 · 已释放 {size}',
+    'cleanup.progressAria': '清理进度',
     // R179：取消已登记——已交批次继续跑完，后续批次不再提交。
     'cleanup.cancelling': '取消中 · 已交批次继续完成 · 已释放 {size}',
     'cleanup.cancellingBtn': '取消中…',
@@ -251,6 +252,7 @@ export const cleanup = {
     'cleanup.cancelledNone': 'Cancelled · nothing was cleared yet (nothing added to the Recycle Bin)',
     // R178: live progress while executing (cleared batches / total batches · bytes freed).
     'cleanup.progressInfo': 'Cleaning · {done}/{total} items · {size} freed',
+    'cleanup.progressAria': 'Cleanup progress',
     // R179: cancel registered — the in-flight batch finishes, no more batches are submitted.
     'cleanup.cancelling': 'Cancelling · in-flight batch finishing · {size} freed',
     'cleanup.cancellingBtn': 'Cancelling…',

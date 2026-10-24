@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 进度条会自报进度——扫描 / 清理 / 压测 / 下载 / 更新补 role=progressbar（R362）
+
+- 缺口：全仓 `role="progressbar"` 数量是 0。扫描条、清理进度、压测监控条、更新下载、
+  插件下载这几处的「进度」都只是一个按百分比撑宽度的彩色块，旁边配一句会变的文字；
+  读屏软件把它们当静态内容，进度到哪、有没有在动，全靠自己盯屏幕。
+- 六处进度条补 `role="progressbar"` + `aria-valuemin/max` + `aria-valuenow`，
+  文案走 i18n（新增 4 个键：`shell.scanbar.aria` / `cleanup.progressAria` /
+  `settings.general.updateAria` / `toolbelt.mkt.downloadAria` / `hw.stressAria`）：
+  `App.tsx` 全局扫描条（拿到总字节数才给 `aria-valuenow`，准备阶段不编造百分比）、
+  `AgentProgressMonitor.tsx` 代理任务卡（`aria-valuetext` 带当前步骤消息）、
+  `DryRunPreviewDialog.tsx` 真删进度、`Settings.tsx` 更新下载、
+  `toolbelt/market.tsx` 插件下载、`HwPanels.tsx` 压测监控条。
+- 纯装饰的两条按 `aria-hidden` 处理（信息旁边已有等价的文字）：
+  `App.tsx` 扫描完成的满格条、`cleanup/CleanupBody.tsx` 目录可清占比条。
+- 守卫（`a11y.test.ts`）：名字里含 `progress` 或 `-fill` 且用 `width:` 撑宽的填充条，
+  必须有 `role="progressbar"` 或明确的 `aria-hidden`。自检：删掉压测条上的 role，
+  守卫变红并点名 `./components/HwPanels.tsx:391`，恢复即绿。
+- 验证：`pnpm -C apps/desktop check` 全绿（60 files / 951 tests）。
 ### 2026-10-24 每个开关 / 搜索框都说得出自己是谁——表单控件补可访问名字（R361）
 
 - 缺口：读屏软件念「复选框，未选中」时不会说这是哪一项。设置 › 通用 的 5 个开关、

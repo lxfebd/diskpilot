@@ -154,6 +154,12 @@ export function AgentProgressCard({
         <div className="agent-progress-track">
           <div
             className="agent-progress-fill"
+            role="progressbar"
+            aria-label={label}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pctPercent}
+            aria-valuetext={progress.message || undefined}
             style={{ width: `${pctPercent}%` }}
           />
         </div>

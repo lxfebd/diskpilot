@@ -1057,6 +1057,11 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
         <div className="scan-bar">
           <div
             className={'scan-bar-fill' + (complete ? ' determinate' : ' indeterminate')}
+            role="progressbar"
+            aria-label={t('shell.scanbar.aria')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={complete ? Math.round(Math.min(99, (complete.progress.bytes / complete.totalBytes) * 100)) : undefined}
             style={complete ? { width: `${Math.min(99, (complete.progress.bytes / complete.totalBytes) * 100)}%` } : undefined}
           />
           <div className="scan-bar-label" title={pathLabel ?? undefined}>
@@ -1068,7 +1073,7 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
       )}
       {!scanning && progress && (
         <div className="scan-bar scan-bar-done">
-          <div className="scan-bar-fill done" style={{ width: '100%' }} />
+          <div className="scan-bar-fill done" aria-hidden style={{ width: '100%' }} />
           <div className="scan-bar-label" title={pathLabel ?? undefined}>
             {`${t('shell.scanbar.done', { files: progress.files.toLocaleString(), bytes: formatBytes(progress.bytes) })}${pathLabel ? ` · ${ellipsizePath(pathLabel)}` : ''}`}
           </div>

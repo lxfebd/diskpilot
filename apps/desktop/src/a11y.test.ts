@@ -298,4 +298,44 @@ describe('表单控件的可访问名字（R361）', () => {
     expect(violations).toEqual([]);
   });
 });
+// ── 进度条要把进度报给读屏（R362）─────────────────────────────────
+// 扫描 / 清理 / 压测 / 下载 / 更新的进度条若只是「彩色块 + 旁边文字」，
+// 读屏软件不知道这是动态进度。规则：名字带 progress 或 -fill 且按百分比
+// 撑宽度的填充条，必须有 role="progressbar"（带 aria-valuenow），或明确
+// aria-hidden（纯装饰，如按钮里那段满格填充）。
+describe('进度条要把进度报给读屏（R362）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let i = start; i < src.length; i++) {
+      const c = src[i];
+      if (quote) {
+        if (c === '\\') i++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return i;
+    }
+    return -1;
+  };
 
+  it('progress / 填充条都有 role=progressbar 或明确装饰豁免', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<(div|span)\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/progress|\-fill/.test(tag)) continue;
+        if (!/width:/.test(tag)) continue;
+        if (/role="progressbar"/.test(tag) || /aria-hidden/.test(tag)) continue;
+        violations.push(`${path}:${src.slice(0, start).split('\n').length}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});

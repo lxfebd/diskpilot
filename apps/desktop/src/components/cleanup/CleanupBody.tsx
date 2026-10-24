@@ -80,7 +80,7 @@ function ScopeRow({ scope }: { scope: Scope }) {
               细条让比例一眼可见（总大小作分母，可清部分填色）。 */}
           {ratio !== null && ratio > 0 && (
             <span className="cleanup-ratio" title={t('cleanup.ratioTip', { pct: Math.round(ratio * 100) })}>
-              <span className="cleanup-ratio-fill" style={{ width: `${(ratio * 100).toFixed(1)}%` }} />
+              <span className="cleanup-ratio-fill" aria-hidden style={{ width: `${(ratio * 100).toFixed(1)}%` }} />
             </span>
           )}
           <span className="cleanup-row-meta">{meta}</span>

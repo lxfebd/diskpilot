@@ -497,7 +497,7 @@ export function MarketPanel() {
           </div>
           {dl && dl.total > 0 && (
             <div className="toolbelt-market-progress">
-              <div className="toolbelt-market-progress-bar" style={{ width: `${Math.min(100, Math.round((dl.downloaded / dl.total) * 100))}%` }} />
+              <div className="toolbelt-market-progress-bar" role="progressbar" aria-label={t('toolbelt.mkt.downloadAria')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round((dl.downloaded / dl.total) * 100))} style={{ width: `${Math.min(100, Math.round((dl.downloaded / dl.total) * 100))}%` }} />
               <span>{formatBytes(dl.downloaded)} / {formatBytes(dl.total)}</span>
             </div>
           )}

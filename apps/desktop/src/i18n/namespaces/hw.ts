@@ -67,6 +67,7 @@ export const hw = {
     'hw.stressRemember': '本次会话免重复确认（今天不再逐次弹窗）',
     'hw.stressInputHint': '输入「确认」以解锁开始按钮',
     'hw.stressInputAria': '压测确认词',
+    'hw.stressAria': '压测进度',
     'hw.startTest': '开始测试',
 
     // 压测实时监控条
@@ -164,6 +165,7 @@ export const hw = {
     'hw.stressRemember': 'Skip re-confirmation for this session (no more popups today)',
     'hw.stressInputHint': 'Type “确认” to unlock the Start button',
     'hw.stressInputAria': 'Stress-test confirmation word',
+    'hw.stressAria': 'Stress test progress',
     'hw.startTest': 'Start test',
 
     // Live stress monitor bar

@@ -175,6 +175,11 @@ export function DryRunPreviewDialog({
             <div className="cleanup-progress-bar">
               <div
                 className="cleanup-progress-fill"
+                role="progressbar"
+                aria-label={t('cleanup.progressAria')}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress.total > 0 ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : 0}
                 style={{
                   width:
                     progress.total > 0

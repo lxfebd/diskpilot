@@ -801,7 +801,7 @@ export function Settings({ onClose, initialTab }: Props) {
                       </>
                     ) : updatePhase === 'downloading' ? (
                       <div className="update-progress">
-                        <div className="update-progress-bar" style={{ width: `${updateProgress}%` }} />
+                        <div className="update-progress-bar" role="progressbar" aria-label={t('settings.general.updateAria')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={updateProgress} style={{ width: `${updateProgress}%` }} />
                         <span className="muted small">{t('settings.general.updateInstalling', { pct: updateProgress })}</span>
                       </div>
                     ) : (

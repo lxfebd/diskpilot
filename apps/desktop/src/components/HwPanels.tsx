@@ -388,7 +388,7 @@ export function HwTestMonitor({
         </div>
       </div>
       <div className="hw-mon-bar">
-        <div className="hw-mon-fill" style={{ width: `${pct}%` }} />
+        <div className="hw-mon-fill" role="progressbar" aria-label={t('hw.stressAria')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} style={{ width: `${pct}%` }} />
       </div>
       <button className="ghost icon" onClick={onStop} title={t('hw.stopTest')} aria-label={t('hw.stopTest')}><StopCircle size={15} /></button>
       <button className="ghost icon" onClick={onClose} title={t('hw.collapse')} aria-label={t('hw.collapse')}><X size={14} /></button>
