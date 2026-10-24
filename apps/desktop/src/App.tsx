@@ -131,6 +131,16 @@ export default function App() {
   useEffect(() => {
     document.title = pageTitle(view, t);
   }, [t, view]);
+
+  // R363：切页后把焦点送进新页面内容区的主元素——键盘/读屏用户点完侧栏，
+  // 焦点还留在侧栏按钮上，新页面内容没人接（读屏也听不到「换页了」）。
+  // 首屏不抢焦点：用户还没操作过，先停在文档起点。
+  const mainRef = useRef<HTMLElement | null>(null);
+  const firstView = useRef(true);
+  useEffect(() => {
+    if (firstView.current) { firstView.current = false; return; }
+    mainRef.current?.focus();
+  }, [view]);
   const [diag, setDiag] = useState<ScanDiag | null>(null);
   // Holds the latest scan-stats event so we can merge it into ScanDiag once
   // api.scan() returns. Tauri emits the event right before the command resolves.
@@ -586,6 +596,8 @@ export default function App() {
     <div className="app">
       {/* 开屏免责声明：首次启动强制阅读（10s 倒计时 + 滑到底部），同意后不再弹 */}
       <Disclaimer />
+      {/* R363：跳转链接——键盘用户 Tab 第一击就到主内容，不必穿过整个侧栏 */}
+      <a className="skip-link" href="#main-content">{t('shell.skipToMain')}</a>
       {/* 导航侧栏：页面分发 + 折叠三态；品牌与设置入口都收在这里 */}
       <Sidebar
         current={view}
@@ -667,7 +679,7 @@ export default function App() {
       )}
 
       {view === 'overview' ? (
-        <main className="overview">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="overview">
           <ErrorBoundary fallbackLabel={t('shell.boundary.overviewFailed')}>
             <Suspense fallback={<PageFallback />}>
               <AssetOverview
@@ -707,7 +719,7 @@ export default function App() {
           </ErrorBoundary>
         </main>
       ) : view === 'tools' ? (
-        <main className="overview">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="overview">
           <Suspense fallback={<PageFallback />}>
             <Toolbelt
               drives={drives}
@@ -720,7 +732,7 @@ export default function App() {
           </Suspense>
         </main>
       ) : view === 'cleanup' ? (
-        <main className="cleanup-page">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="cleanup-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
             <Suspense fallback={<PageFallback />}>
               <CleanupPage onOpenHistory={openHistory} />
@@ -728,7 +740,7 @@ export default function App() {
           </ErrorBoundary>
         </main>
       ) : view === 'privacy' ? (
-        <main className="cleanup-page">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="cleanup-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.cleanupFailed')}>
             <Suspense fallback={<PageFallback />}>
               <CleanupPage tagFilter="privacy" onOpenHistory={openHistory} />
@@ -736,7 +748,7 @@ export default function App() {
           </ErrorBoundary>
         </main>
       ) : view === 'optimizer' ? (
-        <main className="optimizer-page">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="optimizer-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.optimizerFailed')}>
             <Suspense fallback={<PageFallback />}>
               <OptimizerPage />
@@ -744,7 +756,7 @@ export default function App() {
           </ErrorBoundary>
         </main>
       ) : view === 'history' ? (
-        <main className="history-page">
+        <main id="main-content" ref={mainRef} tabIndex={-1} className="history-page">
           <ErrorBoundary fallbackLabel={t('shell.boundary.historyFailed')}>
             <Suspense fallback={<PageFallback />}>
               <HistoryPage onOpenCleanup={() => openCleanup()} />
@@ -753,6 +765,9 @@ export default function App() {
         </main>
       ) : (
       <main
+        id="main-content"
+        ref={mainRef}
+        tabIndex={-1}
         className="ws-main"
         style={{
           gridTemplateColumns: rightVisible

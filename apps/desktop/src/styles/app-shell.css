@@ -195,3 +195,30 @@
 @container (max-width: 560px) { .page-head .ws-hint { display: none; } }
 @container (max-width: 420px) { .page-head .ws-status { display: none; } }
 @container (max-width: 340px) { .page-head .reclaimed-pill { display: none; } }
+
+/* ── 跳转链接与主区焦点（R363）──────────────────────────────────────────
+   键盘用户 Tab 第一击落在「跳到主内容」，不必穿过整个侧栏；切页后
+   App 把焦点送到 <main>（tabIndex=-1），读屏软件从新页面开头念起。
+   程序化移焦不画焦点框——焦点在容器上只是「从这里开始读」，不是可操作目标。 */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  background: var(--paper-2);
+  color: var(--ink);
+  font-size: 12.5px;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform 120ms ease;
+}
+.skip-link:focus-visible {
+  transform: none;
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
+main:focus { outline: none; }
+main:focus-visible { outline: none; }

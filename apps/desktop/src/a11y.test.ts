@@ -249,6 +249,8 @@ describe('外链交给系统浏览器（R360）', () => {
     const violations: string[] = [];
     for (const [path, src] of Object.entries(RAW_TSX)) {
       for (const m of src.matchAll(/<a\s[^>]*>/g)) {
+        // 页内锚点（href="#..."，如 R363 的跳转链接）不触发默认导航，豁免
+        if (/href="#/.test(m[0])) continue;
         if (!m[0].includes('onClick=')) violations.push(`${path} 的 <a> 没有 onClick`);
       }
     }
@@ -337,5 +339,53 @@ describe('进度条要把进度报给读屏（R362）', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+});
+// ── 页面主区能接住程序化焦点（R363）───────────────────────────────
+// 切页后 App 会把焦点送给 <main>，读屏软件才知道「换页了、内容从这开始」。
+// 前提是每个页面的 <main> 都能接收程序化焦点（tabIndex=-1）且带着跳转锚点
+// 的 id；跳转链接本身也要在（Tab 第一击就到主内容）。
+describe('页面主区能接住程序化焦点（R363）', () => {
+  const RAW_CSS = import.meta.glob('./styles/app-shell.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let i = start; i < src.length; i++) {
+      const c = src[i];
+      if (quote) {
+        if (c === '\\') i++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return i;
+    }
+    return -1;
+  };
+
+  it('每个 <main> 都有锚点 id 且 tabIndex=-1', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<main\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!/id="main-content"/.test(tag) || !/tabIndex=\{-1\}/.test(tag)) {
+          violations.push(`${path}:${src.slice(0, start).split('\n').length}`);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it('跳转链接指向主内容，且样式表里真有这个类', () => {
+    const app = RAW_TSX['./App.tsx'] ?? '';
+    expect(app).toContain('className="skip-link" href="#main-content"');
+    const css = Object.values(RAW_CSS).join('\n');
+    expect(css).toContain('.skip-link');
   });
 });

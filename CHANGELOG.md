@@ -5,6 +5,24 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 切页后焦点跟到新页面——跳转链接 + main 收焦点（R363）
+
+- 缺口：点侧栏切页后，焦点还留在侧栏按钮上——读屏软件不知道该从新页面哪里念起，
+  键盘用户想进新内容得 Tab 穿过整个侧栏；全仓 7 个 `<main>` 没有 `tabIndex`，
+  接不住程序化焦点，也没有「跳到主内容」的跳转链接。
+- 每个 `<main>`（总览 ×2、清理/隐私 ×2、系统优化、历史、工作台）加
+  `id="main-content"` + `ref` + `tabIndex={-1}`；`<a className="skip-link" href="#main-content">`
+  放在外壳最前面（Tab 第一击就到主内容）；`view` 变化后 `mainRef.current.focus()`，
+  首屏不抢焦点（用户还没操作过，先停在文档起点）。
+- `app-shell.css`：`.skip-link` 平时 `translateY(-200%)` 藏起来、`:focus-visible` 显形；
+  `main:focus` / `main:focus-visible` 不画焦点框——容器接焦只是「从这里开始读」，
+  不是可操作目标，画框反而误导。
+- 守卫（`a11y.test.ts` 两条）：每个 `<main>` 必须同时有 `id="main-content"` 与
+  `tabIndex={-1}`；跳转链接必须指向 `#main-content` 且样式表里真有 `.skip-link`。
+  自检：删掉系统优化页 `main` 的 `tabIndex`，守卫点名 `./App.tsx:751`，恢复即绿。
+- 顺带：R360 的「每个 `<a>` 都有 onClick」守卫对页内锚点 `href="#..."` 豁免
+  （跳转链接不该走 openExternal）。
+- 验证：`pnpm -C apps/desktop check` 全绿（60 files / 953 tests）。
 ### 2026-10-24 进度条会自报进度——扫描 / 清理 / 压测 / 下载 / 更新补 role=progressbar（R362）
 
 - 缺口：全仓 `role="progressbar"` 数量是 0。扫描条、清理进度、压测监控条、更新下载、

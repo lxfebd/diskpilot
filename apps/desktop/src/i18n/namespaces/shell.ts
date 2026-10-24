@@ -61,6 +61,7 @@ export const shell = {
     'shell.scan.adminHint': '以管理员身份启动 DiskPilot 可走 MFT 快速通道，大幅缩短扫描时间。',
     'shell.scanbar.preparing': '准备扫描…',
     'shell.scanbar.aria': '扫描进度',
+    'shell.skipToMain': '跳到主内容',
     'shell.scanbar.progress': '{files} 个文件 · {bytes}',
     'shell.scanbar.done': '本次扫描 {files} 个文件 · {bytes}',
 
@@ -242,6 +243,7 @@ export const shell = {
     'shell.scan.adminHint': 'Start DiskPilot as administrator to use the fast MFT path and cut scan time dramatically.',
     'shell.scanbar.preparing': 'Preparing scan…',
     'shell.scanbar.aria': 'Scan progress',
+    'shell.skipToMain': 'Skip to main content',
     'shell.scanbar.progress': '{files} files · {bytes}',
     'shell.scanbar.done': 'This scan: {files} files · {bytes}',
 
