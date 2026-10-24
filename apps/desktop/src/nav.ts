@@ -85,6 +85,11 @@ export const SIDEBAR_EXPANDED_MIN_WIDTH_PX = 1100;
 // （CSS 负责渲染、这里负责内容区宽度预算，两处必须同步改）。
 export const SIDEBAR_EXPANDED_WIDTH_PX = 208;
 export const SIDEBAR_COLLAPSED_WIDTH_PX = 56;
+// R408：侧栏占位（px，含 1px 右边框）——AI 侧栏宽度夹取按它扣预算；
+// createSidebarLayoutState 的 expanded 已把视口宽度兜底算进去（窄窗自动折叠）。
+export function sidebarFootprintAt(winW: number, preferredExpanded: boolean): number {
+  return (createSidebarLayoutState(winW, preferredExpanded).expanded ? SIDEBAR_EXPANDED_WIDTH_PX : SIDEBAR_COLLAPSED_WIDTH_PX) + 1;
+}
 
 export interface SidebarLayoutState {
   expanded: boolean;

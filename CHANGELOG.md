@@ -3,6 +3,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R408: AI 侧栏记住的宽值有了上界——窄窗不再被挤爆中栏保底
+
+- 缺口：App.tsx 的 aiWidth 初始化只判 Number.isFinite(v) && v >= 260，没有上界；fit 兜底（窗口缩放/AI 栏开合后保中栏 MIN_CENTER）只收缩左/右栏、从不收 AI 侧栏。大屏拖宽后记住的值（如 800）在窄窗上会把工作台中栏挤到保底以下。
+- 改动：新增 apps/desktop/src/panelWidths.ts 的纯函数 clampAiWidth(v, winW, sidebarFootprint)——上界 = 窗口宽 − 侧栏占位 − AI_MAX_BUDGET(480)，下界 260，非法值回默认 300；nav.ts 新增 sidebarFootprintAt(winW, preferredExpanded)（含窄窗自动折叠的占位）。
+- 接线：aiWidth 初始化走 clampAiWidth；dragAi 的手写 Math.max(260, …) 收进同一函数（口径不再两处）；fit 兜底在左/右收到底仍超预算时收 AI 侧栏；Splitter 的 min={260} 改用 AI_WIDTH_MIN。
+- 测试：panelWidths.test.ts 8 条——clampAiWidth 四类取值 + R408 守卫（App.tsx 初始化块必须含 clampAiWidth/sidebarFootprintAt 且不含旧的裸 isFinite 判定；fit 兜底必须收 AI 侧栏；nav.ts 必须导出 sidebarFootprintAt）。反向自检：删掉初始化里的 clampAiWidth → Tests 1 failed，还原后全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0。
+
 ### R407: 内联样式的语义色收口——3 处写死 hex 改走 token + 源码守卫
 
 - 缺口：MCP 审计行的「已拒」徽标 borderColor: '#e05c51'、可写警告条 background: '#fff3cd' + borderLeft: '4px solid #ffc107'、ReminderSettings 的未知脚手架提示 color: '#b45309'——内联样式绕开 tokens.css，深色主题下不跟着反相，也不受设计系统统一调整（仓库对 CSS 文件已有硬编码色值禁令，TSX 内联对象此前没人看）。

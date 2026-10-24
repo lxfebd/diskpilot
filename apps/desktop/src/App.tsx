@@ -22,6 +22,7 @@ import { loadSettings, isConfigured } from './advisorClient';
 import { useModalFocusTrap } from './dialogFocus';
 import { prefs } from './theme';
 import { safeGetItem, safeSetItem } from './safeStorage';
+import { AI_WIDTH_MIN, clampAiWidth } from './panelWidths';
 import { APP_VERSION } from './version';
 import { useT } from './i18n';
 import {
@@ -32,6 +33,7 @@ import {
   navItemById,
   pageTitle,
   resizeSidebarLayout,
+  sidebarFootprintAt,
   toggleSidebarLayout,
   type PageId,
 } from './nav';
@@ -157,10 +159,15 @@ export default function App() {
 
   // ── 全局 AI 侧栏（贯穿所有页面）──
   const [aiOpen, setAiOpen] = useState<boolean>(() => safeGetItem('diskpilot.aiOpen') !== '0');
-  const [aiWidth, setAiWidth] = useState<number>(() => {
-    const v = Number(safeGetItem('diskpilot.aiWidth'));
-    return Number.isFinite(v) && v >= 260 ? v : 300;
-  });
+  // R408：初始化也要夹上界——大屏记住的宽值不能把窄窗的中栏挤爆；
+  // 侧栏占位按当前视口的展开态算（窄窗自动折叠，与 sidebar 初始态同口径）。
+  const [aiWidth, setAiWidth] = useState<number>(() =>
+    clampAiWidth(
+      Number(safeGetItem('diskpilot.aiWidth')),
+      window.innerWidth,
+      sidebarFootprintAt(window.innerWidth, safeGetItem('diskpilot.sidebarExpanded') !== '0'),
+    ),
+  );
   useEffect(() => { safeSetItem('diskpilot.aiOpen', aiOpen ? '1' : '0'); }, [aiOpen]);
   useEffect(() => { safeSetItem('diskpilot.aiWidth', String(aiWidth)); }, [aiWidth]);
 
@@ -204,13 +211,9 @@ export default function App() {
 
   // AI 侧栏拖宽
   const dragAi = (dx: number) => {
-    setAiWidth((w) => {
-      const winW = window.innerWidth;
-      // 主内容区至少留 480px（含最小左栏 320 + 中栏 360 的预算内），
-      // AI 侧栏最多占到 winW - 480。
-      const maxAi = Math.max(260, winW - sidebarFootprint - 480);
-      return Math.max(260, Math.min(maxAi, w + dx));
-    });
+    // 主内容区至少留 480px（AI_MAX_BUDGET，含最小左栏 320 + 中栏 360 的预算内），
+    // 上界口径收进 clampAiWidth（R408），此处不再手写 Math.max(260,...)。
+    setAiWidth((w) => clampAiWidth(w + dx, window.innerWidth, sidebarFootprint));
   };
 
   const refreshAdvisorTag = () => {
@@ -261,8 +264,14 @@ export default function App() {
       if (over > 0) {
         const lShrink = Math.min(over, leftWidth - MIN_LEFT);
         const rShrink = over - lShrink;
-        setLeftWidth((w) => Math.max(MIN_LEFT, w - lShrink));
-        setRightWidth((w) => Math.max(MIN_RIGHT, w - Math.max(0, rShrink)));
+        const l2 = Math.max(MIN_LEFT, leftWidth - lShrink);
+        const r2 = Math.max(MIN_RIGHT, rightWidth - Math.max(0, rShrink));
+        setLeftWidth(l2);
+        setRightWidth(r2);
+        // R408：左/右都收到底仍超预算 → 收 AI 侧栏，保住中栏 MIN_CENTER。
+        if (l2 + r2 + MIN_CENTER - avail > 0) {
+          setAiWidth((w) => clampAiWidth(w, winW, sidebarFootprint));
+        }
       }
     };
     fit();
@@ -636,7 +645,7 @@ export default function App() {
           </ErrorBoundary>
         </div>
       </div>
-      {aiOpen && <Splitter onDrag={dragAi} value={aiWidth} min={260} />}
+      {aiOpen && <Splitter onDrag={dragAi} value={aiWidth} min={AI_WIDTH_MIN} />}
 
       <div className="app-content">
       <PageHeader
