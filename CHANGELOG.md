@@ -5,6 +5,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 铁律 6「禁阻塞式对话框」补上机器守卫（R379）
+
+- 规则早就写在 ConfirmDialog 头上的注释里（铁律 6：禁 window.confirm，破坏性命令必须走界面内
+  两步确认），但一直没有机器守卫。全仓扫过：只有 1 处阻塞式对话框——App.tsx 的 `pickDirectory`
+  在浏览器预览（`!isTauri`，没有原生目录选择器）里用 `window.prompt` 输路径，属合理例外；
+  `window.confirm` / `window.alert` 本身 0 处。
+- 新增 `src/blockingDialog.test.ts`：扫全部非测试 `.ts/.tsx` 原文，`window.confirm` /
+  `window.alert` 出现即红；`window.prompt` 只允许「8 行内带 `!isTauri` 判定」的预览回退，
+  别处出现也红（报 文件:行号 + 改走界面内确认的提示）。
+- 自检有效：临时探针文件里写一行 `window.confirm('boom')` → 报 `./_guard_probe.tsx:1`、
+  Tests 1 failed、EXIT=1；探针删除后恢复全绿。
+- `pnpm -C apps/desktop check` 62 files / 984 tests 全绿（新增 1 条）。
+
 ### 2026-10-24 删除会话要过确认——X 按钮不再一按就清空本机对话记录（R378）
 
 - 会话列表每行的删除按钮此前直接调 `deleteChat`，点一下就删——本机存储的对话记录
