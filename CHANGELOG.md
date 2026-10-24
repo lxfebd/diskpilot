@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R404: 输入法组合期间的 Enter 不再把打一半的句子发出去
+
+- 缺口：聊天输入框（ChatPanel.tsx:922）onKeyDown 里 Enter 且非 Shift 就 preventDefault + askFollowUp，没有任何输入法组合（IME composition）守卫——中文/日文/韩文用户选候选词时按 Enter 是「确认候选字」，会被直接当成「发送」，把打一半的句子发出去。
+- 改动：新增 composingRef 组合状态位（onCompositionStart 置 true / onCompositionEnd 置 false），onKeyDown 第一行 `if (composingRef.current || e.nativeEvent.isComposing) return;` 双保险（覆盖部分浏览器最后一次 keydown 仍带 isComposing 的情况）；注释写明 R404 缘由。
+- 守卫：a11y.test.ts 新增 describe「输入法组合期间的 Enter 不许发送（R404）」，断言 ChatPanel.tsx 源码含 onCompositionStart / onCompositionEnd / e.nativeEvent.isComposing / 组合状态位短路。反向自检：临时删掉 isComposing 条件 → Tests 1 failed（46 中 1 红），还原后全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0，71 files / 1029 tests。
+
 ### R403: 自定义可聚焦控件的焦点样式对账守卫——没有 :focus-visible 的就报红
 
 - 背景：原生 button/input 有浏览器默认焦点环（app-shell.css 也统一过 :focus-visible 口径），但 role="button" / tabIndex={0} 的 div/span/li 什么都没有——键盘 Tab 过去时屏幕上看不出焦点在哪。R314/R322/R368/R371 都是逐个补的焦点样式，没有机器守卫，新控件很容易漏。

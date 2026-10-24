@@ -865,3 +865,17 @@ describe('聊天记录是动态内容，要被读屏播报（R399）', () => {
     expect(chat).toContain('aria-busy={chatBusy || undefined}');
   });
 });
+
+// ── 输入法组合期间的 Enter 不许触发发送（R404）──────────────────
+// 拼音/日文/韩文 IME 选候选词时按 Enter 是「确认候选字」，不是「发送」；
+// 没有组合状态位的话，中文用户打回车会把打一半的句子直接发出去。
+describe('输入法组合期间的 Enter 不许发送（R404）', () => {
+  it('聊天输入框带组合状态位 + isComposing 双保险', () => {
+    const src = RAW_TSX['./components/ChatPanel.tsx'];
+    expect(src).toBeTruthy();
+    expect(src).toContain('onCompositionStart');
+    expect(src).toContain('onCompositionEnd');
+    expect(src).toContain('e.nativeEvent.isComposing');
+    expect(src).toContain('composingRef.current || e.nativeEvent.isComposing');
+  });
+});

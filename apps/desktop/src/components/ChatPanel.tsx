@@ -132,6 +132,9 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
   const [pendingImages, setPendingImages] = useState<{ id: string; name: string; dataUrl: string; mimeType: string }[]>([]);
   const [dropping, setDropping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+// R404：输入法组合（中文/日文/韩文 IME 选候选词）期间 Enter 是「确认候选字」不是「发送」，
+// 用组合状态位挡住，否则拼音输入时打回车会直接把打一半的句子发出去。
+const composingRef = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   // 待用户确认的 CLI 工具调用（图吧工具箱中/高风险 run_cli_tool）。
   const [pendingCli, setPendingCli] = useState<PendingCliTool | null>(null);
@@ -917,8 +920,12 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
               const v = (e.target as HTMLTextAreaElement).value;
               if (v !== input) setInput(v);
             }}
+            onCompositionStart={() => { composingRef.current = true; }}
+            onCompositionEnd={() => { composingRef.current = false; }}
             onPaste={onPaste}
             onKeyDown={(e) => {
+              // R404：组合中（含部分浏览器最后一次 keydown 仍带 isComposing 的情况）一律不发送。
+              if (composingRef.current || e.nativeEvent.isComposing) return;
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 askFollowUp();
