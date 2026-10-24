@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 撤销核心恢复路径补单测（R376）
+
+- `exec_undo_core.undo_core` 是「撤销隔离」的唯一入口（恢复隔离区文件回原路径），此前只有
+  executor crate 的裸函数测试，这条编排逻辑零覆盖；本次补上 7 条单元测试：成功恢复 + 台账清空；
+  index 漂移（列表可能被其它清理操作刷新）拒绝恢复且不动隔离文件；越界 index 报错；
+  非 Quarantine 动作返回 None 且保留台账；隔离文件缺失时报 `undo failed:` 前缀；
+  index 0 = 最新一条（`list_undo` 反转语义：台账旧前新后）；原路径已存在时拒绝覆盖。
+- 测试用临时目录构造 undo.jsonl + `quarantine/1-0-{leaf}` 隔离文件 fixture。
+- `cargo test --lib undo_core` 9 passed；全套 223 passed / 2 ignored / 0 failed。
+
 ### 2026-10-24 删掉 406 行零引用的死 CSS（R375）
 
 - 用脚本把 `src/styles/*.css` 里的 1075 个类名逐个回查 `.ts/.tsx` 源码（排除 `.test.`），
