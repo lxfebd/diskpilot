@@ -3,6 +3,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R398: 最近清理面板不再整卡消失——台账为空时留头给诚实空态
+
+- 缺口：UndoPanel（Studio 侧栏「最近清理」）在台账为空时直接 return null 整卡消失——同一个台账的整页 HistoryPage 有明确的空态文案（history.empty「还没有清理记录。执行清理后，每次操作都会记录在这里」），面板侧却什么提示都没有，且空卡消失会让侧栏下方组件布局跳动。
+- 改动：UndoPanel.tsx 把 return null 改为空态分支——保留「最近清理」面板头（History 图标），内容行渲染 cleanup.undoEmpty（muted small）；settings.css 加 .undo-empty 规则（padding + var(--muted)）。
+- i18n：cleanup.ts zh/en 在 cleanup.recent 后各加 cleanup.undoEmpty（zh「还没有可撤销的清理记录。执行清理（回收站 / 隔离 / 删除）后，最近操作会出现在这里。」/ en "Nothing to undo yet. Recent cleanups (recycle / quarantine / delete) will show up here."）。
+- 验证：pnpm -C apps/desktop check 70 files / 1024 tests / EXIT=0。
+
 ### R397: MCP 传输方式切换不再留一个空列——seg-2 网格规则补上 + 守卫
 
 - 缺口：layout.css 的基础 .seg 是 3 列网格，seg-3/seg-4/seg-5 变体都有各自的 grid-template-columns 规则，唯独 MCP 服务器表单里传输方式（stdio / http 两项）用的 seg-2 没有任何规则——两个按钮按 3 列排布，各占 1/3 宽，右边空出一个带外框的空列。

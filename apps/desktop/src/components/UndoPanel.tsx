@@ -118,7 +118,17 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
     );
   }
 
-  if (entries.length === 0) return null;
+  // R398：台账为空时面板不消失——保留「最近清理」头稳定侧栏布局，给出诚实空态（与台账页 history.empty 同口径）。
+  if (entries.length === 0) {
+    return (
+      <div className="undo-panel">
+        <div className="studio-head">
+          <span><History size={13} /> {t('cleanup.recent')}</span>
+        </div>
+        <div className="undo-empty muted small">{t('cleanup.undoEmpty')}</div>
+      </div>
+    );
+  }
   const countInfo = undoCountInfo(entries, UNDO_PANEL_LIMIT);
 
   return (
