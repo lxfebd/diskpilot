@@ -16,6 +16,7 @@ import { invalidateToolbeltCache } from '../../advisor/tools';
 import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
 import { APP_VERSION } from '../../version';
 import { useEscapeKey } from '../../escapeKey';
+import { useTauriEvent } from '../../tauriEvent';
 import { openExternal } from '../../external';
 import { openDataDirWithToast } from '../../reveal';
 
@@ -195,28 +196,25 @@ export function MarketPanel() {
     if (tab === 'community') loadCommunity(cQuery);
   }, [tab, cQuery, loadCommunity]);
 
-  // 远程下载进度：plugin-download-progress 事件（B2）
-  useEffect(() => {
-    if (!isTauri) return;
-    let unlisten: (() => void) | undefined;
-    import('@tauri-apps/api/event').then(async (mod) => {
-      unlisten = await mod.listen<{ downloaded: number; total: number; done: boolean; installed?: string }>(
-        'plugin-download-progress', (e) => {
-          if (e.payload.total > 0) {
-            setDl({ downloaded: e.payload.downloaded, total: e.payload.total });
-          }
-          if (e.payload.done) {
-            setDl(null);
-            setUrlBusy(false);
-            if (e.payload.installed) {
-              setMsg(t('toolbelt.mkt.urlInstallOk', { name: e.payload.installed }));
-            }
-            refresh();
-          }
-        });
-    });
-    return () => { unlisten?.(); };
-  }, [refresh, t]);
+  // 远程下载进度：plugin-download-progress 事件（B2）。R387 起用 useTauriEvent：
+  // 依赖重跑/卸载发生在 listen() settle 之前时，迟到的 attach 立即解绑，不叠第二份回调。
+  useTauriEvent<{ downloaded: number; total: number; done: boolean; installed?: string }>(
+    'plugin-download-progress',
+    (p) => {
+      if (p.total > 0) {
+        setDl({ downloaded: p.downloaded, total: p.total });
+      }
+      if (p.done) {
+        setDl(null);
+        setUrlBusy(false);
+        if (p.installed) {
+          setMsg(t('toolbelt.mkt.urlInstallOk', { name: p.installed }));
+        }
+        refresh();
+      }
+    },
+    isTauri,
+  );
 
   const installByUrl = useCallback(async () => {
     const u = url.trim();

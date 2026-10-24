@@ -11,7 +11,7 @@ import {
 import { isPermEnabled } from '../permissions';
 import { isTauri } from '../env';
 import { ErrorBoundary } from './ErrorBoundary';
-import { listen } from '@tauri-apps/api/event';
+import { useTauriEvent } from '../tauriEvent';
 import { useT } from '../i18n';
 import { StartupPanel } from './StartupPanel';
 import { FAN_LEVEL_COLORS } from '../colors';
@@ -257,17 +257,15 @@ function SystemToolsInner() {
     return () => clearInterval(id);
   }, [fanCtrlPerm]);
 
-  // 熔断事件：后端温度超阈值自动回退时前端提示。
-  useEffect(() => {
-    if (!fanCtrlPerm || !isTauri) return;
-    let un: (() => void) | undefined;
-    listen<{ note: string; temp_c: number }>('fan-temp-breaker', (ev) => {
-      const d = ev.payload;
+  // 熔断事件：后端温度超阈值自动回退时前端提示。R387 起用 useTauriEvent（取消竞态安全）。
+  useTauriEvent<{ note: string; temp_c: number }>(
+    'fan-temp-breaker',
+    (d) => {
       setFanBreakerNote(d.note ?? t('system.fan.breakerFallback', { temp: d.temp_c }));
       void loadFanStatus();
-    }).then((fn) => { un = fn; });
-    return () => un?.();
-  }, [fanCtrlPerm, t]);
+    },
+    fanCtrlPerm && isTauri,
+  );
 
   return (
     // R365：作为设置窗「分栏」的内容面板（tabpanel），id 与 Settings.tsx 的 tab 一一对应。

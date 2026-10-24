@@ -8,6 +8,7 @@ import { driveLettersOf, gradeDiskHealth } from '../diskHealth';
 import { t, useT } from '../i18n';
 import type { HwInfo, HwDiskHealth, HwSnapshotMeta, HwCompareOut, HwSeriesPoint } from '../api';
 import { useEscapeKey } from '../escapeKey';
+import { useTauriEvent } from '../tauriEvent';
 import { useReturnFocus } from '../dialogFocus';
 
 /// 硬件报告 GPU 实时行来源标签：按 `gpu_live.name` 判定厂商（desktop 端 AMD ADL
@@ -404,25 +405,22 @@ export function useHwTestMonitor(onStop: () => void) {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<HwProgress | null>(null);
 
-  useEffect(() => {
-    if (!isTauri) return;
-    let cancelled = false;
-    import('@tauri-apps/api/event').then(async (mod) => {
-      const unlisten = await mod.listen<HwProgress>('hw-test-progress', (e) => {
-        if (cancelled) return;
-        // 终态事件（done=true）：测试结束，直接清掉监控条，不再等调用方置 running=false。
-        if (e.payload.done) {
-          setProgress(null);
-          setRunning(false);
-          return;
-        }
-        setProgress(e.payload);
-        setRunning(true);
-      });
-      return () => { unlisten(); };
-    });
-    return () => { cancelled = true; };
-  }, []);
+  // 熔断事件同族（R387）：useTauriEvent 内部用 ListenerGuard 兜取消竞态——
+  // 卸载发生在 listen() settle 之前时，迟到的 attach 立即解绑，不留失去所有者的监听器。
+  useTauriEvent<HwProgress>(
+    'hw-test-progress',
+    (p) => {
+      // 终态事件（done=true）：测试结束，直接清掉监控条，不再等调用方置 running=false。
+      if (p.done) {
+        setProgress(null);
+        setRunning(false);
+        return;
+      }
+      setProgress(p);
+      setRunning(true);
+    },
+    isTauri,
+  );
 
   const stop = () => {
     if (isTauri) api.hwStopTest().catch(() => {});

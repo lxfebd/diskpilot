@@ -1,4 +1,13 @@
 ## [未发布]
+
+### R387: Tauri 事件监听不再有取消竞态——迟到的解绑立即生效，三处监听收进 useTauriEvent
+
+- **修复：Tauri 事件监听不再有取消竞态泄漏。** 全仓三处监听（硬件烤机进度 hw-test-progress、插件下载进度 plugin-download-progress、风扇熔断 fan-temp-breaker）是老写法 `let un; listen(..).then(fn => un = fn); return () => un?.()`——组件卸载或 effect 依赖重跑发生在 `listen()` 的 Promise settle 之前时，解绑函数还没拿到，监听器就留在那里：卸载后仍收事件（可能对已卸载组件 setState）、market 的 `[refresh, t]` 依赖重跑会叠出第二份回调。R328 在 `useAgentToolProgress` 修过一份，本轮收成可复用基建。
+  - 新增 `apps/desktop/src/tauriEvent.ts`：`ListenerGuard<T>`（`attach()` 挂监听、`cancel()` 幂等解绑——迟到 settle 的解绑函数会被立即调用；cancel 后回调不再透传）+ `useTauriEvent<T>(event, handler, enabled)`（handler 永远取最新闭包，deps 只有 event/enabled）。
+  - 三处迁移：`components/HwPanels.tsx`（isTauri）、`components/toolbelt/market.tsx`（isTauri，去掉原 [refresh, t] 叠挂隐患）、`components/SystemTools.tsx`（fanCtrlPerm && isTauri，删掉直接 import 的 listen）。
+  - 新增 `apps/desktop/src/tauriEvent.test.ts` 5 条：正常 attach→cancel 解绑一次；cancel 先于 attach 完成→迟到解绑立即调；cancel 后回调不透传；重复 cancel 幂等（修掉首次实现 cancel 未清 unlisten 的缺陷）；未 attach 就 cancel 后再 attach 不残留。
+  - ScanProgressBar（App.tsx）与 useAgentToolProgress 已各自安全，未动。
+
 ### R386: 市场页说「存哪」也给条路——社区插件说明旁加「打开数据目录」
 
 - 缺口：R385 在设置页加了「打开数据目录」，但插件市场社区 tab 的说明仍只显示 `<code>app_data_dir</code>` 这个变量名 —— 用户正是从这一页看到「索引与下载包缓存在 app_data_dir」，却没有任何入口过去，还得回头翻设置页。
