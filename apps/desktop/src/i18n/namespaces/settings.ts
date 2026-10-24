@@ -119,6 +119,10 @@ export const settings = {
     'settings.general.updateRestart': '重启应用',
     'settings.general.updateConfirmTitle': '确认更新到 v{latest}？',
     'settings.general.updateConfirmBody': '将从 GitHub 下载并安装 v{latest}（当前 v{current}）。下载安装不会改动你的扫描记录、待清理清单或回收站；安装完成后需重启应用生效。',
+    'settings.general.dataDir': '数据目录',
+    'settings.general.dataDirDesc': '撤销台账、隔离区、提醒与硬件历史都存在这里 — 备份或手动清理时从这里进。',
+    'settings.general.dataDirOpen': '打开数据目录',
+    'settings.general.dataDirFail': '打开数据目录失败：{msg}',
     'settings.general.aiInactiveHint': 'AI 未配置时，联网与思考开关暂不生效 — 先到「AI 顾问」标签填好接口。',
     'settings.general.aiNotSetupWorks': '没配置 AI 也能用：扫描、清理、回收站还原、撤销全部照常可用。',
 
@@ -243,6 +247,10 @@ export const settings = {
     'settings.general.updateRestart': 'Restart app',
     'settings.general.updateConfirmTitle': 'Update to v{latest}?',
     'settings.general.updateConfirmBody': 'DiskPilot will download and install v{latest} (current v{current}) from GitHub. This does not touch your scan reports, cleanup lists or recycle bin; a restart is required to apply.',
+    'settings.general.dataDir': 'Data folder',
+    'settings.general.dataDirDesc': 'The undo ledger, quarantine, reminders and hardware history all live here — open it to back up or tidy up by hand.',
+    'settings.general.dataDirOpen': 'Open data folder',
+    'settings.general.dataDirFail': 'Cannot open the data folder: {msg}',
     'settings.general.aiInactiveHint': 'Web and thinking toggles are inactive until the AI is configured — fill in the endpoint on the "AI Advisor" tab first.',
     'settings.general.aiNotSetupWorks': 'Everything else works without AI: scanning, cleanup, Recycle Bin restore, and undo are all available.',
 

@@ -486,6 +486,10 @@ export const systemExtApi = {
     isTauri
       ? invoke<void>('set_close_to_tray', { enabled })
       : Promise.resolve(),
+
+  // 应用数据目录（撤销台账/隔离区/提醒/硬件历史都在这里）：设置页「打开数据目录」用。
+  appDataDir: () =>
+    isTauri ? invoke<string>('app_data_dir') : Promise.resolve(''),
   // 语言切换后把托盘菜单文案推给后端（不传语言，传现成文案）。
   traySync: (showLabel: string, quitLabel: string, tooltip: string) =>
     isTauri

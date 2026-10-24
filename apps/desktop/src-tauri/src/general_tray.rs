@@ -68,6 +68,19 @@ pub(crate) fn read_general_at_path(p: &std::path::Path) -> Result<GeneralConfig,
     serde_json::from_str(&text).map_err(|e| format!("通用配置损坏: {e}"))
 }
 
+/// 应用数据目录的完整路径。
+///
+/// 撤销台账（undo.jsonl）、隔离区（quarantine）、提醒（reminder.json）、
+/// 硬件与传感器历史、插件互查缓存都存在这里——设置页的「打开数据目录」
+/// 按钮用它定位到资源管理器，方便用户备份或手动清理。
+#[tauri::command]
+pub(crate) fn app_data_dir(app: AppHandle) -> Result<String, String> {
+    app.path()
+        .app_data_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| format!("无法定位数据目录: {e}"))
+}
+
 #[tauri::command]
 pub(crate) fn set_general(app: AppHandle, hardware_accel: bool) -> Result<(), String> {
     let Some(dir) = app.path().app_data_dir().ok() else {

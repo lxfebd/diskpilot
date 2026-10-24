@@ -284,6 +284,7 @@ pub fn run() {
             mcp::mcp_tools::mcp_call_tool,
             mcp::mcp_audit::mcp_audit_tail,
             general_tray::general_config,
+            general_tray::app_data_dir,
             general_tray::set_general,
             general_tray::set_tools_root,
             general_tray::set_close_to_tray,

@@ -1,12 +1,14 @@
 import { useEffect, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { getHwProfile, recommendLocal, type HwProfile } from '../hwProfile';
-import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, SlidersHorizontal, ShieldCheck, RefreshCw, ExternalLink, Download, RotateCw, Wrench, Plug, Package, Bell } from 'lucide-react';
+import { X, CheckCircle2, Info, Eye, EyeOff, Settings2, Palette, Sparkles, SlidersHorizontal, ShieldCheck, RefreshCw, ExternalLink, Download, RotateCw, Wrench, Plug, Package, Bell, FolderOpen } from 'lucide-react';
 import { api } from '../api';
 import { isTauri } from '../env';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useEscapeKey } from '../escapeKey';
 import { cycleIndex } from '../a11y';
 import { useReturnFocus } from '../dialogFocus';
+import { revealWithToast } from '../reveal';
+import { useStore } from '../store';
 import { openExternal } from '../external';
 import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -361,6 +363,16 @@ export function Settings({ onClose, initialTab }: Props) {
         <strong>{t('settings.ai.weakWarnTitle')}</strong>{t('settings.ai.weakWarn')}
       </div>
     ) : null;
+
+  // 打开应用数据目录（R385）：撤销台账/隔离区/提醒/硬件历史都在这，备份或手动清理要能一键到。
+  const openDataDir = async () => {
+    try {
+      const dir = await api.appDataDir();
+      if (dir) await revealWithToast(dir);
+    } catch (e) {
+      useStore.getState().toast(t('settings.general.dataDirFail', { msg: e instanceof Error ? e.message : String(e) }), 'err');
+    }
+  };
 
   const save = async () => {
     setErr(null); setMsg(null);
@@ -859,6 +871,12 @@ export function Settings({ onClose, initialTab }: Props) {
                 onCancel={() => setUpdatePhase(null)}
               />
             )}
+
+            <div className="settings-group-title" style={{ marginTop: 18 }}>{t('settings.general.dataDir')}</div>
+            <p className="muted small" style={{ marginTop: 4 }}>{t('settings.general.dataDirDesc')}</p>
+            <button type="button" className="ghost small" style={{ marginTop: 6 }} onClick={() => { void openDataDir(); }}>
+              <FolderOpen size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('settings.general.dataDirOpen')}
+            </button>
 
             <p className="muted small" style={{ marginTop: 10 }}>{t('settings.general.aiInactiveHint')}</p>
             <p className="muted small" style={{ marginTop: 4 }}>{t('settings.general.aiNotSetupWorks')}</p>

@@ -1,4 +1,11 @@
 ## [未发布]
+### R385: 设置页加「打开数据目录」入口——备份/清理不再靠手敲路径
+
+- 缺口：后端把撤销台账（undo.jsonl）、隔离区（quarantine）、提醒（reminder.json）、硬件与传感器历史、插件互查缓存全存应用数据目录（app_data_dir），但前端没有任何命令暴露这个路径；插件市场的「存哪看哪」提示只把 app_data_dir 字符串展示出来，用户想备份或手动清理数据得自己翻 %LOCALAPPDATA%。
+- 改动：① 后端新增 `#[tauri::command] app_data_dir`（general_tray.rs，`app.path().app_data_dir().to_string_lossy()`），lib.rs 的 generate_handler 注册；② api/system-ext.ts 加 `appDataDir()`（isTauri ? invoke : Promise.resolve 兜底，同 generalConfig 族）；③ Settings 通用 tab「版本更新」组后新增「数据目录」组：组标题 + 说明（撤销台账、隔离区、提醒与硬件历史都存在这里）+「打开数据目录」按钮——拿到路径走 revealWithToast 在资源管理器定位，取不到路径或打开失败都弹 err toast（含原因），不再静默。
+- i18n：settings.ts 加 settings.general.dataDir / dataDirDesc / dataDirOpen / dataDirFail 四键（zh/en）。
+- 顺手修正：CHANGELOG 误入的一行孤立字符 g（R383 条目后）已删。
+- 验证：pnpm -C apps/desktop check 64 files / 990 tests 全绿；后端 cargo check 通过。
 
 ### R384: 错误横幅能被读屏念出来——32 处错误文本补 role=alert + 源码守卫
 
@@ -14,7 +21,6 @@
 - i18n：`shell.ts` 加 `shell.scan.busy`（zh「扫描正在进行中，等这一轮扫完再试」/ en "A scan is already running — wait for it to finish"）。
 - 测试：新增 `apps/desktop/src/scanGate.test.ts` 3 条（第一份取到、第二份被拒且 busy 保持；放闸后可再取；没取就放/多放一次不出错且不误放别人的闸）。
 - 验证：`pnpm -C apps/desktop check` 64 files / 989 tests 全绿。
-g
 
 DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
