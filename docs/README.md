@@ -10,6 +10,7 @@
 | [health-butler.md](health-butler.md) | 产品/开发 | 定位升级方案：「预检 → 清单 → 一键确认」管家流程与 P0-P2 路线 |
 | [plugin-market-index.md](plugin-market-index.md) | 插件作者/维护者 | 社区索引契约：schema 1 信封、签名模型、发布流程、建仓模板 |
 | [publish-plugin-guide.md](publish-plugin-guide.md) | 插件作者 | 三步发布自己的清理插件（导出 zip → 填 index.json → 提 PR） |
+| [changelog/README.md](changelog/README.md) | 开发者/维护者 | 逐轮开发记录归档：R1–R380 的 273 条明细按日期分卷存放 |
 
 其他文档入口：
 
