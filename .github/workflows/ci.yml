@@ -111,5 +111,5 @@ jobs:
       - run: pnpm -C apps/desktop check
       - run: pnpm -C apps/desktop build
       # 文档是全仓资产：README / docs / .github 里的相对链接必须指向真实文件，
-      # 否则索引会慢慢漂成坏链。本地用 `pnpm check:docs` 跑同一道检查。
-      - run: node scripts/check-docs-links.mjs
+      # CHANGELOG 结构也在同一道检查里（R392 起）。本地用 `pnpm check:docs` 跑同一道检查。
+      - run: pnpm check:docs

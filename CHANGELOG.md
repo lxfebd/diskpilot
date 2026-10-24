@@ -1,4 +1,14 @@
+DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
+版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
+
 ## [未发布]
+
+### R392: CHANGELOG 结构修整——重复的 [未发布]、错位文件头、9 处标题前缺空行
+
+- 缺陷：清单中段出现第二个 `## [未发布]`（R382 起整段被错误地再分一层）；文件头简介两行被挪到了中段；9 处 `###` 标题前没有空行。Markdown 渲染不报错，但结构索引、diff 和脚本解析都会踩。
+- 修复：文件头简介移回第 1 行；删掉第二个 `## [未发布]`；9 处标题补空行。全文只保留一个 [未发布] 区，`## 较早版本` / `## 格式说明` 结构不变。
+- 守卫：新增 `scripts/check-changelog.mjs`（零依赖 node ESM）——简介只在第 1 行出现一次、恰好一个 [未发布] 区、`###` 标题前必须有空行、标题文本不得重复、文件以单个换行结尾；`pnpm check:docs` 与 CI 的 frontend 文档步骤串上这道检查。
+- 验证：node scripts/check-changelog.mjs 通过；node scripts/check-docs-links.mjs 30 条链接全过。
 
 ### R391: 字段级校验错误贴到出错的输入框上，读屏也能念到
 
@@ -49,6 +59,7 @@
 - i18n：settings.ts 加 `settings.general.dataDirMissing`（后端没返回路径时的原因文案），toolbelt.ts 加 `toolbelt.mkt.openDataDir`（zh/en）。
 - 测试：`reveal.test.ts` 新增 describe「打开应用数据目录的回音（R386）」3 条 —— 成功定位不打扰、后端返回空路径时说明原因、取路径抛错时 toast 带原因。
 - 验证：`pnpm -C apps/desktop check` 全绿。
+
 ### R385: 设置页加「打开数据目录」入口——备份/清理不再靠手敲路径
 
 - 缺口：后端把撤销台账（undo.jsonl）、隔离区（quarantine）、提醒（reminder.json）、硬件与传感器历史、插件互查缓存全存应用数据目录（app_data_dir），但前端没有任何命令暴露这个路径；插件市场的「存哪看哪」提示只把 app_data_dir 字符串展示出来，用户想备份或手动清理数据得自己翻 %LOCALAPPDATA%。
@@ -64,6 +75,7 @@
 - 守卫：a11y.test.ts 新增 describe「错误横幅要能被读屏念出来（R384）」——扫 RAW_TSX，className 含 `err`/`error`/`-err` 词元的 div/p/span 必须带 `role="alert"`、`role="note"` 或 `aria-hidden`（自检：删任意一处即红）。
 - 顺手修正：HistoryPage.tsx 头部注释「undo.jsonl 自带裁剪」与事实不符（后端是读整个 jsonl 再 take，台账没有裁剪；R310 的截断横幅才是真实口径）。
 - 验证：`pnpm -C apps/desktop check` 64 files / 990 tests 全绿。
+
 ### R383: 扫描不再能并发跑两份——加单飞闸门，页脚「重扫」不再踢起第二个扫描
 
 - 缺口：`scan` 没有任何并发守卫，而扫描入口有五处（总览盘卡片、盘条「扫描全部」、体检红盘格、救援横幅、页脚「重扫」）。前四处带 `disabled={scanning}`，唯独页脚重扫（R314 改成可聚焦的 `role="button"` span）没有——扫描中点它就会再起一份扫描：两份同时读盘、`scan-progress` 事件互相覆盖，先结束的那份 `finally` 把 `scanning` 置回 false，界面显示「未扫描」而后端还在遍历。后端 `scan.rs` 也没有「已有扫描在进行」的拦截，靠 UI 的 disabled 拦不住所有路径（R314 之后新增的入口都可能漏）。
@@ -71,11 +83,6 @@
 - i18n：`shell.ts` 加 `shell.scan.busy`（zh「扫描正在进行中，等这一轮扫完再试」/ en "A scan is already running — wait for it to finish"）。
 - 测试：新增 `apps/desktop/src/scanGate.test.ts` 3 条（第一份取到、第二份被拒且 busy 保持；放闸后可再取；没取就放/多放一次不出错且不误放别人的闸）。
 - 验证：`pnpm -C apps/desktop check` 64 files / 989 tests 全绿。
-
-DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
-
-## [未发布]
 
 ### R382: 快速切盘/重扫时迟到的旧响应不再盖住当前盘——异步加载加请求序号守卫
 
@@ -339,6 +346,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   必须有 `role="progressbar"` 或明确的 `aria-hidden`。自检：删掉压测条上的 role，
   守卫变红并点名 `./components/HwPanels.tsx:391`，恢复即绿。
 - 验证：`pnpm -C apps/desktop check` 全绿（60 files / 951 tests）。
+
 ### 2026-10-24 每个开关 / 搜索框都说得出自己是谁——表单控件补可访问名字（R361）
 
 - 缺口：读屏软件念「复选框，未选中」时不会说这是哪一项。设置 › 通用 的 5 个开关、
@@ -354,6 +362,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   （display:none 不进无障碍树）。自检：临时删掉文件页搜索框的 aria-label，
   守卫变红并点名 `./components/FileView.tsx:150`，恢复即绿。
 - 验证：`pnpm -C apps/desktop check` 全绿（60 files / 950 tests）。
+
 ### 2026-10-24 外链点了真的会打开——`target="_blank"` 改走系统浏览器（R360）
 
 - 缺口：免责声明的 GitHub、设置里的「打开发布页 / 下载更新」、工具箱的教程/下载、
@@ -375,6 +384,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 验证：`pnpm -C apps/desktop check` 全绿（60 files / 949 tests）；
   `cargo test -p diskpilot-desktop external` 3 passed；`cargo fmt --all` +
   `cargo clippy -p diskpilot-desktop --all-targets -- -D warnings` 0 警告。
+
 ### 2026-10-24 页面内的「已启用 / 已切换」也念给读屏软件听（R359）
 
 - 缺口：R319 只给全局 toast 补了 `role="status"`，但应用还有第二条反馈通道——操作完就地冒出的
@@ -388,6 +398,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   ② 源码里任何 `{msg && <div|p …>}` 的就地提示都必须带 `role="status"`——新写的提示不会漏。
 - 自检：把 PowerPlanCard 的 `role="status"` 临时去掉 → 两条守卫同时变红并报出文件名，恢复即绿。
 - 验证：`pnpm -C apps/desktop check` 全绿（59 files / 943 tests）。
+
 ### 2026-10-24 连续操作时提示文案不再被上一条的定时器提前抹掉（R358）
 
 - 缺口：四处「一闪而过」的提示各自写成 `setMsg(s); setTimeout(() => setMsg(null), 3500)`——
@@ -402,6 +413,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 - 测试：`src/flash.test.ts` 4 条（到点回调一次并复位、连续两次 arm 只保留最新一次、
   clear 取消且可重复、默认 3.5 秒），用 `vi.useFakeTimers()`。
 - 验证：`pnpm -C apps/desktop check` 全绿（59 files / 941 tests）。
+
 ### 2026-10-24 跟随系统「减少动态效果」——动画停、平滑滚动退回瞬间到位（R357）
 
 - 缺口：全仓 `prefers-reduced-motion` 零命中。侧栏宽度过渡、弹窗淡入、转圈加载、清理扫描灯
@@ -420,6 +432,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   `animation-duration` / `transition-duration` / `scroll-behavior`；② 源码不许再出现裸
   `behavior: 'smooth'`（须经 `scrollBehavior()`）。两条都做了自检：塞探针后变红并按文件名报出，删掉恢复。
 - 验证：`pnpm -C apps/desktop check` 全绿（58 files / 937 tests，含 `motion.test.ts` 4 条 + 2 条守卫）。
+
 ### 2026-10-24 最后三处手写 Esc 收编进栈，并加守卫防它长回来（R356）
 
 - 缺口：R349 把 Esc 收敛成一个模块级栈（叠层时只有最上层响应），但仍有 3 处自己挂
@@ -436,6 +449,7 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
   它的三级 Esc「退出搜索框 → 关详情栏 → 交给外层 Modal」必须比关窗先跑，属有意手写）。
   自检有效：临时塞一个探针组件后守卫变红并按文件名报出，删掉后恢复。
 - 验证：`pnpm -C apps/desktop check` 全绿（57 files / 931 tests）。
+
 ### 2026-10-24 设置窗打开把焦点移进对话框、关掉还回原处（R355）
 
 - 缺口：`components/Settings.tsx`（设置窗，含外观 / AI / 通用 / 权限 / 系统 / MCP / 市场 / 提醒）既没有
