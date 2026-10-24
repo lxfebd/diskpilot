@@ -399,7 +399,7 @@ export const system = {
     'system.reminder.forecastCheck': 'Check trends',
     'system.reminder.forecastChecking': 'Checking…',
     'system.reminder.forecastEmpty': 'No space history yet (needs at least two scan samples)',
-    'system.reminder.forecastOk': 'Full in about {n} day(s)',
+    'system.reminder.forecastOk': 'Full in about {n:day|days}',
     'system.reminder.forecastNow': 'Full now',
     'system.reminder.forecastNoHistory': 'No history read (no samples yet)',
     'system.reminder.forecastNotEnough': 'Not enough samples (need at least two)',
@@ -417,6 +417,6 @@ export const system = {
     'system.reminder.autoListAny': 'Any amount',
     'system.reminder.autoListIdle': 'This cleanup item is not on this machine — the rule stays idle (no near-match substitution)',
     'system.reminder.autoListDelete': 'Remove this authorization rule',
-    'system.reminder.autoListHits': '{items} made it into the list under your authorization rule(s)',
+    'system.reminder.autoListHits': '{items} made it into the list under your authorization rules',
   },
 };

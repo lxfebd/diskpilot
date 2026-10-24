@@ -5,6 +5,20 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 英文单复数不再手写 (s)——t() 支持 {n:day|days} 复数语法（R350）
+
+- 缺口：英文文案表里有 16 处 `(s)` 硬编码单复数（“1 day(s)”是语法错误，读着也别扭），
+  涉及扫描时效、清理提示、健康周刊、启动项等卡片与 toast。
+- `i18n/core.ts`：t() 新增复数占位符语法 `{n:one|other}`（n 为 1 用单数、否则复数，单位与数字一起
+  输出）；导出纯函数 `formatPluralUnit(n, one, other)`；参数不是数字时保留占位符原样不显示 NaN。
+  中文表不写该语法（「1 天 / 3 天」不分单复数），t() 对两种写法一视同仁。
+- 16 处英文串全部改写（system/overview/shell 三个命名空间），如
+  “{n:drive|drives} not scanned for over {days:day|days}”、“Plus {n:duplicate|duplicates}…”；
+  其中 system.reminder.autoListHits 的 “rule(s)” 无计数可依，直接去括号改 “authorization rules”。
+- 守卫：`i18n/coverage.test.ts` 占位符漂移用例的正则升级为兼容 `{n:day|days}`（只收名字作为占位符），
+  另新增「英文表不再手写 (s) 单复数」用例；新增 `i18n/core.test.ts` 5 条单测
+  （formatPluralUnit 1/0/3/1.5、空文案、t() 复数输出、数字字符串参数、非数字参数保留占位符）。
+- 验证：`pnpm -C apps/desktop check` 全绿（55 files / 914 tests）。
 ### 2026-10-24 叠层弹窗按一次 Esc 不再父子一起关——Esc 改成栈，只有最上层响应（R349）
 
 - 缺口：`escapeKey.ts` 的 `useEscapeKey` 每层各挂一个 window keydown，叠层时

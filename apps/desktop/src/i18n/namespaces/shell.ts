@@ -246,22 +246,22 @@ export const shell = {
     // 扫描结果树根节点
     'shell.root.allDrives': 'My Computer (all drives)',
     'shell.toast.openedFromCache': 'Opened from the last scan result — click the refresh badge on a drive to rescan it.',
-    'shell.toast.cleanupReminder': 'About {size} can be cleaned up on {n} drive(s) — review and confirm on the Overview page',
+    'shell.toast.cleanupReminder': 'About {size} can be cleaned up on {n:drive|drives} — review and confirm on the Overview page',
     'shell.toast.healthWeekly': 'Weekly health report ready: about {size} can be cleaned across all drives. See details on the History page',
     // R99 days-to-full warning (notification only; cleanup still goes through the confirm dialog)
     'shell.toast.spaceFull': '{path} may be full in {days} — time to clean up',
     'shell.toast.spaceFullNow': '0 days',
-    'shell.toast.spaceFullMore': ', {n} more drive(s) also approaching full',
+    'shell.toast.spaceFullMore': ', {n:more drive|more drives} also approaching full',
     // R291 sustained high temperature (notification only; fan writes still require L2 double-confirm)
     'shell.toast.thermalSustained': 'Sustained high temperature: {temp}C (threshold {threshold}C, {samples} consecutive samples over limit)',
     // R292 startup items changed (only reports added/removed counts; never claims who did it)
-    'shell.toast.startupChanged': 'Startup items changed: {added} added{gone} (vs. a snapshot from {days} day(s) ago)',
+    'shell.toast.startupChanged': 'Startup items changed: {added} added{gone} (vs. a snapshot from {days:day|days} ago)',
     'shell.toast.startupGone': ', {gone} removed',
     'shell.toast.startupNoGap': 'last snapshot',
     // R293 stale scan (notification only; never speculates why the user did not scan)
-    'shell.toast.scanStale': '{path} has not been scanned for {days} day(s) — scan to refresh',
+    'shell.toast.scanStale': '{path} has not been scanned for {days:day|days} — scan to refresh',
     'shell.toast.scanStaleNever': '{path} has never been scanned — scan once to see usage',
-    'shell.toast.scanStaleMore': ', {n} more drive(s) also stale',
+    'shell.toast.scanStaleMore': ', {n:more drive|more drives} also stale',
     // R103 notification toast action buttons (jump straight to the relevant page)
     'shell.toast.actionOverview': 'Go to Overview',
     'shell.toast.actionHistory': 'View report',
@@ -356,7 +356,7 @@ export const shell = {
     'shell.disclaimer.h5': '5. Licensing & third-party tools',
     'shell.disclaimer.p5': 'This software is released as open source under the license declared in the repository. Third-party tools it integrates (such as the individual hardware utilities in 图吧工具箱) remain the copyright of their respective authors; they are only invoked locally, and their binaries are neither modified nor redistributed. If a third-party tool infringes on your rights, contact the author through the channels above.',
     'shell.disclaimer.tipAgreed': 'I have read and agree to the terms above',
-    'shell.disclaimer.tipReadMore': 'Keep reading for {s} more second(s)',
+    'shell.disclaimer.tipReadMore': 'Keep reading for {s:more second|more seconds}',
     'shell.disclaimer.tipScroll': 'Scroll to the bottom and read everything first',
     'shell.disclaimer.countdown': 'I have read this ({s}s)',
     'shell.disclaimer.accept': 'I accept the statement above — start using it',

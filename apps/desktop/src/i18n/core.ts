@@ -75,7 +75,18 @@ function subscribe(cb: () => void): () => void {
   return () => { listeners.delete(cb); };
 }
 
-/** 取文案：en 缺失时回退中文原文（默认中文零回归）。支持 {name} 占位符替换。 */
+// R350：英文单复数。en 表里写 `{n:day|days}`——n 为 1 时出 “1 day”，其余出 “3 days”，
+// 于是不用再手写 “day(s)” 这种两头不讨好的 hack。中文表不写这个语法
+// （「1 天 / 3 天」不分单复数），t() 对两种写法一视同仁。
+const PLURAL_RE = /\{(\w+):([^}|]*)\|([^}|]*)\}/g;
+
+/** 把数量合成带单位的短语；“1 day” / “0 days” / “3 days”。单/复数文案留空时只给数字。 */
+export function formatPluralUnit(n: number, one: string, other: string): string {
+  const form = n === 1 ? one : other;
+  return form === '' ? String(n) : `${n} ${form}`;
+}
+
+/** 取文案：en 缺失时回退中文原文（默认中文零回归）。支持 {name} 占位符替换与 {n:one|other} 复数。 */
 export function t(key: string, params?: Record<string, string | number>): string {
   const dict = DICTS[effectiveLang()] ?? ZH;
   let v = dict[key] ?? ZH[key] ?? key;
@@ -83,6 +94,11 @@ export function t(key: string, params?: Record<string, string | number>): string
     for (const [k, val] of Object.entries(params)) {
       v = v.split(`{${k}}`).join(String(val));
     }
+    v = v.replace(PLURAL_RE, (m, k: string, one: string, other: string) => {
+      const raw = params[k];
+      const n = typeof raw === 'number' ? raw : Number(raw);
+      return Number.isFinite(n) ? formatPluralUnit(n, one, other) : m;
+    });
   }
   return v;
 }

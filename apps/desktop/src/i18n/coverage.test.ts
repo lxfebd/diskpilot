@@ -87,8 +87,10 @@ describe('i18n 文案表', () => {
   // en 忘了 {n} 时，英文界面会静默丢掉那个数字（反之会漏出裸 {n}）。占位符集合
   // 必须逐键一致——这是文案层最容易在翻译/改词时丢掉的一层。
   it('同一键的 zh / en 占位符集合一致', () => {
+    // R350 起英文可写复数语法 `{n:day|days}`：占位符名字仍只有第一个捕获组，
+    // 冒号后的单/复数文案不参与比对（中文表一律只写 {n}）。
     const placeholderOf = (s: string): string[] =>
-      [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+      [...s.matchAll(/\{(\w+)(?::[^}|]*\|[^}|]*)?\}/g)].map((m) => m[1]).sort();
     const drift: string[] = [];
     for (const ns of NAMESPACES) {
       for (const [k, zhText] of Object.entries(ns.zh) as [string, string][]) {
@@ -102,5 +104,17 @@ describe('i18n 文案表', () => {
       }
     }
     expect(drift).toEqual([]);
+  });
+
+  // R350：英文的单复数不许再手写 "(s)"——"1 day(s)" 是语法错误，读着也别扭。
+  // 复数交给 {n:day|days} 语法（core.ts 的 formatPluralUnit），单数/复数各写一遍。
+  it('英文表不再手写 (s) 单复数', () => {
+    const bad: string[] = [];
+    for (const ns of NAMESPACES) {
+      for (const [k, v] of Object.entries(ns.en) as [string, string][]) {
+        if (typeof v === 'string' && /\(s\)/.test(v)) bad.push(`${k}：${v}`);
+      }
+    }
+    expect(bad).toEqual([]);
   });
 });
