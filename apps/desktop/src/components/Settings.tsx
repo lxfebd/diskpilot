@@ -617,6 +617,8 @@ export function Settings({ onClose, initialTab }: Props) {
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
                 placeholder="https://api.openai.com/v1"
+                autoComplete="off"
+                spellCheck={false}
               />
             </label>
 
@@ -659,12 +661,18 @@ export function Settings({ onClose, initialTab }: Props) {
               <label className="field">
                 <span>{t('settings.ai.apiKey')}</span>
                 <div style={{ display: 'flex', gap: 6 }}>
+                  {/* R413：API key 不是登录口令——autoComplete="new-password" 防止 WebView2 的
+                      密码管理器把它当站点密码跨站保存、并在别的表单里自动填充。 */}
                   <input
                     type={showKey ? 'text' : 'password'}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
                     style={{ flex: 1 }}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
                   />
                   <button
                     type="button"
@@ -684,6 +692,8 @@ export function Settings({ onClose, initialTab }: Props) {
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="gpt-4o-mini · deepseek-chat · claude-haiku-4-5 …"
+                autoComplete="off"
+                spellCheck={false}
               />
             </label>
 

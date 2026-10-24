@@ -166,6 +166,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
               placeholder={t('toolbelt.cli.rootPlaceholder')}
               value={rootDraft}
               onChange={(e) => setRootDraft(e.target.value)}
+              spellCheck={false}
             />
             <button
               className="primary"
@@ -218,6 +219,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
                                 placeholder={t('toolbelt.cli.argsPlaceholder')}
                                 value={argsMap[tool.name] ?? ''}
                                 onChange={(e) => setArgsMap((m) => ({ ...m, [tool.name]: e.target.value }))}
+                                spellCheck={false}
                                 disabled={running !== null}
                               />
                               <button className="primary" disabled={running !== null} onClick={() => runTool(tool)}>

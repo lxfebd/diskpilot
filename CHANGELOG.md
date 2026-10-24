@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R413: 凭据与代码类输入框的表单卫生——API key 不再被密码管理器认领，代码框不再画红波浪线
+
+- 缺口：全仓没有任何 autoComplete / spellCheck 声明。设置页的 API key 输入（默认 type=password）没有显式 autoComplete，浏览器的密码管理器会把它当成站点登录口令跨站保存、并在别处自动填充；8 个 textarea 只有 3 个关了拼写检查，MCP 表单的 args/env/headers（-- 参数、API_KEY=sk-xxx、Authorization: Bearer …）和工具箱的 .tb-args CLI 参数框都会被浏览器画红波浪线；baseUrl / model 也会收到无关的自动填充建议。
+- 改动：Settings.tsx 的 key 框加 autoComplete="new-password" + spellCheck={false} + autoCapitalize="off" + autoCorrect="off"；baseUrl / model 加 autoComplete="off" + spellCheck={false}；McpServers 的 args/env/headers 等代码类 textarea 与 name/command/url/cwd 输入补 autoComplete="off" + spellCheck={false}；toolwall 两处 .tb-args 参数框加 spellCheck={false}。
+- 守卫：新建 apps/desktop/src/formHygiene.test.ts（import.meta.glob 读 TSX raw）三条硬规则——① 密码类输入框必须显式声明 autoComplete 且不许是 "on"（应为 new-password 或 off）；② 除聊天输入（chat.input.aria / chat-input 类名）外，所有 textarea 必须 spellCheck={false}；③ .tb-args 输入框必须 spellCheck={false}。外加「设置页 key 框四属性」区域断言与假数据自检（bad 例 2+1+1 命中 / ok 例全绿）。
+- 反向自检：删掉 headers 框的 spellCheck={false} → Tests 1 failed（报 McpServers.tsx:859 带行号），还原后全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1057 tests（1051 + 6）。
+
 ### R408: AI 侧栏记住的宽值有了上界——窄窗不再被挤爆中栏保底
 
 - 缺口：App.tsx 的 aiWidth 初始化只判 Number.isFinite(v) && v >= 260，没有上界；fit 兜底（窗口缩放/AI 栏开合后保中栏 MIN_CENTER）只收缩左/右栏、从不收 AI 侧栏。大屏拖宽后记住的值（如 800）在窄窗上会把工作台中栏挤到保底以下。

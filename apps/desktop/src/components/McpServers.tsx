@@ -789,6 +789,7 @@ function ServerForm(props: {
         <input
           value={name}
           onChange={(e) => { setName(e.target.value); if (fieldErr === 'name') setFieldErr(null); }}
+          autoComplete="off"
           placeholder={t('mcp.fNamePlaceholder')}
           aria-invalid={fieldErr === 'name'}
           aria-describedby={fieldErr === 'name' ? 'mcp-err-name' : undefined}
@@ -813,6 +814,8 @@ function ServerForm(props: {
             <input
               value={command}
               onChange={(e) => { setCommand(e.target.value); if (fieldErr === 'command') setFieldErr(null); }}
+              autoComplete="off"
+              spellCheck={false}
               placeholder="npx -y @modelcontextprotocol/server-filesystem"
               aria-invalid={fieldErr === 'command'}
               aria-describedby={fieldErr === 'command' ? 'mcp-err-command' : undefined}
@@ -823,15 +826,15 @@ function ServerForm(props: {
           </label>
           <label className="field">
             <span>{t('mcp.fArgs')}</span>
-            <textarea value={args} onChange={(e) => setArgs(e.target.value)} rows={2} placeholder={editingId ? t('mcp.argsOptional') : t('mcp.argsPlaceholder')} />
+            <textarea value={args} onChange={(e) => setArgs(e.target.value)} rows={2} placeholder={editingId ? t('mcp.argsOptional') : t('mcp.argsPlaceholder')} spellCheck={false} />
           </label>
           <label className="field">
             <span>{t('mcp.fEnv')}</span>
-            <textarea value={env} onChange={(e) => setEnv(e.target.value)} rows={2} placeholder="API_KEY=sk-xxx" />
+            <textarea value={env} onChange={(e) => setEnv(e.target.value)} rows={2} placeholder="API_KEY=sk-xxx" spellCheck={false} />
           </label>
           <label className="field">
             <span>{t('mcp.fCwd')}</span>
-            <input value={cwd} onChange={(e) => setCwd(e.target.value)} placeholder={t('mcp.fCwdPlaceholder')} />
+            <input value={cwd} onChange={(e) => setCwd(e.target.value)} placeholder={t('mcp.fCwdPlaceholder')} autoComplete="off" spellCheck={false} />
           </label>
         </>
       ) : (
@@ -841,6 +844,8 @@ function ServerForm(props: {
             <input
               value={url}
               onChange={(e) => { setUrl(e.target.value); if (fieldErr === 'url') setFieldErr(null); }}
+              autoComplete="off"
+              spellCheck={false}
               placeholder="https://mcp.example.com/mcp"
               aria-invalid={fieldErr === 'url'}
               aria-describedby={fieldErr === 'url' ? 'mcp-err-url' : undefined}
@@ -851,7 +856,7 @@ function ServerForm(props: {
           </label>
           <label className="field">
             <span>{t('mcp.fHeaders')}</span>
-            <textarea value={headers} onChange={(e) => setHeaders(e.target.value)} rows={2} placeholder="Authorization: Bearer sk-xxx" />
+            <textarea value={headers} onChange={(e) => setHeaders(e.target.value)} rows={2} placeholder="Authorization: Bearer sk-xxx" spellCheck={false} />
           </label>
           <label className="field">
             <span>{t('mcp.fTimeout')}</span>
