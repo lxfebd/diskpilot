@@ -20,3 +20,22 @@ export async function revealWithToast(path: string): Promise<boolean> {
     return false;
   }
 }
+/**
+ * 打开应用数据目录（R386）：撤销台账、隔离区、提醒、硬件与传感器历史、
+ * 插件缓存全在这里。设置页「打开数据目录」与市场页「存哪看哪」共用——
+ * 取不到路径或打不开都 toast 原因，返回是否成功。
+ */
+export async function openDataDirWithToast(): Promise<boolean> {
+  try {
+    const dir = await api.appDataDir();
+    if (!dir) {
+      useStore.getState().toast(t('settings.general.dataDirFail', { msg: t('settings.general.dataDirMissing') }), 'err');
+      return false;
+    }
+    return await revealWithToast(dir);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    useStore.getState().toast(t('settings.general.dataDirFail', { msg }), 'err');
+    return false;
+  }
+}

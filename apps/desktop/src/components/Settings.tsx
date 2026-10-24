@@ -7,8 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { useEscapeKey } from '../escapeKey';
 import { cycleIndex } from '../a11y';
 import { useReturnFocus } from '../dialogFocus';
-import { revealWithToast } from '../reveal';
-import { useStore } from '../store';
+import { openDataDirWithToast } from '../reveal';
 import { openExternal } from '../external';
 import { check as updaterCheck, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -364,15 +363,8 @@ export function Settings({ onClose, initialTab }: Props) {
       </div>
     ) : null;
 
-  // 打开应用数据目录（R385）：撤销台账/隔离区/提醒/硬件历史都在这，备份或手动清理要能一键到。
-  const openDataDir = async () => {
-    try {
-      const dir = await api.appDataDir();
-      if (dir) await revealWithToast(dir);
-    } catch (e) {
-      useStore.getState().toast(t('settings.general.dataDirFail', { msg: e instanceof Error ? e.message : String(e) }), 'err');
-    }
-  };
+  // 打开应用数据目录（R385/R386）：撤销台账/隔离区/提醒/硬件历史都在这，备份或手动清理要能一键到。
+  const openDataDir = () => { void openDataDirWithToast(); };
 
   const save = async () => {
     setErr(null); setMsg(null);

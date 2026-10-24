@@ -123,6 +123,7 @@ export const settings = {
     'settings.general.dataDirDesc': '撤销台账、隔离区、提醒与硬件历史都存在这里 — 备份或手动清理时从这里进。',
     'settings.general.dataDirOpen': '打开数据目录',
     'settings.general.dataDirFail': '打开数据目录失败：{msg}',
+    'settings.general.dataDirMissing': '后端没有返回数据目录路径',
     'settings.general.aiInactiveHint': 'AI 未配置时，联网与思考开关暂不生效 — 先到「AI 顾问」标签填好接口。',
     'settings.general.aiNotSetupWorks': '没配置 AI 也能用：扫描、清理、回收站还原、撤销全部照常可用。',
 
@@ -251,6 +252,7 @@ export const settings = {
     'settings.general.dataDirDesc': 'The undo ledger, quarantine, reminders and hardware history all live here — open it to back up or tidy up by hand.',
     'settings.general.dataDirOpen': 'Open data folder',
     'settings.general.dataDirFail': 'Cannot open the data folder: {msg}',
+    'settings.general.dataDirMissing': 'the backend did not return a data folder path',
     'settings.general.aiInactiveHint': 'Web and thinking toggles are inactive until the AI is configured — fill in the endpoint on the "AI Advisor" tab first.',
     'settings.general.aiNotSetupWorks': 'Everything else works without AI: scanning, cleanup, Recycle Bin restore, and undo are all available.',
 

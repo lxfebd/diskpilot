@@ -1,4 +1,11 @@
 ## [未发布]
+### R386: 市场页说「存哪」也给条路——社区插件说明旁加「打开数据目录」
+
+- 缺口：R385 在设置页加了「打开数据目录」，但插件市场社区 tab 的说明仍只显示 `<code>app_data_dir</code>` 这个变量名 —— 用户正是从这一页看到「索引与下载包缓存在 app_data_dir」，却没有任何入口过去，还得回头翻设置页。
+- 改动：① `reveal.ts` 新增 `openDataDirWithToast()`（取 appDataDir 后复用 `revealWithToast` 定位；路径为空或取路径失败都 toast 原因），设置页改为调用它（去掉 R385 的重复实现，`api.appDataDir` 调用只留一份）；② 市场社区 tab 说明下新增「打开数据目录」按钮（同样的失败回音口径，不静默）。
+- i18n：settings.ts 加 `settings.general.dataDirMissing`（后端没返回路径时的原因文案），toolbelt.ts 加 `toolbelt.mkt.openDataDir`（zh/en）。
+- 测试：`reveal.test.ts` 新增 describe「打开应用数据目录的回音（R386）」3 条 —— 成功定位不打扰、后端返回空路径时说明原因、取路径抛错时 toast 带原因。
+- 验证：`pnpm -C apps/desktop check` 全绿。
 ### R385: 设置页加「打开数据目录」入口——备份/清理不再靠手敲路径
 
 - 缺口：后端把撤销台账（undo.jsonl）、隔离区（quarantine）、提醒（reminder.json）、硬件与传感器历史、插件互查缓存全存应用数据目录（app_data_dir），但前端没有任何命令暴露这个路径；插件市场的「存哪看哪」提示只把 app_data_dir 字符串展示出来，用户想备份或手动清理数据得自己翻 %LOCALAPPDATA%。

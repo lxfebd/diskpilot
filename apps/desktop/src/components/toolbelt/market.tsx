@@ -2,7 +2,7 @@
 // 独立自包含组件（state + api 调用），Settings「插件市场」tab 复用。
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ChevronDown, ChevronUp, Download, Globe, Info, Package, RefreshCw, Search, ShieldAlert, ShieldCheck, X,
+  ChevronDown, ChevronUp, Download, FolderOpen, Globe, Info, Package, RefreshCw, Search, ShieldAlert, ShieldCheck, X,
 } from 'lucide-react';
 import { api } from '../../api';
 import type {
@@ -17,6 +17,7 @@ import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
 import { APP_VERSION } from '../../version';
 import { useEscapeKey } from '../../escapeKey';
 import { openExternal } from '../../external';
+import { openDataDirWithToast } from '../../reveal';
 
 /** 索引是否"全占位"：有条目但无一提供下载地址（发布者填 URL 前展示引导）。 */
 export function communityComingSoon(community: readonly RegistryPlugin[], indexed: boolean): boolean {
@@ -547,6 +548,15 @@ export function MarketPanel() {
             <div>
               <h3>{t('toolbelt.mkt.tabCommunity')}</h3>
               <p className="muted small">{t('toolbelt.mkt.communityDescA')} <code>app_data_dir</code>{t('toolbelt.mkt.communityDescB')}</p>
+              {/* R386：说清「存哪」的同时给一条路过去——不再只让用户看个变量名。 */}
+              <button
+                type="button"
+                className="ghost small"
+                style={{ marginTop: 4 }}
+                onClick={() => { void openDataDirWithToast(); }}
+              >
+                <FolderOpen size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />{t('toolbelt.mkt.openDataDir')}
+              </button>
             </div>
             <span className="toolbelt-market-count">{t('toolbelt.cli.totalCount', { n: community?.length ?? 0 })}</span>
           </div>
