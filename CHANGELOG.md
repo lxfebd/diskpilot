@@ -5,6 +5,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 环比「N 天前」能对上日历了——上次统计的具体日期（R338）
+
+- 「建议清理」卡的环比行只说「距上次 21 天」，用户对不上日历（21 天前是哪天？）；
+- 后端 `SuggestionDiff.prev_at` 早就给了上次快照的 unix 秒，前端除类型镜像外从没读过；
+- 新增纯函数 `diffGapDate(prevAt, gapDays)`：真有上次（`prev_at > 0`）才给 `YYYY-MM-DD`，
+  否则 null——没有上次时说日期会变成 1970-01-01，那比不说更糟；
+- 文案新增 `overview.clean.diffGapOn`「距上次 {n} 天（上次 {date}）」/ '{n} days since last check (on {date})'，
+  没有可用日期时回退原 `diffGap`；
+- 测试：3 条（有上次给日期 / prev_at 0·null·undefined / gapDays null）；
+- 验证：`pnpm -C apps/desktop check` 全绿（52 files / 861 tests）。
 ### 2026-10-24 跨次对比的「主要变化」不再指错项——按变化量排，并补上前后值（R337）
 
 - 「建议清理」卡的环比行写着「主要在 {label}」，取的是 `scaffolds[0]`；而后端

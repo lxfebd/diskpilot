@@ -337,6 +337,14 @@ export function biggestChange(scaffolds: readonly ScopeChange[] | null | undefin
   return best;
 }
 
+/** R338：环比间隔带出「上次统计于哪天」。只有真有两份快照（prev_at > 0）才给日期——
+ *  没有上次时 prev_at = 0，退回只说天数，绝不说成 1970-01-01。 */
+export function diffGapDate(prevAt: number | null | undefined, gapDays: number | null | undefined): string | null {
+  if (gapDays === null || gapDays === undefined) return null;
+  if (prevAt === null || prevAt === undefined || prevAt <= 0) return null;
+  return formatDateKey(new Date(prevAt * 1000));
+}
+
 /** R92：每个 scaffold 的「主目录」路径（同 aggregateByScaffold 口径——父节点已
  *  打标则子节点不算，只收最外层命中；同 scaffold 多命中取体量最大的那个）。
  *  分类占用行点击时用它定位到工作台；没有命中目录的分类返回不了键（点击不动作）。
@@ -1637,6 +1645,8 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
             : t('overview.clean.needScan');
   // R337：主要变化 = |delta| 最大的共享 scope（后端排序 + 这里再自证一次）。
   const diffTopChange = biggestChange(suggDiff ? suggDiff.scaffolds : null);
+  // R338：上一次快照的日期（没有上次 → null，只显示天数）。
+  const diffGapAt = diffGapDate(suggDiff ? suggDiff.prev_at : null, suggDiff ? suggDiff.gap_days : null);
 
   return (
     <div className="asset-overview">
@@ -1829,7 +1839,10 @@ export function AssetOverview({ root, drives, scaffolds, scanning, onScanDrive, 
                 </span>
                 {suggDiff!.gap_days !== null && (
                   <span className="ao-diff-gap">
-                    {t('overview.clean.diffGap', { n: suggDiff!.gap_days })}
+                    {/* R338：后端一直给 prev_at，前端没读过——只说「N 天」对不上日历。 */}
+                    {diffGapAt !== null
+                      ? t('overview.clean.diffGapOn', { n: suggDiff!.gap_days, date: diffGapAt })
+                      : t('overview.clean.diffGap', { n: suggDiff!.gap_days })}
                   </span>
                 )}
                 {/* R337：文案承诺「主要在 X」，X 就必须是真·最大变化——此前取 scaffolds[0]，

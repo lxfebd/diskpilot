@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -621,6 +621,23 @@ describe('主要变化（R337 biggestChange）', () => {
       now_bytes: 500,
       delta: 400,
     });
+  });
+});
+
+// R338：环比「N 天前」要能对上日历——后端 prev_at 前端此前没读。
+describe('环比日期（R338 diffGapDate）', () => {
+  it('有上次快照 → 给 YYYY-MM-DD', () => {
+    expect(diffGapDate(1_700_000_000, 3)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('没有上次（prev_at 0 / null）→ null，只显示天数', () => {
+    expect(diffGapDate(0, 3)).toBeNull();
+    expect(diffGapDate(null, 3)).toBeNull();
+    expect(diffGapDate(undefined, 3)).toBeNull();
+  });
+
+  it('gapDays 为 null（没有上次）→ null', () => {
+    expect(diffGapDate(1_700_000_000, null)).toBeNull();
   });
 });
 
