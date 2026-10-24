@@ -478,13 +478,14 @@ export function MarketPanel() {
 
           <div className="toolbelt-market-search">
             <Search size={14} />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('toolbelt.mkt.searchPlaceholder')} />
+            <input aria-label={t('toolbelt.mkt.searchAria')} value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('toolbelt.mkt.searchPlaceholder')} />
             <button className="ghost small" onClick={refresh} title={t('toolbelt.common.refresh')} aria-label={t('toolbelt.common.refresh')}><RefreshCw size={13} /> {t('toolbelt.common.refresh')}</button>
           </div>
 
           <div className="toolbelt-market-url">
             <Download size={14} />
             <input
+              aria-label={t('toolbelt.mkt.urlAria')}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder={t('toolbelt.mkt.urlPlaceholder')}
@@ -564,6 +565,7 @@ export function MarketPanel() {
           <div className="toolbelt-market-head" style={{ marginTop: 8 }}>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
               <input
+                aria-label={t('toolbelt.mkt.indexUrlAria')}
                 value={registryUrl}
                 onChange={(e) => setRegistryUrl(e.target.value)}
                 placeholder={t('toolbelt.mkt.indexUrlPlaceholder')}
@@ -738,7 +740,7 @@ export function MarketPanel() {
 
           <div className="toolbelt-market-search">
             <Search size={14} />
-            <input value={cQuery} onChange={(e) => setCQuery(e.target.value)} placeholder={t('toolbelt.mkt.searchCommunityPlaceholder')} />
+            <input aria-label={t('toolbelt.mkt.searchCommunityAria')} value={cQuery} onChange={(e) => setCQuery(e.target.value)} placeholder={t('toolbelt.mkt.searchCommunityPlaceholder')} />
             <button className="ghost small" onClick={() => loadCommunity(cQuery)} title={t('toolbelt.common.refresh')}><RefreshCw size={13} /> {t('toolbelt.common.refresh')}</button>
           </div>
 

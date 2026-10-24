@@ -66,6 +66,7 @@ export const hw = {
     'hw.stressWarn': '⚠️ 测试期间 CPU/GPU 将满载、温度升高。温度超限会自动停止；你也可以随时在监控条上点「停止」中断。测试结果只读，不修改任何硬件设置。',
     'hw.stressRemember': '本次会话免重复确认（今天不再逐次弹窗）',
     'hw.stressInputHint': '输入「确认」以解锁开始按钮',
+    'hw.stressInputAria': '压测确认词',
     'hw.startTest': '开始测试',
 
     // 压测实时监控条
@@ -162,6 +163,7 @@ export const hw = {
     'hw.stressWarn': '⚠️ CPU/GPU will run at full load and temperatures will rise. The test stops automatically once the limit is hit; you can also click Stop on the monitor bar at any time. Results are read-only — no hardware setting is modified.',
     'hw.stressRemember': 'Skip re-confirmation for this session (no more popups today)',
     'hw.stressInputHint': 'Type “确认” to unlock the Start button',
+    'hw.stressInputAria': 'Stress-test confirmation word',
     'hw.startTest': 'Start test',
 
     // Live stress monitor bar

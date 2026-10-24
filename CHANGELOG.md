@@ -5,6 +5,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 每个开关 / 搜索框都说得出自己是谁——表单控件补可访问名字（R361）
+
+- 缺口：读屏软件念「复选框，未选中」时不会说这是哪一项。设置 › 通用 的 5 个开关、
+  系统优化 › 提醒 的 5 个开关、MCP 服务器的「接入 / 可写」开关、清理页的「保留最近 N 天」、
+  高危项的确认词、各处搜索框（文件 / Steam / 工具墙 / 插件市场两处）与聊天输入框、
+  插件 TOML 与 winapp2.ini 文本框——全都只有旁边的可见文字或 placeholder，
+  既没有 `aria-label`，也没包在 `<label>` 里。屏幕上看得到，耳朵里没有归属。
+- 26 个 `<input>` + 4 个 `<textarea>` 补 `aria-label`，文案全部走 i18n 表（新增 15 个键）：
+  设置/提醒的开关复用各自可见标题，MCP 行内开关带服务器名（`服务器名 + 接入 AI 工具表`），
+  搜索框用「搜索…」类短语而不是整句 placeholder（placeholder 不是可访问名字）。
+- 守卫（`a11y.test.ts`）：扫全部 `.tsx`，`<input>` / `<textarea>` 必须带 `aria-label` /
+  `aria-labelledby`，或整块包在 `<label>` 里；`type="file"` 的隐藏输入豁免
+  （display:none 不进无障碍树）。自检：临时删掉文件页搜索框的 aria-label，
+  守卫变红并点名 `./components/FileView.tsx:150`，恢复即绿。
+- 验证：`pnpm -C apps/desktop check` 全绿（60 files / 950 tests）。
 ### 2026-10-24 外链点了真的会打开——`target="_blank"` 改走系统浏览器（R360）
 
 - 缺口：免责声明的 GitHub、设置里的「打开发布页 / 下载更新」、工具箱的教程/下载、

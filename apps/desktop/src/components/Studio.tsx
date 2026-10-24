@@ -328,6 +328,7 @@ function InstallScaffoldModal({
               </p>
               <textarea
                 className="scaffold-toml-input"
+                aria-label={t('studio.tomlAria')}
                 placeholder={t('studio.tomlSample')}
                 value={toml}
                 onChange={(e) => setToml(e.target.value)}
@@ -429,6 +430,7 @@ function Winapp2ImportPanel({
         <p className="muted small">{t('studio.winapp2Lead')}</p>
         <textarea
           className="scaffold-toml-input"
+          aria-label={t('studio.winapp2Aria')}
           placeholder={t('studio.winapp2Placeholder')}
           value={ini}
           onChange={(e) => setIni(e.target.value)}

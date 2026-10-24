@@ -274,6 +274,7 @@ export function CleanupProposalDialog() {
                               <span>{t('cleanup.dangerLead')}</span>
                               <input
                                 className="proposal-danger-input"
+                                aria-label={t('cleanup.dangerAria')}
                                 value={dangerInput[it.path] ?? ''}
                                 onChange={(e) =>
                                   setDangerInput((prev) => ({ ...prev, [it.path]: e.target.value }))

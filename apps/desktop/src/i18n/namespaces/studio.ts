@@ -51,6 +51,7 @@ export const studio = {
       '脚本内容粘贴到这里即可安装。脚本只定义「检测位置 + 可清理范围」，安装后不会自动执行任何清理。',
     'studio.tomlSample':
       'id = "my-tool"\nname = "我的工具缓存"\nrisk = "low"\n# detect / match / scopes ...',
+    'studio.tomlAria': '清理规则 TOML',
 
     // ── Winapp2.ini 社区规则导入（BleachBit 生态取长补短）──
     'studio.tabToml': '粘贴 TOML',
@@ -59,6 +60,7 @@ export const studio = {
       '粘贴 BleachBit / 社区维护的 winapp2.ini 文本（可直接用官方仓库最新版），解析成可清理脚本预览。危险条目会红字标注并拒绝安装。',
     'studio.winapp2Placeholder':
       '; winapp2.ini 内容（[Section] + FileKeyN= 等，可选）',
+    'studio.winapp2Aria': 'winapp2.ini 内容',
     'studio.winapp2Parse': '解析预览',
     'studio.winapp2Parsing': '解析中…',
     'studio.winapp2Empty': '未解析出可清理文件规则（可能只含注册表项或内容为空）。',
@@ -150,6 +152,7 @@ export const studio = {
       'script from the community repo and paste it here to install it. A script only declares where to look and what may be cleaned — installing it never runs a cleanup.',
     'studio.tomlSample':
       'id = "my-tool"\nname = "My tool cache"\nrisk = "low"\n# detect / match / scopes ...',
+    'studio.tomlAria': 'Cleanup rule TOML',
 
     // ── Winapp2.ini community rule import (learning from the BleachBit ecosystem) ──
     'studio.tabToml': 'Paste TOML',
@@ -158,6 +161,7 @@ export const studio = {
       'Paste winapp2.ini text (the community-maintained rule file shared with BleachBit; the official repo’s latest version works) to parse it into installable cleanup scripts. Dangerous entries are flagged in red and refused.',
     'studio.winapp2Placeholder':
       '; winapp2.ini content ([Section] + FileKeyN= etc., optional)',
+    'studio.winapp2Aria': 'winapp2.ini content',
     'studio.winapp2Parse': 'Parse preview',
     'studio.winapp2Parsing': 'Parsing…',
     'studio.winapp2Empty': 'No installable file-cleanup rules parsed (the text may contain only registry entries or be empty).',

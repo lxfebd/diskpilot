@@ -161,6 +161,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
           <div className="toolbelt-actions">
             <input
               className="tb-args"
+              aria-label={t('toolbelt.cli.rootAria')}
               placeholder={t('toolbelt.cli.rootPlaceholder')}
               value={rootDraft}
               onChange={(e) => setRootDraft(e.target.value)}
@@ -212,6 +213,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
                               </button>
                               <input
                                 className="tb-args"
+                                aria-label={t('toolbelt.cli.argsAria')}
                                 placeholder={t('toolbelt.cli.argsPlaceholder')}
                                 value={argsMap[tool.name] ?? ''}
                                 onChange={(e) => setArgsMap((m) => ({ ...m, [tool.name]: e.target.value }))}
@@ -916,6 +918,7 @@ export function CatalogWall({
         <div className="toolwall-search">
           <Search size={13} />
           <input
+            aria-label={t('toolbelt.wall.searchAria')}
             placeholder={t('toolbelt.wall.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}

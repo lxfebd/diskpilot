@@ -234,6 +234,7 @@ export const overview = {
 
     // 文件列表
     'overview.fileview.search': '搜索文件… 支持 *  ?  通配符',
+    'overview.fileview.searchAria': '搜索文件',
     'overview.fileview.count': '{count} 个文件',
     'overview.fileview.truncated': '（过多，已截断）',
     'overview.fileview.showTitle': '显示条数',
@@ -470,6 +471,7 @@ export const overview = {
 
     // File list
     'overview.fileview.search': 'Search files… * and ? wildcards work',
+    'overview.fileview.searchAria': 'Search files',
     'overview.fileview.count': '{count} files',
     'overview.fileview.truncated': ' (too many, truncated)',
     'overview.fileview.showTitle': 'Rows to show',

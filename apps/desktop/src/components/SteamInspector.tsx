@@ -658,6 +658,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
               <input
                 ref={searchInputRef}
                 type="text"
+                aria-label={t('steam.searchAria')}
                 placeholder={t('steam.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

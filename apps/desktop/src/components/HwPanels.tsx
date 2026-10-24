@@ -324,6 +324,7 @@ export function StressConfirmPanel({ t: stress, onClose, onConfirm }: { t: Stres
           <div className="stress-input-row">
             <input
               className="stress-input"
+              aria-label={t('hw.stressInputAria')}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('hw.stressInputHint')}

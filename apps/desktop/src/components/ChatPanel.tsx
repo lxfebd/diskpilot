@@ -892,6 +892,7 @@ export function ChatPanel({ onOpenSettings }: { onOpenSettings?: () => void }) {
           </button>
           <textarea
             rows={2}
+            aria-label={t('chat.input.aria')}
             placeholder={root ? t('chat.input.placeholderScanned') : t('chat.input.placeholderIdle')}
             value={input}
             onChange={(e) => setInput(e.target.value)}

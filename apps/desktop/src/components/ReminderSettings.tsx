@@ -74,7 +74,7 @@ export function withRule(
  * R298：把后端返回的配置归一化成完整形状。
  * 旧版后端（R291/R292 之前）返回的 reminder.json 没有 thermal_* 与
  * startup_watch_* 字段
- * 字段——直接用 undefined 绑到 <input type="checkbox"> 会让 React 把它当成
+ * 字段——直接用 undefined 绑到复选框会让 React 把它当成
  * 非受控组件（切换一次就成了半受控，控制台告警且行为不可预测）。这里按字段
  * 补默认值，默认值取后端 ReminderConfig::default() 的同一口径。
  * 注意：只补缺字段，不覆盖后端已有的值——用户配过的就是配过的。
@@ -278,6 +278,7 @@ export function ReminderSettings() {
         <input
           type="checkbox"
           className="switch"
+          aria-label={t('system.reminder.enabledLabel')}
           checked={cfg.enabled}
           onChange={(e) => save({ enabled: e.target.checked })}
         />
@@ -329,6 +330,7 @@ export function ReminderSettings() {
         <input
           type="checkbox"
           className="switch"
+          aria-label={t('system.reminder.weeklyLabel')}
           checked={cfg.weekly_report_enabled}
           onChange={(e) => save({ weekly_report_enabled: e.target.checked })}
         />
@@ -404,6 +406,7 @@ export function ReminderSettings() {
         <input
           type="checkbox"
           className="switch"
+          aria-label={t('system.reminder.thermalTitle')}
           checked={cfg.thermal_sample_enabled}
           onChange={(e) => save({ thermal_sample_enabled: e.target.checked })}
         />
@@ -454,6 +457,7 @@ export function ReminderSettings() {
         <input
           type="checkbox"
           className="switch"
+          aria-label={t('system.reminder.startupTitle')}
           checked={cfg.startup_watch_enabled}
           onChange={(e) => save({ startup_watch_enabled: e.target.checked })}
         />
@@ -588,6 +592,7 @@ export function ReminderSettings() {
             <input
               type="checkbox"
               className="switch"
+              aria-label={t('system.reminder.enabledLabel')}
               checked={autoList.enabled}
               disabled={autoListBusy}
               onChange={(e) => void persistAutoList({ enabled: e.target.checked, rules: autoList.rules.map((r) => ({ scaffold_id: r.scaffold_id, min_bytes: r.min_bytes })) })}

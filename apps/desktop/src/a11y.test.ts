@@ -255,4 +255,47 @@ describe('外链交给系统浏览器（R360）', () => {
     expect(violations).toEqual([]);
   });
 });
+// ── 表单控件要有可访问名字（R361）─────────────────────────────────
+// 读屏软件念「复选框，未选中」时用户不知道是哪一项；placeholder 不算可访问名字
+// （它只是输入提示，且有些控件根本没有）。规则：<input> / <textarea> 必须带
+// aria-label / aria-labelledby，或整块包在 <label> 里让 label 的文本当名字。
+// 例外：type="file" 的隐藏输入（display:none，本来就不进无障碍树）。
+describe('表单控件的可访问名字（R361）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let i = start; i < src.length; i++) {
+      const c = src[i];
+      if (quote) {
+        if (c === '\\') i++;
+        else if (c === quote) quote = '';
+        continue;
+      }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return i;
+    }
+    return -1;
+  };
+
+  it('每个 input / textarea 都有名字或包在 label 里', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<(input|textarea)\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (/type="file"/.test(tag)) continue;
+        if (/aria-label=|aria-labelledby=/.test(tag)) continue;
+        const before = src.slice(0, start);
+        const depth = (before.match(/<label\b/g)?.length ?? 0) - (before.match(/<\/label>/g)?.length ?? 0);
+        if (depth > 0) continue;
+        violations.push(`${path}:${before.split('\n').length}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
 

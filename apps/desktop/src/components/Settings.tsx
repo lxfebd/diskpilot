@@ -685,7 +685,7 @@ export function Settings({ onClose, initialTab }: Props) {
                 <div className="switch-label">{t('settings.general.webEnabled')}</div>
                 <div className="switch-desc">{t('settings.general.webEnabledDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={prefs.webEnabled} onChange={(e) => togglePref('webEnabled', e.target.checked)} />
+              <input type="checkbox" className="switch" aria-label={t('settings.general.webEnabled')} checked={prefs.webEnabled} onChange={(e) => togglePref('webEnabled', e.target.checked)} />
             </div>
 
             <div className="switch-row">
@@ -693,7 +693,7 @@ export function Settings({ onClose, initialTab }: Props) {
                 <div className="switch-label">{t('settings.general.showThinking')}</div>
                 <div className="switch-desc">{t('settings.general.showThinkingDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={prefs.showThinking} onChange={(e) => togglePref('showThinking', e.target.checked)} />
+              <input type="checkbox" className="switch" aria-label={t('settings.general.showThinking')} checked={prefs.showThinking} onChange={(e) => togglePref('showThinking', e.target.checked)} />
             </div>
 
             <div className="settings-group-title" style={{ marginTop: 18 }}>{t('settings.general.perf')}</div>
@@ -702,7 +702,7 @@ export function Settings({ onClose, initialTab }: Props) {
                 <div className="switch-label">{t('settings.general.parallelScan')}</div>
                 <div className="switch-desc">{t('settings.general.parallelScanDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={prefs.parallelScan} onChange={(e) => togglePref('parallelScan', e.target.checked)} />
+              <input type="checkbox" className="switch" aria-label={t('settings.general.parallelScan')} checked={prefs.parallelScan} onChange={(e) => togglePref('parallelScan', e.target.checked)} />
             </div>
 
             <div className="switch-row">
@@ -710,7 +710,7 @@ export function Settings({ onClose, initialTab }: Props) {
                 <div className="switch-label">{t('settings.general.hardwareAccel')}</div>
                 <div className="switch-desc">{t('settings.general.hardwareAccelDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={prefs.hardwareAccel} onChange={(e) => togglePref('hardwareAccel', e.target.checked)} />
+              <input type="checkbox" className="switch" aria-label={t('settings.general.hardwareAccel')} checked={prefs.hardwareAccel} onChange={(e) => togglePref('hardwareAccel', e.target.checked)} />
             </div>
 
             <div className="switch-row">
@@ -718,7 +718,7 @@ export function Settings({ onClose, initialTab }: Props) {
                 <div className="switch-label">{t('settings.general.closeToTray')}</div>
                 <div className="switch-desc">{t('settings.general.closeToTrayDesc')}</div>
               </div>
-              <input type="checkbox" className="switch" checked={prefs.closeToTray} onChange={(e) => togglePref('closeToTray', e.target.checked)} />
+              <input type="checkbox" className="switch" aria-label={t('settings.general.closeToTray')} checked={prefs.closeToTray} onChange={(e) => togglePref('closeToTray', e.target.checked)} />
             </div>
 
             {backendPrefState === 'err' && (

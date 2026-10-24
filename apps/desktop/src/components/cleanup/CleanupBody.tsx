@@ -101,6 +101,7 @@ function ScopeRow({ scope }: { scope: Scope }) {
           <span>{t('cleanup.keepRecent')}</span>
           <input
             type="number"
+            aria-label={t('cleanup.keepRecentAria')}
             min={0}
             value={days ?? 0}
             onChange={(e) => setDays(scope.id, Number(e.target.value))}

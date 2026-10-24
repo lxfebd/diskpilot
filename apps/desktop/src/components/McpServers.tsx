@@ -421,6 +421,7 @@ function McpServersInner() {
           </p>
           <textarea
             className="mcp-json-input"
+            aria-label={t('mcp.jsonPanelTitle')}
             value={jsonText}
             onChange={(e) => { setJsonText(e.target.value); setParsedJson(null); }}
             placeholder={'{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:/Users/me/Documents"]\n    }\n  }\n}'}
@@ -561,6 +562,7 @@ function McpServersInner() {
                 <input
                   type="checkbox"
                   className="switch"
+                  aria-label={`${s.name} ${t('mcp.attachToggle')}`}
                   checked={s.enabled}
                   onChange={(e) => void toggleEnabled(s.id, e.target.checked)}
                   disabled={!manageOk}
@@ -573,6 +575,7 @@ function McpServersInner() {
                 <input
                   type="checkbox"
                   className="switch"
+                  aria-label={`${s.name} ${t('mcp.writableToggle')}`}
                   checked={s.writable}
                   onChange={(e) => void toggleWritable(s.id, e.target.checked)}
                   disabled={!manageOk}
@@ -815,14 +818,14 @@ function ServerForm(props: {
           <div className="switch-label">{t('mcp.fEnabled')}</div>
           <div className="switch-desc">{t('mcp.fEnabledDesc')}</div>
         </div>
-        <input type="checkbox" className="switch" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <input type="checkbox" className="switch" aria-label={t('mcp.fEnabled')} checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
       </div>
       <div className="switch-row">
         <div>
           <div className="switch-label">{t('mcp.fWritable')}</div>
           <div className="switch-desc">{t('mcp.fWritableDesc')}</div>
         </div>
-        <input type="checkbox" className="switch" checked={writable} onChange={(e) => setWritable(e.target.checked)} />
+        <input type="checkbox" className="switch" aria-label={t('mcp.fWritable')} checked={writable} onChange={(e) => setWritable(e.target.checked)} />
       </div>
       <label className="field">
         <span>{t('mcp.fPrefix')}</span>

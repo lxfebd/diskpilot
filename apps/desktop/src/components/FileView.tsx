@@ -148,6 +148,7 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
       <div className="fileview-search">
         <Search size={13} />
         <input
+          aria-label={t('overview.fileview.searchAria')}
           placeholder={t('overview.fileview.search')}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
