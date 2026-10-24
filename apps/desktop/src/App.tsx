@@ -8,6 +8,7 @@ import { useStore } from './store';
 import { LeftPanel } from './components/LeftPanel';
 import { useCleanupStore } from './useCleanupStore';
 import { scanTargets } from './drives';
+import { ScanGate } from './scanGate';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
 import { PageHeader } from './components/PageHeader';
@@ -119,6 +120,10 @@ export default function App() {
   // App 只保留低频 scanning。用 ref 把「扫描开始/目标列表/总量探针」下发给
   // ScanBar，避免进度更新穿透到 App 整树重渲染。
   const scanBarRef = useRef<ScanBarHandle>(null);
+  // R383：全应用只留一个扫描闸门。扫描入口有五处（盘卡片、扫描全部、体检红盘格、
+  // 救援横幅、页脚重扫），并发起两份会双倍读盘、进度事件互相覆盖，先结束的那份
+  // 还会把 scanning 提前置回 false。闸门在真正扫描前才取，缓存秒开路径不受影响。
+  const scanGate = useRef(new ScanGate()).current;
   const [pickedPath, setPickedPath] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<import('./components/Settings').SettingsTab | undefined>(undefined);
@@ -484,6 +489,12 @@ export default function App() {
       return;
     }
 
+    // R383：已有扫描在跑时提示并放弃本轮（闸门由 finally 释放，取消也走 finally）。
+    if (!scanGate.tryEnter()) {
+      useStore.getState().toast(t('shell.scan.busy'));
+      return;
+    }
+
     setScanning(true); setDiag(null);
     // begin 会清空上一轮进度并触发盘根总量探针（进度分母）。
     scanBarRef.current?.begin(uncached);
@@ -548,6 +559,7 @@ export default function App() {
       }
       setErr(String(e));
     } finally {
+      scanGate.leave();
       setScanning(false);
     }
   };

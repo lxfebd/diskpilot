@@ -1,4 +1,13 @@
-# Changelog
+## [未发布]
+
+### R383: 扫描不再能并发跑两份——加单飞闸门，页脚「重扫」不再踢起第二个扫描
+
+- 缺口：`scan` 没有任何并发守卫，而扫描入口有五处（总览盘卡片、盘条「扫描全部」、体检红盘格、救援横幅、页脚「重扫」）。前四处带 `disabled={scanning}`，唯独页脚重扫（R314 改成可聚焦的 `role="button"` span）没有——扫描中点它就会再起一份扫描：两份同时读盘、`scan-progress` 事件互相覆盖，先结束的那份 `finally` 把 `scanning` 置回 false，界面显示「未扫描」而后端还在遍历。后端 `scan.rs` 也没有「已有扫描在进行」的拦截，靠 UI 的 disabled 拦不住所有路径（R314 之后新增的入口都可能漏）。
+- 改动：新增 `apps/desktop/src/scanGate.ts` —— `ScanGate`（`tryEnter()` / `leave()` / `get busy()`）单飞闸门，风格同 `flash.ts`、`escapeKey.ts` 这类小工具。`App.tsx` 里 `const scanGate = useRef(new ScanGate()).current`，在**缓存命中判定之后、`setScanning(true)` 之前**取闸：命中缓存的「秒开」路径不受影响（扫描期间点盘符仍能看已扫好的树），取不到闸就 `toast(t('shell.scan.busy'))` 并放弃本轮；`finally` 里 `scanGate.leave()` 与 `setScanning(false)` 并列，取消（`scan:cancelled:` 分支的 return）也走 `finally`，闸门必释放。
+- i18n：`shell.ts` 加 `shell.scan.busy`（zh「扫描正在进行中，等这一轮扫完再试」/ en "A scan is already running — wait for it to finish"）。
+- 测试：新增 `apps/desktop/src/scanGate.test.ts` 3 条（第一份取到、第二份被拒且 busy 保持；放闸后可再取；没取就放/多放一次不出错且不误放别人的闸）。
+- 验证：`pnpm -C apps/desktop check` 64 files / 989 tests 全绿。
+g
 
 DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
