@@ -4,6 +4,7 @@ import { api } from '../api';
 import type { SteamGame, WorkshopItem } from '../types';
 import { formatBytes } from '../format';
 import { t, useT } from '../i18n';
+import { useEscapeKey } from '../escapeKey';
 
 /// localStorage cache keyed by stringified item ID. Workshop titles are
 /// extremely stable (renames are rare and not safety-critical), so we cache
@@ -129,18 +130,13 @@ export function SteamWorkshopModal({
     if (items) fetchMissingTitles(items);
   }, [items, fetchMissingTitles]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        const inEditable =
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement;
-        if (!inEditable) onClose();
-      }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // R356：Esc 收进 R349 的栈——叠加弹窗时只有最上层响应，不再按一次 Esc 父子一起关。
+  // 搜索框聚焦时 Esc 仍只做「退出输入」不关窗（保留原守卫语义：输入里按 Esc 不该丢窗）。
+  useEscapeKey(() => {
+    const el = document.activeElement;
+    const inEditable = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+    if (!inEditable) onClose();
+  });
 
   const sorted = useMemo(() => {
     if (!items) return [];

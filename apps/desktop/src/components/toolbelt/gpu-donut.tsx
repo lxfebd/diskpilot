@@ -4,6 +4,7 @@
 // 全屏渲染 + 真实 FPS 帧差统计 + 每秒轮询 hw_temperature 做 90℃ 熔断守门，Esc 退出。
 // G13 显示器坏点检测（全屏纯色覆盖）也在此。
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEscapeKey } from '../../escapeKey';
 import { X } from 'lucide-react';
 import { api } from '../../api';
 import { useT } from '../../i18n';
@@ -37,10 +38,12 @@ export function DeadPixelOverlay({ onExit }: { onExit: () => void }) {
   const colors = deadPixelColors(t);
   const color = colors[idx % colors.length];
 
+  // R356：Esc 交给 R349 的栈（叠加弹窗时只关最上层）；空格翻页仍是本层自己的键，
+  // 留在下面的监听里。
+  useEscapeKey(onExit);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onExit();
-      else if (e.key === ' ') {
+      if (e.key === ' ') {
         e.preventDefault();
         setIdx((i) => i + 1);
       }
@@ -51,7 +54,7 @@ export function DeadPixelOverlay({ onExit }: { onExit: () => void }) {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [onExit]);
+  }, []);
 
   return (
     <div
@@ -161,6 +164,10 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
     },
     [onDone, t],
   );
+
+  // R356：压测中按 Esc = 手动结束（finish 自带 doneRef 幂等）。收进 Esc 栈：
+  // 压测全屏独占、挂载即运行，正好是栈里的一层。
+  useEscapeKey(() => finish(true));
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -637,11 +644,6 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
     };
     raf = window.setTimeout(frame, 0);
 
-    // Esc 退出
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') finish(true);
-    };
-    window.addEventListener('keydown', onKey);
 
     // FPS + 时长统计：真实帧差 / 秒（FurMark 口径）
     const start = Date.now();
@@ -668,7 +670,6 @@ export function GpuDonut({ onDone }: GpuDonutProps) {
     return () => {
       window.clearTimeout(raf);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
       if (tempTimer) clearInterval(tempTimer);
       clearInterval(statTimer);

@@ -161,3 +161,24 @@ describe('键盘焦点不许被 outline:none 抹掉（R348）', () => {
   });
 });
 
+// ── Esc 只走一个栈，不许再手写 window keydown（R356）────────────────
+// R349 把 Esc 收成一个栈：叠层时只有最上层响应。之后还散着几处自己挂
+// window keydown 判 Escape 的实现（甜甜圈压测、坏点测试、创意工坊弹窗），
+// 叠了确认框时一次 Esc 会把两层一起关掉。这里守住「不再长回来」。
+// EXEMPT：SteamInspector 的三级 Esc（退出搜索框 → 关详情栏 → 交给外层 Modal）
+// 必须比关窗先跑，属于有意手写；改动它要连 Modal 层的委派一起动。
+const ESCAPE_EXEMPT = ['SteamInspector.tsx'];
+
+describe('Esc 不许绕过 R349 的栈（R356）', () => {
+  it('手写 window keydown 里不再出现 Escape 分支', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      if (!src.includes("addEventListener('keydown'")) continue;
+      if (!/key\s*===\s*'Escape'|case 'Escape'/.test(src)) continue;
+      if (ESCAPE_EXEMPT.some((name) => path.endsWith('/' + name))) continue;
+      violations.push(`${path} 自己判 Escape——请改用 useEscapeKey（见 escapeKey.ts）`);
+    }
+    expect(violations).toEqual([]);
+  });
+});
+

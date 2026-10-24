@@ -5,6 +5,22 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### 2026-10-24 最后三处手写 Esc 收编进栈，并加守卫防它长回来（R356）
+
+- 缺口：R349 把 Esc 收敛成一个模块级栈（叠层时只有最上层响应），但仍有 3 处自己挂
+  `window.addEventListener('keydown')` 判 Escape——创意工坊弹窗 `SteamWorkshopModal.tsx`、
+  坏点测试全屏层 `gpu-donut.tsx` 的 `DeadPixelOverlay`、甜甜圈压测 `GpuDonut`。它们不参与栈，
+  所以「创意工坊里再弹确认框」这类叠层按一次 Esc 会把父子两层一起关掉。
+- 三处改用 `useEscapeKey`：创意工坊弹窗保留「搜索框聚焦时 Esc 只退出输入、不关窗」的原守卫语义，
+  改看 `document.activeElement`；坏点层的空格翻页与 `body` 滚动锁留在自己的监听里，只把 Esc 交出去；
+  甜甜圈压测挂载即运行、正好是栈里的一层，Esc = 手动结束（`finish` 自带 `doneRef` 幂等）。
+- 顺带去掉甜甜圈压测 effect 里那对 add/remove 的 keydown（Esc 已由 hook 负责），
+  并让坏点层 effect 不再依赖 `onExit`（hook 内部用 ref 取最新回调）。
+- `a11y.test.ts` 新增守卫「Esc 不许绕过 R349 的栈」：扫 `src/**/*.tsx`，凡是既有
+  `addEventListener('keydown')` 又手写 `key === 'Escape'` 的文件即失败（`SteamInspector.tsx` 列为例外：
+  它的三级 Esc「退出搜索框 → 关详情栏 → 交给外层 Modal」必须比关窗先跑，属有意手写）。
+  自检有效：临时塞一个探针组件后守卫变红并按文件名报出，删掉后恢复。
+- 验证：`pnpm -C apps/desktop check` 全绿（57 files / 931 tests）。
 ### 2026-10-24 设置窗打开把焦点移进对话框、关掉还回原处（R355）
 
 - 缺口：`components/Settings.tsx`（设置窗，含外观 / AI / 通用 / 权限 / 系统 / MCP / 市场 / 提醒）既没有
