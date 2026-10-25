@@ -167,6 +167,7 @@ export const cleanup = {
     'cleanup.recycling': '回收中…',
     'cleanup.executeSelected': '确认执行勾选项（{n} 项 · {size}{danger}）',
     'cleanup.includesDanger': ' · 含高危',
+    'cleanup.recycleAllFailed': '回收失败：{n} 项都没能移动（可能未开启执行权限或文件被占用），原因见提示；可重试或换一批。',
 
     // ── UndoPanel：最近清理 / 撤销 ──
     'cleanup.actionRecycle': '回收站',
@@ -352,6 +353,7 @@ export const cleanup = {
     'cleanup.recycling': 'Recycling…',
     'cleanup.executeSelected': 'Move the {n} ticked items to the Recycle Bin ({size}{danger})',
     'cleanup.includesDanger': ', includes high-risk items',
+    'cleanup.recycleAllFailed': 'Recycle failed: {n} selected items were not moved (execution permission off, or files in use). See the toast — retry or pick another batch.',
 
     // ── UndoPanel: recent cleanups / undo ──
     'cleanup.actionRecycle': 'Recycled',

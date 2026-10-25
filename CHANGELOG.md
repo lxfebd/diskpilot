@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R448: AI 清单回收结果就地反馈——一项都没成时不再无声关窗
+
+- 缺口：清理提案窗的执行按钮走 store 的 `aiRecyclePaths`，返回值 `{ done, failed, bytes }` 一直被丢掉——不管成没成、甚至「执行权限未开」，`doRecycle` 都是 `setBusy(false); close();`。失败细节只存在于 store 弹出的 toast，窗口一关就没了，用户回到总览也查不到「刚才那批到底动了没有」；而且 `doRecycle` 没有 try/finally，将来任何一次 reject 都会把执行按钮永久锁在「回收中…」。
+- 改动：apps/desktop/src/cleanup/model.ts 新增 `recycleOutcome(res)`（纯函数）——有成功项就关窗（部分失败仍由 store 的 toast 报告），一项都没成则不关窗并把失败条数带出来；apps/desktop/src/components/CleanupProposalDialog.tsx 的 `doRecycle` 改为 `try { const res = await …; const outcome = recycleOutcome(res); if (outcome.close) close(); else setRecycleErr(t('cleanup.recycleAllFailed', { n: outcome.failed })); } finally { setBusy(false); }`，窗内新增 `role="alert"` 错误位（`proposal` 变化时清空），apps/desktop/src/styles/overview.css 补 `.proposal-err` 间距。新增 i18n 键 `cleanup.recycleAllFailed`（zh/en 成对）。
+- 测试：新增 apps/desktop/src/cleanup/proposalRecycle.test.ts 7 条——纯函数四组（有成功项关窗 / 全失败不关窗并带条数 / 空批次与 null、undefined 不钉住窗口 / 负数小数 NaN Infinity 归一）；接线三条（`outcome` 判定、`setBusy(false)` 落在 `finally` 里、窗内 `role="alert"` 错误位与 proposal 变化清空）。
+- 反向自检：把 `if (outcome.close) close();` 换成 `close();` → 接线用例恰好 1 failed 点名该断言，还原后 7 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（83 files / 1203 tests）。
+
 ### R447: 启动项确认条用过即收——成功后不再反着问「确认恢复？」
 
 - 缺口：启动项面板的开关是两步确认（点开关 → 出现「确认禁用 / 确认恢复」条）。确认后 `toggleStartup` 只重载列表、从不收起 `pendingToggle`：成功后该行 `enabled` 已翻转，确认条却还在，文案变成**反着问**的「确认恢复？」——看起来像刚才那一击没生效；再点一次就把它拨回去了。删除同理（行虽消失，但确认条状态残留）。在途时确认按钮也不禁用，连点会就同一项发两次相反请求。

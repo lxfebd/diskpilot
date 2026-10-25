@@ -8,6 +8,7 @@ import { driveAliasesOf, pathsOnRiskyDrives } from '../diskHealth';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
 import { RISK_META, RISK_ORDER } from './cleanup/RiskBadge';
+import { recycleOutcome } from '../cleanup/model';
 import { useEscapeKey } from '../escapeKey';
 import { useDialogFocus } from '../dialogFocus';
 
@@ -32,6 +33,8 @@ export function CleanupProposalDialog() {
   const [sizes, setSizes] = useState<Record<string, number | null>>({});
   const [measuring, setMeasuring] = useState(true);
   const [busy, setBusy] = useState(false);
+  // R448：全部回收失败时窗内就地说明——只走 toast 会随窗口关闭一起消失。
+  const [recycleErr, setRecycleErr] = useState<string | null>(null);
   // 硬盘健康：要清的条目若落在健康可疑的盘上，确认前必须显式承认（清理修不好硬盘）。
   // 共享缓存已有就直接用，没有才后台读一次；读不到不编造、也不拦。
   const [health, setHealth] = useState<HwDiskHealth | null>(null);
@@ -50,6 +53,7 @@ export function CleanupProposalDialog() {
     setSizes({});
     setMeasuring(true);
     setAckRisky(false);
+    setRecycleErr(null);
   }, [proposal]);
 
   // 硬盘健康只在「正在确认一份提案」时才读：平时不跑 PowerShell。
@@ -138,11 +142,19 @@ export function CleanupProposalDialog() {
   const doRecycle = async () => {
     if (selectedItems.length === 0 || riskyBlocked) return;
     setBusy(true);
-    await aiRecyclePaths(
-      selectedItems.map((it) => ({ path: it.path, size_hint: sizeOf(it) })),
-    );
-    setBusy(false);
-    close();
+    setRecycleErr(null);
+    try {
+      const res = await aiRecyclePaths(
+        selectedItems.map((it) => ({ path: it.path, size_hint: sizeOf(it) })),
+      );
+      // R448：看结果再决定是否关窗——全部失败（如权限未开）时留在窗内说明，
+      // 别让「刚才那批没成」只剩一条会自己消失的 toast。
+      const outcome = recycleOutcome(res);
+      if (outcome.close) close();
+      else setRecycleErr(t('cleanup.recycleAllFailed', { n: outcome.failed }));
+    } finally {
+      setBusy(false);
+    }
   };
 
   // 按风险分组，空组不渲染。
@@ -293,6 +305,9 @@ export function CleanupProposalDialog() {
             })}
           </ul>
         </div>
+{recycleErr && (
+          <div className="error proposal-err" role="alert">{recycleErr}</div>
+        )}
         <div className="modal-actions">
           <button className="ghost" onClick={close}>
             {t('cleanup.skipAll')}

@@ -460,3 +460,29 @@ export function sortScopesByBytes<T>(
 ): T[] {
   return [...scopes].sort((a, b) => sizeOf(b) - sizeOf(a));
 }
+
+/**
+ * R448：AI 清单回收结果 → 窗内反馈决策。此前 doRecycle 不看返回值、无论成败都
+ * close()——权限未开或全部失败时窗口照关，用户只在一闪而过的 toast 里看到原因，
+ * 回到总览也查不到「刚才那批到底成没成」。有成功项就关窗（部分失败由 store 的
+ * toast 报告）；一项都没成则留在窗内说明，用户可重试或换一批。
+ */
+export interface RecycleOutcome {
+  /** 是否可以直接关窗。 */
+  close: boolean;
+  done: number;
+  failed: number;
+}
+
+export function recycleOutcome(
+  res: { done: number; failed: number } | null | undefined,
+): RecycleOutcome {
+  const count = (v: unknown): number => {
+    const n = Math.trunc(Number(v));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const done = count(res?.done);
+  const failed = count(res?.failed);
+  // 有成功项就关；没有可失败的（空批次/异常返回）也不该把窗钉住。
+  return { close: done > 0 || failed === 0, done, failed };
+}
