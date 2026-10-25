@@ -201,6 +201,10 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
               const tempC = tc > 60 ? (tc - 32) * 5 / 9 : tc;
               const healthRaw = String(pick(d, 'health') ?? '');
               const letters = driveLettersOf(d);
+              // R440：型号名会被 ellipsis 截断，悬停给出完整名字（下面 <span> 与 title 同源）
+              const hwName = letters.length > 0
+                ? letters.join(', ') + ': ' + String(pick(d, 'friendly') ?? t('hw.unknown'))
+                : String(pick(d, 'friendly') ?? t('hw.unknown'));
               const grade = gradeDiskHealth(healthRaw);
               const Icon =
                 grade === 'good'
@@ -230,10 +234,7 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
               return (
                 <li key={i} className="hw-row">
                   <Icon size={13} style={color ? { color } : undefined} />
-                  <span className="hw-name">
-                    {letters.length > 0 ? `${letters.join(', ')}: ` : ''}
-                    {String(pick(d, 'friendly') ?? t('hw.unknown'))}
-                  </span>
+                  <span className="hw-name" title={hwName}>{hwName}</span>
                   <span className="hw-meta">
                     <span title={healthRaw}>{healthLabel}</span> · {ph > 0 ? t('hw.powerOnHours', { hours: ph }) : ''}{' '}
                     {wear >= 0 ? t('hw.lifeSuffix', { pct: Math.max(0, 100 - wear) }) : ''}{' '}
@@ -250,7 +251,8 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
         <div className="hw-section">
           <div className="hw-section-title">{t('hw.sectionBios')}</div>
           <div className="hw-row">
-            <span className="hw-name">{String(board ? pick(board, 'Product') : t('hw.unknown'))}</span>
+            {/* R440：主板型号同样会被截断，悬停给出完整值 */}
+            <span className="hw-name" title={String(board ? pick(board, 'Product') : t('hw.unknown'))}>{String(board ? pick(board, 'Product') : t('hw.unknown'))}</span>
             <span className="hw-meta">{String(pick(bios, 'SMBIOSBIOSVersion'))}</span>
           </div>
         </div>

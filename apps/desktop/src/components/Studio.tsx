@@ -468,7 +468,8 @@ function Winapp2ImportPanel({
                       disabled={!!item.red_line}
                       onChange={() => toggle(item.id)}
                     />
-                    <span className="winapp2-item-name">{item.name}</span>
+                    {/* R440：规则名会被 ellipsis 截断，悬停给出完整名字 */}
+                    <span className="winapp2-item-name" title={item.name}>{item.name}</span>
                     <span className="muted small">{t('studio.winapp2Scopes', { n: item.scope_count })}</span>
                   </label>
                   {item.red_line && <div className="winapp2-redline small">{t('studio.winapp2RedLine', { msg: item.red_line })}</div>}

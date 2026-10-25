@@ -259,7 +259,8 @@ export function WeeklyHealthCard({
                         className={d.grade === 'bad' ? 'wh-disks-item bad' : 'wh-disks-item caution'}
                       >
                         <ShieldAlert size={12} />
-                        <span className="wh-disks-name">
+                        {/* R440：磁盘型号/别名会被 ellipsis 截断，悬停给出完整名字 */}
+                        <span className="wh-disks-name" title={d.letters ? `${d.letters}: ${d.friendly}` : d.friendly}>
                           {d.letters ? `${d.letters}: ${d.friendly}` : d.friendly}
                         </span>
                         <span className="wh-disks-grade" title={d.health}>

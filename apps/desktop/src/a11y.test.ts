@@ -1407,3 +1407,19 @@ describe('搜索框 Esc 清空（R439）', () => {
     }
   });
 });
+
+describe('截断文本的悬停提示（R440）', () => {
+  it('磁盘型号 / 主板型号的 hw-name 都有完整值的 title', () => {
+    const hw = RAW_TSX['./components/HwPanels.tsx'] ?? '';
+    // 三处 hw-name（内存盘 / 磁盘 / 主板）全部带 title，且磁盘分支与 title 同源变量
+    expect(hw.split('<span className="hw-name" title=').length - 1).toBe(3);
+    expect(hw).toContain('const hwName = letters.length > 0');
+    expect(hw).toContain('<span className="hw-name" title={hwName}>{hwName}</span>');
+  });
+  it('winapp2 规则名与周报磁盘名都有 title', () => {
+    const st = RAW_TSX['./components/Studio.tsx'] ?? '';
+    expect(st).toContain('<span className="winapp2-item-name" title={item.name}>{item.name}</span>');
+    const wh = RAW_TSX['./components/history/WeeklyHealthCard.tsx'] ?? '';
+    expect(wh).toContain('<span className="wh-disks-name" title={');
+  });
+});

@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R440: 截断的名字补悬停提示——磁盘型号 / 主板型号 / 清理规则名被省略号切掉后悬停能看到全文
+
+- 缺口：全仓 46 条 CSS 规则用 text-overflow: ellipsis 把长文本切成省略号，其中四处是动态名字却没有 title：硬件面板的磁盘型号名（hw-name）与主板型号、Studio 的 winapp2 清理规则名（winapp2-item-name）、周报的磁盘名（wh-disks-name）。省略号切掉的正是「这块盘是什么型号」「这条规则清理什么」，鼠标悬停也拿不回全文。其余 40 余处要么自带 title、要么父级容器已带 title（如文件视图行、预览清单行、规则卡），已逐一核验不是缺口。
+- 改动：HwPanels.tsx 把磁盘显示名提成 hwName 常量，<span> 文本与 title 同源（避免两处表达式漂移），主板型号 span 补 title；Studio.tsx 的 winapp2-item-name、WeeklyHealthCard.tsx 的 wh-disks-name 各补 title，与显示文本同源。
+- 守卫：a11y.test.ts 新增 describe「截断文本的悬停提示（R440）」2 条——HwPanels 里 <span className=hw-name title= 必须恰好 3 处（内存/磁盘/主板）且磁盘分支用 hwName 同源变量；Studio 规则名与周报磁盘名的 title 片段逐字断言。
+- 反向自检：临时删掉 Studio 的 title → 恰好 1 failed 点名该断言，还原后 94 passed。
+
 ### R439: 搜索框 Esc 一键清空——肌肉记忆不再落空，弹窗 Esc 不再误伤
 
 - 缺口：六个搜索框（巡检记录 / 启动项 / 驱动表 / 工具墙 / 文件视图 / Steam 搜索）都没有「按 Esc 清空」的行为；toolwall 与 Steam 搜索有视觉清除按钮，其余四个连清除按钮都没有。用户停在搜索框里按 Esc 是肌肉记忆，当前只会冒泡——要么没效果，要么把桌面上的弹窗一并关掉（R349 弹窗栈）。
