@@ -1730,3 +1730,21 @@ describe('更新下载失败后回到待装态（R463）', () => {
     expect(body).not.toContain('setUpdateProgress(Math.round(');
   });
 });
+describe('社区搜索的防抖与乱序守卫（R464）', () => {
+  const src = String(RAW_TSX['./components/toolbelt/market.tsx'] ?? '');
+  const start = src.indexOf('const loadCommunity = useCallback');
+  const loader = src.slice(start, src.indexOf('}, [t]);', start));
+  it('请求令牌：只认最后一次请求，旧响应不回写', () => {
+    expect(start).toBeGreaterThan(-1);
+    expect(src).toContain('const communitySeq = useRef(0);');
+    expect(loader).toContain('const seq = ++communitySeq.current;');
+    const guards = loader.split('if (seq !== communitySeq.current) return;').length - 1;
+    expect(guards).toBe(2); // then 与 catch 各一道
+  });
+  it('输入防抖 250ms，停手再查', () => {
+    const effect = src.slice(src.indexOf('// R464：输入防抖'), src.indexOf(', [tab, cQuery, loadCommunity]);'));
+    expect(effect).toContain('window.setTimeout(() => {');
+    expect(effect).toContain('}, 250);');
+    expect(effect).toContain('return () => window.clearTimeout(id);');
+  });
+});

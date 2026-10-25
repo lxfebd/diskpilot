@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R464: 社区插件搜索防抖与乱序守卫——打字快时不再用旧结果盖掉新结果
+
+- 缺口：市场页社区 tab 的搜索框每次按键都 `setCQuery`，effect 因此逐键发一次远端索引请求（`pluginRegistrySearch`）：列表在结果之间来回跳、服务端被逐键请求打；更要紧的是没有请求序号——先发的慢响应后到时会无条件 `setCommunity`，把「ab」的搜索结果换成「a」的（输入框写着 ab、列表却是 a 的结果）。失败分支同理，旧请求的 catch 也会把新请求的加载态清成失败。
+- 改动：`apps/desktop/src/components/toolbelt/market.tsx` 的 `loadCommunity` 加请求令牌 `communitySeq`（`const seq = ++communitySeq.current;`，then 与 catch 各一道 `if (seq !== communitySeq.current) return;`，只认最后一次请求）；加载 effect 改为 250ms 防抖（`window.setTimeout` + cleanup `clearTimeout`），停手再查，重试按钮等直接调用路径不受防抖影响。
+- 守卫：a11y.test.ts 新增 describe「社区搜索的防抖与乱序守卫（R464）」2 条——`loadCommunity` 体内令牌声明 + 两道守卫恰好 2 处；防抖 effect 含 `window.setTimeout(` / `}, 250);` / `return () => window.clearTimeout(id);`。
+- 反向自检：把两道 `if (seq !== communitySeq.current) return;` 都删掉 → 恰好 1 failed（guards 0 ≠ 2），已还原。
+
 ### R463: 更新下载失败回到待装态——进度钳在 100 以内，错误可见也能立刻重试
 
 - 缺口：设置页在线更新，`installUpdate` 点「下载并安装」后进入 `updatePhase = 'downloading'`。下载失败（网络中断、文件损坏）时 catch 只写 `updateErr` 不复位 phase——进度条永远停在下载态，红字报错旁边却没有「下载并安装」按钮；再点「检查更新」也不会复位 phase，用户只能重启应用才能重试。另外进度 `Math.round((downloaded / total) * 100)` 未钳制：内容长度与实际下载量不一致时 `aria-valuenow` 可能超过 `aria-valuemax=100`，宽度也会溢出。

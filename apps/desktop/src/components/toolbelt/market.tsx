@@ -141,6 +141,8 @@ export function MarketPanel() {
   const [community, setCommunity] = useState<RegistryPlugin[] | null>(null);
   const [communityWarn, setCommunityWarn] = useState<string | null>(null);
   const [cQuery, setCQuery] = useState('');
+  // R464：社区搜索的请求序号——逐键请求会乱序回写，只认最后一次发出请求的结果。
+  const communitySeq = useRef(0);
   const [cBusyId, setCBusyId] = useState<string | null>(null);
   // 远端分发：索引 URL 配置 / 刷新 / 校验 / 已安装台账
   const [registryUrl, setRegistryUrl] = useState('');
@@ -184,19 +186,28 @@ export function MarketPanel() {
   // 社区注册表加载 + 搜索
   const [skippedBuiltin, setSkippedBuiltin] = useState(0);
   const loadCommunity = useCallback((q = '') => {
+    // R464：令牌只认最后一次请求——打字快时先发的响应可能后到，旧结果不许盖掉新结果。
+    const seq = ++communitySeq.current;
     (q.trim() ? api.pluginRegistrySearch(q) : api.pluginRegistryList()).then((r) => {
+      if (seq !== communitySeq.current) return;
       setCommunity(r.items);
       setSkippedBuiltin(r.skipped_builtin ?? 0);
       setCommunityWarn(r.warning ?? null);
     }).catch((e) => {
+      if (seq !== communitySeq.current) return;
       // 读失败 ≠ 空：置 null 走「失败」分支，而不是折叠成 [] 伪装「社区为空」。
       setCommunity(null);
       setSkippedBuiltin(0);
       setCommunityWarn(t('toolbelt.mkt.loadFailed', { msg: String(e) }));
     });
   }, [t]);
+  // R464：输入防抖 250ms——逐键拉远端索引既浪费一次往返，也会让列表在结果间跳；
+  // 停手再查，配合上面的请求令牌，最后一次输入的结果才落地。
   useEffect(() => {
-    if (tab === 'community') loadCommunity(cQuery);
+    const id = window.setTimeout(() => {
+      if (tab === 'community') loadCommunity(cQuery);
+    }, 250);
+    return () => window.clearTimeout(id);
   }, [tab, cQuery, loadCommunity]);
 
   // 远程下载进度：plugin-download-progress 事件（B2）。R387 起用 useTauriEvent：
