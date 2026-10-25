@@ -466,6 +466,11 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   outline: none;
 }
 .fileview-search input:focus { border-color: var(--accent-strong); }
+/* R431：键盘焦点补替身——鼠标点击仍是边框换色，Tab 到的亮出描边（R348/R405 口径）。 */
+.fileview-search input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .fileview-stats {
   display: flex;
   align-items: center;

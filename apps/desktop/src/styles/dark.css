@@ -362,6 +362,11 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 }
 .toolwall-search:focus-within { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft); }
 .toolwall-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: var(--ink); font-size: 12.5px; padding: 0; }
+/* R431：键盘焦点补替身——暗色主题下搜索框也只靠边框换色，Tab 到的亮出描边（R348/R405 口径）。 */
+.toolwall-search input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .toolwall-count { flex-shrink: 0; margin-left: auto; }
 
 /* 卡片「信息」按钮（详情通道，悬于卡片右上角） */

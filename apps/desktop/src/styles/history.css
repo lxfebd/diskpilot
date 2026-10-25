@@ -95,6 +95,11 @@
   width: 180px;
   outline: none;
 }
+/* R431：键盘焦点补替身——此前只有 1px 边框换色，键盘用户几乎看不出焦点（R348/R405 口径）。 */
+.hp-search input:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 
 .hp-search:focus-within {
   border-color: var(--accent);

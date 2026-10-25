@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R431: 搜索框键盘焦点补描边——Tab 进三个搜索框不再只剩边框换色
+
+- 缺口：layout.css:226 有全局 input/select:focus-visible 描边（R348）+ textarea:focus-visible（R405），但更晚加载的样式文件用等特异性的 outline: none 把它覆盖掉——.hp-search input（history.css:96）、.fileview-search input（settings.css:466）、.toolwall-search input（dark.css:364）同为 0,1,1 且排在 layout.css 之后，键盘焦点只剩容器边框换色（R348 判过这种提示不够）；.cp-search 仅 0,1,0、全局 ring 本已压过它，为显式一致也补同款。
+- 改动（4 个样式文件）：history.css / settings.css / dark.css / cleanup.css 各加一条 :focus-visible 规则——outline: 2px solid var(--accent-strong) + outline-offset: -2px，鼠标点击仍是边框换色、Tab 到的亮出描边（R348/R405 口径），并配 R431 注释。
+- 守卫（apps/desktop/src/styles/token-guard.test.ts）：新增 describe「键盘焦点描边（R431）」——扫描每个样式文件，凡选择器点了 input/textarea 的规则块里写了 outline: none，同文件必须另有 :focus-visible 规则且含 2px accent-strong 描边，否则点名。
+- 反向自检：临时删掉 history.css 的 .hp-search input:focus-visible → 恰好 1 failed 点名 ./history.css：.hp-search input，还原后 token-guard 3 passed；全量 pnpm check 77 files / 1131 tests 绿。
+
 ### R430: 背景滚动锁可逐点关掉——右键菜单不再把滚轮锁死
 
 - 缺口：R429 把「打开期间锁住背景滚动」直接接进了 useReturnFocus / useDialogFocus，等于所有调用点都锁——但右键菜单（ContextMenu）是瞬态浮层不是模态：它本来靠在 window 上捕获 scroll 来自动关闭（滚轮一动菜单就收），锁住祖先 overflow 后滚动事件根本不发生，滚轮落在菜单上变成完全没反应，只能 Esc 或点空白处才能脱身。

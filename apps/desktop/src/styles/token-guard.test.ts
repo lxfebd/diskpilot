@@ -71,3 +71,30 @@ describe('裸 hex 语义色基线（R420）', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// ── 键盘焦点描边（R431）───────────────────────────────
+// layout.css:226 的全局 ring（input/select:focus-visible）与 R405 的 textarea:focus-visible，
+// 会被更晚加载的样式文件里等特异性的 outline: none 覆盖（.hp-search input 与
+// input:focus-visible 同为 0,1,1，后写者赢）——键盘焦点就只剩容器边框换色。
+// 规则：任何选择器里点了 input/textarea 的规则块，只要写了 outline: none，
+// 同文件必须另有 :focus-visible 规则给出 2px accent-strong 描边（R348/R405 口径）。
+describe('键盘焦点描边（R431）', () => {
+  it('凡在 input/textarea 上抹掉 outline 的文件，都必须自带 :focus-visible 描边', () => {
+    const RING = 'outline: 2px solid var(--accent-strong)';
+    const offenders: string[] = [];
+    for (const [path, cssRaw] of Object.entries(SOURCES)) {
+      const src = cssRaw.replace(/\/\*[\s\S]*?\*\//g, ' ');
+      const blocks = [...src.matchAll(/([^{}]+)\{([^}]*)\}/g)];
+      const silenced = blocks.filter(
+        (m) => /(^|[\s,>])input\b|(^|[\s,>])textarea\b/.test(m[1]) && /outline\s*:\s*none/.test(m[2]),
+      );
+      if (silenced.length === 0) continue;
+      const ringed = blocks.some((m) => m[1].includes(':focus-visible') && m[2].includes(RING));
+      if (!ringed) {
+        const names = silenced.map((m) => m[1].trim().replace(/\s+/g, ' ')).join(' / ');
+        offenders.push(path + '：' + names);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

@@ -67,6 +67,11 @@ main.cleanup-page > .cleanup-page {
   outline: none;
 }
 .cp-search:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-bg); }
+/* R431：键盘焦点补替身（与全局 input:focus-visible 同款，就地声明不依赖加载顺序）。 */
+.cp-search:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .cp-search::placeholder { color: var(--ink-3); }
 /* R221：命中状态过滤 chips（全部 / 已命中 / 未检测到） */
 .cp-status-chips {
