@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Play, BellOff, TrendingUp, ListPlus, Trash2, AlertTriangle } from 'lucide-react';
 import { api } from '../api';
 import type { ReminderConfig, ReminderPayload, SpaceForecast, AutoListConfigView, AutoListRule, StartupChanged } from '../api';
@@ -6,6 +6,7 @@ import { formatBytes } from '../format';
 import { SCAN_STALE_WARN_DAYS, DEFAULT_THERMAL_SUSTAINED_C } from '../thresholds';
 import { useStore } from '../store';
 import { useT } from '../i18n';
+import { createSaveQueue } from '../saveQueue';
 
 /** R300：启动项对比结果的组织（纯函数，可单测）。
  *  后端 check_startup_delta_cmd 区分两种「没得比」：Err("no_history") = 真空
@@ -192,15 +193,23 @@ export function ReminderSettings() {
   // R302：手动检查结果里的自动进清单命中项（一次算出，渲染时不再重复查找）。
   const lastHits = lastPayload ? hitRows(lastPayload.auto_list_hits, scaffolds) : [];
 
+  // R446：写请求串行化——连点分段控件时按点击顺序逐个落盘，旧响应不会覆盖新
+  // 选择（此前并发请求乱序到达，后端最终落的是「最后一个处理的」而不是「用户
+  // 最后点的」，界面也会被先发的旧响应回写）。pendingSaves 计数保证队列里还有
+  // 在途任务时 saving 指示不闪。
+  const saveQueue = useRef(createSaveQueue());
+  const pendingSaves = useRef(0);
   const save = async (patch: Partial<ReminderConfig>) => {
+    pendingSaves.current += 1;
     setSaving(true);
     try {
-      const next = await api.setReminderConfig(patch);
+      const next = await saveQueue.current(() => api.setReminderConfig(patch));
       setCfg(normalizeReminderCfg(next));
     } catch (e) {
       useStore.getState().toast(t('system.reminder.toastSaveFailed', { err: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
-      setSaving(false);
+      pendingSaves.current -= 1;
+      if (pendingSaves.current === 0) setSaving(false);
     }
   };
 

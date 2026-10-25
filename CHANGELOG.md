@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R446: 提醒设置的写请求串行化——连点分段控件不再「最后点的被前一次覆盖」
+
+- 缺口：提醒设置的间隔 / 阈值 / 若干分段控件每点一下就把一个 patch 发给后端，但 save() 直接并发：快速连点「6 小时」再点「3 天」时两个请求同时在飞，后端按到达顺序处理，最终落盘的可能是**先点的那次**；界面这边也会被先发的旧响应 `setCfg` 回写，高亮跳回旧选项。`saving` 指示同样按「任一次完成」清除，在途请求还在时指示已消失。
+- 改动：新增 apps/desktop/src/saveQueue.ts —— `createSaveQueue()` 把写请求排成一条链，上一个完成（成功或失败）才发下一个，前一个失败不阻断后续（`tail.then(task, task)`）。apps/desktop/src/components/ReminderSettings.tsx 的 save() 改为经 `saveQueue.current(() => api.setReminderConfig(patch))` 串行发送；`pendingSaves` 计数保证队列里还有在途任务时 `saving` 指示不闪（计数归零才收起）。用户最后一次点击必然最后落盘、界面也不会被旧响应回写。
+- 测试：新增 apps/desktop/src/saveQueue.test.ts 5 条——按提交顺序执行（后发的不会插到先发前）、前一个失败不卡住队列、任务不并行（峰值并发 1）、每个队列实例互不影响，以及接线断言（ReminderSettings 必须走队列 + 计数、旧的直接 `await api.setReminderConfig(patch)` 写法必须消失）。
+- 反向自检：把组件里的队列调用还原成直接 await → 恰好 1 failed 点名接线断言，还原后 5 passed。
+
 ### R445: 「当前项」补上语义——会话列表 / 市场分页读屏能听出谁选中
 
 - 缺口：全仓「选中 / 当前」状态大部分已带 aria（aria-pressed / aria-selected / aria-current 都有守卫），但两处漏网：① 会话列表的活动会话只在容器 div 的 className 加 active（纯视觉），切换按钮本身没有记忆点，读屏听不出当前会话；② 市场页的「内置 / 社区」两个分页按钮用 `className={tab === ... ? 'active' : ''}`（active 不带前导空格），旧守卫只认 `' active'` 写法直接绕过，也没有任何 aria 状态。
