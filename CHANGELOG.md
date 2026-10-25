@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R470: 两处「有类名没样式」补齐——空态副标题与风险提示小字不再继承正文字号
+
+- **缺口**：`App.tsx` 的空态副标题写着 `className="empty-sub"`、提醒设置里未知脚手架的提示写着 `className="muted xsmall"`，但 `styles/*.css` 里**根本没有这两个类**。于是空态副标题与 15px 的标题同处一段却按正文 Default 字号渲染、拉不开层级；「未知脚手架」那枚警示小字继承正文字号，比紧挨着的 11px 字节数**还大**——提示反而比正常信息更抢眼。
+- **改动**：`styles/layout.css`（紧挨既有 `.empty-title` 与 `.muted.small`）补两条声明——`.empty-sub { font-size: 12.5px; line-height: 1.65; color: var(--ink-2); }`、`.xsmall { font-size: 10.5px; }`（`small` 是 11px，`xsmall` 正好再小一号）。全部走既有语义 token，不引入裸 hex / 裸字号以外的颜色。
+- **守卫**：新增 `apps/desktop/src/classParity.test.ts`（5 条）——扫全仓 TSX 里字面写出的 `className` 类名，每个都必须在 `styles/*.css` 里有定义，或在 `ALLOW_UNSTYLED` 里登记为「有意不写样式」的结构钩子（`.ao-card` / `.ghost.small` 这类基础类承担视觉的包装层）。另附三条：解析器自己不能空转（CSS ≥13 个文件、TSX ≥40 个文件、类名池 ≥800 / ≥500）、登记表不许过期（登记了就必须还有人在用且确实没样式）、注释里的类名不算定义。
+- **反向自检**：把 `.xsmall` 规则改名 + 把 `App.tsx` 的 `className="empty-sub"` 改成 `empty-subx` → 恰好 2 条红并逐条点名 `empty-subx @ ./App.tsx:949`、`xsmall @ ./components/ReminderSettings.tsx:625`；还原后 5 passed。
+- **价值**：以后 `className="mutd"` 这类手滑不再静默丢样式——CI 直接红，并指出是哪个文件哪一行。
+
 ### R469: 提示条按钮点完焦点不丢——「去调散热」/关闭后不再掉到页面开头
 
 - **缺口**：提示条的「去调散热 / 查看周报」动作按钮与关闭按钮点完整条就卸载——若焦点正在该条里（键盘 Tab 过去 / 正在读错误原文），卸载后焦点掉到 `<body>`，键盘用户要从文档开头重新 Tab 一遍（R462 清空按钮同款问题，toast 一直没处理）。动作按钮打开设置窗时更糟：焦点先掉 body，窗自己再抢，中间凭空多一次跳动。

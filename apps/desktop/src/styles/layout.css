@@ -81,6 +81,9 @@
 }
 .muted { color: var(--ink-3); font-weight: 600; }
 .muted.small { font-size: 11px; font-family: var(--font-mono); }
+/* R470：比 .muted.small 再小一号的提示小字。此前组件里写了 .xsmall 却没有这条声明，
+   提示字于是继承正文字号——比旁边 11px 的数字还大，风险提示反而更抢眼。 */
+.xsmall { font-size: 10.5px; }
 
 /* ── Header ──────────────────────────────────────────────────────────
    页头（.page-head）的基线样式：内部排版与降级见 styles/app-shell.css。 */
@@ -754,6 +757,9 @@ footer {
 
 .empty { padding: 28px; color: var(--ink-2); }
 .empty-title { font-size: 15px; color: var(--ink); margin-bottom: 6px; font-weight: 600; }
+/* R470：空态副标题（「怎么用」那几行）。此前没有声明，副标题与正文同号、
+   与上面 15px 的标题拉不开层级。 */
+.empty-sub { font-size: 12.5px; line-height: 1.65; color: var(--ink-2); }
 
 /* ── Cards ─────────────────────────────────────────────────────────── */
 .card {
