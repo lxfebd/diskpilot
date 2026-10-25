@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R460: Rust 命令面与前端 invoke 的契约守卫——漏挂 handler / 拼错命令名不再等到点下去才炸
+
+- 缺口：三张清单（`#[tauri::command]` 声明 117 条 / lib.rs 的 `generate_handler!` 注册 / 前端 api.ts + api/*.ts 的字面量 invoke）此前没有任何交叉校验。加命令忘了挂进 handler 时宏仍生成包装函数，cargo 编译通过，用户点下去才吃到 command not found；前端拼错命令名同理；Rust 侧改名后没人调则留下死命令。
+- 改动：新增 apps/desktop/src/commands.test.ts（4 条）——声明解析会跳过 `#[allow(...)]` / `#[cfg(windows)]` 这类夹在标记与 fn 之间的属性行和注释行；注册清单按 `generate_handler![` 后的 `[` `]` 深度配平取体、条目取最后一段路径（`scan::scan_path` → `scan_path`）；前端用泛型容忍的正则抓字面量命令行（`[^()]` 吃掉嵌套尖括号，如 `invoke<Record<string, SpacePoint[]>>`）。源文件一律用 `import.meta.glob` 的 `?raw` 取文（src 下的测试被 `tsc -b` 纳入类型检查，不能引 node:fs）。
+- 断言：解析器不空转（api 文件 ≥6、声明 ≥100、注册数 === 声明数、含 `scan_path`、invoke ≥100）；声明 → 注册无遗漏；invoke 名都在声明表里；声明都被前端用上（有意只给托盘或后台线程的命令写进 `ALLOW_UNUSED` 并注明原因，当前为空）。
+- 反向自检：往 api.ts 临时插一行 `invoke("r460_probe_typo")` → 恰好 1 failed 点名该名字；再新建一个只带 `#[tauri::command]` 的临时 .rs → 3 failed（计数不等 + 漏挂 + 未使用）都点出 `r460_probe`，两处已还原。全量 pnpm check 87 files / 1238 tests 全绿。
+
 ### R459: toast 同屏上限 4 条——批量失败时不再用提示条糊满整个窗口
 
 - 缺口：R364 只做了「同一句话反复喊」的去重（文本 + 级别 + 动作按钮同键原位替换）。互不相同的提示仍会同时在场：批量安装插件逐项失败、清理清单多条路径各自报错、多盘体检同时超温——`.toast-stack`（overview.css）只有 fixed + flex column，既不能滚也不封顶，攒到十几条就从中下往上糊满窗口，每条 `pointer-events: auto`，下面的按钮点不到。
