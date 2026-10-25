@@ -630,6 +630,8 @@ export function ReminderSettings() {
                 className="field"
                 value={pickId}
                 onChange={(e) => setPickId(e.target.value)}
+                aria-label={t('system.reminder.autoListPick')}
+                autoComplete="off"
                 style={{ maxWidth: 220 }}
               >
                 <option value="">{t('system.reminder.autoListPick')}</option>
@@ -638,12 +640,15 @@ export function ReminderSettings() {
                 ))}
               </select>
               {/* R301：阈值下拉没标签，用户不知道这个数字是干什么的——
-                  词条 autoListThreshold 写了没人用。 */}
-              <span className="muted small">{t('system.reminder.autoListThreshold')}</span>
+                  词条 autoListThreshold 写了没人用。
+                  R427：aria-labelledby 把提示 span 挂成千位下拉的可访问名。 */}
+              <span id="reminder-threshold-hint" className="muted small">{t('system.reminder.autoListThreshold')}</span>
               <select
                 className="field"
                 value={pickMb}
                 onChange={(e) => setPickMb(Number(e.target.value))}
+                aria-labelledby="reminder-threshold-hint"
+                autoComplete="off"
                 style={{ maxWidth: 150 }}
               >
                 <option value={0}>{t('system.reminder.autoListAny')}</option>

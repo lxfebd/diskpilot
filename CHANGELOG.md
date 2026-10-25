@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R427: 提醒设置两个下拉框补上读屏名——视觉提示与可访问名终于对上了
+
+- 缺口：设置页「自动进白名单」的列表选择与阈值下拉只有视觉提示（R301 补的 span 文案），读屏软件读出来是没有名字的下拉框——视障用户不知道这个下拉是干什么的、也读不到阈值含义；R301 的词条 autoListThreshold 写了却从没被任何 aria 属性引用。
+- 改动（apps/desktop/src/components/ReminderSettings.tsx）：列表选择下拉补 aria-label=autoListPick；阈值下拉给提示 span 加 id="reminder-threshold-hint" 再用 aria-labelledby 关联（读屏名直接来自可见文案，词条终于被用上）；两个下拉都补 autoComplete="off"。
+- 守卫：a11y.test.ts 新增 describe「下拉框的可访问名（R427）」2 条——① ReminderSettings 站点断言 aria-label 与 aria-labelledby 都在；② 全仓扫描器：任何 <select> 若无 aria-label / aria-labelledby / title 且不在 <label> 上下文中就点名报错（SystemTools / HwPanels / bench / FileView 四处均有名，基线干净）。
+
 ### R426: 弹窗初始焦点避开关闭按钮——打开弹窗按 Enter 不再立刻关掉它
 
 - 缺口：R424/R425 的 useDialogFocus 取「最上层弹窗第一个可聚焦元素」，但所有弹窗 DOM 顺序第一个可聚焦元素就是右上角的关闭 X——键盘用户打开弹窗后按 Enter/空格 = 立刻关掉刚打开的弹窗（破坏性默认），读屏用户也被引导到「关闭」。

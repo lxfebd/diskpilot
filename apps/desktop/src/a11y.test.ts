@@ -1149,3 +1149,34 @@ describe('弹窗初始焦点避开关闭按钮（R426）', () => {
     expect(df).toContain('list.filter((el) => !head.contains(el))');
   });
 });
+
+
+// R427：视觉提示不等于读屏名——select 必须有 aria-label / aria-labelledby / title，或包在 <label> 里。
+describe('下拉框的可访问名（R427）', () => {
+  it('提醒设置的两个下拉各有可访问名', () => {
+    const rs = RAW_TSX['./components/ReminderSettings.tsx'] ?? '';
+    expect(rs).toContain("aria-label={t('system.reminder.autoListPick')}");
+    expect(rs).toContain('<span id="reminder-threshold-hint"');
+    expect(rs).toContain('aria-labelledby="reminder-threshold-hint"');
+  });
+
+  it('全仓没有裸的 select（无名且不在 label 内）', () => {
+    const offenders: string[] = [];
+    for (const [key, raw] of Object.entries(RAW_TSX)) {
+      const lines = String(raw).split(String.fromCharCode(10));
+      for (let i = 0; i < lines.length; i++) { {
+        if (!/<select(\s|>|$)/.test(lines[i])) continue;
+        let body = '';
+        for (let j = i; j < Math.min(lines.length, i + 12); j++) {
+          body += lines[j] + String.fromCharCode(10);
+          if (/[^=<>]>/.test(lines[j]) || /^\s*>\s*$/.test(lines[j])) break;
+        }
+        if (/aria-label=|aria-labelledby=|title=/.test(body)) continue;
+        const prev = lines.slice(Math.max(0, i - 12), i).join(String.fromCharCode(10));
+        if (/<label[\s>]/.test(prev)) continue;
+        offenders.push(key + ':' + (i + 1));
+      } }
+    }
+    expect(offenders, 'select 缺可访问名（补 aria-label / aria-labelledby / title，或包进 label）').toEqual([]);
+  });
+});
