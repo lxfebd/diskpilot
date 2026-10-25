@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R428: 创意工坊弹窗补上可访问名——读屏进入弹窗先念出「创意工坊 · 游戏名」
+
+- 缺口：SteamWorkshopModal 的 role=dialog 是全仓 19 处弹窗里唯一没有 aria-label / aria-labelledby 的（审计发现：SteamInspectorModal、DryRunPreviewDialog、ConfirmDialog、Settings、Studio、bench×3、market、toolwall×5、HwPanels、CleanupProposalDialog、Disclaimer 都有名字，唯独这个创意工坊子模态裸奔）——读屏用户进入弹窗后无从知道自己在哪。
+- 改动（apps/desktop/src/components/SteamWorkshopModal.tsx）：dialog 容器补 aria-labelledby="steam-workshop-title"，指向头部标题 div 的 id="steam-workshop-title"（标题文本 = workshopTitle · 游戏名，中英随 i18n 动态变化，用 labelledby 引用而非 aria-label 写死）。
+- 守卫：apps/desktop/src/a11y.test.ts 新增 describe「弹窗的可访问名（R428）」2 条——① 站点断言：SteamWorkshopModal.tsx 同时含 aria-labelledby 与 id；② 全仓扫描器：逐行找 role=dialog / role=alertdialog（跳过 role= 出现在 < 之后的注释行），按 R427 同款「逐行抽开标签到闭合」逻辑，无 aria-label / aria-labelledby 则记入 offenders。
+- 反向自检：临时删掉 aria-labelledby → 恰好 2 failed（站点断言 + 扫描器点名 ./components/SteamWorkshopModal.tsx:164），还原后 76 passed。
+
 ### R427: 提醒设置两个下拉框补上读屏名——视觉提示与可访问名终于对上了
 
 - 缺口：设置页「自动进白名单」的列表选择与阈值下拉只有视觉提示（R301 补的 span 文案），读屏软件读出来是没有名字的下拉框——视障用户不知道这个下拉是干什么的、也读不到阈值含义；R301 的词条 autoListThreshold 写了却从没被任何 aria 属性引用。

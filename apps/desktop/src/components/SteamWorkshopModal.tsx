@@ -161,9 +161,9 @@ export function SteamWorkshopModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="steam-modal-dialog steam-workshop-dialog" role="dialog" aria-modal="true">
+      <div className="steam-modal-dialog steam-workshop-dialog" role="dialog" aria-modal="true" aria-labelledby="steam-workshop-title">
         <div className="steam-modal-head">
-          <div className="steam-modal-title">
+          <div className="steam-modal-title" id="steam-workshop-title">
             <Boxes size={16} /> {t('steam.workshopTitle')} · {nameCn ?? game.name_en}
           </div>
           <div className="steam-modal-subtitle">

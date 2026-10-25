@@ -1180,3 +1180,35 @@ describe('下拉框的可访问名（R427）', () => {
     expect(offenders, 'select 缺可访问名（补 aria-label / aria-labelledby / title，或包进 label）').toEqual([]);
   });
 });
+
+// R428：role=dialog / role=alertdialog 必须有可访问名（aria-label 或 aria-labelledby）——
+// 读屏进入弹窗先念名字；缺名的弹窗像「没有标题的页面」。
+// 用与 R427 select 扫描器同款的「逐行找开标签→抽到闭合」逻辑，避免属性跨行漏检。
+describe('弹窗的可访问名（R428）', () => {
+  it('Steam 创意工坊弹窗有可访问名', () => {
+    const m = RAW_TSX['./components/SteamWorkshopModal.tsx'] ?? '';
+    expect(m).toContain('aria-labelledby="steam-workshop-title"');
+    expect(m).toContain('id="steam-workshop-title"');
+  });
+
+  it('全仓所有 role=dialog / alertdialog 都有可访问名', () => {
+    const offenders: string[] = [];
+    for (const [key, raw0] of Object.entries(RAW_TSX)) {
+      const lines = String(raw0).split(String.fromCharCode(10));
+      for (let i = 0; i < lines.length; i++) {
+        if (!/role="?(dialog|alertdialog)"?/.test(lines[i])) continue;
+        // 只扫 JSX 元素行：role= 左侧必须已有 `<`（注释里的 role=dialog 说明文字不算）
+        if (lines[i].indexOf('<') < 0 || lines[i].indexOf('<') > lines[i].indexOf('role=')) continue;
+        let body = '';
+        for (let j = i; j < Math.min(lines.length, i + 14); j++) {
+          body += lines[j] + String.fromCharCode(10);
+          if (/[^=<>]>/.test(lines[j]) || /^\s*>\s*$/.test(lines[j])) break;
+        }
+        if (/aria-label=|aria-labelledby=/.test(body)) continue;
+        offenders.push(key + ':' + (i + 1));
+      }
+    }
+    expect(offenders, 'role=dialog 缺可访问名（补 aria-label 或 aria-labelledby）').toEqual([]);
+  });
+});
+
