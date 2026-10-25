@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R426: 弹窗初始焦点避开关闭按钮——打开弹窗按 Enter 不再立刻关掉它
+
+- 缺口：R424/R425 的 useDialogFocus 取「最上层弹窗第一个可聚焦元素」，但所有弹窗 DOM 顺序第一个可聚焦元素就是右上角的关闭 X——键盘用户打开弹窗后按 Enter/空格 = 立刻关掉刚打开的弹窗（破坏性默认），读屏用户也被引导到「关闭」。
+- 改动：useDialogFocus 进场时先找头部（.modal-head / .steam-modal-head），优先头部之外第一个可聚焦元素（取消 / 主操作 / 搜索框等真正要交互的元素）；整个弹窗只剩头部有可聚焦元素时才回退头部第一个，再回退容器本身。
+- 守卫：a11y.test.ts 新增 describe「弹窗初始焦点避开关闭按钮（R426）」1 条（头部选择器 + filter 表达式），R424 原断言同步改为匹配新回退链 ?? list[0] ??。反向自检：临时去掉头部过滤 → 2 failed 点名 R424 + R426 两条，已还原。
+
 ### R425: 挂载式弹窗补进场焦点——预览窗 / 提案窗 / 安装窗打开即在弹窗里
 
 - 缺口：R424 给内联弹窗接了进场 + 归还一体的 useDialogFocus，但 7 处挂载式弹窗里有 3 处只挂了只管归还的 useReturnFocus——打开瞬间焦点还留在触发按钮上（DryRunPreviewDialog 预览窗 / CleanupProposalDialog AI 提案窗 / Studio InstallScaffoldModal 安装窗），键盘 Tab 第一步就走出弹窗。

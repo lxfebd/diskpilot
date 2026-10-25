@@ -1082,7 +1082,7 @@ describe('弹窗焦点进场与归还（R424）', () => {
   it('dialogFocus.ts 提供 useDialogFocus：进场取最上层弹窗第一个可聚焦元素、关闭归还 opener', () => {
     const df = RAW_DF['./dialogFocus.ts'] ?? '';
     expect(df).toContain('export function useDialogFocus(');
-    expect(df).toContain('focusableWithin(top)[0]');
+    expect(df).toContain('?? list[0] ??');
     expect(df).toContain('prev.current?.focus?.();');
     expect(df).toContain('document.querySelectorAll<HTMLElement>(MODAL_SEL)');
   });
@@ -1136,5 +1136,16 @@ describe('挂载式弹窗的进场焦点（R425）', () => {
     expect(RAW_TSX['./components/ContextMenu.tsx'] ?? '').toContain('useReturnFocus(state !== null)');
     expect(RAW_TSX['./components/HwPanels.tsx'] ?? '').toContain('useReturnFocus(true)');
     expect(RAW_TSX['./components/Settings.tsx'] ?? '').toContain('useReturnFocus(true)');
+  });
+});
+
+// R426：进场焦点不能落在头部关闭按钮上——打开弹窗按一下 Enter/空格就把弹窗关掉是破坏性默认。
+// useDialogFocus 应跳过 .modal-head / .steam-modal-head 里的关闭钮，优先头部之外的可聚焦元素。
+describe('弹窗初始焦点避开关闭按钮（R426）', () => {
+  it('useDialogFocus 用头部选择器过滤关闭钮，保留头部外第一个可聚焦元素', () => {
+    const df = RAW_DF['./dialogFocus.ts'] ?? '';
+    expect(df).toContain('.modal-head, .steam-modal-head');
+    expect(df).toContain('head ? list.filter((el) => !head.contains(el)) : list');
+    expect(df).toContain('list.filter((el) => !head.contains(el))');
   });
 });

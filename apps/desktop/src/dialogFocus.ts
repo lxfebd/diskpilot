@@ -16,10 +16,14 @@ export function focusReturnTarget(el: unknown): HTMLElement | null {
 // useReturnFocus 只负责「关闭归还」；内联在父组件里的弹窗（工具箱、跑分、插件市场、
 // Steam 详情）打开后焦点还留在触发按钮上，键盘用户按 Tab 第一步就走出了弹窗，读屏
 // 用户也不知道弹窗已经打开。useDialogFocus 在打开那一刻把焦点送到最上层 aria-modal
-// 弹窗的第一个可聚焦元素（与 useModalFocusTrap 同为「DOM 顺序最后一个」口径），
+// 弹窗的可聚焦元素（与 useModalFocusTrap 同为「DOM 顺序最后一个」口径），
 // 关闭时归还给 opener——进场与归还一体，内联/挂载式弹窗都适用。
 // open 由 false 变 true 时进场，变回 false（或组件卸载）时归还。
 // 注意：必须在弹窗自己的「自动聚焦」effect 之前调用，否则记住的会是弹窗内部元素。
+// R426：进场焦点跳过头部行——弹窗 DOM 顺序第一个可聚焦元素通常是右上角的关闭按钮，
+// 焦点落在它上面意味着用户按一下 Enter/空格就把刚打开的弹窗关掉（破坏性默认）。
+// 这里优先选头部（.modal-head / .steam-modal-head）之外第一个可聚焦元素，即取消/
+// 主操作或主要交互（如 Steam 搜索框）；整个弹窗只剩头部有关键元素时才回退头一个。
 export function useReturnFocus(open: boolean): void {
   const prev = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -43,7 +47,11 @@ export function useDialogFocus(open: boolean): void {
     const top = dialogs[dialogs.length - 1];
     if (top) {
       // 弹窗里第一个真能聚焦的元素；若容器自身可聚焦（tabIndex>=0）则回退容器。
-      const target = focusableWithin(top)[0] ?? (top.tabIndex >= 0 ? top : null);
+      const list = focusableWithin(top);
+      // R426：头部（.modal-head / .steam-modal-head）里的关闭按钮不做初始焦点——
+      // 按一下 Enter 就把刚打开的弹窗关掉太容易误触；优先头部之外第一个可聚焦元素。
+      const head = top.querySelector<HTMLElement>('.modal-head, .steam-modal-head');
+      const target = (head ? list.filter((el) => !head.contains(el)) : list)[0] ?? list[0] ?? (top.tabIndex >= 0 ? top : null);
       target?.focus?.();
     }
     return () => {
