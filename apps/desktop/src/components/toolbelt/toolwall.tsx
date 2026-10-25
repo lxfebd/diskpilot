@@ -493,7 +493,9 @@ function ToolDetailModal({
                   {manifest.invocation.params.length > 0 && (
                     <table className="tdm-params">
                       {/* R432：表头列加 scope="col"——读屏把列头与数据格绑定，缺 scope 时列头是游离文本 */}
-                      <thead><tr><th scope="col">{t('toolbelt.detail.thParam')}</th><th scope="col">{t('toolbelt.detail.thType')}</th><th scope="col">{t('toolbelt.detail.thRequired')}</th><th scope="col">{t('toolbelt.detail.thDesc')}</th></tr></thead>
+                            {/* R438：表格标题——读屏进表前先念出「脚本参数表」，视觉上靠 .sr-only 隐藏 */}
+      <caption className="sr-only">{t('toolbelt.detail.paramsCaption')}</caption>
+<thead><tr><th scope="col">{t('toolbelt.detail.thParam')}</th><th scope="col">{t('toolbelt.detail.thType')}</th><th scope="col">{t('toolbelt.detail.thRequired')}</th><th scope="col">{t('toolbelt.detail.thDesc')}</th></tr></thead>
                       <tbody>
                         {manifest.invocation.params.map((p) => (
                           <tr key={p.name}>

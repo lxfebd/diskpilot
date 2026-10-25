@@ -139,3 +139,15 @@ code, .mono {
   }
 }
 
+/* R438：屏幕阅读器专用类——视觉隐藏但读屏可读（供唯一表格的 <caption> 等结构元素使用）。 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

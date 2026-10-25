@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R438: 唯一表格补 <caption> 标题——读屏进参数表先听到「脚本参数表」
+
+- 缺口：全仓唯一的表格（工具墙详情卡的参数表）没有任何标题；读屏进入时只会报「表格，4 列 × N 行」而没有内容语境。列头虽已由 R432 补上 scope="col"，整张表仍缺一个名字。全仓也没有 .sr-only 工具类，想补标题没有现成的视觉隐藏手段。
+- 改动：apps/desktop/src/styles/tokens.css 新增 .sr-only 屏幕阅读器专用类（视觉隐藏但读屏可读：absolute + 1px + clip + nowrap）；apps/desktop/src/components/toolbelt/toolwall.tsx 参数表在 <thead> 前补 <caption className="sr-only">{t('toolbelt.detail.paramsCaption')}</caption>；i18n 新增键 toolbelt.detail.paramsCaption（zh 脚本参数表 / en Script parameters），与表头键同区放置。
+- 守卫：apps/desktop/src/a11y.test.ts 新增 describe「表格的标题（R438）」2 条——caption 必须位于 <table className="tdm-params"> 之后、<thead> 之前且引用新键；.sr-only 块必须含 position absolute / clip / nowrap / border 0。反向自检：临时删除 caption 行 → 恰好 1 failed 点名该断言，还原后 88 passed。
+
 ### R437: AI 配置保存前归一化空白——粘贴带尾随空格不再「连接失败」查不出原因
 
 - 缺口：Settings 的保存与试连只用 trim 做非空校验，落盘存的仍是原样（含首尾空白、多余尾斜杠）；而 provider.ts 消费端只 replace(/\/$/, '') 剥一个斜杠、不剥空白。从文档或链接里粘贴 ' http://127.0.0.1:11434/ ' 这种值校验能过，实际请求却是带空格的非法 URL，报「连接失败」根本查不出是空格；model 带空格则 404 找不到模型。

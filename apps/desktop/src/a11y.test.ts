@@ -1350,3 +1350,25 @@ describe('AI 配置保存的空白归一化（R437）', () => {
     expect(src).toContain('JSON.stringify(normalizeSettings(s))');
   });
 });
+
+describe('表格的标题（R438）', () => {
+  it('唯一表格的 <caption> 在表头之前、读屏能念出标题', () => {
+    const tw = RAW_TSX['./components/toolbelt/toolwall.tsx'] ?? '';
+    const tIdx = tw.indexOf('<table className="tdm-params">');
+    const cIdx = tw.indexOf('<caption className="sr-only">');
+    const thIdx = tw.indexOf('<thead>');
+    expect(tIdx).toBeGreaterThanOrEqual(0);
+    expect(cIdx).toBeGreaterThan(tIdx);
+    expect(thIdx).toBeGreaterThan(cIdx);
+    expect(tw.slice(cIdx, cIdx + 130)).toContain('toolbelt.detail.paramsCaption');
+  });
+  it('.sr-only 工具类存在于全局样式且视觉隐藏', () => {
+    const src = RAW_CSS['./styles/tokens.css'] ?? '';
+    const block = src.slice(src.indexOf('.sr-only'), src.indexOf('.sr-only') + 300);
+    expect(block).toContain('position: absolute');
+    expect(block).toContain('clip: rect(0 0 0 0)');
+    expect(block).toContain('white-space: nowrap');
+    expect(block).toContain('border: 0');
+    expect(block).toContain('overflow: hidden');
+  });
+});
