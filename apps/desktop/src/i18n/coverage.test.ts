@@ -117,4 +117,51 @@ describe('i18n 文案表', () => {
     }
     expect(bad).toEqual([]);
   });
+  // R449：键集一致只保证「有这条键」，不代表英文真的翻译了——en 值仍带汉字的
+  // 键必须逐项落在允许清单里（两类：给机器/数据用的常值——多盘合并的虚拟根
+  // path、mock 冒充后端的说明、喂给 AI 模型的会话上下文模板、提示用户照打的
+  // 确认词、中文产品名「图吧工具箱」的目录与提示——以及作者名等专名）。
+  // 哪条不再需要就删掉对应允许项，别让清单纯当免罪金牌。
+  // 覆盖范围：CJK 表意区 + CJK 标点（U+3000–303F）+ 全角形式（U+FF01–FF60）。
+  const ch = (n: number) => String.fromCharCode(n);
+  const EN_CJK_ALLOW: ReadonlySet<string> = new Set([
+    'common.data.allDrivesRoot',
+    'common.mock.fanReadonlyChannel',
+    'common.chatModel.procCalls',
+    'common.chatModel.procResults',
+    'common.chatModel.procWrap',
+    'common.chatModel.procJoin',
+    'common.chatModel.noteJoin',
+    'common.chatModel.earlierUser',
+    'common.chatModel.earlierAssistant',
+    'hw.stressInputHint',
+    'shell.disclaimer.authorName',
+    'shell.disclaimer.p5',
+    'toolbelt.cli.noRootA',
+    'toolbelt.cli.rootPlaceholder',
+  ]);
+  const EN_CJK = new RegExp(
+    '[' + ch(0x3000) + '-' + ch(0x303f) + ch(0x3400) + '-' + ch(0x4dbf) +
+    ch(0x4e00) + '-' + ch(0x9fff) + ch(0xff01) + '-' + ch(0xff60) + ']',
+  );
+  it('英文表不再留下未翻译的中文（允许清单逐项核验）', () => {
+    const bad: string[] = [];
+    for (const ns of NAMESPACES) {
+      for (const [k, v] of Object.entries(ns.en) as [string, string][]) {
+        if (typeof v !== 'string' || !EN_CJK.test(v)) continue;
+        if (!EN_CJK_ALLOW.has(k)) bad.push(k + ': ' + v);
+      }
+    }
+    expect(bad).toEqual([]);
+    // 允许清单本身不许腐化：条目必须恰好存在于某个命名空间，且确实还含汉字。
+    for (const k of EN_CJK_ALLOW) {
+      const owners = NAMESPACES.filter((ns) => k in (ns.en as Record<string, string>));
+      expect(owners.length, k + ' 允许项必须在且仅在某个命名空间里').toBe(1);
+      if (owners.length === 1) {
+        const v = (owners[0].en as Record<string, string>)[k];
+        expect(v, k + ' 允许项失踪').toBeDefined();
+        expect(EN_CJK.test(v), k + ' 已不再含汉字——请从允许清单移除').toBe(true);
+      }
+    }
+  });
 });

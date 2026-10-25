@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R449: 英文表不再悄悄留中文——未翻译的键逐项钉进允许清单
+
+- 缺口：键集一致的守卫（coverage.test.ts）只保证 zh / en「都有这条键」，不保证英文真的翻译过——新键若把中文原样抄进 en，英文界面会直接显示中文，测试仍然全绿。
+- 改动：apps/desktop/src/i18n/coverage.test.ts 新增「英文表不再留下未翻译的中文」用例——en 值含 CJK 表意区 / 标点 / 全角字符的键必须落在 `EN_CJK_ALLOW`（14 项：多盘合并虚拟根 path、mock 冒充后端说明、喂给 AI 的会话上下文模板、提示用户照打的确认词、中文产品名「图吧工具箱」的目录与提示、作者名等专名）；允许清单自身也逐项核验（必须恰好存在于某个命名空间、且确实还含汉字），条目不再需要就删除，不许当免罪金牌。
+- 反向自检：把 `cleanup.skipAll` 的 en 临时改成「全部跳过」→ 恰好 1 failed 点名该键，还原后 9 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（83 files / 1204 tests）。
+
 ### R448: AI 清单回收结果就地反馈——一项都没成时不再无声关窗
 
 - 缺口：清理提案窗的执行按钮走 store 的 `aiRecyclePaths`，返回值 `{ done, failed, bytes }` 一直被丢掉——不管成没成、甚至「执行权限未开」，`doRecycle` 都是 `setBusy(false); close();`。失败细节只存在于 store 弹出的 toast，窗口一关就没了，用户回到总览也查不到「刚才那批到底动了没有」；而且 `doRecycle` 没有 try/finally，将来任何一次 reject 都会把执行按钮永久锁在「回收中…」。
