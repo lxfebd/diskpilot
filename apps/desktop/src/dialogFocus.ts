@@ -28,10 +28,13 @@ export function useReturnFocus(open: boolean): void {
   const prev = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
+    // R429：打开期间锁住背景滚动（见下方 lockAncestorScroll）。
+    const unlockScroll = lockAncestorScroll(topDialog(), viewport());
     prev.current = focusReturnTarget(typeof document === 'undefined' ? null : document.activeElement);
     return () => {
       prev.current?.focus?.();
       prev.current = null;
+      unlockScroll();
     };
   }, [open]);
 }
@@ -45,6 +48,8 @@ export function useDialogFocus(open: boolean): void {
     // 最上层弹窗 = DOM 顺序最后一个（嵌套弹窗总在其父对话框之后渲染）。
     const dialogs = document.querySelectorAll<HTMLElement>(MODAL_SEL);
     const top = dialogs[dialogs.length - 1];
+    // R429：打开期间锁住背景滚动（见下方 lockAncestorScroll）。
+    const unlockScroll = lockAncestorScroll(top, viewport());
     if (top) {
       // 弹窗里第一个真能聚焦的元素；若容器自身可聚焦（tabIndex>=0）则回退容器。
       const list = focusableWithin(top);
@@ -57,8 +62,74 @@ export function useDialogFocus(open: boolean): void {
     return () => {
       prev.current?.focus?.();
       prev.current = null;
+      unlockScroll();
     };
   }, [open]);
+}
+
+// ── R429：弹窗打开时锁住背景滚动 ──
+// 弹窗遮罩是 position:fixed 全屏（祖先里没有 transform/filter，固定定位不会被改写），
+// 但它挂在各 view 的 main 里；滚轮落在遮罩上时浏览器去找「最近的可滚动祖先」——弹窗内容
+// 短时背景页跟着滚，正在看的内容被滚走（清理页/优化器/历史页的滚动容器还不一定是 main）。
+// 这里锁住弹窗自身的可滚动祖先（不动弹窗内部，所以 modal-body 照常滚），按元素引用计数：
+// 嵌套弹窗得全部关掉才恢复，避免内层先解锁把外层的锁一并解开。
+const SCROLL_LOCK_ATTR = 'data-scroll-locked';
+type LockEntry = { prev: string; count: number };
+const scrollLocks = new Map<HTMLElement, LockEntry>();
+
+type ScrollStyleSource = { getComputedStyle: (el: Element) => { overflowY: string; overflow: string } };
+
+function isScrollableY(node: Element, win: ScrollStyleSource): boolean {
+  const cs = win.getComputedStyle(node);
+  return /^(auto|scroll|overlay)$/.test(cs.overflowY) || /^(auto|scroll|overlay)$/.test(cs.overflow);
+}
+
+function viewport(): (Window & typeof globalThis) | null {
+  return typeof window === 'undefined' ? null : window;
+}
+
+function topDialog(): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  const dialogs = document.querySelectorAll<HTMLElement>(MODAL_SEL);
+  return dialogs[dialogs.length - 1] ?? null;
+}
+
+// 纯 DOM 操作：从 from 的父级往上找可滚动祖先并锁住，返回解锁函数。
+// 只改祖先链，不碰 from 自身与它的子树——弹窗内部该滚的地方照滚。
+export function lockAncestorScroll(
+  from: Element | null | undefined,
+  win: ScrollStyleSource | null | undefined,
+): () => void {
+  if (!from || !win) return () => {};
+  const locked: HTMLElement[] = [];
+  let node: Element | null = from.parentElement ?? null;
+  while (node) {
+    if (isScrollableY(node, win)) {
+      const el = node as HTMLElement;
+      const entry = scrollLocks.get(el);
+      if (entry) {
+        entry.count += 1;
+      } else {
+        const prev = el.style.overflow;
+        el.style.overflow = 'hidden';
+        el.setAttribute(SCROLL_LOCK_ATTR, '');
+        scrollLocks.set(el, { prev, count: 1 });
+      }
+      locked.push(el);
+    }
+    node = node.parentElement;
+  }
+  return () => {
+    for (const el of locked) {
+      const entry = scrollLocks.get(el);
+      if (!entry) continue;
+      entry.count -= 1;
+      if (entry.count > 0) continue;
+      el.style.overflow = entry.prev;
+      el.removeAttribute(SCROLL_LOCK_ATTR);
+      scrollLocks.delete(el);
+    }
+  };
 }
 
 // ── R347：Tab 不许跑出弹窗 ──

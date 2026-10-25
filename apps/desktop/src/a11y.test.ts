@@ -1212,3 +1212,28 @@ describe('弹窗的可访问名（R428）', () => {
   });
 });
 
+
+// R429：弹窗遮罩是全屏 fixed，但挂在各 view 的滚动容器里——滚轮落在遮罩上时背景页跟着滚。
+// 两个进场钩子都必须挂 lockAncestorScroll：锁住弹窗的可滚动祖先、按引用计数恢复。
+describe('弹窗打开锁背景滚动（R429）', () => {
+  it('dialogFocus.ts 提供 lockAncestorScroll：锁可滚动祖先、引用计数恢复', () => {
+    const df = RAW_DF['./dialogFocus.ts'] ?? '';
+    expect(df).toContain('export function lockAncestorScroll(');
+    expect(df).toContain("el.style.overflow = 'hidden';");
+    expect(df).toContain('entry.count += 1;');
+    expect(df).toContain('if (entry.count > 0) continue;');
+    expect(df).toContain('data-scroll-locked');
+  });
+
+  it('useReturnFocus 与 useDialogFocus 打开期间都锁、关闭时都解锁', () => {
+    const df = RAW_DF['./dialogFocus.ts'] ?? '';
+    const rf = df.slice(df.indexOf('export function useReturnFocus'), df.indexOf('export function useDialogFocus'));
+    const dg = df.slice(df.indexOf('export function useDialogFocus'), df.indexOf('// ── R429'));
+    const segs = [rf, dg];
+    expect(segs.length).toBe(2);
+    for (const seg of segs) {
+      expect(seg).toContain('lockAncestorScroll(');
+      expect(seg).toContain('unlockScroll();');
+    }
+  });
+});

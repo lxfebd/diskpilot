@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { focusReturnTarget, focusableWithin, trapTarget, trapTabKey, MODAL_SEL } from './dialogFocus';
+import { focusReturnTarget, focusableWithin, trapTarget, trapTabKey, MODAL_SEL, lockAncestorScroll } from './dialogFocus';
 
 describe('焦点归还目标（R344 focusReturnTarget）', () => {
   it('能接收焦点的元素原样返回', () => {
@@ -124,5 +124,68 @@ describe('弹窗选择器（R347 MODAL_SEL）', () => {
   it('同时认 dialog 与通用确认框用的 alertdialog，并要求 aria-modal', () => {
     expect(MODAL_SEL).toContain('[role="dialog"][aria-modal="true"]');
     expect(MODAL_SEL).toContain('[role="alertdialog"][aria-modal="true"]');
+  });
+});
+
+// ── R429：弹窗打开时锁住背景滚动 ──
+
+type FakeScrollNode = {
+  parentElement: FakeScrollNode | null;
+  style: { overflow: string };
+  __oy: string;
+  attrs: Set<string>;
+  setAttribute(n: string): void;
+  removeAttribute(n: string): void;
+};
+
+function fakeScrollNode(overflowY: string, parent: FakeScrollNode | null = null): FakeScrollNode {
+  const attrs = new Set<string>();
+  return {
+    parentElement: parent,
+    style: { overflow: '' },
+    __oy: overflowY,
+    attrs,
+    setAttribute: (n: string) => { attrs.add(n); },
+    removeAttribute: (n: string) => { attrs.delete(n); },
+  };
+}
+
+const fakeScrollWin = {
+  getComputedStyle: (el: Element) => ({
+    overflowY: (el as unknown as FakeScrollNode).__oy ?? 'visible',
+    overflow: 'visible',
+  }),
+};
+
+describe('弹窗打开锁背景滚动（R429 lockAncestorScroll）', () => {
+  it('只锁可滚动的祖先：弹窗自身与不可滚祖先都不动，解锁后恢复原值', () => {
+    const root = fakeScrollNode('visible');
+    const scroller = fakeScrollNode('auto', root);
+    const dialog = fakeScrollNode('visible', scroller);
+    const unlock = lockAncestorScroll(dialog as unknown as Element, fakeScrollWin);
+    expect(scroller.style.overflow).toBe('hidden');
+    expect(scroller.attrs.has('data-scroll-locked')).toBe(true);
+    expect(root.style.overflow).toBe('');
+    expect(dialog.style.overflow).toBe('');
+    unlock();
+    expect(scroller.style.overflow).toBe('');
+    expect(scroller.attrs.has('data-scroll-locked')).toBe(false);
+  });
+
+  it('嵌套弹窗按元素引用计数：内层先解仍锁着，外层也解才恢复', () => {
+    const scroller = fakeScrollNode('scroll');
+    const outer = fakeScrollNode('visible', scroller);
+    const inner = fakeScrollNode('visible', scroller);
+    const unlockOuter = lockAncestorScroll(outer as unknown as Element, fakeScrollWin);
+    const unlockInner = lockAncestorScroll(inner as unknown as Element, fakeScrollWin);
+    unlockInner();
+    expect(scroller.style.overflow).toBe('hidden');
+    unlockOuter();
+    expect(scroller.style.overflow).toBe('');
+  });
+
+  it('没有弹窗或没有 window 时返回 no-op，不抛', () => {
+    expect(() => lockAncestorScroll(null, fakeScrollWin)()).not.toThrow();
+    expect(() => lockAncestorScroll(undefined, null)()).not.toThrow();
   });
 });

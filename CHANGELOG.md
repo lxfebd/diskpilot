@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R429: 弹窗打开时锁住背景滚动——滚轮不再穿透遮罩把背景页滚走
+
+- 缺口：弹窗遮罩（.modal-bg 等）是 position:fixed 全屏，但它挂在各 view 的滚动容器里；滚轮落在遮罩上时浏览器去找「最近的可滚动祖先」——弹窗内容短时背景页跟着滚，正在看的内容被滚走（清理页 / 优化器 / 历史页的滚动容器还不一定是 main，各 view 各一套，没法用一条 CSS 锁死）。
+- 改动（apps/desktop/src/dialogFocus.ts）：新增 lockAncestorScroll——从弹窗自身的父链向上找可滚动祖先（computed overflowY auto/scroll/overlay）逐个 overflow:hidden，只改祖先不碰弹窗子树所以 modal-body 照常滚；按元素引用计数（Map 计数 + data-scroll-locked 标记），嵌套弹窗全部关掉才恢复原值；useReturnFocus 与 useDialogFocus 打开期间加锁、清理时解锁。
+- 守卫：dialogFocus.test.ts 新增 3 条单测（只锁可滚祖先不碰弹窗自身 / 嵌套引用计数内层先解仍锁 / 无弹窗或无 window 时 no-op 不抛）；a11y.test.ts 新增 describe「弹窗打开锁背景滚动（R429）」2 条（lockAncestorScroll 关键实现断言 + 两个钩子各含 lockAncestorScroll( 与 unlockScroll()）。
+- 反向自检：把 entry.count += 1 改坏 → 恰好 2 failed（引用计数单测 + 静态守卫点名），还原后 96 passed。
+
 ### R428: 创意工坊弹窗补上可访问名——读屏进入弹窗先念出「创意工坊 · 游戏名」
 
 - 缺口：SteamWorkshopModal 的 role=dialog 是全仓 19 处弹窗里唯一没有 aria-label / aria-labelledby 的（审计发现：SteamInspectorModal、DryRunPreviewDialog、ConfirmDialog、Settings、Studio、bench×3、market、toolwall×5、HwPanels、CleanupProposalDialog、Disclaimer 都有名字，唯独这个创意工坊子模态裸奔）——读屏用户进入弹窗后无从知道自己在哪。
