@@ -1112,3 +1112,29 @@ describe('弹窗焦点进场与归还（R424）', () => {
     expect(RAW_TSX['./components/SteamWorkshopModal.tsx'] ?? '').toContain('useDialogFocus(true)');
   });
 });
+
+// R425：挂载式弹窗（预览窗 / 提案窗 / 安装窗）此前只有 close 后归还（useReturnFocus），
+// 打开瞬间焦点还留在触发元素上——换成 useDialogFocus 后进场 + 归还一体。
+describe('挂载式弹窗的进场焦点（R425）', () => {
+  it('预览窗（DryRunPreviewDialog）打开即进场，关掉回到清理按钮', () => {
+    const c = RAW_TSX['./components/cleanup/DryRunPreviewDialog.tsx'] ?? '';
+    expect(c).toContain('useDialogFocus(true)');
+    expect(c).not.toContain('useReturnFocus');
+  });
+  it('AI 提案窗（CleanupProposalDialog，常驻挂载）提案一出现即进场，关闭归还', () => {
+    const c = RAW_TSX['./components/CleanupProposalDialog.tsx'] ?? '';
+    expect(c).toContain('useDialogFocus(proposal !== null)');
+    expect(c).not.toContain('useReturnFocus');
+  });
+  it('工具坊安装窗（InstallScaffoldModal）打开即进场，装完/关闭归还', () => {
+    const c = RAW_TSX['./components/Studio.tsx'] ?? '';
+    expect(c).toContain('useDialogFocus(true)');
+    expect(c).not.toContain('useReturnFocus');
+  });
+  it('已有初始焦点的挂载式弹窗保留 useReturnFocus（口径不变）', () => {
+    expect(RAW_TSX['./components/ConfirmDialog.tsx'] ?? '').toContain('useReturnFocus(true)');
+    expect(RAW_TSX['./components/ContextMenu.tsx'] ?? '').toContain('useReturnFocus(state !== null)');
+    expect(RAW_TSX['./components/HwPanels.tsx'] ?? '').toContain('useReturnFocus(true)');
+    expect(RAW_TSX['./components/Settings.tsx'] ?? '').toContain('useReturnFocus(true)');
+  });
+});

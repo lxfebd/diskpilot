@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R425: 挂载式弹窗补进场焦点——预览窗 / 提案窗 / 安装窗打开即在弹窗里
+
+- 缺口：R424 给内联弹窗接了进场 + 归还一体的 useDialogFocus，但 7 处挂载式弹窗里有 3 处只挂了只管归还的 useReturnFocus——打开瞬间焦点还留在触发按钮上（DryRunPreviewDialog 预览窗 / CleanupProposalDialog AI 提案窗 / Studio InstallScaffoldModal 安装窗），键盘 Tab 第一步就走出弹窗。
+- 改动：三处的 useReturnFocus(...) 换成 useDialogFocus(...)（进场与归还一体）——预览窗 useDialogFocus(true)、提案窗 useDialogFocus(proposal !== null)（常驻挂载，提案一出现即进场）、安装窗 useDialogFocus(true)；注释同步更新。
+- 保留：ConfirmDialog（cancelRef 初始焦点）/ ContextMenu（首项 focus）/ Settings（dlgRef）/ HwPanels（autoFocus 确认词输入框）四处已有自己的初始焦点，继续用 useReturnFocus，口径不变。
+- 守卫：a11y.test.ts 新增 describe「挂载式弹窗的进场焦点（R425）」4 条——三处站点断言含 useDialogFocus 且不再含 useReturnFocus，第四条钉住保留 useReturnFocus 的四处不被误改。反向自检：提案窗还原成 useReturnFocus → 恰好 1 failed 点名该条，已还原。
+
 ### R424: 弹窗焦点进场与归还——打开即在弹窗里，关闭回到触发按钮
 
 - 缺口：R344 的 useReturnFocus 只负责「关闭后归还」，且只接了 7 处挂载式弹窗；内联在父组件里的 11 处弹窗（工具箱详情 / 导出 / 回收 / 启动确认 / AI 工具详情、跑分三确认、插件市场写操作确认、Steam 详情与创意工坊）完全没有焦点处理——打开后焦点还留在触发按钮上，键盘用户按 Tab 第一步就走出了弹窗，读屏用户也不知道弹窗已打开。

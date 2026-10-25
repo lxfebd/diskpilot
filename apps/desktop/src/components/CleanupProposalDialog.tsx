@@ -9,7 +9,7 @@ import { formatBytes } from '../format';
 import { useT } from '../i18n';
 import { RISK_META, RISK_ORDER } from './cleanup/RiskBadge';
 import { useEscapeKey } from '../escapeKey';
-import { useReturnFocus } from '../dialogFocus';
+import { useDialogFocus } from '../dialogFocus';
 
 // 高危项解锁口令：参与逐字比较的数据常量，不随语言翻译（提示语里原样显示）。
 const DANGER_WORD = '确认'; // @i18n-keep
@@ -99,8 +99,8 @@ export function CleanupProposalDialog() {
 
   // R320：Esc = 取消（与点遮罩、右上角 X 同口径）；执行中也能关，和 X 一致。
   useEscapeKey(() => setProposal(null), proposal !== null);
-  // R344：关掉提案窗后焦点回到打开它的按钮（本组件常驻挂载，不能靠 mount 记录）。
-  useReturnFocus(proposal !== null);
+  // R424：提案窗一出现就把焦点送进来；关掉后焦点回到打开它的按钮（本组件常驻挂载，不能靠 mount 记录）。
+  useDialogFocus(proposal !== null);
 
   if (!proposal) return null;
 

@@ -16,7 +16,7 @@ import { copyPathWithToast } from '../clipboard';
 import { isContextMenuKey, contextMenuAnchor } from '../a11y';
 import { revealWithToast } from '../reveal';
 import { useEscapeKey } from '../escapeKey';
-import { useReturnFocus } from '../dialogFocus';
+import { useDialogFocus } from '../dialogFocus';
 
 const FEATURED_IDS = [
   'wechat-pc',
@@ -286,8 +286,8 @@ function InstallScaffoldModal({
   const [err, setErr] = useState<string | null>(null);
   // R320：Esc 关闭（与点遮罩 / 右上角 X 一致）。
   useEscapeKey(onClose);
-  // R344：装完/关掉后焦点回到「安装」入口。
-  useReturnFocus(true);
+  // R424：安装窗打开即把焦点送进来；装完/关掉后焦点回到「安装」入口。
+  useDialogFocus(true);
 
   const install = async () => {
     if (!toml.trim()) {
