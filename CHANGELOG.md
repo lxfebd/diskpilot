@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R457: toast 长文本折行——Windows 长路径不再糊出卡片外
+
+- 缺口：`apps/desktop/src/styles/overview.css` 的 `.toast-text` 只有 `flex: 1; min-width: 0`，没有任何断行规则。toast 里常带无空格断点的内容（`reveal.ts` 的数据目录失败、`clipboard.ts` 的复制失败原文、`store.ts` 把 `String(e)` 拼进错误文案），Windows 路径一长就整段横向溢出：卡片 `max-width: 84vw` 拦不住，文字糊到页面上、压住下层内容（`.toast` 也没有 `overflow: hidden`，本就直接画出去）。
+- 实证：1280×800 页面里 340px 宽的探针卡，同一段 126 字符路径——加规则前 `scrollWidth 500 / clientWidth 266`（溢出 234px、明显越出卡框），加规则后 `266 / 266`（收进卡内、多折一行）。
+- 改动：`.toast-text` 补 `overflow-wrap: anywhere;`（`min-width: 0` 保留，flex 收缩逻辑不变；`pointer-events` 链未动，操作/关闭按钮照常可点）。
+- 守卫：`apps/desktop/src/styles/token-guard.test.ts` 新增 describe「toast 长文本不溢出卡片（R457）」——切 `.toast-text` 规则块断言 `overflow-wrap: anywhere` + `min-width: 0`，并顺带钉住 `.toast { pointer-events: auto }`（R103 操作按钮可点的契约）。
+- 反向自检：删掉 `overflow-wrap` 行 → 恰好 1 failed 点名「expected … to contain overflow-wrap: anywhere」，还原后 5 passed。
+- 验证：`npx vitest run src/styles/token-guard.test.ts` 5 passed；`pnpm -C apps/desktop check` EXIT=0；`node scripts/check-changelog.mjs` 与 `check-docs-links.mjs` EXIT=0。
+
 ### R456: 确认弹窗小窗不撑破视口——长正文时按钮不再被顶出屏外
 
 - 缺口：`ConfirmDialog`（`.confirm-dialog-mask` + `.cli-confirm` 卡片）既没有 `max-height` 也没有 `overflow`，遮罩只设 `padding-top: 15vh` 且自身不滚动。小窗（150% 缩放的笔记本）或长正文（错误文案、长标题等调用方自定义 `body`）时卡片底部超出视口，确认 / 取消按钮被裁到屏外，用户只能按 Esc 脱身。

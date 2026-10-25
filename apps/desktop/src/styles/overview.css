@@ -764,7 +764,13 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
   color: #fff;
 }
 /* R103：通知 toast 文本区 + 操作按钮 + 关闭钮（点击操作不触发关闭） */
-.toast-text { flex: 1; min-width: 0; }
+.toast-text {
+  flex: 1;
+  min-width: 0;
+  /* R457：toast 里常带 Windows 长路径 / 原始 OS 错误串（无空格断点）。
+     没有断行机会时文字会溢出卡片、糊到页面上：允许任意位置折行。 */
+  overflow-wrap: anywhere;
+}
 .toast-action {
   flex-shrink: 0;
   border: 1px solid currentColor;

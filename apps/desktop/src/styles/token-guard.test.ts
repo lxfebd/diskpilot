@@ -115,3 +115,19 @@ describe('确认弹窗小窗不撑破视口（R456）', () => {
     expect(chat).toContain('.confirm-dialog-mask .cli-confirm-body { overflow-y: auto; min-height: 0; }');
   });
 });
+
+// R457：toast 文本可能携带无空格的 Windows 长路径 / 原始 OS 错误串——没有断行机会时
+// 文字会溢出卡片、糊到页面上。规则：.toast-text 必须允许任意位置折行，且保持可收缩。
+describe('toast 长文本不溢出卡片（R457）', () => {
+  it('.toast-text 有 overflow-wrap 与收缩许可，卡片保持可点', () => {
+    const ov = SOURCES['./overview.css'];
+    const start = ov.indexOf('.toast-text {');
+    expect(start).toBeGreaterThan(-1);
+    const rule = ov.slice(start, ov.indexOf('}', start) + 1);
+    expect(rule).toContain('overflow-wrap: anywhere');
+    expect(rule).toContain('min-width: 0');
+    const tstart = ov.indexOf('.toast {');
+    const tcard = ov.slice(tstart, ov.indexOf('}', tstart) + 1);
+    expect(tcard).toContain('pointer-events: auto');
+  });
+});
