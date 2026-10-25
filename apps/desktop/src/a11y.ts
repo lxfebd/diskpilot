@@ -86,3 +86,17 @@ export function clearSearchOnClick(clear: () => void) {
     e.currentTarget.parentElement?.querySelector('input')?.focus();
   };
 }
+
+// R469：提示条的「去调散热 / 查看周报」和关闭按钮点完就把整条卸载——若焦点正在
+// 该条里，卸载后焦点掉到 <body>，键盘用户得从文档开头重新 Tab（R462 清空按钮同款
+// 问题）。等 React 真正卸载完事（setTimeout 0）再判断：焦点若已落到 body（说明没有
+// 别的控件接走，比如动作打开的设置窗会自己抢焦），就交给页面主体——跳过链接的落点
+// main[tabindex="-1"]（R419 已给它可见焦点描边）。
+export function focusMainIfFocusLost(): void {
+  setTimeout(() => {
+    if (typeof document === 'undefined') return;
+    const el = document.activeElement;
+    if (el && el !== document.body && el !== document.documentElement) return;
+    document.getElementById('main-content')?.focus();
+  }, 0);
+}

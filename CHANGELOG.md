@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R469: 提示条按钮点完焦点不丢——「去调散热」/关闭后不再掉到页面开头
+
+- **缺口**：提示条的「去调散热 / 查看周报」动作按钮与关闭按钮点完整条就卸载——若焦点正在该条里（键盘 Tab 过去 / 正在读错误原文），卸载后焦点掉到 `<body>`，键盘用户要从文档开头重新 Tab 一遍（R462 清空按钮同款问题，toast 一直没处理）。动作按钮打开设置窗时更糟：焦点先掉 body，窗自己再抢，中间凭空多一次跳动。
+- **改动**：`a11y.ts` 新增 `focusMainIfFocusLost()`——`setTimeout(0)` 等 React 真正卸载完按钮后再看 `document.activeElement`，已掉到 body（说明没有别的控件接走焦点）就把焦点交给页面主体（跳过链接落点 `#main-content`，R419 已有可见焦点描边）；`App.tsx` 提示条两个按钮都在 `dismissToast` 后调它。动作若开了窗，窗会自己抢焦，检测到就不会抢，互不打架。
+- **守卫**：`a11y.test.ts` 新增 4 条——行为三连（焦点落 body 时交 main / 别的控件已接走时不抢 / 没有 document 或没有 main-content 都静默不抛）+ 接线断言（toast 栈内 `focusMainIfFocusLost();` 恰好 2 处）。
+- **反向自检**：删掉关闭按钮那处调用 → 恰好 1 条红（接线断言 expected 1 to be 2），还原后 130 passed；`pnpm check` 87 files / 1270 tests 全绿。
+
 ### R468: 活动会话草稿——托盘退出 / 进程被杀时，没归档的对话不再整段丢
 
 - **缺口**：活动会话的 turns 平时只在归档（`archiveActiveChat` / `newChat` / `switchChat`）时才进历史列表落盘；`beforeunload` 只在刷新/真正关窗时触发，而默认「关闭窗口进托盘」只是 `window.hide()`、托盘「退出」直接 `app.exit`，进程被杀更不用说——这些路径上未归档的活跃对话整段消失（连「中断」提示都留不下）。

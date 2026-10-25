@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import { api } from './api';
 import { isTauri } from './env';
 import { useStore, flushActiveChatDraft } from './store';
+import { focusMainIfFocusLost } from './a11y';
 import { LeftPanel } from './components/LeftPanel';
 import { useCleanupStore } from './useCleanupStore';
 import { scanTargets } from './drives';
@@ -914,6 +915,9 @@ export default function App() {
                   ev.stopPropagation();
                   toast.action!.run();
                   dismissToast(toast.id);
+                  // R469：整条卸载后焦点会掉到 body——交给页面主体（动作若开了窗，
+                  // 窗自己会抢焦，这里检测到就不会抢）
+                  focusMainIfFocusLost();
                 }}
               >
                 {toast.action.label}
@@ -923,7 +927,10 @@ export default function App() {
               type="button"
               className="toast-close"
               aria-label={t('common.close')}
-              onClick={() => dismissToast(toast.id)}
+              onClick={() => {
+                dismissToast(toast.id);
+                focusMainIfFocusLost();
+              }}
             >
               <X size={12} />
             </button>

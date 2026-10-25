@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { activateOnKey, clearSearchOnClick, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
+import { activateOnKey, clearSearchOnClick, clearSearchOnEscape, focusMainIfFocusLost, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
 
 describe('键盘激活口径（R314）', () => {
   it('只有 Enter 与空格算激活键（对齐原生 button）', () => {
@@ -1812,5 +1812,74 @@ describe('关窗前活动草稿落盘（R468）', () => {
     expect(st).toContain("const ACTIVE_DRAFT_KEY = 'diskpilot.activeChatDraft';");
     expect(st).toContain('useStore.subscribe((s, prev) => {');
     expect(st).toContain('ACTIVE_DRAFT_THROTTLE_MS);');
+  });
+});
+
+// R469：提示条的「去调散热 / 查看周报」与关闭按钮点完整条就卸载——焦点若正在
+// 该条里就会掉到 <body>，键盘用户要从文档开头重新 Tab。卸载后焦点还在 body 时
+// 交给页面主体（跳过链接落点 #main-content，R419 给它可见描边）；动作打开的窗
+// 自己会抢焦，这里检测到就不会抢。
+describe('提示条卸载后焦点不丢（R469）', () => {
+  const setup = (activeElement: unknown, main: { focus: () => void } | null) => {
+    const doc = {
+      activeElement,
+      body: { tagName: 'BODY' },
+      documentElement: { tagName: 'HTML' },
+      getElementById: vi.fn(() => main),
+    };
+    vi.stubGlobal('document', doc);
+    return doc;
+  };
+
+  it('焦点落到 body 时交给 main-content', () => {
+    vi.useFakeTimers();
+    const focus = vi.fn();
+    const doc = setup(null, { focus });
+    doc.activeElement = doc.body;
+    focusMainIfFocusLost();
+    vi.advanceTimersByTime(1);
+    expect(doc.getElementById).toHaveBeenCalledWith('main-content');
+    expect(focus).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('别的控件已接走焦点时不抢（动作开的窗自己会抢）', () => {
+    vi.useFakeTimers();
+    const focus = vi.fn();
+    const doc = setup({ tagName: 'INPUT' }, { focus });
+    focusMainIfFocusLost();
+    vi.advanceTimersByTime(1);
+    expect(doc.getElementById).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('没有 document / 没有 main-content 都静默不抛', () => {
+    vi.useFakeTimers();
+    expect(() => {
+      focusMainIfFocusLost();
+      vi.advanceTimersByTime(1);
+    }).not.toThrow();
+    const doc = setup(null, null);
+    doc.activeElement = doc.body;
+    expect(() => {
+      focusMainIfFocusLost();
+      vi.advanceTimersByTime(1);
+    }).not.toThrow();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('提示条按钮接了焦点归还（R469 接线）', () => {
+  it('动作按钮与关闭按钮都在 dismiss 后调 focusMainIfFocusLost', () => {
+    const app = String(RAW_TSX['./App.tsx'] ?? '');
+    const start = app.indexOf('className="toast-stack"');
+    const stack = app.slice(start, app.indexOf('</div>', app.indexOf('className="toast-close"')));
+    expect(stack).toContain('toast.action!.run();');
+    expect(stack.split('focusMainIfFocusLost();').length - 1).toBe(2);
+    expect(stack).toContain('dismissToast(toast.id);');
   });
 });
