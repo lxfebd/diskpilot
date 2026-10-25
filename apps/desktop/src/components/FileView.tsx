@@ -6,7 +6,7 @@ import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useStore } from '../store';
 import { useT } from '../i18n';
-import { activateOnKey, isContextMenuKey, contextMenuAnchor } from '../a11y';
+import { activateOnKey, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor } from '../a11y';
 import { copyPathWithToast } from '../clipboard';
 import { revealWithToast } from '../reveal';
 
@@ -160,11 +160,13 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
     <div className="fileview">
       <div className="fileview-search">
         <Search size={13} />
-        <input
+                {/* R439：Esc 有文字时清空搜索，空时放行（弹窗照常关） */}
+<input
           aria-label={t('overview.fileview.searchAria')}
           placeholder={t('overview.fileview.search')}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
+          onKeyDown={clearSearchOnEscape(() => onQueryChange(''))}
         />
       </div>
 

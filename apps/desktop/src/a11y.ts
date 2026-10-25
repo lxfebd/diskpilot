@@ -50,3 +50,15 @@ export function contextMenuAnchor(el: Element | null): { x: number; y: number } 
   if (!(r.width > 0 || r.height > 0)) return null;
   return { x: Math.round(r.left + 12), y: Math.round(r.top + Math.min(r.height, 22)) };
 }
+
+// R439：搜索框内按 Esc 一键清空——有文字时清空并吞掉事件（不冒泡去关弹窗），
+// 空输入时放行（Esc 照常走 R349 的弹窗栈关掉当前层）。
+export function clearSearchOnEscape(clear: () => void) {
+  return (e: { key: string; preventDefault?: () => void; stopPropagation?: () => void; currentTarget?: { value: string } }) => {
+    if (e.key === 'Escape' && (e.currentTarget?.value ?? '') !== '') {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+      clear();
+    }
+  };
+}

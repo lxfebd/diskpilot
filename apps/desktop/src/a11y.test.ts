@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { activateOnKey, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
+import { activateOnKey, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
 
 describe('键盘激活口径（R314）', () => {
   it('只有 Enter 与空格算激活键（对齐原生 button）', () => {
@@ -1370,5 +1370,40 @@ describe('表格的标题（R438）', () => {
     expect(block).toContain('white-space: nowrap');
     expect(block).toContain('border: 0');
     expect(block).toContain('overflow: hidden');
+  });
+});
+
+describe('搜索框 Esc 清空（R439）', () => {
+  it('有文字时 Esc 清空并吞掉事件（不冒泡去关弹窗）', () => {
+    const clear = vi.fn(); const pd = vi.fn(); const sp = vi.fn();
+    clearSearchOnEscape(clear)({ key: 'Escape', preventDefault: pd, stopPropagation: sp, currentTarget: { value: 'abc' } });
+    expect(clear).toHaveBeenCalledTimes(1);
+    expect(pd).toHaveBeenCalledTimes(1);
+    expect(sp).toHaveBeenCalledTimes(1);
+  });
+  it('空输入时放行（Esc 走弹窗栈）', () => {
+    const clear = vi.fn(); const sp = vi.fn();
+    clearSearchOnEscape(clear)({ key: 'Escape', stopPropagation: sp, currentTarget: { value: '' } });
+    expect(clear).not.toHaveBeenCalled();
+    expect(sp).not.toHaveBeenCalled();
+  });
+  it('其它键不动', () => {
+    const clear = vi.fn();
+    clearSearchOnEscape(clear)({ key: 'Enter', currentTarget: { value: 'x' } });
+    expect(clear).not.toHaveBeenCalled();
+  });
+  it('六个搜索框都接上 clearSearchOnEscape', () => {
+    const sites: [string, string][] = [
+      ['./components/history/HistoryPage.tsx', 'clearSearchOnEscape(() => setQuery('],
+      ['./components/StartupPanel.tsx', 'clearSearchOnEscape(() => setQuery('],
+      ['./components/SystemTools.tsx', 'clearSearchOnEscape(() => setDrvQuery('],
+      ['./components/toolbelt/toolwall.tsx', 'clearSearchOnEscape(() => setQuery('],
+      ['./components/FileView.tsx', 'clearSearchOnEscape(() => onQueryChange('],
+      ['./components/SteamInspector.tsx', 'clearSearchOnEscape(() => setSearchQuery('],
+    ];
+    for (const [path, needle] of sites) {
+      const src = RAW_TSX[path] ?? '';
+      expect(src).toContain(needle);
+    }
   });
 });

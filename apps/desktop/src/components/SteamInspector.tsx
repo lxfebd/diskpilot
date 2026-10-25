@@ -23,6 +23,7 @@ import { formatBytes, formatDateTime, formatDateKey } from '../format';
 import { t, useT } from '../i18n';
 import { SteamWorkshopModal } from './SteamWorkshopModal';
 import { scrollBehavior } from '../motion';
+import { clearSearchOnEscape } from '../a11y';
 
 type Pivot = 'sleep' | 'size' | 'library' | 'lastplayed';
 
@@ -655,13 +656,15 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
             )}
             <div className="steam-search">
               <Search size={13} />
-              <input
+                            {/* R439：Esc 有文字时清空搜索，空时放行（弹窗照常关） */}
+<input
                 ref={searchInputRef}
                 type="text"
                 aria-label={t('steam.searchAria')}
                 placeholder={t('steam.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={clearSearchOnEscape(() => setSearchQuery(''))}
               />
               {searchQuery && (
                 <button className="steam-icon-btn" onClick={() => setSearchQuery('')} title={t('steam.clear')}>

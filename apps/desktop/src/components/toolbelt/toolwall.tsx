@@ -35,6 +35,7 @@ import {
 } from './catalog';
 import type { ToolContext } from './shared';
 import { formatTime } from '../../format';
+import { clearSearchOnEscape } from '../../a11y';
 
 export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
   const t = useT();
@@ -951,11 +952,13 @@ export function CatalogWall({
       <div className="toolwall-top">
         <div className="toolwall-search">
           <Search size={13} />
-          <input
+                    {/* R439：Esc 有文字时清空搜索，空时放行（弹窗照常关） */}
+<input
             aria-label={t('toolbelt.wall.searchAria')}
             placeholder={t('toolbelt.wall.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={clearSearchOnEscape(() => setQuery(''))}
             spellCheck={false}
           />
           {query && (

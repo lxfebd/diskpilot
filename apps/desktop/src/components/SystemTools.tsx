@@ -16,6 +16,7 @@ import { useT } from '../i18n';
 import { StartupPanel } from './StartupPanel';
 import { FAN_LEVEL_COLORS } from '../colors';
 import { useFlashText } from '../flash';
+import { clearSearchOnEscape } from '../a11y';
 
 // 风扇调速档位 → 语义色（urgent 红 → balanced 绿，未知灰）。
 // R108：此前在本文件硬编码 9 个 hex，是 colors.ts（W4 单源）之外的散板——
@@ -460,9 +461,11 @@ function SystemToolsInner() {
           </span>
           <label className="sys-filter-search">
             <Search size={13} />
-            <input
+                        {/* R439：Esc 有文字时清空搜索，空时放行（弹窗照常关） */}
+<input
               value={drvQuery}
               onChange={(e) => setDrvQuery(e.target.value)}
+              onKeyDown={clearSearchOnEscape(() => setDrvQuery(''))}
               aria-label={t('system.driver.searchAria')}
               placeholder={t('system.driver.searchPlaceholder')}
             />

@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R439: 搜索框 Esc 一键清空——肌肉记忆不再落空，弹窗 Esc 不再误伤
+
+- 缺口：六个搜索框（巡检记录 / 启动项 / 驱动表 / 工具墙 / 文件视图 / Steam 搜索）都没有「按 Esc 清空」的行为；toolwall 与 Steam 搜索有视觉清除按钮，其余四个连清除按钮都没有。用户停在搜索框里按 Esc 是肌肉记忆，当前只会冒泡——要么没效果，要么把桌面上的弹窗一并关掉（R349 弹窗栈）。
+- 改动：apps/desktop/src/a11y.ts 新增 clearSearchOnEscape(clear) 助手——仅在输入框有文字时按 Esc 才 preventDefault + stopPropagation + 清空；空输入时放行，Esc 继续走弹窗栈。六个搜索框各接一行 onKeyDown={clearSearchOnEscape(() => setX(''))}，让清空动作与局部状态解耦（FileView 走 onQueryChange 回调）。
+- 守卫：apps/desktop/src/a11y.test.ts 新增 describe「搜索框 Esc 清空（R439）」4 条——有文字时 Esc 清空并吞事件（不冒泡去关弹窗）/ 空输入放行不调 clear 不调 stopPropagation / 其它键不动 / 六个搜索框全部接上（逐路径断言）。
+- 反向自检：临时删掉 HistoryPage 的 onKeyDown 行 → 恰好 1 failed 点名「六个搜索框都接上」，还原后 92 passed。
+
 ### R438: 唯一表格补 <caption> 标题——读屏进参数表先听到「脚本参数表」
 
 - 缺口：全仓唯一的表格（工具墙详情卡的参数表）没有任何标题；读屏进入时只会报「表格，4 列 × N 行」而没有内容语境。列头虽已由 R432 补上 scope="col"，整张表仍缺一个名字。全仓也没有 .sr-only 工具类，想补标题没有现成的视觉隐藏手段。

@@ -9,6 +9,7 @@ import { useT } from '../../i18n';
 import { formatBytes, formatTime } from '../../format';
 import type { UndoEntry } from '../../types';
 import { WeeklyHealthCard } from './WeeklyHealthCard';
+import { clearSearchOnEscape } from '../../a11y';
 import {
   dayGroupLabel,
   filterUndoEntries,
@@ -171,9 +172,11 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         ))}
         <label className="hp-search">
           <Search size={13} />
-          <input
+                    {/* R439：Esc 有文字时清空搜索，空时放行（弹窗照常关） */}
+<input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={clearSearchOnEscape(() => setQuery(''))}
             aria-label={t('history.searchAria')}
             placeholder={t('history.searchPlaceholder')}
           />

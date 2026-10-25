@@ -6,6 +6,7 @@ import { api, type StartupItem } from '../api';
 import { isPermEnabled } from '../permissions';
 import { useT } from '../i18n';
 import { useFlashText } from '../flash';
+import { clearSearchOnEscape } from '../a11y';
 
 // 启动项来源标签：switch 比较的是后端返回的标识符（不译），文案在渲染处求值——
 // 模块顶层求值会把中文烤死在首次 import，切语言不再生效。未知来源原样显示。
@@ -204,9 +205,11 @@ export function StartupPanel() {
             </span>
             <label className="sys-filter-search">
               <Search size={13} />
-              <input
+                            {/* R439：Esc 有文字时清空搜索，空时放行（弹窗照常关） */}
+<input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={clearSearchOnEscape(() => setQuery(''))}
                 aria-label={t('system.startup.searchAria')}
                 placeholder={t('system.startup.searchPlaceholder')}
               />
