@@ -115,6 +115,9 @@ export default function App() {
   const reclaimedBytes = useStore((s) => s.reclaimedBytes);
   const toasts = useStore((s) => s.toasts);
   const dismissToast = useStore((s) => s.dismissToast);
+  // R467：悬停 / 聚焦时暂停倒计时。
+  const pauseToast = useStore((s) => s.pauseToast);
+  const resumeToast = useStore((s) => s.resumeToast);
 
   // R347：aria-modal 只是说给读屏软件的承诺，Tab 仍会走到背景页——这里全局接管一次。
   useModalFocusTrap();
@@ -886,7 +889,16 @@ export default function App() {
           读屏软件对「清理完成 / 打不开 / 提醒」一律静默。容器常驻，内容一变就播报。 */}
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => (
-          <div key={toast.id} className={'toast ' + toast.kind}>
+          <div
+            key={toast.id}
+            className={'toast ' + toast.kind}
+            // R467：指针在提示条上、或键盘焦点在它的按钮里时不倒数——
+            // 别在用户正读错误原文 / 正要点「去调散热」的时候把条收走。
+            onMouseEnter={() => pauseToast(toast.id)}
+            onMouseLeave={() => resumeToast(toast.id)}
+            onFocus={() => pauseToast(toast.id)}
+            onBlur={() => resumeToast(toast.id)}
+          >
             <span className="toast-text">{toast.text}</span>
             {toast.action && (
               <button

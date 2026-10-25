@@ -140,6 +140,7 @@ describe('弹窗焦点循环已挂载（R347）', () => {
 // box-shadow，也没补 :focus-visible。两者都让键盘用户看不出焦点在哪，且不会有断言变红。
 const RAW_CSS = import.meta.glob('./**/*.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const RAW_SHELL = import.meta.glob('./i18n/namespaces/shell.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const RAW_STORE = import.meta.glob('./store.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 describe('键盘焦点不许被 outline:none 抹掉（R348）', () => {
   it(':focus 规则里的 outline:none 必须有可见替身或 :focus-visible', () => {
@@ -1772,5 +1773,26 @@ describe('扫描中断态不再冒充完成（R465）', () => {
     const at = css.indexOf('.scan-bar-cancelled .scan-bar-label {');
     expect(at).toBeGreaterThan(-1);
     expect(css.slice(at, at + 120)).toContain('color: var(--ink-3);');
+  });
+});
+describe('toast 倒计时的悬停 / 聚焦暂停（R467）', () => {
+  const app = String(RAW_TSX['./App.tsx'] ?? '');
+  const store = String(RAW_STORE['./store.ts'] ?? '');
+  it('提示条挂了悬停与聚焦四个暂停钩子', () => {
+    expect(app).toContain('onMouseEnter={() => pauseToast(toast.id)}');
+    expect(app).toContain('onMouseLeave={() => resumeToast(toast.id)}');
+    expect(app).toContain('onFocus={() => pauseToast(toast.id)}');
+    expect(app).toContain('onBlur={() => resumeToast(toast.id)}');
+  });
+  it('暂停按剩余时长续上，手动关闭收掉句柄', () => {
+    expect(store).toContain('const scheduleDismiss = (id: string, ms: number) => {');
+    expect(store).toContain('entry.remaining = Math.max(0, entry.dueAt - Date.now());');
+    expect(store).toContain('entry.paused = true;');
+    expect(store).toContain('scheduleDismiss(id, entry.remaining);');
+    const at = store.indexOf('dismissToast: (id) => {');
+    expect(at).toBeGreaterThan(-1);
+    const body = store.slice(at, at + 400);
+    expect(body).toContain('clearTimeout(entry.timer);');
+    expect(body).toContain('toastTimers.delete(id);');
   });
 });

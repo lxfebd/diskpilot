@@ -370,6 +370,17 @@ export function toastDuration(
   return Math.min(ms, TOAST_MAX_MS);
 }
 
+// R467：toast 倒计时的句柄表。指针悬停或键盘焦点落在提示条上时暂停倒计时，
+// 移开/失焦再续上剩余时长——「去调散热」「查看周报」这类动作按钮和异常原文
+// 不该在用户正看着它的时候消失（WCAG 2.2.1：限时内容要能暂停/延长）。
+interface ToastTimer {
+  timer: ReturnType<typeof setTimeout>;
+  dueAt: number;
+  remaining: number;
+  paused: boolean;
+}
+const toastTimers = new Map<string, ToastTimer>();
+
 interface AppState {
   root: Node | null;
   // 按盘符缓存的扫描结果树（key = 大写去尾斜杠的盘符/路径）。全盘扫完后再点
@@ -419,6 +430,9 @@ interface AppState {
 
   toast: (text: string, kind?: 'ok' | 'err' | 'warn', action?: { label: string; run: () => void }) => void;
   dismissToast: (id: string) => void;
+  // R467：暂停 / 续上某条 toast 的倒计时（指针悬停或键盘聚焦时暂停）。
+  pauseToast: (id: string) => void;
+  resumeToast: (id: string) => void;
   setProposal: (p: CleanupProposal | null) => void;
   recyclePaths: (
     paths: { path: string; size_hint?: number }[],
@@ -470,6 +484,15 @@ export const useStore = create<AppState>((set, get) => {
     // bump，右键回收和 AI 提案执行后台账已追加记录，但依赖 scanSeq 的读者
     // （清理页脚本卡「上次清理」徽标、总览 loadClean）收不到信号，卡在旧状态。
     get().bumpScanSeq();
+  };
+
+  // R467：把「到期自动关闭」登记进句柄表——暂停时才能算准剩余时长；
+  // 重复登记（如 R364 同文案原地替换）先清旧句柄再排新的。
+  const scheduleDismiss = (id: string, ms: number) => {
+    const existing = toastTimers.get(id);
+    if (existing) clearTimeout(existing.timer);
+    const timer = setTimeout(() => get().dismissToast(id), ms);
+    toastTimers.set(id, { timer, dueAt: Date.now() + ms, remaining: ms, paused: false });
   };
 
   return {
@@ -552,9 +575,30 @@ export const useStore = create<AppState>((set, get) => {
       if (next.length > TOAST_MAX_VISIBLE) next.splice(0, next.length - TOAST_MAX_VISIBLE);
       return { toasts: next };
     });
-    setTimeout(() => get().dismissToast(id), toastDuration(kind, text, action !== undefined));
+    scheduleDismiss(id, toastDuration(kind, text, action !== undefined));
   },
-  dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  dismissToast: (id) => {
+    // R467：手动关掉也要把定时器与登记表一起收掉，别留悬空句柄。
+    const entry = toastTimers.get(id);
+    if (entry) {
+      clearTimeout(entry.timer);
+      toastTimers.delete(id);
+    }
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
+  },
+  pauseToast: (id) => {
+    const entry = toastTimers.get(id);
+    if (!entry || entry.paused) return;
+    clearTimeout(entry.timer);
+    entry.remaining = Math.max(0, entry.dueAt - Date.now());
+    entry.paused = true;
+  },
+  resumeToast: (id) => {
+    const entry = toastTimers.get(id);
+    if (!entry || !entry.paused) return;
+    entry.paused = false;
+    scheduleDismiss(id, entry.remaining);
+  },
   setProposal: (proposal) => set({ proposal }),
 
   // 批量移入回收站：逐个执行（后端 recycle_paths，强制 Recycle + undo.jsonl），

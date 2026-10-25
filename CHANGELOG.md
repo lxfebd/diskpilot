@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R467: toast 倒计时可以暂停——悬停或聚焦时不再「读着读着就消失」
+
+- 缺口：toast 的自动关闭是创建时一次性 `setTimeout`（`apps/desktop/src/store.ts` 的 `toast()` 末尾），R342 按级别分到 5–16 秒，但**倒计时无法暂停**：鼠标悬在提示条上读异常原文、或键盘 Tab 到「去调散热」「查看周报」按钮准备按下去时，条子照样到期消失——带动作按钮的提示等于白给，长错误串也来不及读完（WCAG 2.2.1：限时内容要能暂停/延长）。
+- 改动：`store.ts` 增加 toast 句柄表 `toastTimers` 与统一的 `scheduleDismiss(id, ms)`（登记 `dueAt`/`remaining`）；新增 `pauseToast(id)`（`clearTimeout` 后按 `dueAt - now` 记下剩余时长、置 `paused`）与 `resumeToast(id)`（按**剩余**时长重排，不是从头重数）；`dismissToast` 手动/到期关闭都一并 `clearTimeout` 并删登记，不留悬空句柄。`App.tsx` 的提示条挂 `onMouseEnter` / `onMouseLeave` / `onFocus` / `onBlur` 四个钩子（focus/blur 冒泡覆盖条内动作按钮与关闭按钮），指针停在条上或焦点在条里时不倒数。
+- 守卫：`store.test.ts` 新增 describe「toast 倒计时可暂停（R467）」4 条——到期自动关闭、暂停后越过到期仍保留且续上后按剩余时长正好走完、重复暂停与未登记 id 静默不抛、手动关闭后 `vi.getTimerCount()` 归零且不再触发；`a11y.test.ts` 新增 describe「toast 倒计时的悬停 / 聚焦暂停（R467）」2 条——App.tsx 四个钩子逐字、store.ts 的 `scheduleDismiss` / 剩余时长计算 / `paused` 置位 / `dismissToast` 清理句柄。
+- 反向自检：删掉 `pauseToast` 里的 `entry.paused = true;` → 恰好 1 failed 点名该守卫断言，已还原；pnpm check 87 files / 1258 tests 全绿。
+
 ### R466: 扫描完成也播报——完成条补上 live region，读屏用户不必盯着进度条
 
 - 缺口：扫描结束在界面上只是「进度条消失 + 换成完成条」，而完成条（`apps/desktop/src/App.tsx` 的 `.scan-bar-done`）没有 live region——读屏用户扫完之后收不到任何结果播报，只能自己去摸页面；R465 刚给取消条加了 `role="status"`，于是口径反过来变成「取消有播报、正常完成没有」。

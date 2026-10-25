@@ -752,3 +752,55 @@ describe('会话列表上限（R452）', () => {
     expect(saved.some((x) => x.id === 'c0')).toBe(false);
   });
 });
+describe('toast 倒计时可暂停（R467）', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('到期自动关闭', () => {
+    useStore.getState().toast('普通提示', 'ok');
+    vi.advanceTimersByTime(toastDuration('ok', '普通提示', false) + 1);
+    expect(useStore.getState().toasts).toHaveLength(0);
+  });
+
+  it('暂停后到期不关，续上后按剩余时长走完才关', () => {
+    useStore.getState().toast('带动作的提示', 'warn', { label: '去调散热', run: () => {} });
+    const id = useStore.getState().toasts[0].id;
+    const dur = toastDuration('warn', '带动作的提示', true);
+    vi.advanceTimersByTime(1000);
+    useStore.getState().pauseToast(id);
+    vi.advanceTimersByTime(dur * 5);
+    expect(useStore.getState().toasts).toHaveLength(1);
+    useStore.getState().resumeToast(id);
+    vi.advanceTimersByTime(dur - 1000 - 1);
+    expect(useStore.getState().toasts).toHaveLength(1);
+    vi.advanceTimersByTime(2);
+    expect(useStore.getState().toasts).toHaveLength(0);
+  });
+
+  it('重复暂停 / 未登记 id 都静默，不抛', () => {
+    useStore.getState().toast('x', 'ok');
+    const id = useStore.getState().toasts[0].id;
+    useStore.getState().pauseToast(id);
+    useStore.getState().pauseToast(id);
+    useStore.getState().resumeToast(id);
+    useStore.getState().resumeToast(id);
+    useStore.getState().pauseToast('ghost');
+    useStore.getState().resumeToast('ghost');
+    vi.advanceTimersByTime(toastDuration('ok', 'x', false) + 1);
+    expect(useStore.getState().toasts).toHaveLength(0);
+  });
+
+  it('手动关闭收掉定时器，不再触发 dismiss', () => {
+    useStore.getState().toast('y', 'ok');
+    const id = useStore.getState().toasts[0].id;
+    vi.advanceTimersByTime(100);
+    useStore.getState().dismissToast(id);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(100000);
+    expect(useStore.getState().toasts).toHaveLength(0);
+  });
+});
