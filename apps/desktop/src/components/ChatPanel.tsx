@@ -19,6 +19,7 @@ import type { Node, AdvisorResponse, Scaffold } from '../types';
 import { HwReportCard, StressConfirmPanel, HwTestMonitor, useHwTestMonitor, type StressConfirm } from './HwPanels';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useAgentToolProgress, AgentProgressCard } from './AgentProgressMonitor';
+import { swapChatDraft, type ChatDraftStore } from './chatDraft';
 
 // 后端进度 label（agent-server blocking_call_progress 固定中文）→ i18n 键。
 // 精确匹配全部 9 个已知 label；未收录的 label 原样显示——后端新增进度
@@ -149,6 +150,12 @@ const composingRef = useRef(false);
   const [pendingRecycle, setPendingRecycle] = useState<{ path: string; name: string; size: number; reason: string } | null>(null);
   // R378：删除会话是破坏性操作（本机对话记录直接没），先过 ConfirmDialog 再删。
   const [pendingDeleteChat, setPendingDeleteChat] = useState<{ id: string; title: string } | null>(null);
+  // R454：每个会话各有一份草稿（输入框文字 + 待发附件）。切换会话时把当前
+  // 草稿归到离开的会话名下，再取出目标会话的草稿——否则草稿会跟着人跑进
+  // 另一个对话（半句话发错上下文、附件串台）。
+  const draftsRef = useRef<ChatDraftStore>({});
+  const prevChatIdRef = useRef<string | null>(activeChatId);
+
   // AI 调用 get_hardware_info / analyze_disk_health 时的结构化数据，渲染为卡片。
   const [hwCard, setHwCard] = useState<{ info: HwInfo | null; health: import('../api').HwDiskHealth | null } | null>(null);
   // 当前进行中 AI 请求的取消控制器（beginReq 创建、endReq 清空）：停止按钮
@@ -282,6 +289,23 @@ const composingRef = useRef(false);
     stickRef.current = true;
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: scrollBehavior() });
   }, [activeChatId]);
+
+  useEffect(() => {
+    // R454：会话级草稿——切走时存档、切回时原样取回（文字 + 待发附件一起）。
+    const from = prevChatIdRef.current;
+    if (from === activeChatId) return;
+    prevChatIdRef.current = activeChatId;
+    const swapped = swapChatDraft(draftsRef.current, from, activeChatId, {
+      text: input,
+      drops: pendingDrops,
+      images: pendingImages,
+    });
+    draftsRef.current = swapped.store;
+    setInput(swapped.next.text);
+    setPendingDrops(swapped.next.drops);
+    setPendingImages(swapped.next.images);
+  }, [activeChatId, input, pendingDrops, pendingImages]);
+
 
   // Walk root, collect ALL nodes tagged with this scaffold. Mirrors Studio's
   // findAllMatchesByScaffold — a scaffold legitimately matches in multiple

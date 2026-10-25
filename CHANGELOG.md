@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R454: 切会话不再串台——草稿（文字 + 待发附件）跟着会话各存一份
+
+- 缺口：聊天框的输入草稿与待发附件（拖入的路径 / 图片药丸）都是组件级单例状态：在会话 A 打了一半的字、拖了两个附件，随手点开到会话 B，草稿和附件原样跟过来——按发送就发进 B 的上下文（半句话问错对话、附件串台），切回 A 时 A 的草稿已经没了。
+- 改动：新增 apps/desktop/src/components/chatDraft.ts（`ChatDraft` + `swapChatDraft(store, from, to, current)`：切走时非空草稿归档到离开的会话名下、空草稿删除条目、切回时取回自己的草稿并逐项浅拷贝，`EMPTY_CHAT_DRAFT` 兜底）；ChatPanel 持 `draftsRef` + `prevChatIdRef`，`activeChatId` 变化时一次性交换文字 / 路径 / 图片三样状态。
+- 守卫：apps/desktop/src/components/chatDraft.test.ts 7 条——纯函数 6 条（归档 + 取回、空草稿不落条目、目标会话无草稿则清空、同会话不搬动、仅附件也算非空、返回值与库内互不影响）+ 接线 1 条（import.meta.glob 读 ChatPanel raw，断言两个 ref / swapChatDraft 调用 / 三个 setter 写回）。
+- 反向自检：临时删掉 effect 里的 `setInput(swapped.next.text);` → 接线断言恰好 1 failed，还原后 7 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（85 files / 1219 tests）；check-changelog 与 check-docs-links EXIT=0。
+
 ### R453: 切换会话后回到该会话的底部——不再继承上一个会话的滚动位置
 
 - 缺口：R406 的贴底跟随只在「回合数变化 / 忙碌态变化」时触发，且要求 `stickRef.current` 为真。用户在上一个会话往上翻过历史，再切到另一个会话：turns 整个换掉、滚动位置却留在原地——长对话→长对话落在中间，短对话→长对话卡在顶部，想看最近消息得先自己滚到底。
