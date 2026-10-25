@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R456: 确认弹窗小窗不撑破视口——长正文时按钮不再被顶出屏外
+
+- 缺口：`ConfirmDialog`（`.confirm-dialog-mask` + `.cli-confirm` 卡片）既没有 `max-height` 也没有 `overflow`，遮罩只设 `padding-top: 15vh` 且自身不滚动。小窗（150% 缩放的笔记本）或长正文（错误文案、长标题等调用方自定义 `body`）时卡片底部超出视口，确认 / 取消按钮被裁到屏外，用户只能按 Esc 脱身。
+- 改动：`apps/desktop/src/styles/chat.css` 的 `.confirm-dialog-mask .cli-confirm` 补 `max-height: calc(100vh - 15vh - 24px)` + `display: flex` + `flex-direction: column` + `overflow: hidden`；新增 `.confirm-dialog-mask .cli-confirm-head, .confirm-dialog-mask .cli-confirm-actions { flex-shrink: 0; }` 与 `.confirm-dialog-mask .cli-confirm-body { overflow-y: auto; min-height: 0; }`——头尾固定、正文自己滚动，按钮永不被顶出屏外。全部作用域限定在遮罩之下，聊天里内联的 `.cli-confirm` 卡片不受影响。
+- 守卫：`apps/desktop/src/styles/token-guard.test.ts` 新增 describe「确认弹窗小窗不撑破视口（R456）」——用 `indexOf` 切片 `.confirm-dialog-mask .cli-confirm {` 到首个 `}`，断言含 `max-height: calc(100vh - 15vh - 24px)` 与 `overflow: hidden`，并钉住三个 scoped 规则原文。
+- 反向自检：临时删掉 `max-height` 行 → 恰好 1 failed 点名「expected … to contain max-height: calc(100vh - 15vh - 24px)」，还原后 4 passed。
+- 验证：`npx vitest run src/styles/token-guard.test.ts` 4 passed；`pnpm -C apps/desktop check` EXIT=0（86 files / 1226 tests）；`node scripts/check-changelog.mjs` 与 `check-docs-links.mjs` EXIT=0。
+
 ### R455: 台账刷新闸门带一次补跑——在途时点「查看全部」不再白点
 
 - **缺口**：R441 的刷新闸门是「在途就丢弃」。历史页点「刷新」后立刻点「查看全部」时，上限从 500 放宽到 5000 触发的那次刷新被拦下丢掉，在途请求仍按 500 条落盘——`historyTruncated(entries, limit)` 变成 `500 >= 5000` 为假，截断横幅连同「查看全部」按钮一起消失，用户看到 500 行却以为已经看全，也没有入口再放宽（只能手动再点一次刷新）。

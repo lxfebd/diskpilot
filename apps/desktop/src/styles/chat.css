@@ -559,7 +559,20 @@
   padding-top: 15vh;
   background: rgba(0, 0, 0, 0.45);
 }
-.confirm-dialog-mask .cli-confirm { width: 440px; max-width: 92vw; margin: 0; }
+.confirm-dialog-mask .cli-confirm {
+  width: 440px;
+  max-width: 92vw;
+  margin: 0;
+  /* R456：小窗或长正文时卡片不撑破视口——遮罩 15vh 顶部内边距下，
+     卡片最高 85vh - 24px，头/尾固定、正文自己滚动，按钮永不被顶出屏外。 */
+  max-height: calc(100vh - 15vh - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.confirm-dialog-mask .cli-confirm-head,
+.confirm-dialog-mask .cli-confirm-actions { flex-shrink: 0; }
+.confirm-dialog-mask .cli-confirm-body { overflow-y: auto; min-height: 0; }
 
 /* ── Agent 工具进度卡（B2/B3）：stress/bench/大文件扫描的实时进度。
    R107：从内联样式迁移到 token 体系（进度条 accent、停止钮 err 语义色）。 ── */

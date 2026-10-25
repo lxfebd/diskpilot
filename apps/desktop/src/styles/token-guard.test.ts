@@ -98,3 +98,20 @@ describe('键盘焦点描边（R431）', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// R456：ConfirmDialog 卡片此前没有 max-height/overflow——遮罩只设 padding-top: 15vh
+// 且自身不滚动，小窗（150% 缩放的笔记本）或长正文时卡片底部超出视口，
+// 确认/取消按钮被裁到屏外，只能靠 Esc 脱身。规则：卡片必须限制在视口内、正文自己滚动。
+describe('确认弹窗小窗不撑破视口（R456）', () => {
+  it('confirm-dialog-mask 下的卡片限制在视口内，正文自己滚动', () => {
+    const chat = SOURCES['./chat.css'];
+    const start = chat.indexOf('.confirm-dialog-mask .cli-confirm {');
+    expect(start).toBeGreaterThan(-1);
+    const rule = chat.slice(start, chat.indexOf('}', start) + 1);
+    expect(rule).toContain('max-height: calc(100vh - 15vh - 24px)');
+    expect(rule).toContain('overflow: hidden');
+    expect(chat).toContain('.confirm-dialog-mask .cli-confirm-head,');
+    expect(chat).toContain('.confirm-dialog-mask .cli-confirm-actions { flex-shrink: 0; }');
+    expect(chat).toContain('.confirm-dialog-mask .cli-confirm-body { overflow-y: auto; min-height: 0; }');
+  });
+});
