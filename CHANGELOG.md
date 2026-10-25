@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R434: 脚本命中收集纯函数补单测——DFS 深度上限与 R228 嵌套归属从此有据可查
+
+- 缺口：apps/desktop/src/cleanup/matches.ts（91 行）被 Studio 工作台卡片与 CleanupPage 脚本列表共用，含真实规则（回退名字命中的大小写/深度上限、R228 嵌套 detect 各算各的、命中优先+体量降序排序），但零测试——改动 DFS 或排序口径没有任何网兜住。
+- 新增 apps/desktop/src/cleanup/matches.test.ts（125 行 / 14 条）：fallbackByNameContains 6 条（空 name_contains 不查、大小写不敏感子串、命中即不再下钻、root 第 0 层不参与、非目录跳过、多关键字）；collectScaffoldCards 8 条（root null 全量按名排、重复 id 只留首张、detect 命中含 root 自身、R228 嵌套各算各的、detect 无命中才走回退、detect 命中不叠加回退、合计体量/文件数求和且 size 降序、最终排序命中优先→体量→名字）。
+- 反向自检：把 matches.ts 的 depth 上限从 4 放宽到 5 → 恰好 1 failed（点名「下钻深度上限」用例），还原后 14 passed。
+- 验证：pnpm check EXIT=0，78 files / 1149 tests（1135+14）；check-changelog / check-docs-links EXIT=0。
+
 ### R433: 图标搜索框补可访问名——三个只靠 placeholder 的搜索框读屏能报出名字
 
 - 缺口：HistoryPage / StartupPanel / SystemTools 三个搜索框包在 label 里但 label 只有 Search 图标、input 只写 placeholder——图标不是可访问名，placeholder 也不是可靠的可访问名来源（FileView / toolwall / SteamInspector 都有显式 aria-label，这三处漏了）。
