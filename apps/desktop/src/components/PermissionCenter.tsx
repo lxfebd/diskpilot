@@ -85,12 +85,13 @@ export function PermissionCenter() {
                       <Lock size={14} className="perm-lock" />
                     ) : lv === 'L0' ? (
                       // L0 始终开启不可关：禁用态开关 + 常开视觉，点了也不会有「没反应」的错觉
-                      <button type="button" className="switch on" disabled aria-label={t(p.labelKey)} title={t('perm.center.l0Title')} />
+                      <button type="button" role="switch" aria-checked={true} className="switch on" disabled aria-label={t(p.labelKey)} title={t('perm.center.l0Title')} />
                     ) : (
                       <button
                         type="button"
                         className={'switch' + (on ? ' on' : '')}
                         onClick={() => toggle(p.id)}
+                        role="switch"
                         aria-checked={on}
                         aria-label={t(p.labelKey)}
                       />

@@ -1456,3 +1456,49 @@ describe('台账刷新按钮的进行中反馈（R441）', () => {
     expect(panel).toContain('{refreshing ? <Loader2 size={11} className="spin" /> : <RotateCcw size={11} />}');
   });
 });
+
+// R443：开关按钮此前只带 aria-checked——aria-checked 在 role=button 上不合法，
+// 读屏（NVDA/JAWS）不会念出开/关状态，用户只能靠视觉判断。补 role="switch"。
+describe('开关按钮的 role="switch"（R443）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) { if (c === '\\') j++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it('非原生控件带 aria-checked 时必须声明 role="switch"', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<\/?[a-zA-Z][\w.-]*/g)) {
+        const start = m.index ?? 0;
+        if (src[start + 1] === '/') continue; // 闭合标签
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!tag.includes('aria-checked=')) continue;
+        if (/^<input\b/.test(tag)) continue; // 原生 checkbox 自带 role=checkbox
+        if (!tag.includes('role="switch"')) {
+          violations.push(path + ':' + src.slice(0, start).split('\n').length);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+  it('权限中心与启动项的两个开关都已补上 role="switch"', () => {
+    const perm = String(RAW_TSX['./components/PermissionCenter.tsx'] ?? '');
+    expect(perm.match(/role="switch"/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(perm.match(/aria-checked=/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    // L0 常开开关是禁用态，同样要能被念成「开」
+    expect(perm).toContain('role="switch" aria-checked={true}');
+    const startup = String(RAW_TSX['./components/StartupPanel.tsx'] ?? '');
+    expect(startup).toContain('role="switch"');
+    expect(startup.match(/aria-checked=/g)?.length ?? 0).toBe(1);
+  });
+});

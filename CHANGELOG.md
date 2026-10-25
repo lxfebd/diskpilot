@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R443: 开关按钮补 role="switch"——读屏才念得出「开 / 关」
+
+- 缺口：全仓只有权限中心与启动项面板两个开关是自绘的 <button className="switch">，状态挂在 aria-checked 上；但 aria-checked 在 role=button 上不合法，NVDA / JAWS 不会念出开 / 关，用户只能靠视觉判断，键盘 / 读屏用户无法确认当前权限或启动项是否启用。权限中心的 L0 常开开关（禁用态）连 aria-checked 都没有。
+- 改动：apps/desktop/src/components/PermissionCenter.tsx 的 L1/L2 开关补 role="switch"；L0 常开禁用开关补 role="switch" + aria-checked={true}（读屏读作「开关，开，不可用」）。apps/desktop/src/components/StartupPanel.tsx 的启动项开关补 role="switch"。视觉样式不变（样式由 className="switch" 承载，与角色无关）。
+- 守卫：apps/desktop/src/a11y.test.ts 新增 describe「开关按钮的 role="switch"（R443）」2 条——① 用花括号配平取完整开标签，凡非 <input 的标签带 aria-checked 必须同时带 role="switch"，否则按 path:行号 点名（原生 checkbox 自带 role=checkbox 豁免）；② 钉住权限中心两处、启动项一处已补齐。
+- 反向自检：删掉 StartupPanel 的 role="switch" → 恰好 2 failed（扫描器点名 ./components/StartupPanel.tsx:281 + 站点断言），还原后 98 passed。
+
 ### R442: AI 在飞时切换会话不再丢对话——在飞回合先净化归档再切走
 
 - 缺口：store 的 switchChat 把当前 chat.turns 整个丢弃（不归档），且强制 busy:false；AI 流式在飞时点会话列表切走，在飞回合既不入库也没有落盘点，回复到达时 patchChatTurn 在新会话里找不到 turnId 静默丢弃，整段对话蒸发；切走再点自己还会拿旧存档覆盖实时 turns，对话「倒退」到上次存档。

@@ -281,6 +281,7 @@ export function StartupPanel() {
                   <button
                     type="button"
                     className={'switch' + (item.enabled ? ' on' : '')}
+                    role="switch"
                     aria-checked={item.enabled}
                     aria-label={t('system.startup.ariaToggle', { action: item.enabled ? t('system.common.disable') : t('system.common.restore'), name: item.name })}
                     title={item.enabled ? t('system.startup.switchOffTitle') : t('system.startup.switchOnTitle')}
