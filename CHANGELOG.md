@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R447: 启动项确认条用过即收——成功后不再反着问「确认恢复？」
+
+- 缺口：启动项面板的开关是两步确认（点开关 → 出现「确认禁用 / 确认恢复」条）。确认后 `toggleStartup` 只重载列表、从不收起 `pendingToggle`：成功后该行 `enabled` 已翻转，确认条却还在，文案变成**反着问**的「确认恢复？」——看起来像刚才那一击没生效；再点一次就把它拨回去了。删除同理（行虽消失，但确认条状态残留）。在途时确认按钮也不禁用，连点会就同一项发两次相反请求。
+- 改动：apps/desktop/src/components/StartupPanel.tsx 新增 `mutatingRef`（防重入锁）+ `mutatingId`（在途行 id）：`toggleStartup` / `removeStartup` 入口加 `if (mutatingRef.current) return;`，最后 `finally` 里 `setPendingToggle(null)` / `setPendingDel(null)` 收起确认条；四个确认 / 取消按钮改为在途时 `disabled={mutatingId !== null}`（任何一行在途时全禁用，避免「点了没反应」的静默拦截）。
+- 测试：新增 apps/desktop/src/startupToggle.test.ts 2 条（源码切片断言）——两个操作都有锁、结束后各自收起确认条（`toggleStartup` 切片的 `setPendingToggle(null)`、`removeStartup` 切片的 `setPendingDel(null)`）；四个按钮都在途禁用。
+- 反向自检：删掉 toggle 失败/成功路径的 `setPendingToggle(null)` → 恰好 1 failed，还原后 2 passed。
+
 ### R446: 提醒设置的写请求串行化——连点分段控件不再「最后点的被前一次覆盖」
 
 - 缺口：提醒设置的间隔 / 阈值 / 若干分段控件每点一下就把一个 patch 发给后端，但 save() 直接并发：快速连点「6 小时」再点「3 天」时两个请求同时在飞，后端按到达顺序处理，最终落盘的可能是**先点的那次**；界面这边也会被先发的旧响应 `setCfg` 回写，高亮跳回旧选项。`saving` 指示同样按「任一次完成」清除，在途请求还在时指示已消失。

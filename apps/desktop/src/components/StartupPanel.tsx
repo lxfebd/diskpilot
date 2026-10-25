@@ -1,6 +1,6 @@
 // 启动项管理面板（P4-4 抽取）：自包含状态 + 两步确认。
 // 被「系统工具（设置）」与「系统优化页」两处复用，样式沿用 sys-* 系列。
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trash2, RefreshCw, Search } from 'lucide-react';
 import { api, type StartupItem } from '../api';
 import { isPermEnabled } from '../permissions';
@@ -93,6 +93,9 @@ export function StartupPanel() {
   const [startupLoading, setStartupLoading] = useState(false);
   // 两步确认：pendingId 待确认项（点了「禁用/删除」先变「确认？」按钮）。
   const [pendingToggle, setPendingToggle] = useState<string | null>(null);
+  // R447：在途操作（开关 / 删除）的防重入锁 + 正在处理的行 id（按钮据此禁用）。
+  const mutatingRef = useRef(false);
+  const [mutatingId, setMutatingId] = useState<string | null>(null);
   const [pendingDel, setPendingDel] = useState<string | null>(null);
   // R358：提示文案统一走 useFlashText（见 flash.ts）。
   const [msg, flashMsg] = useFlashText();
@@ -121,6 +124,12 @@ export function StartupPanel() {
       setStartupErr(t('system.startup.permOff'));
       return;
     }
+    // R447：在途时不再接受第二次确认（连点会就同一项发两次相反请求），
+    // 结束（成功或失败）都把确认条收掉——成功后 enabled 已翻转，若确认条还留着，
+    // 文案会变成「确认恢复？」这种反着问的提示，看起来像刚才那一击没生效。
+    if (mutatingRef.current) return;
+    mutatingRef.current = true;
+    setMutatingId(item.id);
     try {
       await api.setStartupItem(item.id, enable, true);
       flashMsg(t('system.startup.toastToggled', {
@@ -130,6 +139,10 @@ export function StartupPanel() {
       await loadStartup();
     } catch (e) {
       setStartupErr(String(e instanceof Error ? e.message : e));
+    } finally {
+      mutatingRef.current = false;
+      setMutatingId(null);
+      setPendingToggle(null);
     }
   };
 
@@ -139,6 +152,9 @@ export function StartupPanel() {
       setStartupErr(t('system.startup.permOff'));
       return;
     }
+    if (mutatingRef.current) return;
+    mutatingRef.current = true;
+    setMutatingId(item.id);
     try {
       const backup = await api.removeStartupItem(item.id, true);
       // 回收站接住的（路径为空）走系统回收站还原；没接住 / 注册表值走应用自己的备份，
@@ -151,6 +167,10 @@ export function StartupPanel() {
       await loadStartup();
     } catch (e) {
       setStartupErr(String(e instanceof Error ? e.message : e));
+    } finally {
+      mutatingRef.current = false;
+      setMutatingId(null);
+      setPendingDel(null);
     }
   };
 
@@ -262,8 +282,8 @@ export function StartupPanel() {
                 {pendingDel === item.id ? (
                   <span className="sys-confirm">
                     <span className="muted small">{t('system.common.confirmDelete')}</span>
-                    <button type="button" className="danger small" onClick={() => removeStartup(item)}>{t('system.common.delete')}</button>
-                    <button type="button" className="ghost small" onClick={() => setPendingDel(null)}>{t('system.common.cancel')}</button>
+                    <button type="button" className="danger small" onClick={() => removeStartup(item)} disabled={mutatingId !== null}>{t('system.common.delete')}</button>
+                    <button type="button" className="ghost small" onClick={() => setPendingDel(null)} disabled={mutatingId !== null}>{t('system.common.cancel')}</button>
                   </span>
                 ) : pendingToggle === item.id ? (
                   <span className="sys-confirm">
@@ -272,10 +292,11 @@ export function StartupPanel() {
                       type="button"
                       className={item.enabled ? 'danger small' : 'primary small'}
                       onClick={() => toggleStartup(item, !item.enabled)}
+                      disabled={mutatingId !== null}
                     >
                       {item.enabled ? t('system.common.disable') : t('system.common.restore')}
                     </button>
-                    <button type="button" className="ghost small" onClick={() => setPendingToggle(null)}>{t('system.common.cancel')}</button>
+                    <button type="button" className="ghost small" onClick={() => setPendingToggle(null)} disabled={mutatingId !== null}>{t('system.common.cancel')}</button>
                   </span>
                 ) : (
                   <button
