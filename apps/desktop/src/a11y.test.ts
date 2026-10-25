@@ -1073,3 +1073,42 @@ describe('长任务的卸载守卫（R421）', () => {
     expect(bench).toContain('if (!aliveRef.current) return; // R421：卸载后实时温度与曲线不再落地');
   });
 });
+// R424：内联弹窗（工具箱详情/导出/回收/启动确认、跑分三确认、插件市场写操作、Steam 详情/创意工坊）
+// 打开时焦点进场（第一个可聚焦元素）、关闭时归还 opener——键盘用户打开弹窗的瞬间焦点就该在弹窗里。
+// dialogFocus.ts 不是 .tsx，RAW_TSX 摸不到它，单独 glob。
+const RAW_DF = import.meta.glob('./dialogFocus.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+describe('弹窗焦点进场与归还（R424）', () => {
+  it('dialogFocus.ts 提供 useDialogFocus：进场取最上层弹窗第一个可聚焦元素、关闭归还 opener', () => {
+    const df = RAW_DF['./dialogFocus.ts'] ?? '';
+    expect(df).toContain('export function useDialogFocus(');
+    expect(df).toContain('focusableWithin(top)[0]');
+    expect(df).toContain('prev.current?.focus?.();');
+    expect(df).toContain('document.querySelectorAll<HTMLElement>(MODAL_SEL)');
+  });
+  it('工具箱 ToolDetailModal：详情/导出/回收三层各自挂进场归还', () => {
+    const tw = RAW_TSX['./components/toolbelt/toolwall.tsx'] ?? '';
+    expect(tw).toContain('useDialogFocus(true)');
+    expect(tw).toContain('useDialogFocus(exportAsk !== null)');
+    expect(tw).toContain('useDialogFocus(recycleAsk !== null)');
+  });
+  it('工具箱 CatalogWall：启动确认 / AI 工具详情两层各自挂进场归还', () => {
+    const tw = RAW_TSX['./components/toolbelt/toolwall.tsx'] ?? '';
+    expect(tw).toContain('useDialogFocus(confirmLaunch !== null)');
+    expect(tw).toContain('useDialogFocus(agentDetail !== null)');
+  });
+  it('跑分三个确认窗挂进场归还（压测 / 磁盘 / 甜甜圈）', () => {
+    const b = RAW_TSX['./components/toolbelt/bench.tsx'] ?? '';
+    expect(b).toContain('useDialogFocus(confirmStress)');
+    expect(b).toContain('useDialogFocus(confirmDiskRun)');
+    expect(b).toContain('useDialogFocus(confirmDonut)');
+  });
+  it('插件市场写操作确认挂进场归还', () => {
+    const mk = RAW_TSX['./components/toolbelt/market.tsx'] ?? '';
+    expect(mk).toContain('useDialogFocus(confirmAsk !== null)');
+  });
+  it('Steam 详情 / 创意工坊弹窗（条件挂载）打开即进场', () => {
+    expect(RAW_TSX['./components/SteamInspectorModal.tsx'] ?? '').toContain('useDialogFocus(true)');
+    expect(RAW_TSX['./components/SteamWorkshopModal.tsx'] ?? '').toContain('useDialogFocus(true)');
+  });
+});

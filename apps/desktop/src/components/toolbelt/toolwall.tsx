@@ -16,6 +16,7 @@ import { RISK_COLORS, LEVEL_COLORS } from '../../colors';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { useEscapeKey } from '../../escapeKey';
+import { useDialogFocus } from '../../dialogFocus';
 import { useStore } from '../../store';
 import { safeGetItem, safeSetItem } from '../../safeStorage';
 import { openExternal } from '../../external';
@@ -389,6 +390,10 @@ function ToolDetailModal({
   // 导出/回收不响应（enabled=false，避免半途关窗看着像成功）。
   useEscapeKey(() => setExportAsk(null), exportAsk !== null && !exporting);
   useEscapeKey(() => setRecycleAsk(false), recycleAsk && !recycling);
+  // R424：详情 / 导出 / 回收确认打开时焦点进场（第一个可聚焦元素）、关闭时归还 opener。
+  useDialogFocus(true);
+  useDialogFocus(exportAsk !== null);
+  useDialogFocus(recycleAsk !== null);
   const exportPlugin = async () => {
     const pluginId = tool.plugin?.id;
     if (!pluginId) return;
@@ -730,6 +735,9 @@ export function CatalogWall({
   useEscapeKey(() => setConfirmLaunch(null), confirmLaunch !== null && !launching);
   useEscapeKey(() => setDetail(null), detail !== null);
   useEscapeKey(() => setAgentDetail(null), agentDetail !== null);
+  // R424：启动确认 / AI 工具详情弹窗打开时焦点进场、关闭时归还（详情卡由 ToolDetailModal 自己管）。
+  useDialogFocus(confirmLaunch !== null);
+  useDialogFocus(agentDetail !== null);
 
   // R417：工具墙在视图切换时会卸载，迟到的清单响应不落地到已卸载组件。
   useEffect(() => {

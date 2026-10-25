@@ -12,17 +12,40 @@ export function focusReturnTarget(el: unknown): HTMLElement | null {
   return typeof candidate.focus === 'function' ? (el as HTMLElement) : null;
 }
 
-// 说明：只有「自己是一个组件、且随手写 `{open && <Dialog/>}` 挂载」的弹窗才用得上；
-// 内联在父组件里的弹窗（工具箱、跑分、插件市场）没有独立的 mount 时机，留给后续抽出
-// 统一弹窗组件时再一并接。
-//
-// open 由 false 变 true 时记录，变回 false（或组件卸载）时归还。
+// ── R424：弹窗打开时把焦点送进去、关闭时归还 ──
+// useReturnFocus 只负责「关闭归还」；内联在父组件里的弹窗（工具箱、跑分、插件市场、
+// Steam 详情）打开后焦点还留在触发按钮上，键盘用户按 Tab 第一步就走出了弹窗，读屏
+// 用户也不知道弹窗已经打开。useDialogFocus 在打开那一刻把焦点送到最上层 aria-modal
+// 弹窗的第一个可聚焦元素（与 useModalFocusTrap 同为「DOM 顺序最后一个」口径），
+// 关闭时归还给 opener——进场与归还一体，内联/挂载式弹窗都适用。
+// open 由 false 变 true 时进场，变回 false（或组件卸载）时归还。
 // 注意：必须在弹窗自己的「自动聚焦」effect 之前调用，否则记住的会是弹窗内部元素。
 export function useReturnFocus(open: boolean): void {
   const prev = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
     prev.current = focusReturnTarget(typeof document === 'undefined' ? null : document.activeElement);
+    return () => {
+      prev.current?.focus?.();
+      prev.current = null;
+    };
+  }, [open]);
+}
+
+export function useDialogFocus(open: boolean): void {
+  const prev = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    // 进场前先抓住 opener（此时焦点还在触发按钮上），关闭时还给它。
+    prev.current = focusReturnTarget(typeof document === 'undefined' ? null : document.activeElement);
+    // 最上层弹窗 = DOM 顺序最后一个（嵌套弹窗总在其父对话框之后渲染）。
+    const dialogs = document.querySelectorAll<HTMLElement>(MODAL_SEL);
+    const top = dialogs[dialogs.length - 1];
+    if (top) {
+      // 弹窗里第一个真能聚焦的元素；若容器自身可聚焦（tabIndex>=0）则回退容器。
+      const target = focusableWithin(top)[0] ?? (top.tabIndex >= 0 ? top : null);
+      target?.focus?.();
+    }
     return () => {
       prev.current?.focus?.();
       prev.current = null;

@@ -5,6 +5,7 @@ import type { SteamGame, WorkshopItem } from '../types';
 import { formatBytes } from '../format';
 import { t, useT } from '../i18n';
 import { useEscapeKey } from '../escapeKey';
+import { useDialogFocus } from '../dialogFocus';
 
 /// localStorage cache keyed by stringified item ID. Workshop titles are
 /// extremely stable (renames are rare and not safety-critical), so we cache
@@ -57,6 +58,8 @@ export function SteamWorkshopModal({
   onClose: () => void;
 }) {
   const t = useT();
+  // R424：创意工坊弹窗只在打开时挂载——打开即进场、关闭时归还（Esc/遮罩/关闭钮同口径）。
+  useDialogFocus(true);
   const [items, setItems] = useState<WorkshopItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

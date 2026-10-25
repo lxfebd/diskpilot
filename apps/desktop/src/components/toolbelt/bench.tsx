@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../api';
 import { useEscapeKey } from '../../escapeKey';
+import { useDialogFocus } from '../../dialogFocus';
 import { isTauri } from '../../env';
 import { useT } from '../../i18n';
 import { useStore } from '../../store';
@@ -197,6 +198,10 @@ export function BenchPanel() {
   useEscapeKey(() => setConfirmStress(false), confirmStress);
   useEscapeKey(() => setConfirmDiskRun(false), confirmDiskRun);
   useEscapeKey(() => setConfirmDonut(false), confirmDonut);
+  // R424：三个确认窗打开时焦点进场、关闭时归还 opener（此前只在关窗后还焦点）。
+  useDialogFocus(confirmStress);
+  useDialogFocus(confirmDiskRun);
+  useDialogFocus(confirmDonut);
 
   const runDonut = () => {
     setConfirmDonut(false);

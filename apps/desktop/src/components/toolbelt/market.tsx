@@ -16,6 +16,7 @@ import { invalidateToolbeltCache } from '../../advisor/tools';
 import { hasRegistryUpdate, meetsMinApp } from '../../updateSkip';
 import { APP_VERSION } from '../../version';
 import { useEscapeKey } from '../../escapeKey';
+import { useDialogFocus } from '../../dialogFocus';
 import { useTauriEvent } from '../../tauriEvent';
 import { openExternal } from '../../external';
 import { openDataDirWithToast } from '../../reveal';
@@ -164,6 +165,8 @@ export function MarketPanel() {
 
   // R320：确认框 Esc = 取消（与点遮罩 / X / 取消按钮一致）。
   useEscapeKey(() => setConfirmAsk(null), confirmAsk !== null);
+  // R424：写操作确认框打开时焦点进场、关闭时归还。
+  useDialogFocus(confirmAsk !== null);
 
   const refresh = useCallback(() => {
     // 安装/卸载/激活插件后工具集变化，AI 侧 toolbelt 索引缓存必须作废重拉。

@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R424: 弹窗焦点进场与归还——打开即在弹窗里，关闭回到触发按钮
+
+- 缺口：R344 的 useReturnFocus 只负责「关闭后归还」，且只接了 7 处挂载式弹窗；内联在父组件里的 11 处弹窗（工具箱详情 / 导出 / 回收 / 启动确认 / AI 工具详情、跑分三确认、插件市场写操作确认、Steam 详情与创意工坊）完全没有焦点处理——打开后焦点还留在触发按钮上，键盘用户按 Tab 第一步就走出了弹窗，读屏用户也不知道弹窗已打开。
+- 改动：dialogFocus.ts 新增 useDialogFocus(open)（进场 + 归还一体）：打开时先记 opener（focusReturnTarget(document.activeElement)），再取 MODAL_SEL 中 DOM 顺序最后一个 = 最上层弹窗，聚焦 focusableWithin(top)[0]（容器可聚焦时回退容器），关闭 / 卸载时归还 opener；useReturnFocus 的过期注释（「留给后续抽出统一弹窗组件」）同步更新为 R424 口径。
+- 接入 11 处：toolwall.tsx（ToolDetailModal：useDialogFocus(true) + exportAsk / recycleAsk；CatalogWall：confirmLaunch / agentDetail）；bench.tsx（confirmStress / confirmDiskRun / confirmDonut）；market.tsx（confirmAsk !== null）；SteamInspectorModal.tsx / SteamWorkshopModal.tsx（条件挂载，useDialogFocus(true)）。
+- 守卫：a11y.test.ts 新增 describe「弹窗焦点进场与归还（R424）」6 条——dialogFocus.ts 单独 glob 断言 useDialogFocus / focusableWithin(top)[0] / prev.current?.focus?.() / MODAL_SEL 查询；五个组件文件逐站点断言钩子调用文本。反向自检：删 market 的钩子 → 恰好 1 failed 点名该断言，已还原。
+
 ### R423: 主题系统的四张事实表对偶守卫——17 个预设删掉一个语义键当场红，theme.ts 从零测试到 22 条
 
 - 缺口：theme.ts（579 行，启动即跑）此前零测试。它内部有四张互相对偶的事实表——ThemeId 联合（17 项）、THEME_FONTS（17 键）、PRESETS（17 块色板）、DARK_IDS（5 个深色主题）——任何一张漏配都不会编译报错（对象字面量缺键只是静默回退 vercel），这正是 R420 修过的「换主题漏配」事故的复发通道；loadTheme/saveTheme/applyTheme 的行为契约（坏 JSON 回落、accent 合法性、fontScale 钳制、深浅色 data-mode/colorScheme、getKeepFiles 钳制）也全无测试。

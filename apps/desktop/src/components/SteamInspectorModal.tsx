@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { SteamInspector } from './SteamInspector';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useT } from '../i18n';
+import { useDialogFocus } from '../dialogFocus';
 
 /// Modal wrapper for the Steam Inspector. Click backdrop to close.
 /// The Inspector owns its keyboard handling (including closing the detail
@@ -18,6 +19,8 @@ export function SteamInspectorModal({
   onRequestClose?: () => void;
 }) {
   const t = useT();
+  // R424：只在打开时挂载的弹窗——打开即进场（关闭按钮在 modal-head 首位），关闭时归还。
+  useDialogFocus(true);
   return (
     <div
       className="steam-modal-backdrop"
