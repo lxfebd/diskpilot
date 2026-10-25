@@ -992,3 +992,30 @@ describe('挂载期拉取的卸载守卫（R417）', () => {
     expect(listTools).toContain("if (alive) setAgentIssue(ready ? 'failed' : 'missing')");
   });
 });
+// R418：保留天数输入框的钳制回显——输入上界与 sanitize 钳制是同一个常量；
+// 提交走「草稿 + 失焦/Enter」而不是每敲一个字符就 Number() 写回。
+describe('保留天数输入框的钳制回显（R418）', () => {
+  const RAW_MODEL = import.meta.glob('./cleanup/model.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  const RAW_CB = import.meta.glob('./components/cleanup/CleanupBody.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  it('上限常量导出，sanitize 钳制与输入 max 用同一个数', () => {
+    const model = RAW_MODEL['./cleanup/model.ts'] ?? '';
+    expect(model).toContain('export const MAX_RETENTION_DAYS = 3650;');
+    expect(model).toContain('if (raw > MAX_RETENTION_DAYS) return MAX_RETENTION_DAYS;');
+    expect(model).not.toMatch(/raw > 3650(?!\b)/);
+    const cb = RAW_CB['./components/cleanup/CleanupBody.tsx'] ?? '';
+    expect(cb).toContain('max={MAX_RETENTION_DAYS}');
+  });
+  it('提交走草稿 + 失焦/Enter，清空回退默认天数而非 0', () => {
+    const cb = RAW_CB['./components/cleanup/CleanupBody.tsx'] ?? '';
+    const at = cb.indexOf('cleanup.keepRecent');
+    const end = cb.indexOf('cleanup.daysUnit', at);
+    const region = cb.slice(at, end);
+    expect(region).toContain('value={daysDraft ?? String(days ?? 0)}');
+    expect(region).toContain('onBlur');
+    expect(region).toContain("if (e.key === 'Enter') e.currentTarget.blur();");
+    expect(region).toContain('raw === \'\' ? fallback');
+    expect(region).toContain('sanitizeRetentionDays(parsed)');
+    expect(region).not.toContain('setDays(scope.id, Number(');
+    expect(region).toContain('setDaysDraft(null)');
+  });
+});

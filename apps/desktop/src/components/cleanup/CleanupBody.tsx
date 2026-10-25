@@ -3,10 +3,11 @@
 //
 // 三段执行语义（预览 → 预备 → 真删）由 store.execute 驱动，本组件只画按钮；
 // DryRunPreviewDialog 在 preview !== null 时挂在 body 末尾（zIndex:60 盖住行动条）。
+import { useState } from 'react';
 import { Loader2, Trash2, AlertTriangle, History } from 'lucide-react';
 import { useCleanupStore, scopeBytes, computeSessionTotal, computeSessionCoverage, computeAllCleanableBytes } from '../../useCleanupStore';
 import { formatBytes } from '../../format';
-import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive, sortScopesByBytes } from '../../cleanup/model';
+import { applySelectionMode, cleanRatio, cleanedHitStats, formatLastActive, MAX_RETENTION_DAYS, sanitizeRetentionDays, sortScopesByBytes } from '../../cleanup/model';
 import { SelectionModePicker, useSelectionOptions } from './SelectionMode';
 import { SelectionActionBar } from './SelectionActionBar';
 import { DryRunPreviewDialog } from './DryRunPreviewDialog';
@@ -28,6 +29,11 @@ function ScopeRow({ scope }: { scope: Scope }) {
   const allWithinRetention = eligibleEmpty && !trulyEmpty;
   const checked = s.selectedScopes.has(scope.id) && !eligibleEmpty;
   const days = s.daysByScope[scope.id] ?? (scope.prompt?.kind === 'days' ? scope.prompt.default : undefined);
+  // R418：保留天数改「草稿输入 + 失焦提交」——此前每敲一个字符就 Number()
+  // 写回 store：清空瞬间被 sanitize 成 0（「保留 0 天」= 什么都能删），框里
+  // 还显示 5000 时 store 早钳到 3650，显示与实际执行两层皮。draft 期间只改
+  // 本地字符串，失焦 / Enter 提交时 sanitize + setDays 回显钳制后的真值。
+  const [daysDraft, setDaysDraft] = useState<string | null>(null);
   // R156：这个 scope 涉及的目录里，最近一次被清理的时刻（取最新）——只按
   // 目录前缀匹配（glob 展开只有后端能做，前端不猜）；台账没读到 → null。
   // R157：同时报覆盖度——多命中目录时只清过其中几个要说清，否则「上次清理
@@ -103,8 +109,24 @@ function ScopeRow({ scope }: { scope: Scope }) {
             type="number"
             aria-label={t('cleanup.keepRecentAria')}
             min={0}
-            value={days ?? 0}
-            onChange={(e) => setDays(scope.id, Number(e.target.value))}
+            max={MAX_RETENTION_DAYS}
+            step={1}
+            value={daysDraft ?? String(days ?? 0)}
+            onChange={(e) => setDaysDraft(e.target.value)}
+            onBlur={() => {
+              // R418：失焦 / Enter 提交——空或非数字回退到该 scope 的默认保留
+              // 天数（不是 0；清空框不该变成「全都能删」），越界值钳回
+              // [0, MAX_RETENTION_DAYS] 并把钳制后的真值回显进框。
+              const raw = (daysDraft ?? '').trim();
+              const fallback = scope.prompt?.kind === 'days' ? scope.prompt.default : 0;
+              const parsed = raw === '' ? fallback : Number(raw);
+              const v = sanitizeRetentionDays(parsed);
+              setDays(scope.id, v);
+              setDaysDraft(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+            }}
             disabled={s.running}
           />
           <span>{t('cleanup.daysUnit')}</span>

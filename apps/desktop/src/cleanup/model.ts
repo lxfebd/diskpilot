@@ -132,6 +132,10 @@ export function scopeDayOverrides(
   return out;
 }
 
+/** R251：保留天数上限（10 年）。R418 起导出给 CleanupBody 的 number 输入框
+ *  当 max——输入上界与 sanitize 钳制必须是同一个数，改上限只改这一处。 */
+export const MAX_RETENTION_DAYS = 3650;
+
 /** R251：保留天数输入 sanitize——负值 → 0（立即全清语义），超过 3650 天
  *  （10 年）→ 3650。拒绝脏值：超长保留期会污染持久化覆盖表（每次会话
  *  默认被带偏），且「保留近 3650 天」算出的可清范围几乎为空（误导没得清）。
@@ -139,7 +143,7 @@ export function scopeDayOverrides(
 export function sanitizeRetentionDays(days: number): number {
   const raw = Number.isFinite(days) ? Math.floor(days) : 0;
   if (raw < 0) return 0;
-  if (raw > 3650) return 3650;
+  if (raw > MAX_RETENTION_DAYS) return MAX_RETENTION_DAYS;
   return raw;
 }
 

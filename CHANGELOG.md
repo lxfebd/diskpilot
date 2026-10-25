@@ -7,6 +7,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R418: 保留天数输入钳制回显——清空框不再瞬变「保留 0 天」，上限当场可见
+
+- 缺口：CleanupBody 的「保留最近 N 天」是 type=number 且 onChange 里直接 Number(e.target.value) 写回 store（setDays → sanitizeRetentionDays 钳 [0,3650]）：① 清空框的瞬间 sanitizeRetentionDays(0)=0，「保留 0 天」= 什么都能删，是删得最狠的值却随手可达；② 框里显示 5000 时 store 已钳到 3650——用户看到的和实际执行的是两个数，方向是「以为更保守、实际更激进」；③ 输入框没有 max/step，浏览器微调按钮也停不到 3650。
+
+- 改动：① model.ts 导出 MAX_RETENTION_DAYS = 3650，sanitizeRetentionDays 的钳制改用该常量——输入上界与钳制上限同源，改上限只改一处；② CleanupBody 改「草稿 + 失焦提交」：daysDraft 只记本地字符串，onBlur / Enter 提交时非数字（含空串）回退该 scope 的 prompt.default（不是 0）、越界走 sanitizeRetentionDays 钳制，再 setDays 回显钳制后的真值并清 draft；③ 输入加 max={MAX_RETENTION_DAYS} step={1}，微调按钮同样停在上限。
+
+- 守卫：a11y.test.ts 新增 describe「保留天数输入框的钳制回显（R418）」2 条——① model.ts 必须导出 MAX_RETENTION_DAYS = 3650、sanitize 用常量钳制且无裸 3650 上限、CleanupBody 必须 max={MAX_RETENTION_DAYS}；② 输入框区域（keepRecent…daysUnit 切片）必须是 daysDraft 草稿值、有 onBlur 与 Enter 提交、空串回退 fallback、走 sanitizeRetentionDays(parsed)、提交后清 draft，且不得再出现 setDays(scope.id, Number( 直写。
+
+- 反向自检：把 max 改回 9999 → 1 failed（报上限常量那条），还原后全绿。
+
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1067 tests。
+
 ### R417: 挂载期拉取补卸载守卫——迟到的响应不落地到已卸载组件
 
 - 缺口：4 个「仅挂载时拉取」的 effect 直接在 .then/.catch 里 setState，组件卸载后迟到的响应仍会落地：SpaceTrendCard 的 getSpaceHistory、设置页的 getHwProfile、工具墙 CatalogWall 的 toolbeltManifests 与 listTools（后者 catch 里还嵌套 agentReady().then）、Toolbelt 的 toolbeltCatalog。其余拉取（CleanupPage/Studio/DryRun/ReminderSettings/AssetOverview 等）早有 alive/cancelled/req token 守卫，这 5 处是漏网的。
