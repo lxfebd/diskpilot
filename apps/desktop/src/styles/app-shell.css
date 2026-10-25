@@ -220,5 +220,12 @@
   outline: 2px solid var(--accent-strong);
   outline-offset: -2px;
 }
+/* R419：main 是 R236 跳过链接（skip-link → #main-content）的落点，
+   :focus-visible 把描边抹掉 → 键盘用户回车跳过去后看不出焦点落在哪、
+   下一步 Tab 进哪里。按仓内既有替身口径（R405 聊天框 / R348 modal-tab）
+   补 :focus-visible 内部描边：鼠标点击不画框，键盘焦点可见。 */
 main:focus { outline: none; }
-main:focus-visible { outline: none; }
+main:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}

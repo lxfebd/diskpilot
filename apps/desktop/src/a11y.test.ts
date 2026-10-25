@@ -1019,3 +1019,26 @@ describe('保留天数输入框的钳制回显（R418）', () => {
     expect(region).toContain('setDaysDraft(null)');
   });
 });
+// R419：跳过链接（skip-link → #main-content）的落点必须看得见焦点——
+// main 的 :focus-visible 若把描边抹掉，键盘用户回车跳过去就丢了位置。
+describe('跳过链接落点的焦点可见（R419）', () => {
+  const RAW_SHELL = import.meta.glob('./styles/app-shell.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  it('main:focus-visible 给可见描边而不是 outline: none', () => {
+    const css = RAW_SHELL['./styles/app-shell.css'] ?? '';
+    const at = css.indexOf('main:focus-visible');
+    expect(at).toBeGreaterThan(-1);
+    const end = css.indexOf('}', at);
+    const block = css.slice(at, end);
+    expect(block).not.toContain('outline: none');
+    expect(block).toContain('outline: 2px solid var(--accent-strong)');
+    expect(block).toContain('outline-offset: -2px');
+  });
+  it('落点锚（#main-content / skip-link）仍存在，否则焦点替身是空转', () => {
+    const css = RAW_SHELL['./styles/app-shell.css'] ?? '';
+    expect(css).toContain('.skip-link:focus-visible');
+    const app = RAW_TSX['./App.tsx'] ?? '';
+    expect(app).toContain('href="#main-content"');
+    expect(app).toContain('id="main-content"');
+    expect(app).toContain('tabIndex={-1}');
+  });
+});

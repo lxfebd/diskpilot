@@ -7,6 +7,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R419: 跳过链接落点的焦点可见——键盘回车跳到 main 不再丢位置
+
+- 缺口：app-shell.css main:focus 与 main:focus-visible 都是 outline: none。main 正是 R236 跳过链接（skip-link → #main-content，App.tsx tabIndex={-1}）的落点——键盘用户 Tab 到跳过链接回车跳转后焦点落在 main 上，却没有任何可见指示，下一步 Tab 进哪完全靠猜，跳过链接等于白做。
+
+- 改动：按仓内既有「:focus 抹掉描边必须给替身」口径（R405 聊天输入框 / R348 modal-tab）补 main:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }——鼠标点击不画框，键盘跳转画内部描边；main:focus 保留 outline: none（程序性 focus 不画）。
+
+- 守卫：a11y.test.ts 新增 describe「跳过链接落点的焦点可见（R419）」2 条——① main:focus-visible 切块内不得再有 outline: none、必须有 2px accent-strong 描边与 -2px offset；② 落点锚仍存在（.skip-link:focus-visible + App.tsx 的 href="#main-content" / id="main-content" / tabIndex={-1}），避免落点没了守卫空转。
+
+- 反向自检：main:focus-visible 改回 outline: none → 1 failed，还原后全绿。
+
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1069 tests。
+
 ### R418: 保留天数输入钳制回显——清空框不再瞬变「保留 0 天」，上限当场可见
 
 - 缺口：CleanupBody 的「保留最近 N 天」是 type=number 且 onChange 里直接 Number(e.target.value) 写回 store（setDays → sanitizeRetentionDays 钳 [0,3650]）：① 清空框的瞬间 sanitizeRetentionDays(0)=0，「保留 0 天」= 什么都能删，是删得最狠的值却随手可达；② 框里显示 5000 时 store 已钳到 3650——用户看到的和实际执行的是两个数，方向是「以为更保守、实际更激进」；③ 输入框没有 max/step，浏览器微调按钮也停不到 3650。
