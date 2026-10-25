@@ -652,3 +652,75 @@ describe('resetChat（清空对话）不复活已清掉的会话（R451）', () 
     expect(sessions.some((x) => x.id !== 'chat_a' && x.turns.some((t) => t.id === 'n1'))).toBe(true);
   });
 });
+
+// R452：写盘时把会话列表截到 20，但内存不截——一次会话里新建超过 20 个会话，
+// 侧边栏会显示第 21+ 条，重启后它们静默消失（两层皮）。上限统一到
+// MAX_CHAT_SESSIONS 常量：新建 / 归档 / 在飞切换都先截再落盘。
+describe('会话列表上限（R452）', () => {
+  beforeEach(() => {
+    const storage = new Map<string, string>();
+    const fake: Storage = {
+      getItem: (k) => storage.get(k) ?? null,
+      setItem: (k, v) => { storage.set(k, String(v)); },
+      removeItem: (k) => { storage.delete(k); },
+      clear: () => storage.clear(),
+      key: (i) => [...storage.keys()][i] ?? null,
+      get length() { return storage.size; },
+    };
+    vi.stubGlobal('localStorage', fake);
+    useStore.setState({
+      root: null,
+      scanCache: {},
+      selectedPath: null,
+      selectedNode: null,
+      activeChatId: null,
+      chatSessions: [],
+      chat: { node: null, scaffoldId: null, turns: [], busy: false },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('新建 21 个会话：内存与写盘都停在 20，最旧的被丢', () => {
+    for (let i = 0; i < 21; i += 1) {
+      // 每个新会话用全新 id 归档（真实用法里 activeChatId 是未归档的在飞会话，
+      // 不与列表中的历史条目重合）；这里把 activeChatId 归 null 模拟同样语义。
+      useStore.setState({ activeChatId: null });
+      useStore.setState({
+        chat: { node: null, scaffoldId: null, turns: [{ id: 't' + i, role: 'user', text: 'q' + i }], busy: false },
+      });
+      useStore.getState().newChat();
+    }
+    const mem = useStore.getState().chatSessions;
+    expect(mem.length).toBe(20);
+    expect(mem[0].title).toBe('q20');
+    expect(mem.some((x) => x.title === 'q0')).toBe(false);
+    const rawSaved = localStorage.getItem('diskpilot.chatSessions') ?? '[]';
+    const saved = JSON.parse(rawSaved) as Array<{ title: string }>;
+    expect(saved.length).toBe(20);
+    expect(saved.map((x) => x.title)).toEqual(mem.map((x) => x.title));
+  });
+
+  it('归档与在飞切换同样受上限约束：新归档进首位，最旧被挤掉', () => {
+    const existing: Array<{ id: string; title: string; ts: number; turns: Array<{ id: string; role: 'user'; text: string }> }> = [];
+    for (let i = 0; i < 20; i += 1) {
+      existing.push({ id: 'c' + (19 - i), title: 'c' + (19 - i), ts: i, turns: [{ id: 'x' + i, role: 'user', text: 'c' + i }] });
+    }
+    useStore.setState({
+      chatSessions: existing,
+      chat: { node: null, scaffoldId: null, turns: [{ id: 'n1', role: 'user', text: '归档的新对话' }], busy: false },
+    });
+    useStore.getState().archiveActiveChat();
+    const mem = useStore.getState().chatSessions;
+    expect(mem.length).toBe(20);
+    expect(mem[0].title).toBe('归档的新对话');
+    expect(mem[0].id.startsWith('chat_')).toBe(true);
+    expect(mem.some((x) => x.id === 'c0')).toBe(false);
+    const rawSaved = localStorage.getItem('diskpilot.chatSessions') ?? '[]';
+    const saved = JSON.parse(rawSaved) as Array<{ id: string }>;
+    expect(saved.length).toBe(20);
+    expect(saved.some((x) => x.id === 'c0')).toBe(false);
+  });
+});

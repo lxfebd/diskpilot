@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R452: 会话列表的内存上限与写盘对齐——第 21 条会话不再「看得见、重启就消失」
+
+- 缺口：`persistChatSessions` 落盘时把列表截到 20 条，但内存里的 `chatSessions` 不截——`newChat` / `archiveActiveChat` 只做 `[新归档, ...旧列表]`。一次会话里聊出超过 20 段对话时，侧边栏照常显示第 21 条起的历史（可点、可切换），下一次落盘却写不进去，重启后这些会话静默消失：看得见、用过、却没了。
+- 改动：apps/desktop/src/store.ts 导出 `MAX_CHAT_SESSIONS = 20` 作单一上限；`persistChatSessions` 与 `loadChatSessions`（旧存值可能超限）都按它截断；`newChat` / `archiveActiveChat` / `switchChat`（含在飞归档分支）构造完列表后同样 `slice(0, MAX_CHAT_SESSIONS)` 再落盘并写回内存——UI 显示的上限与落盘的上限从此是同一个数。
+- 守卫：apps/desktop/src/store.test.ts 追加 describe「会话列表上限（R452）」2 条——新建 21 段会话后内存与 localStorage 都恰好 20 条、最新在前、最旧被丢，且两侧 id 序列一致；已有 20 条时归档新对话同样只留 20 条、最旧被挤掉。
+- 反向自检：撤掉 `newChat` 的内存截断 → 恰好 1 failed（expected 21 to be 20），还原后 34 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（84 files / 1211 tests）。
+
 ### R451: 清空对话后不再「删了又复活」——activeChatId 同步归零
 
 - 缺口：聊天气泡头的 X（清空对话）走 store 的 `resetChat`：它把活动会话从 `chatSessions` 移除、清空 turns、落盘列表，但既不把 `activeChatId` 归 null，也不同步 `persistActiveChatId`。残留的 id 让之后任一处归档（关窗 `archiveActiveChat` / 新建 `newChat` / AI 在飞时切走 `switchChat`）都用旧 id 把刚落盘的会话写回列表——用户刚清空的对话，关个窗又出现在历史里；重启后 localStorage 里还留着指向已删会话的 activeChatId。

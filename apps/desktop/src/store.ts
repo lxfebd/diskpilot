@@ -10,6 +10,11 @@ import { t } from './i18n';
 import { common } from './i18n/namespaces/common';
 
 const CHAT_SESSIONS_KEY = 'diskpilot.chatSessions';
+
+// R452：会话列表上限统一到一个常量——持久化与内存同口径。此前写盘 slice(0,20)
+// 但内存不截，一次会话里新建超过 20 个时，侧边栏会显示第 21+ 条、重启后
+// 它们静默消失（两层皮）。
+export const MAX_CHAT_SESSIONS = 20;
 const ACTIVE_CHAT_KEY = 'diskpilot.activeChatId';
 
 // 会话恢复时把遗留的 pending 回合净化掉：pending 只代表「有请求在飞」，
@@ -57,6 +62,7 @@ function loadChatSessions(): ChatSessionMeta[] {
       ? arr
           .filter((s) => s && typeof s.id === 'string' && Array.isArray(s.turns))
           .map((s) => ({ ...s, turns: sanitizeTurns(s.turns) }))
+          .slice(0, MAX_CHAT_SESSIONS)
       : [];
   } catch {
     return [];
@@ -65,9 +71,10 @@ function loadChatSessions(): ChatSessionMeta[] {
 
 function persistChatSessions(list: ChatSessionMeta[]) {
   try {
-    // 每会话 turns 最多保留 200 条（与 UI 渲染上限一致），列表最多 20 个
-    // 会话，超出丢最旧的——避免 localStorage 被对话历史塞满。
-    const capped = list.slice(0, 20).map((s) => ({ ...s, turns: s.turns.slice(-200) }));
+    // 每会话 turns 最多保留 200 条（与 UI 渲染上限一致），列表最多
+    // MAX_CHAT_SESSIONS 个会话，超出丢最旧的——避免 localStorage 被对话
+    // 历史塞满；上限常量与内存截断共用（R452）。
+    const capped = list.slice(0, MAX_CHAT_SESSIONS).map((s) => ({ ...s, turns: s.turns.slice(-200) }));
     localStorage.setItem(CHAT_SESSIONS_KEY, JSON.stringify(capped));
   } catch {
     /* localStorage 满/不可用时静默丢弃，不影响主流程 */
@@ -736,9 +743,12 @@ export const useStore = create<AppState>((set, get) => {
         const meta: ChatSessionMeta = { id: s.activeChatId ?? id, title, ts: Date.now(), turns: sanitizeTurns(s.chat.turns) };
         list = [meta, ...list.filter((x) => x.id !== meta.id)];
       }
-      persistChatSessions(list);
+      // R452：内存列表与写盘同口径——超过上限丢最旧，UI 不再显示重启后
+      // 会消失的会话。
+      const capped = list.slice(0, MAX_CHAT_SESSIONS);
+      persistChatSessions(capped);
       persistActiveChatId(id);
-      return { chatSessions: list, activeChatId: id, chat: { node: null, scaffoldId: null, turns: [], busy: false } };
+      return { chatSessions: capped, activeChatId: id, chat: { node: null, scaffoldId: null, turns: [], busy: false } };
     }),
   // 关窗前归档：与 newChat 的归档逻辑同源，但不换会话、不清活动 turns。
   // 高频路径不逐条落盘的设计不变，只是补上「结束前」这个落盘点。
@@ -750,8 +760,9 @@ export const useStore = create<AppState>((set, get) => {
       const title = s.chat.turns.find((turn) => turn.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 24) || t('common.chat.untitled');
       const meta: ChatSessionMeta = { id, title, ts: Date.now(), turns: sanitizeTurns(s.chat.turns) };
       const list = [meta, ...s.chatSessions.filter((x) => x.id !== meta.id)];
-      persistChatSessions(list);
-      return { chatSessions: list };
+      const capped = list.slice(0, MAX_CHAT_SESSIONS);
+      persistChatSessions(capped);
+      return { chatSessions: capped };
     }),
   switchChat: (id) =>
     set((s) => {
@@ -769,12 +780,13 @@ export const useStore = create<AppState>((set, get) => {
         const archId = s.activeChatId ?? `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
         const title = s.chat.turns.find((turn) => turn.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 24) || t('common.chat.untitled');
         const arch: ChatSessionMeta = { id: archId, title, ts: Date.now(), turns: sanitizeTurns(s.chat.turns) };
-        list = [arch, ...list.filter((x) => x.id !== archId)];
+        list = [arch, ...list.filter((x) => x.id !== archId)].slice(0, MAX_CHAT_SESSIONS);
         persistChatSessions(list);
       }
       persistActiveChatId(id);
+      const capped = list.slice(0, MAX_CHAT_SESSIONS);
       return {
-        chatSessions: list,
+        chatSessions: capped,
         activeChatId: id,
         chat: { node: null, scaffoldId: null, turns: sanitizeTurns(meta.turns), busy: false },
       };
