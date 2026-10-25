@@ -463,6 +463,7 @@ function SystemToolsInner() {
             <input
               value={drvQuery}
               onChange={(e) => setDrvQuery(e.target.value)}
+              aria-label={t('system.driver.searchAria')}
               placeholder={t('system.driver.searchPlaceholder')}
             />
           </label>

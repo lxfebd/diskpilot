@@ -1275,3 +1275,57 @@ describe('表格表头的 scope 绑定（R432）', () => {
     expect((src.match(/<th scope="col">/g) ?? []).length).toBe(4);
   });
 });
+
+// ── 搜索框的可访问名（R433）────────────────────────────
+// 图标不是可访问名：label 里只放 <Search/>、input 只写 placeholder 时，
+// 读屏读不出这个框是搜什么的（placeholder 不是可靠的可访问名来源）。
+// 规则：placeholder 输入框必须有 aria-label / aria-labelledby，
+// 或所在 label 里带真实文字（t() 或文字节点）作隐式标签。
+describe('搜索框的可访问名（R433）', () => {
+  it('placeholder 输入框都有可访问名（aria-label 或 label 文字）', () => {
+    const offenders: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      const lines = String(src).split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].includes('<input')) continue;
+        const idx = lines[i].indexOf('<input');
+        let depth = 0;
+        let tag = '';
+        let done = false;
+        for (let j = i; j < lines.length && !done; j++) {
+          const line = lines[j];
+          for (let k = j === i ? idx : 0; k < line.length; k++) {
+            const c = line[k];
+            if (c === '{') depth++;
+            else if (c === '}') depth = Math.max(0, depth - 1);
+            if (c === '>' && depth === 0 && (j > i || k > idx)) {
+              done = true;
+              tag += '>';
+              break;
+            }
+            tag += c;
+          }
+        }
+        if (!/placeholder=/.test(tag) || /aria-label=|aria-labelledby=/.test(tag)) continue;
+        let labelText = false;
+        for (let q = i - 1; q >= Math.max(0, i - 12); q--) {
+          if (lines[q].includes('</label>')) break;
+          if (lines[q].includes('<label')) {
+            let region = '';
+            for (let m = q; m <= i - 1; m++) region += lines[m] + '\n';
+            const text = region.replace(/<[^>]*>/g, ' ').replace(/\/\*[\s\S]*?\*\//g, '');
+            labelText = /t\(|[\u4e00-\u9fff]|[A-Za-z]/.test(text);
+            break;
+          }
+        }
+        if (!labelText) offenders.push(String(path) + ':' + (i + 1));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+  it('三个图标搜索框都有显式 aria-label', () => {
+    expect(String(RAW_TSX['./components/history/HistoryPage.tsx'])).toContain("aria-label={t('history.searchAria')}");
+    expect(String(RAW_TSX['./components/StartupPanel.tsx'])).toContain("aria-label={t('system.startup.searchAria')}");
+    expect(String(RAW_TSX['./components/SystemTools.tsx'])).toContain("aria-label={t('system.driver.searchAria')}");
+  });
+});

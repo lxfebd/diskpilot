@@ -207,6 +207,7 @@ export function StartupPanel() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                aria-label={t('system.startup.searchAria')}
                 placeholder={t('system.startup.searchPlaceholder')}
               />
             </label>

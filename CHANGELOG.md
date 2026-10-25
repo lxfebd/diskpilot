@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R433: 图标搜索框补可访问名——三个只靠 placeholder 的搜索框读屏能报出名字
+
+- 缺口：HistoryPage / StartupPanel / SystemTools 三个搜索框包在 label 里但 label 只有 Search 图标、input 只写 placeholder——图标不是可访问名，placeholder 也不是可靠的可访问名来源（FileView / toolwall / SteamInspector 都有显式 aria-label，这三处漏了）。
+- 改动：三处 input 各加 aria-label，复用各自命名空间新键 history.searchAria / system.startup.searchAria / system.driver.searchAria（zh/en 成对，键集一致性由既有 i18n 守卫兜底）。
+- 守卫（apps/desktop/src/a11y.test.ts）：新增 describe「搜索框的可访问名（R433）」2 条——① 全仓扫 placeholder 输入框（花括号配平取完整开标签，避开 onChange 箭头里的 >），必须有 aria-label / aria-labelledby，或所在 label 带真实文字（t() 或文字节点），否则点名；② 三个图标搜索框都有显式 aria-label 断言。
+- 反向自检：临时删 HistoryPage 的 aria-label → 恰好 2 failed（扫描器点名 ./components/history/HistoryPage.tsx:174 + 断言），还原后 a11y 84 passed；全量 pnpm check 77 files / 1135 tests 绿。
+
 ### R432: 参数表表头补 scope="col"——读屏把列头与数据格绑起来
 
 - 缺口：全仓唯一数据表（toolwall 的 CLI 参数表）四个 <th> 都没有 scope——读屏把列头当游离文本、不关联对应列的数据格（只有这一张表，所以一直没暴露）。

@@ -174,6 +174,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label={t('history.searchAria')}
             placeholder={t('history.searchPlaceholder')}
           />
         </label>
