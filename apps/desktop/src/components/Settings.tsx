@@ -290,8 +290,11 @@ export function Settings({ onClose, initialTab }: Props) {
   }, []);
 
   // 读取本机性能档位（CPU 核数/内存），用于给 AI 配置建议「用云端还是本地」。
+  // R417：设置弹层关得快时迟到的响应不落地到已卸载组件。
   useEffect(() => {
-    getHwProfile().then(setHw).catch(() => setHw(null));
+    let alive = true;
+    getHwProfile().then((p) => { if (alive) setHw(p); }).catch(() => { if (alive) setHw(null); });
+    return () => { alive = false; };
   }, []);
 
   // 主题在别处被改（如 future 的快捷切换）时，设置页里的色板/滑条要跟着变。

@@ -7,6 +7,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R417: 挂载期拉取补卸载守卫——迟到的响应不落地到已卸载组件
+
+- 缺口：4 个「仅挂载时拉取」的 effect 直接在 .then/.catch 里 setState，组件卸载后迟到的响应仍会落地：SpaceTrendCard 的 getSpaceHistory、设置页的 getHwProfile、工具墙 CatalogWall 的 toolbeltManifests 与 listTools（后者 catch 里还嵌套 agentReady().then）、Toolbelt 的 toolbeltCatalog。其余拉取（CleanupPage/Studio/DryRun/ReminderSettings/AssetOverview 等）早有 alive/cancelled/req token 守卫，这 5 处是漏网的。
+
+- 改动：5 处 effect 统一补 let alive = true + 回调首查 if (!alive) return + return () => { alive = false; }；listTools 的 catch 内嵌套 agentReady().then 也查 alive。同步部分（Toolbelt 的 setCatalogErr(null)、toolwall 的 !isTauri early-return）保持不变。
+
+- 守卫：a11y.test.ts 新增 describe「挂载期拉取的卸载守卫（R417）」3 条——显式站点清单（AssetOverview/Settings/toolwall 两处/Toolbelt）按 marker 定位所在 useEffect 块，断言块内含 let alive = true、清理函数与 if (alive)/if (!alive) 守卫；设置档位与目录、清单与嵌套探活各有精确文本断言。
+
+- 反向自检：删 Settings 的 if (alive) setHw(null) → 1 failed（报 R417「设置页性能档位与工具墙目录」那条），还原后全绿。
+
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1065 tests。
+
 ### R416: 跑分历史的展开态不再跟着新记录漂——index key 换时间戳身份
 
 - 缺口：bench.tsx 的两处跑分历史列表（通用跑分 + 压测）都是「新记录插最前」（persistHistory 尾插 + 渲染 reverse），却用 key={i}。跑完新一次后所有条目位移一格，React 按 index 复用 <details> DOM——用户展开的旧记录展开态漂到别的记录上，读到的是另一份结果。

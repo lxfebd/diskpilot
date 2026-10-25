@@ -950,3 +950,45 @@ describe('跑分历史的条目身份（R416）', () => {
     expect(src).not.toMatch(/reverse\(\)\.slice\(1\)\.map\(\(h, i\) =>/);
   });
 });
+// R417：4 处「仅挂载时拉取」effect 补 alive 卸载守卫——视图切换 / 弹层快速关闭时
+// 迟到的响应不再 setState 到已卸载组件（对齐 R382 / CleanupPage / Studio 的房规）。
+describe('挂载期拉取的卸载守卫（R417）', () => {
+  const R417_SITES: Record<string, string> = {
+    './components/AssetOverview.tsx': 'api.getSpaceHistory()',
+    './components/Settings.tsx': 'getHwProfile()',
+    './components/toolbelt/toolwall.tsx': 'api.toolbeltManifests()',
+    './components/Toolbelt.tsx': 'api.toolbeltCatalog()',
+  };
+  function effectBlock(src: string, marker: string): string {
+    const at = src.indexOf(marker);
+    expect(at).toBeGreaterThan(-1);
+    const start = src.lastIndexOf('useEffect(', at);
+    const end = src.indexOf('}, []);', at);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    return src.slice(start, end);
+  }
+  it('四处只读拉取（含 toolwall 两处）、一处弹层档位：脱挂后响应不落地', () => {
+    for (const [path, marker] of Object.entries(R417_SITES)) {
+      const block = effectBlock(RAW_TSX[path] ?? '', marker);
+      expect(block).toContain('let alive = true;');
+      expect(block).toContain('return () => { alive = false; };');
+      expect(block).toMatch(/if \(alive\)|if \(!alive\)/);
+    }
+  });
+  it('设置页性能档位与工具墙目录：先查 alive 再落地', () => {
+    const settings = effectBlock(RAW_TSX['./components/Settings.tsx'] ?? '', 'getHwProfile()');
+    expect(settings).toContain('if (alive) setHw(p)');
+    expect(settings).toContain('if (alive) setHw(null)');
+    const belt = effectBlock(RAW_TSX['./components/Toolbelt.tsx'] ?? '', 'api.toolbeltCatalog()');
+    expect(belt).toContain('if (alive) setCatalog(c)');
+  });
+  it('工具墙清单与探活（含 catch 里嵌套 agentReady）都受 alive 保护', () => {
+    const tw = RAW_TSX['./components/toolbelt/toolwall.tsx'] ?? '';
+    const manifests = effectBlock(tw, 'api.toolbeltManifests()');
+    expect(manifests).toContain('if (!alive) return; setManifests(list)');
+    const listTools = effectBlock(tw, 'api.listTools()');
+    expect(listTools).toContain('if (!alive) return;');
+    expect(listTools).toContain("if (alive) setAgentIssue(ready ? 'failed' : 'missing')");
+  });
+});

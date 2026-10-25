@@ -36,11 +36,17 @@ export function Toolbelt({ drives, scanning, onScanDrive, onScanAll, onGoWorkspa
   useEffect(() => {
     // 非 Tauri（浏览器预览）走 api 的 mock catalog；Tauri 走真实后端。
     setCatalogErr(null);
-    api.toolbeltCatalog().then(setCatalog).catch((e) => {
+    // R417：卸载后迟到的目录响应不落地。
+    let alive = true;
+    api.toolbeltCatalog().then((c) => {
+      if (alive) setCatalog(c);
+    }).catch((e) => {
+      if (!alive) return;
       // 读失败 ≠ 扫描中：记原因，让工具墙显示失败而非永远「正在扫描」。
       setCatalog(null);
       setCatalogErr(String(e instanceof Error ? e.message : e));
     });
+    return () => { alive = false; };
   }, []);
 
   const ctx: ToolContext = useMemo(

@@ -573,11 +573,18 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
   const [hist, setHist] = useState<Record<string, SpacePoint[]>>({});
   const [histErr, setHistErr] = useState<string | null>(null);
   useEffect(() => {
-    api.getSpaceHistory().then(setHist).catch((e) => {
+    // R417：卸载后迟到的响应不落地（SpaceTrendCard 会在工作区视图切换时卸载）。
+    let alive = true;
+    api.getSpaceHistory().then((h) => {
+      if (!alive) return;
+      setHist(h);
+    }).catch((e) => {
+      if (!alive) return;
       // 读失败 ≠ 没扫过：记录原因，别让「还没扫」的空态文案盖住真实错误。
       setHist({});
       setHistErr(String(e instanceof Error ? e.message : e));
     });
+    return () => { alive = false; };
   }, []);
 
   const selfKey = selPath ? spaceNormKey(selPath) : null;

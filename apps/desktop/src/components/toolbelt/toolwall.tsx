@@ -731,20 +731,30 @@ export function CatalogWall({
   useEscapeKey(() => setDetail(null), detail !== null);
   useEscapeKey(() => setAgentDetail(null), agentDetail !== null);
 
+  // R417：工具墙在视图切换时会卸载，迟到的清单响应不落地到已卸载组件。
   useEffect(() => {
     if (!isTauri) return;
+    let alive = true;
     api.toolbeltManifests()
-      .then((list) => { setManifests(list); setManifestErr(null); })
-      .catch((e) => { setManifests([]); setManifestErr(String(e instanceof Error ? e.message : e)); });
+      .then((list) => { if (!alive) return; setManifests(list); setManifestErr(null); })
+      .catch((e) => {
+        if (!alive) return;
+        setManifests([]);
+        setManifestErr(String(e instanceof Error ? e.message : e));
+      });
+    return () => { alive = false; };
   }, []);
 
   // 「AI 可操作」分区数据：agent-server 全部 MCP 工具清单（数字随真实清单）。
   // 拉取失败时不再静默消失——探活分出「二进制找不到」与「找得到但握手失败」，
   // 前者用户能自己修（安装包缺 sidecar / dev 没编 agent-server）。
+  // R417：卸载后迟到的清单 / 探活响应都不落地（含 catch 里的嵌套 agentReady）。
   useEffect(() => {
     if (!isTauri) return;
+    let alive = true;
     api.listTools()
       .then((tools) => {
+        if (!alive) return;
         if (tools.length) {
           setAgentTools(tools);
           setAgentIssue(null);
@@ -754,12 +764,14 @@ export function CatalogWall({
         }
       })
       .catch(() => {
+        if (!alive) return;
         setAgentTools(null);
         void api
           .agentReady()
-          .then((ready) => setAgentIssue(ready ? 'failed' : 'missing'))
-          .catch(() => setAgentIssue('failed'));
+          .then((ready) => { if (alive) setAgentIssue(ready ? 'failed' : 'missing'); })
+          .catch(() => { if (alive) setAgentIssue('failed'); });
       });
+    return () => { alive = false; };
   }, []);
 
     // 与后端 find_manifest 同语义的部分匹配：目录名「cpu-z」vs manifest 名
