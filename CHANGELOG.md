@@ -7,6 +7,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R420: CSS 裸 hex 语义色收口到 token——危险红 / 健康绿 / 分隔线随主题走，换主题不再漏配
+
+- 缺口：主题机制是 applyTheme() 把整套语义 token 写成 <html> 内联变量（theme.ts），CSS 里写死的非主题 hex 换主题时必然漏配——settings.css:52 进度条失败底 #d94d6a、:477 fileview-stats 分隔线 #f0d8e4（浅粉，深色主题下不变量）、:814/:823 button.danger #e5484d/#d13438、:841 sys-tag-green #16a34a、cleanup.css:407-415 armed 确认红 #c43358/#8a1d3a + 脉冲 rgba。已有守卫（token-guard rgba 基线 / inlineColor R407 内联 style hex）都不拦主题无关 CSS 文件里的裸 hex。
+
+- 改动：上述全部改走语义 token + color-mix：进度失败底 → var(--risk-danger)；fileview 分隔线 → var(--border)；button.danger → var(--risk-danger)，hover → color-mix(in srgb, var(--risk-danger) 85%, #000)（深浅主题都朝暗的方向）；sys-tag-green → var(--risk-safe) + color-mix 底/边（settings.css rgba 5→3）；cleanup armed → var(--risk-danger) + color-mix 边框，脉冲 keyframes → color-mix(in srgb, var(--risk-danger) 45%, transparent) / transparent（cleanup rgba 2→0）。刻意保留的固定色入册说明：chat 代码块深色 editorial 卡（#1a1220/#f5e8ee）与工具墙 GPU donut 仪表仪器色（#080612/#7dfc9f/#ff5252/#ff8080）——主题无关，与 rgba 基线里的 donut 黑场同口径。
+
+- 守卫：token-guard.test.ts 新增 describe「裸 hex 语义色基线（R420）」——去注释 + 循环剥 var(--x, #y) 回退与 color-mix(...) 调用后，非白名单文件的裸 hex 除 #fff/#ffffff 外必须落在 HEX_KEEP 册（按文件分册）；新增裸语义色直接红，先改语义 token，确属固定色才允许进册并注明理由。rgba 既有基线不动（settings 5→3、cleanup 2→0 只减）。
+
+- 反向自检：往 steam.css 注入 .re402-probe { color: #123456; } → 1 failed 点出「./steam.css 出现未入册裸 hex：#123456」，还原后 2 passed。
+
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1070 tests。
+
 ### R419: 跳过链接落点的焦点可见——键盘回车跳到 main 不再丢位置
 
 - 缺口：app-shell.css main:focus 与 main:focus-visible 都是 outline: none。main 正是 R236 跳过链接（skip-link → #main-content，App.tsx tabIndex={-1}）的落点——键盘用户 Tab 到跳过链接回车跳转后焦点落在 main 上，却没有任何可见指示，下一步 Tab 进哪完全靠猜，跳过链接等于白做。

@@ -49,7 +49,7 @@
 }
 .progress-button.is-error .progress-button-fill {
   animation: none;
-  background: #d94d6a;
+  background: var(--risk-danger);
 }
 .progress-button.is-error {
   color: #fff;
@@ -474,7 +474,7 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   padding: 5px 10px;
   font-size: calc(11px * var(--font-scale, 1));
   color: var(--ink-2);
-  border-bottom: 1px solid #f0d8e4;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .fileview-stats select {
@@ -811,7 +811,7 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 .sys-row-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .sys-confirm { display: inline-flex; align-items: center; gap: 6px; }
 button.danger {
-  background: #e5484d;
+  background: var(--risk-danger);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -820,7 +820,7 @@ button.danger {
   cursor: pointer;
   font-weight: 700;
 }
-button.danger:hover:not(:disabled) { background: #d13438; }
+button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--risk-danger) 85%, #000); }
 button.danger:disabled { opacity: 0.5; cursor: not-allowed; }
 .sys-tag {
   flex-shrink: 0;
@@ -837,9 +837,9 @@ button.danger:disabled { opacity: 0.5; cursor: not-allowed; }
   border-color: var(--accent);
 }
 .sys-tag-green {
-  background: rgba(22,163,74,0.12);
-  color: #16a34a;
-  border-color: rgba(22,163,74,0.35);
+  background: color-mix(in srgb, var(--risk-safe) 12%, transparent);
+  color: var(--risk-safe);
+  border-color: color-mix(in srgb, var(--risk-safe) 35%, transparent);
 }
 .sys-tag-grey {
   background: var(--paper-3);

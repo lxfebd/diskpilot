@@ -405,14 +405,14 @@ main.cleanup-page > .cleanup-page {
 .cleanup-summary strong { color: var(--ink); font-weight: 600; }
 .cleanup-actions { display: flex; gap: 6px; }
 .cleanup-execute.armed {
-  background: #c43358;
+  background: var(--risk-danger);
   color: #fff;
-  border-color: #8a1d3a;
+  border-color: color-mix(in srgb, var(--risk-danger) 55%, #000);
   animation: pulse-armed 1s ease-in-out infinite;
 }
 @keyframes pulse-armed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(196, 51, 88, 0.5); }
-  50%      { box-shadow: 0 0 0 5px rgba(196, 51, 88, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--risk-danger) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 5px transparent; }
 }
 
 /* R178: live progress while a real delete runs — bar + freed bytes + cancel button. */
