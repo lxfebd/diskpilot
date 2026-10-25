@@ -508,8 +508,19 @@ const composingRef = useRef(false);
       r.readAsDataURL(file);
     });
 
+  // R450：非图片文件不再无声消失——选择 / 拖入里混进的其它文件逐条说明原因。
+  const skipNonImages = (files: File[]) => {
+    if (files.length === 0) return;
+    const names =
+      files.slice(0, 3).map((f) => f.name || '?').join(', ') + (files.length > 3 ? '…' : '');
+    pushTurn({ id: uid(), role: 'system', text: t('chat.sys.imageNotImage', { names }) });
+  };
+
   const addImageFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    if (!file.type.startsWith('image/')) {
+      skipNonImages([file]);
+      return;
+    }
     if (file.size > 20 * 1024 * 1024) {
       pushTurn({ id: uid(), role: 'system', text: t('chat.sys.imageTooBig', { name: file.name }) });
       return;
@@ -544,9 +555,10 @@ const composingRef = useRef(false);
     setDropping(false);
     // Image file drop (from filesystem / browser): take precedence over the
     // internal DiskPilot path drop, since paths come with our custom mime type.
-    const files = Array.from(e.dataTransfer.files ?? []).filter((f) => f.type.startsWith('image/'));
-    if (files.length > 0) {
-      for (const f of files) await addImageFile(f);
+    const dropped = Array.from(e.dataTransfer.files ?? []);
+    if (dropped.length > 0) {
+      for (const f of dropped.filter((f) => f.type.startsWith('image/'))) await addImageFile(f);
+      skipNonImages(dropped.filter((f) => !f.type.startsWith('image/')));
       return;
     }
     const path = e.dataTransfer.getData('application/x-diskpilot-path');

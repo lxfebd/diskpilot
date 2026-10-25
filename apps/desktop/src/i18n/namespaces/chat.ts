@@ -59,6 +59,7 @@ export const chat = {
     // 系统回合（不进 AI 上下文，纯界面反馈）
     'chat.sys.imageTooBig': '图片 {name} 太大（>20MB），跳过',
     'chat.sys.imageReadFailed': '读取图片失败：{msg}',
+    'chat.sys.imageNotImage': '只支持图片（PNG / JPG / WebP / GIF），已忽略非图片：{names}',
     'chat.sys.recycled': '已回收 {path} · 释放 {size}',
     'chat.sys.recycledNoBytes': '已回收 {path}（未能统计释放大小，不编造数字）',
     'chat.sys.recycleFailed': '回收失败：{msg}',
@@ -169,6 +170,7 @@ export const chat = {
     // System turns (never sent back to the model)
     'chat.sys.imageTooBig': 'Skipped {name}: image is larger than 20MB',
     'chat.sys.imageReadFailed': 'Could not read the image: {msg}',
+    'chat.sys.imageNotImage': 'Only images are supported (PNG / JPG / WebP / GIF); ignored: {names}',
     'chat.sys.recycled': 'Recycled {path} · {size} freed',
     'chat.sys.recycledNoBytes': 'Recycled {path} (could not measure freed space; not inventing a number)',
     'chat.sys.recycleFailed': 'Recycle failed: {msg}',

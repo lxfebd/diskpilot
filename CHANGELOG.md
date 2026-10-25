@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R450: 聊天框混入的非图片文件给出提示——不再无声消失
+
+- 缺口：聊天框只收图片，但「选择文件」对话框能切到「所有文件」、拖入也能带进 PDF / zip——这些文件在 `addImageFile` 里被 `if (!file.type.startsWith('image/')) return;` 静默丢弃：没有药丸、没有提示、没有系统消息，用户以为点了没反应。
+- 改动：apps/desktop/src/components/ChatPanel.tsx 新增 `skipNonImages`（最多列 3 个文件名的系统消息，超过补省略号）；`addImageFile` 遇非图片改为调用它而不是裸 return；`onDrop` 把 `dataTransfer.files` 分成图片 / 非图片两批，图片照收、其余一并说明；文件选择器仍把每个文件交给 `addImageFile` 统一判定。
+- i18n：chat.ts zh / en 各加 `chat.sys.imageNotImage`（只支持图片（PNG / JPG / WebP / GIF），已忽略非图片：{names} / Only images are supported (PNG / JPG / WebP / GIF); ignored: {names}）。
+- 守卫：新增 apps/desktop/src/components/chatDrop.test.ts 3 条（统一提示且静默 return 消失 / 拖入按图片分流 / 名称最多三条与选择器通路）；反向自检还原静默 return → 恰好 1 failed，还原后 12 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（84 files / 1207 tests）。
+
 ### R449: 英文表不再悄悄留中文——未翻译的键逐项钉进允许清单
 
 - 缺口：键集一致的守卫（coverage.test.ts）只保证 zh / en「都有这条键」，不保证英文真的翻译过——新键若把中文原样抄进 en，英文界面会直接显示中文，测试仍然全绿。
