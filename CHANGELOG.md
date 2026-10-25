@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R416: 跑分历史的展开态不再跟着新记录漂——index key 换时间戳身份
+
+- 缺口：bench.tsx 的两处跑分历史列表（通用跑分 + 压测）都是「新记录插最前」（persistHistory 尾插 + 渲染 reverse），却用 key={i}。跑完新一次后所有条目位移一格，React 按 index 复用 <details> DOM——用户展开的旧记录展开态漂到别的记录上，读到的是另一份结果。
+- 改动：两处 <details> 的 key 改为 h.at（persistHistory 写入的 Date.now() 时间戳，每条唯一）；map 回调去掉不再使用的 i；第一处 map 箭头前补注释说明 R416 缺口。
+- 守卫：a11y.test.ts 新增 describe「跑分历史的条目身份（R416）」1 条——bench.tsx 必须恰有 2 处 <details key={h.at}>、不得出现 <details key={i}>、两处 reverse().slice(1) 列表的 map 回调不得再带 index 参数。
+- 反向自检：把 key 还原成 {i} → 1 failed，还原后全绿。中途踩坑：JSX 注释放在 map((h) => ( 的箭头括号内是语法错误（TS1005），注释须提到 map 调用之前。
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1062 tests。
+
 ### R415: AI 配置持久化接上 safeStorage——存储异常不再冒充「连接失败」
 
 - 缺口：advisor/provider.ts 的 saveSettings / clearSettings 是裸 localStorage.setItem / removeItem——R395 的兜底只覆盖 safeStorage 自身与 4 个启动文件。隐私模式 / 配额满时：Settings「保存 / 试连」包了 try/catch，存储异常被拼进「连接失败：<错误>」误导排查方向；「清除配置」按钮没包 try，异常直接炸掉事件处理器。

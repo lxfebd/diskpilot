@@ -937,3 +937,16 @@ describe('工具墙弹层 Esc 取消（R414）', () => {
     expect(src).toContain('useEscapeKey(() => setRecycleAsk(false), recycleAsk && !recycling)');
   });
 });
+// R416：跑分历史是「最新插最前」的动态列表——key={i} 会让新记录跑完后所有条目
+// 错位一格，React 按 index 复用 <details> DOM，用户展开的历史漂到别的记录上。
+describe('跑分历史的条目身份（R416）', () => {
+  const RAW = import.meta.glob('./components/toolbelt/bench.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  it('两处 details 列表都用稳定身份 key，不用 index', () => {
+    const src = RAW['./components/toolbelt/bench.tsx'] ?? '';
+    const detailsKeys = src.match(/<details key=\{[^}]+\}>/g) ?? [];
+    expect(detailsKeys).toHaveLength(2);
+    expect(detailsKeys.every((t) => t === '<details key={h.at}>')).toBe(true);
+    expect(src).not.toMatch(/<details key=\{i\}>/);
+    expect(src).not.toMatch(/reverse\(\)\.slice\(1\)\.map\(\(h, i\) =>/);
+  });
+});

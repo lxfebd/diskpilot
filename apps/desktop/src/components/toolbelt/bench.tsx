@@ -317,8 +317,10 @@ export function BenchPanel() {
       )}
       {historyOf(key).length > 1 && (
         <div className="bench-history">
-          {historyOf(key).slice().reverse().slice(1).map((h, i) => (
-            <details key={i}>
+          {/* R416：最新记录插在最前（reverse 后），index key 会让所有条目错位一格，
+              用户展开的历史跟着漂到别的记录上；时间戳是每条唯一身份。 */}
+          {historyOf(key).slice().reverse().slice(1).map((h) => (
+            <details key={h.at}>
               <summary className="muted small">
                 {h.label} · {formatDateTime(new Date(h.at))}
               </summary>
@@ -422,8 +424,8 @@ export function BenchPanel() {
         })()}
         {historyOf('stress_test').length > 1 && (
           <div className="bench-history">
-            {historyOf('stress_test').slice().reverse().slice(1).map((h, i) => (
-              <details key={i}>
+            {historyOf('stress_test').slice().reverse().slice(1).map((h) => (
+              <details key={h.at}>
                 <summary className="muted small">{h.label} · {formatDateTime(new Date(h.at))}</summary>
                 <pre className="bench-out">{h.result}</pre>
               </details>
