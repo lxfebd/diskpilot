@@ -139,6 +139,7 @@ describe('弹窗焦点循环已挂载（R347）', () => {
 // :focus-visible 替身；单条 `<selector>:focus { outline: none; }` 既没给 border-color /
 // box-shadow，也没补 :focus-visible。两者都让键盘用户看不出焦点在哪，且不会有断言变红。
 const RAW_CSS = import.meta.glob('./**/*.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const RAW_SHELL = import.meta.glob('./i18n/namespaces/shell.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 describe('键盘焦点不许被 outline:none 抹掉（R348）', () => {
   it(':focus 规则里的 outline:none 必须有可见替身或 :focus-visible', () => {
@@ -1746,5 +1747,29 @@ describe('社区搜索的防抖与乱序守卫（R464）', () => {
     expect(effect).toContain('window.setTimeout(() => {');
     expect(effect).toContain('}, 250);');
     expect(effect).toContain('return () => window.clearTimeout(id);');
+  });
+});
+describe('扫描中断态不再冒充完成（R465）', () => {
+  const app = String(RAW_TSX['./App.tsx'] ?? '');
+  it('完成态只在未中断时出现，取消另有中性说明', () => {
+    expect(app).toContain('interrupt: (kind: ' + String.fromCharCode(39) + 'cancelled' + String.fromCharCode(39) + ' | ' + String.fromCharCode(39) + 'failed' + String.fromCharCode(39) + ') => void;');
+    expect(app).toContain("useState<null | 'cancelled' | 'failed'>(null);");
+    expect(app).toContain('{!scanning && progress && interrupted === null && (');
+    expect(app).toContain("{!scanning && progress && interrupted === 'cancelled' && (");
+    expect(app).toContain("t('shell.scanbar.cancelled',");
+  });
+  it('取消与失败两条中断路径都通知进度条', () => {
+    expect(app).toContain("scanBarRef.current?.interrupt('cancelled');");
+    expect(app).toContain("scanBarRef.current?.interrupt('failed');");
+    expect(app.split('setInterrupted(null);').length - 1).toBe(1); // begin 复位
+  });
+  it('中断态 i18n 中英成对，样式退到次要色', () => {
+    const shell = String(RAW_SHELL['./i18n/namespaces/shell.ts'] ?? '');
+    expect(shell).toContain("'shell.scanbar.cancelled': '扫描已取消");
+    expect(shell).toContain("'shell.scanbar.cancelled': 'Scan cancelled");
+    const css = String(RAW_CSS['./styles/layout.css'] ?? '');
+    const at = css.indexOf('.scan-bar-cancelled .scan-bar-label {');
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at, at + 120)).toContain('color: var(--ink-3);');
   });
 });

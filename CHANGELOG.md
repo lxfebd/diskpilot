@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R465: 扫描中断态不再冒充完成——取消 / 失败后进度条不再报「本次扫描 N 个文件」
+
+- 缺口：`apps/desktop/src/App.tsx` 的 `ScanBar` 只要 `!scanning && progress` 就渲染「完成」条（满 100% 底 + `shell.scanbar.done`「本次扫描 {files} 个文件 · {bytes}」）。但取消扫描走 `api.isScanCancelledError(e)` 分支直接 `return`、失败走 `setErr` 分支，两条路都不碰 `progress`——`scanning` 一置 false，进度条就把一次被取消/失败的扫描显示成「完成」，看着像成功扫完了。
+- 改动：`ScanBarHandle` 增加 `interrupt: (kind: 'cancelled' | 'failed') => void`；`scan()` 的取消分支与失败分支分别调 `interrupt('cancelled')` / `interrupt('failed')`。`ScanBar` 内新增 `interrupted` 状态（`begin` 时复位），完成条条件收紧为 `interrupted === null`；取消态改渲染中性条 `.scan-bar-cancelled`（`role="status"`，文案 `shell.scanbar.cancelled`「扫描已取消 · 已看 {files} 个文件 · {bytes}」，样式退到 `var(--ink-3)` 且不铺满底色）；失败态不额外渲染（错误横幅已经在报）。i18n 中英成对新增 `shell.scanbar.cancelled`；样式补 `.scan-bar-cancelled .scan-bar-label`。
+- 守卫：a11y.test.ts 新增 describe「扫描中断态不再冒充完成（R465）」3 条——接口签名与 `interrupted` 状态声明、完成条门控与取消条条件、两条中断调用各 1 次且 `setInterrupted(null);` 恰 1 处（begin 复位）、i18n 中英成对 + `layout.css` 取消态用 `var(--ink-3)`。
+- 反向自检：把完成条条件还原成 `{!scanning && progress && (` → 恰好 1 failed 点名该断言，已还原；pnpm check 87 files / 1252 tests 全绿。
+
 ### R464: 社区插件搜索防抖与乱序守卫——打字快时不再用旧结果盖掉新结果
 
 - 缺口：市场页社区 tab 的搜索框每次按键都 `setCQuery`，effect 因此逐键发一次远端索引请求（`pluginRegistrySearch`）：列表在结果之间来回跳、服务端被逐键请求打；更要紧的是没有请求序号——先发的慢响应后到时会无条件 `setCommunity`，把「ab」的搜索结果换成「a」的（输入框写着 ab、列表却是 a 的结果）。失败分支同理，旧请求的 catch 也会把新请求的加载态清成失败。

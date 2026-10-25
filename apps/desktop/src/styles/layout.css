@@ -286,6 +286,12 @@ select:focus-visible {
   color: var(--text);
   text-shadow: none;
 }
+/* R465：中断态（取消）——不用完成态的实心底色，文字退回次要色，
+   说的是「已看多少」而不是「本次扫描完成」。 */
+.scan-bar-cancelled .scan-bar-label {
+  color: var(--ink-3);
+  text-shadow: none;
+}
 .scan-bar-label {
   position: absolute;
   inset: 0;

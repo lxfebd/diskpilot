@@ -67,6 +67,8 @@ export const shell = {
     'shell.skipToMain': '跳到主内容',
     'shell.scanbar.progress': '{files} 个文件 · {bytes}',
     'shell.scanbar.done': '本次扫描 {files} 个文件 · {bytes}',
+    // R465：取消不是完成——中断态单独一条中性说明，不再复用「本次扫描」。
+    'shell.scanbar.cancelled': '扫描已取消 · 已看 {files} 个文件 · {bytes}',
 
     // 扫描结果树根节点
     'shell.root.allDrives': '我的电脑（全部磁盘）',
@@ -256,6 +258,7 @@ export const shell = {
     'shell.skipToMain': 'Skip to main content',
     'shell.scanbar.progress': '{files} files · {bytes}',
     'shell.scanbar.done': 'This scan: {files} files · {bytes}',
+    'shell.scanbar.cancelled': 'Scan cancelled · saw {files} files · {bytes}',
 
     // 扫描结果树根节点
     'shell.root.allDrives': 'My Computer (all drives)',

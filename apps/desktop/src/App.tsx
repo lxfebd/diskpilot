@@ -92,6 +92,8 @@ interface DriveInfo {
 export interface ScanBarHandle {
   begin: (targets: string[]) => void;
   probeTotals: (targets: string[]) => void;
+  // R465：本轮扫描被中断（取消/失败）——进度条不许再冒充「完成」态。
+  interrupt: (kind: 'cancelled' | 'failed') => void;
 }
 
 const DEFAULT_LEFT = 620;
@@ -565,8 +567,12 @@ export default function App() {
       // 不清空已有树、不弹错误条。
       if (api.isScanCancelledError(e)) {
         console.log('[diskpilot] scan cancelled by user');
+        // R465：取消不是完成——进度条收回 100% 的「完成」态，换成「已取消」的中性说明。
+        scanBarRef.current?.interrupt('cancelled');
         return;
       }
+      // R465：失败同样不是完成——错误横幅已经报错，进度条不能同时说「已完成」。
+      scanBarRef.current?.interrupt('failed');
       setErr(String(e));
     } finally {
       scanGate.leave();
@@ -1073,6 +1079,8 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
   const [progress, setProgress] = useState<{ files: number; bytes: number; path: string } | null>(null);
   const [totalBytes, setTotalBytes] = useState<number | null>(null);
   const [pathLabel, setPathLabel] = useState<string | null>(null);
+  // R465：本轮是否被中断（取消/失败）。begin 清空，interrupt 置位，完成态只认 interrupted === null。
+  const [interrupted, setInterrupted] = useState<null | 'cancelled' | 'failed'>(null);
 
   useImperativeHandle(ref, () => ({
     begin: (targets: string[]) => {
@@ -1080,7 +1088,11 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
       setProgress(null);
       setTotalBytes(null);
       setPathLabel(null);
+      setInterrupted(null);
       probeDriveTotals(targets, setTotalBytes);
+    },
+    interrupt: (kind) => {
+      setInterrupted(kind);
     },
     probeTotals: (targets: string[]) => {
       probeDriveTotals(targets, setTotalBytes);
@@ -1130,11 +1142,18 @@ const ScanBar = forwardRef<ScanBarHandle, { scanning: boolean }>(function ScanBa
           </div>
         </div>
       )}
-      {!scanning && progress && (
+      {!scanning && progress && interrupted === null && (
         <div className="scan-bar scan-bar-done">
           <div className="scan-bar-fill done" aria-hidden style={{ width: '100%' }} />
           <div className="scan-bar-label" title={pathLabel ?? undefined}>
             {`${t('shell.scanbar.done', { files: progress.files.toLocaleString(), bytes: formatBytes(progress.bytes) })}${pathLabel ? ` · ${ellipsizePath(pathLabel)}` : ''}`}
+          </div>
+        </div>
+      )}
+      {!scanning && progress && interrupted === 'cancelled' && (
+        <div className="scan-bar scan-bar-cancelled" role="status">
+          <div className="scan-bar-label" title={pathLabel ?? undefined}>
+            {t('shell.scanbar.cancelled', { files: progress.files.toLocaleString(), bytes: formatBytes(progress.bytes) })}
           </div>
         </div>
       )}
