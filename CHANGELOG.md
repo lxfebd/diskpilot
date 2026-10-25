@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R455: 台账刷新闸门带一次补跑——在途时点「查看全部」不再白点
+
+- **缺口**：R441 的刷新闸门是「在途就丢弃」。历史页点「刷新」后立刻点「查看全部」时，上限从 500 放宽到 5000 触发的那次刷新被拦下丢掉，在途请求仍按 500 条落盘——`historyTruncated(entries, limit)` 变成 `500 >= 5000` 为假，截断横幅连同「查看全部」按钮一起消失，用户看到 500 行却以为已经看全，也没有入口再放宽（只能手动再点一次刷新）。
+- **改动**：新增 `apps/desktop/src/refreshGate.ts`（`createRefreshGate()`：`tryStart()` 在途时记一次补跑并返回 false；`finish()` 返回 true 表示期间有被拦下的刷新）；`HistoryPage.tsx` 用它替换 `refreshingRef` 布尔闸门，`.finally` 里 `finish()` 为真时通过 `refreshRef.current?.()` 用最新 `limit` 闭包立刻补拉一次，spinner 不断档。
+- **守卫**：新增 `apps/desktop/src/refreshGate.test.ts` 6 条——闸门纯逻辑 5 条（空闲可开始 / 在途拦下并记补跑 / 补跑标记用过即清 / 收尾后可重开 / 实例互不影响）+ 接线 1 条（HistoryPage 含 `createRefreshGate` 导入、`tryStart` / `finish` / 补跑调用与 `refreshRef.current = refresh;`，且 `refreshingRef` 已消失）。R441 那条 a11y 断言同步改为新闸门文本。
+- **反向自检**：删掉 `refreshRef.current?.();` 一行 → `refreshGate.test.ts` 恰好 1 failed 点名接线断言，还原后 6 passed。
+- **验证**：`pnpm -C apps/desktop check` 86 files / 1225 tests；`node scripts/check-changelog.mjs` / `check-docs-links.mjs` 均通过。
+
 ### R454: 切会话不再串台——草稿（文字 + 待发附件）跟着会话各存一份
 
 - 缺口：聊天框的输入草稿与待发附件（拖入的路径 / 图片药丸）都是组件级单例状态：在会话 A 打了一半的字、拖了两个附件，随手点开到会话 B，草稿和附件原样跟过来——按发送就发进 B 的上下文（半句话问错对话、附件串台），切回 A 时 A 的草稿已经没了。

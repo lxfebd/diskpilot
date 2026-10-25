@@ -1429,18 +1429,24 @@ describe('台账刷新按钮的进行中反馈（R441）', () => {
     const page = RAW_TSX['./components/history/HistoryPage.tsx'] ?? '';
     const start = page.indexOf('const refresh = useCallback(');
     const region = start >= 0 ? page.slice(start, page.indexOf('}, [t, limit]);', start)) : '';
-    expect(region).toContain('if (refreshingRef.current) return;');
+    // R441：重入闸门；R455：闸门升级成「进行中 + 一次补跑」（上限在途放宽时补拉）
+    expect(region).toContain('if (!gateRef.current.tryStart()) return;');
     expect(region).toContain('setRefreshing(true);');
     expect(region).toContain('.finally(() => {');
+    expect(region).toContain('if (!gateRef.current.finish()) {');
     expect(region).toContain('setRefreshing(false);');
+    expect(region).toContain('refreshRef.current?.();');
     expect(page).toContain('const [refreshing, setRefreshing] = useState(false);');
-    expect(page).toContain('const refreshingRef = useRef(false);');
+    expect(page).toContain('const gateRef = useRef(createRefreshGate());');
+    expect(page).toContain('refreshRef.current = refresh;');
+    expect(page).not.toContain('refreshingRef');
     // 按钮：禁用 + aria-busy + 图标随 refreshing 切换（不再是恒 RotateCcw）
     expect(page).toContain('disabled={refreshing}');
     expect(page).toContain('aria-busy={refreshing || undefined}');
     expect(page).toContain('{refreshing ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />}');
     expect(page).not.toContain("<RotateCcw size={12} /> {t('history.refresh')}");
   });
+
   it('UndoPanel 重试按钮同样防重入并给进行中反馈', () => {
     const panel = RAW_TSX['./components/UndoPanel.tsx'] ?? '';
     const start = panel.indexOf('const refresh = useCallback(');

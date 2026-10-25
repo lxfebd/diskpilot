@@ -18,6 +18,8 @@ import {
   summarizeUndo,
   type UndoActionFilter,
 } from '../../history/model';
+// R455：刷新闸门放在独立模块里（纯逻辑，可单测）。
+import { createRefreshGate } from '../../refreshGate';
 
 // 后端 list_undo 是「读整个 jsonl 再 take」——R310 之前这里写的「undo.jsonl 自带裁剪」
 // 与事实不符，条数够到上限时靠下面的截断横幅说明。
@@ -79,22 +81,31 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   const [err, setErr] = useState<string | null>(null);
   // R441：刷新进行中——防连点并发重复请求，按钮给出进行中反馈。
   const [refreshing, setRefreshing] = useState(false);
-  const refreshingRef = useRef(false);
+  // R455：闸门带「一次补跑」——在途期间把上限放宽（「查看全部」）时，收尾用
+  // 最新闭包补拉一次；否则 limit 变了列表却还是旧的，截断横幅还会因
+  // entries.length < limit 整个消失，用户以为已经看全。
+  const gateRef = useRef(createRefreshGate());
+  const refreshRef = useRef<(() => void) | null>(null);
 
   const refresh = useCallback(() => {
     setLoadErr(null);
-    // R441：进行中不重入——连点或还原回调撞上在途加载都拦下。
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
+    // R441：进行中不重入——连点或还原回调撞上在途加载都拦下（R455：记一次补跑）。
+    if (!gateRef.current.tryStart()) return;
     setRefreshing(true);
     api.listUndo(limit).then(setEntries).catch((e) => {
       setEntries([]);
       setLoadErr(t('history.loadFailed', { msg: String(e) }));
     }).finally(() => {
-      refreshingRef.current = false;
-      setRefreshing(false);
+      if (!gateRef.current.finish()) {
+        setRefreshing(false);
+        return;
+      }
+      // 在途期间上限变了：立刻用最新 limit 再拉一次，spinner 不断档。
+            refreshRef.current?.();
     });
   }, [t, limit]);
+  // 补跑要拿最新闭包（limit 已放宽），所以每次渲染刷新这个引用。
+  refreshRef.current = refresh;
 
   // limit 放宽 → refresh 身份变化 → 自动重拉一次（无需额外按钮状态机）。
   useEffect(() => { refresh(); }, [refresh]);
