@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R423: 主题系统的四张事实表对偶守卫——17 个预设删掉一个语义键当场红，theme.ts 从零测试到 22 条
+
+- 缺口：theme.ts（579 行，启动即跑）此前零测试。它内部有四张互相对偶的事实表——ThemeId 联合（17 项）、THEME_FONTS（17 键）、PRESETS（17 块色板）、DARK_IDS（5 个深色主题）——任何一张漏配都不会编译报错（对象字面量缺键只是静默回退 vercel），这正是 R420 修过的「换主题漏配」事故的复发通道；loadTheme/saveTheme/applyTheme 的行为契约（坏 JSON 回落、accent 合法性、fontScale 钳制、深浅色 data-mode/colorScheme、getKeepFiles 钳制）也全无测试。
+- 改动：无生产代码改动，纯测试落地。
+- 守卫：新增 theme.test.ts（22 条）——四表对偶（THEME_IDS==THEME_FONTS 键集==PRESETS 块逐键相等、无重复）；公共语义键交集必须覆盖 R420 语义链（--bg/--surface/--text/--border/--accent 族/--risk-* 族/--ok 等 15 个关键键，且每个预设必须全含交集键）；圆角口径分册（minimal 0.75rem / doubao 1.2rem / barbie 1.8rem / brand 2rem / 21th 0 等 9 个自带 --radius，其余 8 个明确回退 tokens.css 的 1rem）；DARK_IDS 恰 5 个且都在 ThemeId 内；loadTheme 六种边界（无存值/坏 JSON/未知 id/非法 accent/非法 fontScale/合法透传）；applyTheme 深浅色与自定义 accent 两档（提亮深字+状态色跟随、压暗白字+状态色保持）+ fontScale 钳制 0.8–1.3；saveTheme 写盘+应用+广播 diskpilot:theme-changed；initTheme 启动路径；getKeepFiles/setKeepFiles/pref 契约；存储抛异常静默回落。
+- 实现细节：PRESETS 未导出，用 import.meta.glob ?raw 抓源码静态解析（与 a11y.test.ts 同款）；theme.ts 是 CRLF，行解析先剥行尾 \r 再上正则锚点；该文件 ?raw 内容 35306 字符可直接 glob 取到。
+- 反向自检：向关键链注入幽灵键 --bogus-probe → 1 failed 正点交集用例，还原后 22 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0，77 files / 1108 tests。
+
 ### R422: 权限表的防漂移守卫与读盘布尔卫生——手写的 "false" 字符串不再被误读成「开启」
 
 - 缺口：permissions.ts 的 loadPermConfig 用 Boolean(存值) 收布尔——Boolean("false")===true，手写/异构存值（"false" 字符串、0/1）会把这个「关闭」误读成「开启」；且 PERMS（22 项权限定义）与 DEFAULT_ENABLED（22 项默认开关）是两处互相依赖的表，加权限只改一张不会编译报错，isPermEnabled 的 L0 恒开 / L3 恒关短路与逐键合并就可能在静默里漂移。
