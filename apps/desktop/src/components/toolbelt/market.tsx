@@ -458,10 +458,10 @@ export function MarketPanel() {
   return (
     <div className="toolbelt-market">
       <div className="toolbelt-market-tabs">
-        <button className={tab === 'builtin' ? 'active' : ''} onClick={() => setTab('builtin')}>
+        <button className={tab === 'builtin' ? 'active' : ''} aria-pressed={tab === 'builtin'} onClick={() => setTab('builtin')}>
           <Package size={13} /> {t('toolbelt.mkt.tabBuiltin')}
         </button>
-        <button className={tab === 'community' ? 'active' : ''} onClick={() => setTab('community')}>
+        <button className={tab === 'community' ? 'active' : ''} aria-pressed={tab === 'community'} onClick={() => setTab('community')}>
           <Globe size={13} /> {t('toolbelt.mkt.tabCommunity')}
         </button>
       </div>

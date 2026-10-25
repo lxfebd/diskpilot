@@ -665,6 +665,7 @@ const composingRef = useRef(false);
                     既可用键盘，也避免出现按钮嵌按钮。 */}
                 <button
                   className="chat-session-main"
+                  aria-current={sess.id === activeChatId ? 'true' : undefined}
                   onClick={() => { clearSessionAuths(); switchChat(sess.id); }}
                   title={sess.title}
                 >

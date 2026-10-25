@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R445: 「当前项」补上语义——会话列表 / 市场分页读屏能听出谁选中
+
+- 缺口：全仓「选中 / 当前」状态大部分已带 aria（aria-pressed / aria-selected / aria-current 都有守卫），但两处漏网：① 会话列表的活动会话只在容器 div 的 className 加 active（纯视觉），切换按钮本身没有记忆点，读屏听不出当前会话；② 市场页的「内置 / 社区」两个分页按钮用 `className={tab === ... ? 'active' : ''}`（active 不带前导空格），旧守卫只认 `' active'` 写法直接绕过，也没有任何 aria 状态。
+- 改动：apps/desktop/src/components/ChatPanel.tsx 的会话切换按钮补 `aria-current={sess.id === activeChatId ? 'true' : undefined}`（当前会话读作「第 N 项，当前」）；apps/desktop/src/components/toolbelt/market.tsx 两个分页按钮补 `aria-pressed={tab === ...}`（与仓内 view 切换按钮同一口径）。
+- 守卫：apps/desktop/src/a11y.test.ts 新增 describe「当前项的语义（R445）」3 条——① 通用扫描器改为认 className 里的 `active` 字面量（带不带前导空格都算），凡 <button> 含它必须带 aria-pressed / aria-selected / aria-current / aria-checked 之一，否则按 path:行号 点名（这是旧守卫的漏洞：无空格写法直接绕过）；②③ 钉住会话按钮的 aria-current 与市场两按钮的 aria-pressed。
+- 反向自检：删掉 market 社区按钮的 aria-pressed → 恰好 2 failed（扫描器点名 ./components/toolbelt/market.tsx:464 + 站点断言），还原后 103 passed。
+
 ### R444: 检查结果接上活区播报——读屏按下「立即检查」能听到结果
 
 - 缺口：提醒设置的「立即检查」「启动项对比」「磁盘预测」三个结果区块都是普通 div，点击按钮后焦点不会移动，读屏用户听不到任何结果播报——只能盲目再按一次或切到别处碰运气。

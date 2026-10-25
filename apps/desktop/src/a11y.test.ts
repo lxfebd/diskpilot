@@ -1541,3 +1541,47 @@ describe('检查结果的活区播报（R444）', () => {
     expect(rs.match(/className="reminder-result" role="status"/g)?.length ?? 0).toBe(3);
   });
 });
+
+// R445：选中/当前状态此前有些只用 className 里的 active 表达（视觉颜色），
+// 读屏听不到。会话列表的活动会话、市场页的两个分页按钮就是漏网之鱼——
+// 旧守卫只认 `' active'`（带前导空格），`'active'` 写法直接绕过。这里改成
+// 按钮类一律必须有 aria 状态，并把漏网的两处补上。
+describe('当前项的语义（R445）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) { if (c === '\\') j++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it('className 带 active 的按钮必须声明 aria 状态（含无空格写法）', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<button\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!tag.includes("'active'")) continue;
+        if (/aria-pressed=|aria-selected=|aria-current=|aria-checked=/.test(tag)) continue;
+        violations.push(path + ':' + src.slice(0, start).split('\n').length);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+  it('会话列表的当前会话对读屏可见', () => {
+    const cp = String(RAW_TSX['./components/ChatPanel.tsx'] ?? '');
+    expect(cp).toContain('aria-current={sess.id === activeChatId ? \'true\' : undefined}');
+  });
+  it('市场页两个分页按钮有按下态', () => {
+    const mk = String(RAW_TSX['./components/toolbelt/market.tsx'] ?? '');
+    expect(mk).toContain("aria-pressed={tab === 'builtin'}");
+    expect(mk).toContain("aria-pressed={tab === 'community'}");
+  });
+});
