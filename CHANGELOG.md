@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R444: 检查结果接上活区播报——读屏按下「立即检查」能听到结果
+
+- 缺口：提醒设置的「立即检查」「启动项对比」「磁盘预测」三个结果区块都是普通 div，点击按钮后焦点不会移动，读屏用户听不到任何结果播报——只能盲目再按一次或切到别处碰运气。
+- 改动：apps/desktop/src/components/ReminderSettings.tsx 三处 `<div className="reminder-result">` 补 role="status"（隐式 polite 活区 + 隐式 aria-atomic）：结果一出现，读屏立即播报「上次检查 共 2.3 GB / 新增 2 项 · 消失 1 项 / 预计 7 天放量」等。视觉不变。错误分支保持 role="alert" 原样（错误要打断、结果不打断）。
+- 守卫：apps/desktop/src/a11y.test.ts 新增 describe「检查结果的活区播报（R444）」2 条——① 用花括号配平取完整开标签，凡 className 含 reminder-result 的 <div> 必须同时带 role="status"，否则按 path:行号 点名；② 钉住 ReminderSettings 恰好 3 处已接入。
+- 反向自检：删掉 startup 区块的 role="status" → 恰好 2 failed（扫描器点名 ./components/ReminderSettings.tsx:483 + 计数 2≠3），还原后 100 passed。
+
 ### R443: 开关按钮补 role="switch"——读屏才念得出「开 / 关」
 
 - 缺口：全仓只有权限中心与启动项面板两个开关是自绘的 <button className="switch">，状态挂在 aria-checked 上；但 aria-checked 在 role=button 上不合法，NVDA / JAWS 不会念出开 / 关，用户只能靠视觉判断，键盘 / 读屏用户无法确认当前权限或启动项是否启用。权限中心的 L0 常开开关（禁用态）连 aria-checked 都没有。

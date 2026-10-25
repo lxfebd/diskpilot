@@ -480,7 +480,7 @@ export function ReminderSettings() {
       <div className="muted small" style={{ marginTop: 6 }}>
         {t('system.reminder.startupHint')}
       </div>
-      <div className="reminder-result" style={{ marginTop: 10 }}>
+      <div className="reminder-result" role="status" style={{ marginTop: 10 }}>
         <button className="ghost" onClick={checkStartupDelta} disabled={startupBusy}>
           <TrendingUp size={13} /> {startupBusy ? t('system.reminder.startupChecking') : t('system.reminder.startupCheck')}
         </button>
@@ -517,7 +517,7 @@ export function ReminderSettings() {
         <div className="muted small" style={{ marginTop: 8 }}>{t('system.reminder.forecastEmpty')}</div>
       )}
       {forecast && forecast.length > 0 && (
-        <div className="reminder-result" style={{ marginTop: 8 }}>
+        <div className="reminder-result" role="status" style={{ marginTop: 8 }}>
           {forecast.map((f) => {
             const status =
               f.reason === 'ok' && f.days !== null
@@ -549,7 +549,7 @@ export function ReminderSettings() {
         </div>
       )}
       {lastPayload && (
-        <div className="reminder-result" style={{ marginTop: 10 }}>
+        <div className="reminder-result" role="status" style={{ marginTop: 10 }}>
           {t('system.reminder.lastCheck')} <b>{formatBytes(lastPayload.total_bytes)}</b>
           {lastPayload.drives.map((d) => (
             <div key={d.path} className="muted small">

@@ -1502,3 +1502,42 @@ describe('开关按钮的 role="switch"（R443）', () => {
     expect(startup.match(/aria-checked=/g)?.length ?? 0).toBe(1);
   });
 });
+
+// R444：立即检查 / 启动项对比 / 磁盘预测三个结果区块此前都是普通 div——
+// 读屏用户按「立即检查」后听不到任何结果播报（按钮焦点不会自动跳过去）。
+// 补 role="status"（隐式 polite 活区），结果一出现就读出来。
+describe('检查结果的活区播报（R444）', () => {
+  const tagEnd = (src: string, start: number): number => {
+    let brace = 0;
+    let quote = '';
+    for (let j = start; j < src.length; j++) {
+      const c = src[j];
+      if (quote) { if (c === '\\') j++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === "'" || c === '`') { quote = c; continue; }
+      if (c === '{') brace++;
+      else if (c === '}') brace--;
+      else if (c === '>' && brace <= 0) return j;
+    }
+    return -1;
+  };
+  it('reminder-result 结果区块必须带 role="status"', () => {
+    const violations: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      for (const m of src.matchAll(/<div\b/g)) {
+        const start = m.index ?? 0;
+        const end = tagEnd(src, start);
+        if (end < 0) continue;
+        const tag = src.slice(start, end + 1);
+        if (!tag.includes('className="reminder-result"')) continue;
+        if (!tag.includes('role="status"')) {
+          violations.push(path + ':' + src.slice(0, start).split('\n').length);
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+  it('ReminderSettings 三处结果区块都已接入', () => {
+    const rs = String(RAW_TSX['./components/ReminderSettings.tsx'] ?? '');
+    expect(rs.match(/className="reminder-result" role="status"/g)?.length ?? 0).toBe(3);
+  });
+});
