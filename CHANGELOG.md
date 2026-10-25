@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R451: 清空对话后不再「删了又复活」——activeChatId 同步归零
+
+- 缺口：聊天气泡头的 X（清空对话）走 store 的 `resetChat`：它把活动会话从 `chatSessions` 移除、清空 turns、落盘列表，但既不把 `activeChatId` 归 null，也不同步 `persistActiveChatId`。残留的 id 让之后任一处归档（关窗 `archiveActiveChat` / 新建 `newChat` / AI 在飞时切走 `switchChat`）都用旧 id 把刚落盘的会话写回列表——用户刚清空的对话，关个窗又出现在历史里；重启后 localStorage 里还留着指向已删会话的 activeChatId。
+- 改动：apps/desktop/src/store.ts 的 `resetChat` 在移除列表项后补 `persistActiveChatId(null)`，并把返回值里的 `activeChatId` 置 null——与 `deleteChat` 删除活动会话时的口径一致；之后的新回合归档会拿到一个全新 id，而不是复写旧会话。
+- 守卫：apps/desktop/src/store.test.ts 追加 describe「resetChat（清空对话）不复活已清掉的会话（R451）」2 条——清空后 activeChatId 为 null 且持久化键被移除；清空后产生新回合并关窗归档时，旧 id 不再出现在列表里、新回落在新 id 下。
+- 反向自检：撤掉 `persistActiveChatId(null)` 与 `activeChatId: null` → 恰好 2 failed（expected 'chat_a' to be null / 旧会话被复活），还原后 32 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（84 files / 1209 tests）。
+
 ### R450: 聊天框混入的非图片文件给出提示——不再无声消失
 
 - 缺口：聊天框只收图片，但「选择文件」对话框能切到「所有文件」、拖入也能带进 PDF / zip——这些文件在 `addImageFile` 里被 `if (!file.type.startsWith('image/')) return;` 静默丢弃：没有药丸、没有提示、没有系统消息，用户以为点了没反应。

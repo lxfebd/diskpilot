@@ -596,3 +596,59 @@ describe('switchChat（切会话）在 AI 在飞时的归档（R442）', () => {
     expect(localStorage.getItem('diskpilot.chatSessions')).toBeNull();
   });
 });
+
+// R451：清空对话（resetChat）曾把活动会话从列表移除、清空 turns，但既不把
+// activeChatId 归 null、也不同步持久化——残留 id 会让之后的归档（关窗
+// archiveActiveChat / 新建 newChat / 在飞切走 switchChat）用旧 id 把刚落盘的
+// 会话写回列表：用户刚清空的对话，关个窗又在历史里复活。
+describe('resetChat（清空对话）不复活已清掉的会话（R451）', () => {
+  beforeEach(() => {
+    const storage = new Map<string, string>();
+    const fake: Storage = {
+      getItem: (k) => storage.get(k) ?? null,
+      setItem: (k, v) => { storage.set(k, String(v)); },
+      removeItem: (k) => { storage.delete(k); },
+      clear: () => storage.clear(),
+      key: (i) => [...storage.keys()][i] ?? null,
+      get length() { return storage.size; },
+    };
+    vi.stubGlobal('localStorage', fake);
+    useStore.setState({
+      root: null,
+      scanCache: {},
+      selectedPath: null,
+      selectedNode: null,
+      activeChatId: 'chat_a',
+      chatSessions: [
+        { id: 'chat_a', title: '要清空的会话', ts: 1, turns: [{ id: 'u0', role: 'user', text: '我在清空前说的话' }] },
+      ],
+      chat: { node: null, scaffoldId: null, turns: [{ id: 'u0', role: 'user', text: '我在清空前说的话' }], busy: false },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('清空后 activeChatId 归 null，持久化键一并移除', () => {
+    useStore.getState().resetChat();
+    expect(useStore.getState().activeChatId).toBeNull();
+    expect(localStorage.getItem('diskpilot.activeChatId')).toBeNull();
+    expect(useStore.getState().chatSessions).toEqual([]);
+  });
+
+  it('清空后产生新回合并关窗归档：旧会话不复活，落入的是新 id', () => {
+    useStore.getState().resetChat();
+    useStore.setState({
+      chat: { node: null, scaffoldId: null, turns: [{ id: 'n1', role: 'user', text: '清空后的新问题' }], busy: false },
+    });
+    const { archiveActiveChat } = useStore.getState() as unknown as {
+      archiveActiveChat: () => void;
+    };
+    archiveActiveChat();
+    const raw = localStorage.getItem('diskpilot.chatSessions') ?? '[]';
+    const sessions = JSON.parse(raw) as Array<{ id: string; turns: Array<{ id: string }> }>;
+    expect(sessions.find((x) => x.id === 'chat_a')).toBeUndefined();
+    expect(sessions.some((x) => x.id !== 'chat_a' && x.turns.some((t) => t.id === 'n1'))).toBe(true);
+  });
+});

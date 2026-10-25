@@ -710,7 +710,12 @@ export const useStore = create<AppState>((set, get) => {
       if (!s.activeChatId) return { chat: { node: null, scaffoldId: null, turns: [], busy: false } };
       const list = s.chatSessions.filter((x) => x.id !== s.activeChatId);
       persistChatSessions(list);
-      return { chatSessions: list, chat: { node: null, scaffoldId: null, turns: [], busy: false } };
+      // R451：清掉的活动会话必须把 activeChatId 归 null 并同步移除持久化键——
+      // 否则残留 id 会让之后任一处归档（关窗 archiveActiveChat / 新建 newChat /
+      // 在飞切走 switchChat）用旧 id 把刚移除的会话写回列表——用户刚清空的
+      // 对话，关个窗又在历史里复活。deleteChat 已是此口径，resetChat 对齐。
+      persistActiveChatId(null);
+      return { chatSessions: list, activeChatId: null, chat: { node: null, scaffoldId: null, turns: [], busy: false } };
     }),
   requestStudio: (scaffoldId) => set({ studioRequest: { scaffoldId, ts: Date.now() } }),
   consumeStudio: () => set({ studioRequest: null }),
