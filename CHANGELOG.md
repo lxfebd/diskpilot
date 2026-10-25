@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R466: 扫描完成也播报——完成条补上 live region，读屏用户不必盯着进度条
+
+- 缺口：扫描结束在界面上只是「进度条消失 + 换成完成条」，而完成条（`apps/desktop/src/App.tsx` 的 `.scan-bar-done`）没有 live region——读屏用户扫完之后收不到任何结果播报，只能自己去摸页面；R465 刚给取消条加了 `role="status"`，于是口径反过来变成「取消有播报、正常完成没有」。
+- 改动：完成条根节点补 `role="status"`（隐式 `aria-live="polite"`），文本「本次扫描 {files} 个文件 · {bytes}」在出现时播报一次；完成条只在扫描结束那一刻挂载、挂载后文本不再变，不会重复打扰。
+- 守卫：a11y.test.ts 的「扫描中断态不再冒充完成（R465）」第 1 条追加断言，钉住完成条开标签必须是 `<div className="scan-bar scan-bar-done" role="status">`。
+- 反向自检：删掉完成条的 `role="status"` → 恰好 1 failed 点名该断言，已还原；pnpm check 87 files / 1252 tests 全绿。
+
 ### R465: 扫描中断态不再冒充完成——取消 / 失败后进度条不再报「本次扫描 N 个文件」
 
 - 缺口：`apps/desktop/src/App.tsx` 的 `ScanBar` 只要 `!scanning && progress` 就渲染「完成」条（满 100% 底 + `shell.scanbar.done`「本次扫描 {files} 个文件 · {bytes}」）。但取消扫描走 `api.isScanCancelledError(e)` 分支直接 `return`、失败走 `setErr` 分支，两条路都不碰 `progress`——`scanning` 一置 false，进度条就把一次被取消/失败的扫描显示成「完成」，看着像成功扫完了。

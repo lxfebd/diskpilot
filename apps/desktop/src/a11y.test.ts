@@ -1755,6 +1755,7 @@ describe('扫描中断态不再冒充完成（R465）', () => {
     expect(app).toContain('interrupt: (kind: ' + String.fromCharCode(39) + 'cancelled' + String.fromCharCode(39) + ' | ' + String.fromCharCode(39) + 'failed' + String.fromCharCode(39) + ') => void;');
     expect(app).toContain("useState<null | 'cancelled' | 'failed'>(null);");
     expect(app).toContain('{!scanning && progress && interrupted === null && (');
+    expect(app).toContain('<div className="scan-bar scan-bar-done" role="status">');
     expect(app).toContain("{!scanning && progress && interrupted === 'cancelled' && (");
     expect(app).toContain("t('shell.scanbar.cancelled',");
   });
