@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R414: 工具墙弹层 Esc 一致性——导出 / 回收确认框也能按 Esc 取消
+
+- 缺口：R142 给工具墙补了三个弹层的 Esc（启动确认 / exe 详情 / AI 工具详情），但 ToolDetailModal 里后加的导出确认（exportAsk）与回收确认（recycleAsk）两个确认框没有 Esc——同一界面里「有的弹窗能 Esc、有的不能」，且这俩恰是写操作确认。
+- 改动：把两条 useEscapeKey 挂进 ToolDetailModal（exportAsk 声明之后）：setExportAsk(null) 受 exportAsk !== null && !exporting 约束、setRecycleAsk(false) 受 recycleAsk && !recycling 约束——R349 的栈只把 Esc 交给最深一层，所以按 Esc 只取消当前确认、不连带关掉背后的详情弹窗；进行中的导出/回收不响应（避免半途关窗看着像成功）。CatalogWall 注释同步指回 ToolDetailModal。
+- 守卫：a11y.test.ts 新增 describe「工具墙弹层 Esc 取消（R414）」2 条——① 第一个到最后一个 useEscapeKey( 的切片必须含 setConfirmLaunch(null)/setDetail(null)/setAgentDetail(null)/setExportAsk(null)/setRecycleAsk(false) 五个 setter；② 两条新钩子的精确文本必须在场。反向自检：删 setExportAsk 行 → 2 failed（报 setter 缺失），还原全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1059 tests。
+
 ### R413: 凭据与代码类输入框的表单卫生——API key 不再被密码管理器认领，代码框不再画红波浪线
 
 - 缺口：全仓没有任何 autoComplete / spellCheck 声明。设置页的 API key 输入（默认 type=password）没有显式 autoComplete，浏览器的密码管理器会把它当成站点登录口令跨站保存、并在别处自动填充；8 个 textarea 只有 3 个关了拼写检查，MCP 表单的 args/env/headers（-- 参数、API_KEY=sk-xxx、Authorization: Bearer …）和工具箱的 .tb-args CLI 参数框都会被浏览器画红波浪线；baseUrl / model 也会收到无关的自动填充建议。

@@ -905,3 +905,35 @@ describe('聊天区贴底跟随（R406）', () => {
     expect(scroll).toBeGreaterThan(guard);
   });
 });
+
+// ── 工具墙的确认弹层都支持 Esc 取消（R414）────────────────────────
+// R142 只给启动确认 / exe 详情 / AI 工具详情三处接了 useEscapeKey；后来加的
+// 「导出确认 / 回收确认」没有——同一个界面上有的弹窗按 Esc 能关、有的不能，
+// 用户只会觉得键盘失灵（而且它们背后就是导出 / 删目录这类危险动作）。
+describe('工具墙弹层 Esc 取消（R414）', () => {
+  const entry = Object.entries(RAW_TSX).find(([p]) => p.endsWith('components/toolbelt/toolwall.tsx'));
+  const src = entry?.[1] ?? '';
+  const escBlock = (() => {
+    const start = src.indexOf('useEscapeKey(');
+    const end = src.lastIndexOf('useEscapeKey(');
+    return start >= 0 && end > start ? src.slice(start, end + 220) : '';
+  })();
+
+  it('五个弹层状态都能被 Esc 取消', () => {
+    expect(escBlock).toBeTruthy();
+    for (const setter of [
+      'setConfirmLaunch(null)',
+      'setDetail(null)',
+      'setAgentDetail(null)',
+      'setExportAsk(null)',
+      'setRecycleAsk(false)',
+    ]) {
+      expect(escBlock).toContain(setter);
+    }
+  });
+
+  it('导出 / 回收进行中不响应 Esc（与启动确认同一口径）', () => {
+    expect(src).toContain('useEscapeKey(() => setExportAsk(null), exportAsk !== null && !exporting)');
+    expect(src).toContain('useEscapeKey(() => setRecycleAsk(false), recycleAsk && !recycling)');
+  });
+});

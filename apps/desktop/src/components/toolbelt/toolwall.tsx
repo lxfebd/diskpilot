@@ -383,6 +383,12 @@ function ToolDetailModal({
   // 后端按插件 id 定位目录（校验 tool.plugin.json 存在）后整包压缩。
   // 写操作：选完路径再弹一次确认（confirmed 在确认后才置位）。
   const [exportAsk, setExportAsk] = useState<{ outZip: string } | null>(null);
+
+  // R414：导出 / 回收确认各自是一层 Esc——R349 的栈只把 Esc 交给最深一层，
+  // 所以按 Esc 只取消当前确认，不会连同背后的详情弹窗一起关掉；进行中的
+  // 导出/回收不响应（enabled=false，避免半途关窗看着像成功）。
+  useEscapeKey(() => setExportAsk(null), exportAsk !== null && !exporting);
+  useEscapeKey(() => setRecycleAsk(false), recycleAsk && !recycling);
   const exportPlugin = async () => {
     const pluginId = tool.plugin?.id;
     if (!pluginId) return;
@@ -717,8 +723,10 @@ export function CatalogWall({
   // R176：主网格排序——工具箱几十上百个工具，默认目录序不好找，
   // 按名称/风险/分类重排；默认保持分类目录原序（不重排）。
   const [sortBy, setSortBy] = useState<'default' | 'name' | 'risk' | 'category'>('default');
-  // R142：三个弹层都支持 Esc 关闭（启动确认 / exe 详情 / AI 工具详情）——
-  // 此前只有点遮罩能关。Esc 一律是「取消」，不会启动任何工具。
+  // R142：启动确认 / exe 详情 / AI 工具详情弹层都支持 Esc 关闭——此前只有
+  // 点遮罩能关；Esc 一律是「取消」，不会启动任何工具。详情弹窗内部的
+  // 导出 / 回收确认由 ToolDetailModal 自己挂一层（R414，见那里注释）——
+  // R349 的栈保证按 Esc 只关最深那一层。
   useEscapeKey(() => setConfirmLaunch(null), confirmLaunch !== null && !launching);
   useEscapeKey(() => setDetail(null), detail !== null);
   useEscapeKey(() => setAgentDetail(null), agentDetail !== null);
