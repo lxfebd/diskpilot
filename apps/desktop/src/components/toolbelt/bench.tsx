@@ -2,7 +2,7 @@
 // 全部走 agent-server 已验收的 MCP 工具（bench_cpu / bench_memory / bench_disk /
 // stress_test / system_report / sensor_trend），手动触发 + 结果历史对比（localStorage）。
 // stress_test 是写操作（hw.stress 权限），走两步确认；其余只读 L0 直接跑。
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Activity, Copy, Flame, Gauge, History, Loader2, Monitor, ShieldAlert, Square, TrendingUp, X,
 } from 'lucide-react';
@@ -103,16 +103,16 @@ export function BenchPanel() {
     try {
       const r = await api.callTool(key, args, confirmed ? true : undefined);
       const text = r.is_error ? t('toolbelt.bench.rejected', { text: r.text }) : r.text;
-      setResults((prev) => ({ ...prev, [key]: text }));
-      persistHistory(key, label, text);
+      if (aliveRef.current) setResults((prev) => ({ ...prev, [key]: text })); // R421
+      persistHistory(key, label, text); // 历史落 localStorage，与组件存活无关
       return text;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setResults((prev) => ({ ...prev, [key]: t('toolbelt.bench.callFailed', { msg }) }));
-      toast(t('toolbelt.bench.callFailedToast', { msg }), 'err');
+      if (aliveRef.current) setResults((prev) => ({ ...prev, [key]: t('toolbelt.bench.callFailed', { msg }) })); // R421
+      toast(t('toolbelt.bench.callFailedToast', { msg }), 'err'); // 全局 toast：视图切走了也照发
       return null;
     } finally {
-      setBusy(null);
+      if (aliveRef.current) setBusy(null); // R421：卸载后不回落已失效的 busy
     }
   };
 
@@ -124,6 +124,22 @@ export function BenchPanel() {
   // 折线 + 峰值/熔断阈值警戒；失败不拦主流程（监护只是增强，压测本身照常）。
   const [liveTemp, setLiveTemp] = useState<{ points: TrendPoint[]; err: string | null } | null>(null);
   const liveTimer = useRef<number | null>(null);
+  // R421：压测（5–300s 同步 call）进行中切走 tab，BenchPanel 直接卸载（Toolbelt
+  // 按 view 条件渲染）——此后 poll() 还会每 2s 打一次后端 sensor_trend，run() 的
+  // await 返回后还会往已卸载组件上落地。aliveRef 在 setup 置 true（StrictMode
+  // 重复挂载会重跑 setup，不能只在 useRef 初值置一次），cleanup 置 false 并掐掉
+  // 实时温度轮询。卸载后仍值得留的全局副作用（toast / localStorage 历史）照发。
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+      if (liveTimer.current !== null) {
+        window.clearInterval(liveTimer.current);
+        liveTimer.current = null;
+      }
+    };
+  }, []);
 
   // 停止正在跑的压测（stress_test / stress_test_gpu）：agent.rs 每次调用重新
   // spawn agent-server 进程，压测与停止按钮是两个进程实例；stress_cancel 写
@@ -150,17 +166,20 @@ export function BenchPanel() {
     // 只读 L0 无需确认；失败只标记监护错误，压测本体照常。
     setLiveTemp({ points: [], err: null });
     const poll = async () => {
+      if (!aliveRef.current) return; // R421：卸载后不再打后端
       try {
         const r = await api.callTool('sensor_trend', { n: 1, format: 'json' });
+        if (!aliveRef.current) return; // R421：响应回来时已卸载，不落地
         if (r.is_error) { setLiveTemp((prev) => prev ? { ...prev, err: t('toolbelt.bench.stress.liveFail') } : prev); return; }
         const pts = parseTrendJson(r.text);
         if (pts) setLiveTemp((prev) => prev ? { ...prev, points: [...prev.points, ...pts].slice(-60) } : prev);
-      } catch { setLiveTemp((prev) => prev ? { ...prev, err: t('toolbelt.bench.stress.liveFail') } : prev); }
+      } catch { if (aliveRef.current) setLiveTemp((prev) => prev ? { ...prev, err: t('toolbelt.bench.stress.liveFail') } : prev); } // R421
     };
     void poll();
     liveTimer.current = window.setInterval(() => void poll(), 2000);
     const text = await run('stress_test', t('toolbelt.bench.stress.name'), { secs: stressSecs, max_temp: 95 }, true);
     if (liveTimer.current !== null) { window.clearInterval(liveTimer.current); liveTimer.current = null; }
+    if (!aliveRef.current) return; // R421：卸载后实时温度与曲线不再落地
     setLiveTemp(null);
     // 从结果解析「温度曲线：0.0s=52.1°C; …」行，渲染压测实时温度折线
     if (text) {
@@ -208,13 +227,13 @@ export function BenchPanel() {
     setReport(t('toolbelt.bench.report.generating'));
     try {
       const r = await api.callTool('system_report', {});
-      setReport(r.is_error ? t('toolbelt.bench.rejected', { text: r.text }) : r.text);
+      if (aliveRef.current) setReport(r.is_error ? t('toolbelt.bench.rejected', { text: r.text }) : r.text); // R421
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setReport(t('toolbelt.bench.report.failed', { msg }));
-      toast(t('toolbelt.bench.report.failedToast', { msg }), 'err');
+      if (aliveRef.current) setReport(t('toolbelt.bench.report.failed', { msg })); // R421
+      toast(t('toolbelt.bench.report.failedToast', { msg }), 'err'); // 全局 toast 照发
     } finally {
-      setBusy(null);
+      if (aliveRef.current) setBusy(null); // R421：卸载后不回落已失效的 busy
     }
   };
 

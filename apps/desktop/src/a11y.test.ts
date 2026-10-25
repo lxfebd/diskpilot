@@ -1042,3 +1042,34 @@ describe('跳过链接落点的焦点可见（R419）', () => {
     expect(app).toContain('tabIndex={-1}');
   });
 });
+
+// R421：压测 / 体检报告是 5–300s 的长 call，而 BenchPanel 挂在 Toolbelt 的 view 条件
+// 渲染下——切走 tab 直接卸载。此前 poll() 仍每 2s 打一次后端 sensor_trend，run() 的
+// await 返回后还往已卸载组件落地。这里锁住「卸载即停轮询、落地先查 alive」的形状。
+describe('长任务的卸载守卫（R421）', () => {
+  const bench = RAW_TSX['./components/toolbelt/bench.tsx'] ?? '';
+  it('压测面板有 aliveRef：setup 置真、cleanup 置假并掐掉实时温度轮询', () => {
+    expect(bench).toContain('const aliveRef = useRef(true);');
+    expect(bench).toContain('aliveRef.current = true;');
+    expect(bench).toContain('aliveRef.current = false;');
+    expect(bench).toContain('window.clearInterval(liveTimer.current);');
+  });
+  it('实时温度轮询：发请求前与响应落地前都查 alive', () => {
+    expect(bench).toContain('if (!aliveRef.current) return; // R421：卸载后不再打后端');
+    expect(bench).toContain('if (!aliveRef.current) return; // R421：响应回来时已卸载，不落地');
+    expect(bench).toContain('if (aliveRef.current) setLiveTemp(');
+  });
+  it('长 call 前后的 setState 都受 alive 保护（busy / 结果 / 报告）', () => {
+    const lines = bench.split('\n');
+    const busy = lines.filter((l) => l.includes('setBusy(null)'));
+    expect(busy.length).toBeGreaterThan(0);
+    for (const line of busy) expect(line).toContain('aliveRef.current');
+    const results = lines.filter((l) => l.includes('setResults((prev) => ({ ...prev, [key]:'));
+    expect(results.length).toBe(2);
+    for (const line of results) expect(line).toContain('aliveRef.current');
+    for (const line of lines.filter((l) => l.includes("setReport(r.is_error") || l.includes("setReport(t('toolbelt.bench.report.failed'"))) {
+      expect(line).toContain('aliveRef.current');
+    }
+    expect(bench).toContain('if (!aliveRef.current) return; // R421：卸载后实时温度与曲线不再落地');
+  });
+});

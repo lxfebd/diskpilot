@@ -7,6 +7,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R421: 压测与体检报告的卸载守卫——切走 tab 不再让长任务往已卸载面板落地
+
+- 缺口：BenchPanel 挂在 Toolbelt 的 view 条件渲染下（Toolbelt.tsx:118），切到别的 tab 直接卸载。压测 runStress 是 5–300s 的同步 call，期间 liveTimer 每 2s 打一次后端 sensor_trend，run() 的 await 返回后还会 setResults / setBusy(null) 落到已卸载组件；体检报告 runReport 的 setReport / setBusy(null) 同理。生产代码没有崩（React 18 只是警告），但轮询白打、状态错挂，违背仓内 R382/CleanupPage/Studio 一以贯之的 alive 房规。
+
+- 改动：bench.tsx 加 aliveRef + 卸载 effect——setup 置 true（main.tsx 有 StrictMode，重复挂载会重跑 setup，不能只在 useRef 初值置一次），cleanup 置 false 并掐掉实时温度轮询；run()/runReport 的 setResults、setReport、两处 finally 的 setBusy(null) 全部先查 aliveRef；poll() 在发请求前与响应落地前各查一次；runStress 等 run() 返回后先查 alive 再写实时温度。persistHistory（localStorage）与 toast 是全局副作用，卸载后照发，不加守卫并注明。
+
+- 守卫：a11y.test.ts 新增 describe「长任务的卸载守卫（R421）」4 条——aliveRef 声明 + setup/cleanup 置真置假 + clearInterval；poll 两处 R421 注释锚 + setLiveTemp 受守；逐行扫 bench.tsx 里所有 setBusy(null) / setResults((prev) => ({ ...prev, [key]: / setReport 行必须带 aliveRef.current；runStress 的「卸载后实时温度与曲线不再落地」锚。
+
+- 反向自检：拆掉 run() finally 里一条 setBusy 守卫 → 1 failed 点出该行缺 aliveRef.current，还原后 61 passed。
+
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1073 tests。
+
 ### R420: CSS 裸 hex 语义色收口到 token——危险红 / 健康绿 / 分隔线随主题走，换主题不再漏配
 
 - 缺口：主题机制是 applyTheme() 把整套语义 token 写成 <html> 内联变量（theme.ts），CSS 里写死的非主题 hex 换主题时必然漏配——settings.css:52 进度条失败底 #d94d6a、:477 fileview-stats 分隔线 #f0d8e4（浅粉，深色主题下不变量）、:814/:823 button.danger #e5484d/#d13438、:841 sys-tag-green #16a34a、cleanup.css:407-415 armed 确认红 #c43358/#8a1d3a + 脉冲 rgba。已有守卫（token-guard rgba 基线 / inlineColor R407 内联 style hex）都不拦主题无关 CSS 文件里的裸 hex。
