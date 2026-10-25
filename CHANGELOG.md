@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R436: localStorage 键读写对偶守卫——「只读不写」的死开关当场红
+
+- 缺口：apps/desktop/src/components/Studio.tsx 读 localStorage 键 diskpilot.hideStudio === '1' 决定整页隐藏，但全仓（含测试）没有任何地方写过这个键——该分支自公开仓库首发（57ae3bb）起就不可达，studio.hidden（已隐藏/Hidden）两条 i18n 键连同整段早退渲染是纯死代码；「键只读不写」这类缺陷此前零守卫，未来新增这样的开关会静默失效。
+- 改动：删掉 Studio.tsx 的 hidden IIFE、allCards 里的 if (hidden) return [] 与整段 hidden 早退块（46-64 行），allCards 直接 collectScaffoldCards(root, scaffolds)（deps [scaffolds, root]）；删 studio.ts zh/en 各一条 studio.hidden 键；新增 apps/desktop/src/storageParity.test.ts（38 行 / 2 条）——扫描全部非测试 ts/tsx 的 localStorage 字面键，凡 getItem 的键全仓必须有同键 setItem 或 removeItem（ALLOW_GET_ONLY 例外清单暂空），并断言 Studio.tsx 不再含 hideStudio / studio.hidden。
+- 反向自检：临时把 getItem('diskpilot.hideStudio') 探针行插回 Studio.tsx → 恰好 2 failed（对偶守卫点名该键 + Studio 断言），还原后 2 passed。
+- 验证：pnpm check EXIT=0，80 files / 1163 tests（1161+2）；check-changelog / check-docs-links EXIT=0。
+
 ### R435: 性能档位判定的文档与实现对齐——「任一命中即降档」不再是注释与代码打架
 
 - 缺口：apps/desktop/src/hwProfile.ts 的档位注释写「弱(≤4核 且 ≤8GB) / 中(≤8核 且 ≤16GB)」，但 detect() 实现是「核数或内存**任一**命中即降档」（4 核配 64 GB 内存仍是弱机）——注释撒谎会误导后续维护者把 OR 改成 AND，弱机会被误判成强机、AI 建议直接崩。该模块（106 行，决定 Ollama 本地/云端建议）此前零测试。

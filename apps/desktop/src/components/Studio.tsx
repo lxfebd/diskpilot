@@ -43,25 +43,9 @@ export function Studio({ onOpenCleanup, onOpenHistory }: { onOpenCleanup: (scaff
   const [installOpen, setInstallOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
 
-  const hidden = (() => {
-    try { return localStorage.getItem('diskpilot.hideStudio') === '1'; } catch { return false; }
-  })();
-
   const allCards: CardData[] = useMemo(() => {
-    if (hidden) return [];
     return collectScaffoldCards(root, scaffolds);
-  }, [scaffolds, root, hidden]);
-
-  if (hidden) {
-    return (
-      <div className="studio">
-        <div className="studio-head">
-          <span>{t('studio.title')}</span>
-          <span className="muted small">{t('studio.hidden')}</span>
-        </div>
-      </div>
-    );
-  }
+  }, [scaffolds, root]);
 
   const featured = allCards.filter((c) => FEATURED_IDS.includes(c.scaffold.id));
   const others = allCards.filter((c) => !FEATURED_IDS.includes(c.scaffold.id));

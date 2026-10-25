@@ -8,7 +8,6 @@ export const studio = {
   zh: {
     // ── 面板与分区标题 ──
     'studio.title': '清理脚本',
-    'studio.hidden': '已隐藏',
     'studio.scriptCount': '{n} 个脚本',
     'studio.featured': '推荐',
     'studio.more': '更多',
@@ -111,7 +110,6 @@ export const studio = {
   en: {
     // ── Panel and section headings ──
     'studio.title': 'Cleanup scripts',
-    'studio.hidden': 'Hidden',
     'studio.scriptCount': '{n} scripts',
     'studio.featured': 'Recommended',
     'studio.more': 'More',
