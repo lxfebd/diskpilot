@@ -1256,3 +1256,22 @@ describe('弹窗滚动的可配置锁（R430）', () => {
     expect(String(ctx)).toContain("window.addEventListener('scroll', handleScroll, true);");
   });
 });
+
+// ── 表格表头的 scope 绑定（R432）────────────────────────
+// 全仓唯一数据表（toolwall 的 CLI 参数表）此前 th 没有 scope——读屏把列头当
+// 游离文本、不与数据格绑定。规则：任何 <th> 必须带 scope= 属性，新增表格
+// 忘了写 scope 直接红。
+describe('表格表头的 scope 绑定（R432）', () => {
+  it('全仓 <th> 都必须声明 scope', () => {
+    const offenders: string[] = [];
+    for (const [path, src] of Object.entries(RAW_TSX)) {
+      const bad = [...src.matchAll(/<th(?=[\s>])(?![^>]*\bscope=)[^>]*>/g)];
+      if (bad.length) offenders.push(String(path) + '：' + bad.length + ' 个 <th> 无 scope');
+    }
+    expect(offenders).toEqual([]);
+  });
+  it('toolwall 参数表四列都带 scope="col"', () => {
+    const src = RAW_TSX['./components/toolbelt/toolwall.tsx'] as string;
+    expect((src.match(/<th scope="col">/g) ?? []).length).toBe(4);
+  });
+});

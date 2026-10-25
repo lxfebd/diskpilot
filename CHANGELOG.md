@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R432: 参数表表头补 scope="col"——读屏把列头与数据格绑起来
+
+- 缺口：全仓唯一数据表（toolwall 的 CLI 参数表）四个 <th> 都没有 scope——读屏把列头当游离文本、不关联对应列的数据格（只有这一张表，所以一直没暴露）。
+- 改动（apps/desktop/src/components/toolbelt/toolwall.tsx）：tdm-params 表头行四个 th 加 scope="col"，并在 <table> 前补 R432 注释。
+- 守卫（apps/desktop/src/a11y.test.ts）：新增 describe「表格表头的 scope 绑定（R432）」2 条——① 全仓扫任何 <th> 必须带 scope= 属性（正则加 <th(?=[\s>]) 边界，避免把 <thead> 当表头），新增表格忘写直接红；② toolwall 参数表恰好 4 个 scope="col"。
+- 反向自检：临时删掉一个 scope → 恰好 2 failed（扫描器点名 + 计数断言 3≠4），还原后 a11y 82 passed；全量 pnpm check 77 files / 1133 tests 绿。
+
 ### R431: 搜索框键盘焦点补描边——Tab 进三个搜索框不再只剩边框换色
 
 - 缺口：layout.css:226 有全局 input/select:focus-visible 描边（R348）+ textarea:focus-visible（R405），但更晚加载的样式文件用等特异性的 outline: none 把它覆盖掉——.hp-search input（history.css:96）、.fileview-search input（settings.css:466）、.toolwall-search input（dark.css:364）同为 0,1,1 且排在 layout.css 之后，键盘焦点只剩容器边框换色（R348 判过这种提示不够）；.cp-search 仅 0,1,0、全局 ring 本已压过它，为显式一致也补同款。

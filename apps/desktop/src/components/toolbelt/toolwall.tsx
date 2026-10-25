@@ -492,7 +492,8 @@ function ToolDetailModal({
                   <div className="tdm-section-title"><ChevronRight size={13} /> {t('toolbelt.detail.cliSection')}</div>
                   {manifest.invocation.params.length > 0 && (
                     <table className="tdm-params">
-                      <thead><tr><th>{t('toolbelt.detail.thParam')}</th><th>{t('toolbelt.detail.thType')}</th><th>{t('toolbelt.detail.thRequired')}</th><th>{t('toolbelt.detail.thDesc')}</th></tr></thead>
+                      {/* R432：表头列加 scope="col"——读屏把列头与数据格绑定，缺 scope 时列头是游离文本 */}
+                      <thead><tr><th scope="col">{t('toolbelt.detail.thParam')}</th><th scope="col">{t('toolbelt.detail.thType')}</th><th scope="col">{t('toolbelt.detail.thRequired')}</th><th scope="col">{t('toolbelt.detail.thDesc')}</th></tr></thead>
                       <tbody>
                         {manifest.invocation.params.map((p) => (
                           <tr key={p.name}>
