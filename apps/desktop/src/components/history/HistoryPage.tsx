@@ -9,7 +9,7 @@ import { useT } from '../../i18n';
 import { formatBytes, formatTime } from '../../format';
 import type { UndoEntry } from '../../types';
 import { WeeklyHealthCard } from './WeeklyHealthCard';
-import { clearSearchOnEscape } from '../../a11y';
+import { clearSearchOnClick, clearSearchOnEscape } from '../../a11y';
 import {
   dayGroupLabel,
   filterUndoEntries,
@@ -209,7 +209,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
             placeholder={t('history.searchPlaceholder')}
           />
           {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
-          {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setQuery('')}><X size={12} /></button>)}
+          {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={clearSearchOnClick(() => setQuery(''))}><X size={12} /></button>)}
         </label>
       </div>
 

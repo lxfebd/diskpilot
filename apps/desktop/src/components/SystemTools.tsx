@@ -16,7 +16,7 @@ import { useT } from '../i18n';
 import { StartupPanel } from './StartupPanel';
 import { FAN_LEVEL_COLORS } from '../colors';
 import { useFlashText } from '../flash';
-import { clearSearchOnEscape } from '../a11y';
+import { clearSearchOnClick, clearSearchOnEscape } from '../a11y';
 
 // 风扇调速档位 → 语义色（urgent 红 → balanced 绿，未知灰）。
 // R108：此前在本文件硬编码 9 个 hex，是 colors.ts（W4 单源）之外的散板——
@@ -470,7 +470,7 @@ function SystemToolsInner() {
               placeholder={t('system.driver.searchPlaceholder')}
             />
             {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
-            {drvQuery !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setDrvQuery('')}><X size={12} /></button>)}
+            {drvQuery !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={clearSearchOnClick(() => setDrvQuery(''))}><X size={12} /></button>)}
           </label>
         </div>
       )}

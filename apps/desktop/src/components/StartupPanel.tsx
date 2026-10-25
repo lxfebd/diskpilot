@@ -6,7 +6,7 @@ import { api, type StartupItem } from '../api';
 import { isPermEnabled } from '../permissions';
 import { useT } from '../i18n';
 import { useFlashText } from '../flash';
-import { clearSearchOnEscape } from '../a11y';
+import { clearSearchOnClick, clearSearchOnEscape } from '../a11y';
 
 // 启动项来源标签：switch 比较的是后端返回的标识符（不译），文案在渲染处求值——
 // 模块顶层求值会把中文烤死在首次 import，切语言不再生效。未知来源原样显示。
@@ -234,7 +234,7 @@ export function StartupPanel() {
                 placeholder={t('system.startup.searchPlaceholder')}
               />
               {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
-              {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setQuery('')}><X size={12} /></button>)}
+              {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={clearSearchOnClick(() => setQuery(''))}><X size={12} /></button>)}
             </label>
           </div>
           {visible.length === 0 && (

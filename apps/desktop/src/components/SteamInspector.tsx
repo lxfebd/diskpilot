@@ -23,7 +23,7 @@ import { formatBytes, formatDateTime, formatDateKey } from '../format';
 import { t, useT } from '../i18n';
 import { SteamWorkshopModal } from './SteamWorkshopModal';
 import { scrollBehavior } from '../motion';
-import { clearSearchOnEscape } from '../a11y';
+import { clearSearchOnClick, clearSearchOnEscape } from '../a11y';
 
 type Pivot = 'sleep' | 'size' | 'library' | 'lastplayed';
 
@@ -667,7 +667,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
                 onKeyDown={clearSearchOnEscape(() => setSearchQuery(''))}
               />
               {searchQuery && (
-                <button className="steam-icon-btn" onClick={() => setSearchQuery('')} title={t('steam.clear')}>
+                <button className="steam-icon-btn" onClick={clearSearchOnClick(() => setSearchQuery(''))} title={t('steam.clear')}>
                   <X size={12} />
                 </button>
               )}

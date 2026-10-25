@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R462: 清空按钮点完把焦点还给搜索框——清完还能接着打字
+
+- 缺口：R461 给四个搜索框补的清空按钮是「有词才渲染」的。键盘用户 Tab 到它、按 Enter（或鼠标点）清空后输入变空、按钮随即卸载，焦点掉到 `<body>`——想接着改搜索词得从文档开头重新 Tab 一遍。工具墙与 Steam 检查器里两个更早的清空按钮同样如此（R439 的 Esc 路径没这问题：焦点本来就在输入框里）。
+- 改动：`apps/desktop/src/a11y.ts` 新增 `clearSearchOnClick(clear)`——先执行清空，再把焦点交给按钮父容器里的输入框（父容器就是搜索框容器：`label.hp-search` / `div.toolwall-search` / `div.steam-search` 等，邻居就是要的那个 input）。六个站点全部改接该助手：巡检记录、启动项、驱动、文件视图，以及工具墙、Steam 检查器（含各自的 lucide 导入与 a11y 导入更新）。
+- 守卫：a11y.test.ts 新增 describe「搜索框清空按钮的焦点归还（R462）」2 条（清空后 focus 被调用一次、父容器拿不到输入框时不炸且清空照常执行）与「清空按钮清完把焦点还给输入框（R462 接线）」2 条（a11y.ts 提供助手与 `parentElement?.querySelector('input')?.focus();`；六个站点各恰好出现 1 次 `clearSearchOnClick(`）。
+- 反向自检：把 SteamInspector 的清空按钮还原成内联 onClick → 恰好 1 failed 点名 ./components/SteamInspector.tsx（计数 0 ≠ 1），还原后 a11y.test.ts 115 passed。全量 pnpm check 87 files / 1245 tests 全绿。
+
 ### R461: 四个搜索框补清空按钮——鼠标/触屏不必记 Esc
 
 - 缺口：R439 给六个搜索框接上了「按 Esc 一键清空」，但只有工具墙与 Steam 检查器两个搜索框有可见的清空按钮（`ghost icon` + X）。巡检记录、启动项、驱动、文件视图这四个搜索框只有图标在左、输入框在右：鼠标用户想清空只能全选删除，触屏连 Esc 都没有——同一个界面里六个搜索框两种交互。

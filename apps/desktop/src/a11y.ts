@@ -74,3 +74,15 @@ export function clearSearchOnEscape(clear: () => void) {
     }
   };
 }
+
+// R462：清空按钮点完把焦点送回输入框。清空按钮是「有词才渲染」的：焦点落在按钮
+// 上时点它（或键盘按 Enter），清完输入变空、按钮随即卸载，焦点会掉到 <body>——
+// 键盘用户清完想接着改搜索词，得从文档开头重新 Tab 一遍。按钮的父容器恰好就是
+// 搜索框容器（label.hp-search / div.toolwall-search / div.steam-search 等），
+// 里面挨着的就是那个输入框，把焦点还给它。
+export function clearSearchOnClick(clear: () => void) {
+  return (e: { currentTarget: HTMLElement }): void => {
+    clear();
+    e.currentTarget.parentElement?.querySelector('input')?.focus();
+  };
+}

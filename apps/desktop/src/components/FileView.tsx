@@ -6,7 +6,7 @@ import { ContextMenu, type ContextMenuState } from './ContextMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useStore } from '../store';
 import { useT } from '../i18n';
-import { activateOnKey, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor } from '../a11y';
+import { activateOnKey, clearSearchOnClick, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor } from '../a11y';
 import { copyPathWithToast } from '../clipboard';
 import { revealWithToast } from '../reveal';
 
@@ -169,7 +169,7 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
           onKeyDown={clearSearchOnEscape(() => onQueryChange(''))}
         />
         {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
-        {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => onQueryChange('')}><X size={12} /></button>)}
+        {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={clearSearchOnClick(() => onQueryChange(''))}><X size={12} /></button>)}
       </div>
 
       <div className="fileview-stats">

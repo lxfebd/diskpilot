@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { activateOnKey, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
+import { activateOnKey, clearSearchOnClick, clearSearchOnEscape, isContextMenuKey, contextMenuAnchor, cycleIndex, isActivationKey } from './a11y';
 
 describe('键盘激活口径（R314）', () => {
   it('只有 Enter 与空格算激活键（对齐原生 button）', () => {
@@ -1672,5 +1672,45 @@ describe('搜索框的清空按钮（R461）', () => {
     const common = String(RAW_COMMON['./i18n/namespaces/common.ts'] ?? '');
     expect(common).toContain('清空搜索');
     expect(common).toContain('Clear search');
+  });
+});
+
+describe('搜索框清空按钮的焦点归还（R462）', () => {
+  it('点清空：先清空，再把焦点送回输入框', () => {
+    const clear = vi.fn();
+    const focus = vi.fn();
+    const handler = clearSearchOnClick(clear);
+    handler({ currentTarget: { parentElement: { querySelector: () => ({ focus }) } } } as unknown as { currentTarget: HTMLElement });
+    expect(clear).toHaveBeenCalledTimes(1);
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+  it('父容器拿不到输入框也不炸——清空照常执行', () => {
+    const clear = vi.fn();
+    const handler = clearSearchOnClick(clear);
+    handler({ currentTarget: { parentElement: null } } as unknown as { currentTarget: HTMLElement });
+    handler({ currentTarget: { parentElement: { querySelector: () => null } } } as unknown as { currentTarget: HTMLElement });
+    expect(clear).toHaveBeenCalledTimes(2);
+  });
+});
+describe('清空按钮清完把焦点还给输入框（R462 接线）', () => {
+  it('a11y.ts 提供焦点归还助手', () => {
+    const src = String(RAW_A11Y['./a11y.ts'] ?? '');
+    expect(src).toContain('export function clearSearchOnClick(');
+    expect(src).toContain("parentElement?.querySelector('input')?.focus();");
+  });
+  it('六个搜索框的清空按钮都走 clearSearchOnClick', () => {
+    const sites = [
+      './components/history/HistoryPage.tsx',
+      './components/StartupPanel.tsx',
+      './components/SystemTools.tsx',
+      './components/FileView.tsx',
+      './components/toolbelt/toolwall.tsx',
+      './components/SteamInspector.tsx',
+    ];
+    for (const path of sites) {
+      const src = String(RAW_TSX[path] ?? '');
+      const times = src.split('clearSearchOnClick(').length - 1;
+      expect(times, path).toBe(1);
+    }
   });
 });

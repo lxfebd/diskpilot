@@ -35,7 +35,7 @@ import {
 } from './catalog';
 import type { ToolContext } from './shared';
 import { formatTime } from '../../format';
-import { clearSearchOnEscape } from '../../a11y';
+import { clearSearchOnClick, clearSearchOnEscape } from '../../a11y';
 
 export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
   const t = useT();
@@ -962,7 +962,7 @@ export function CatalogWall({
             spellCheck={false}
           />
           {query && (
-            <button className="ghost icon" onClick={() => setQuery('')} title={t('toolbelt.wall.clear')}><X size={12} /></button>
+            <button className="ghost icon" onClick={clearSearchOnClick(() => setQuery(''))} title={t('toolbelt.wall.clear')}><X size={12} /></button>
           )}
         </div>
         <span className="muted small toolwall-count">
