@@ -22,6 +22,7 @@ import {
   saveSettings,
   clearSettings,
   detectProvider,
+  normalizeSettings,
   freeChat,
   type Provider,
 } from '../advisorClient';
@@ -376,8 +377,13 @@ export function Settings({ onClose, initialTab }: Props) {
     if (!model.trim())   { setErr(t('settings.ai.errModel')); return; }
     if (needsKey && !apiKey.trim()) { setErr(t('settings.ai.errKey')); return; }
     try {
-      saveSettings({ provider, model, apiKey, baseUrl, providerOverride });
-      setBaseline({ baseUrl, apiKey, model, providerOverride });
+      // R437：粘贴带空白时先归一化——输入框跟着变成 canonical，所见即所存。
+      const n = normalizeSettings({ provider, model, apiKey, baseUrl, providerOverride });
+      saveSettings(n);
+      setBaseline({ baseUrl: n.baseUrl, apiKey: n.apiKey, model: n.model, providerOverride: n.providerOverride });
+      setBaseUrl(n.baseUrl);
+      setModel(n.model);
+      setApiKey(n.apiKey);
       setMsg(t('settings.ai.saved'));
       setSaved(true);
     } catch (e) {
@@ -400,9 +406,14 @@ export function Settings({ onClose, initialTab }: Props) {
   const testConn = async () => {
     setErr(null); setMsg(null); setTesting(true);
     try {
-      saveSettings({ provider, model, apiKey, baseUrl, providerOverride });
+      // R437：同保存——试连走的是 loadSettings 的读路径，落盘前先归一化。
+      const n = normalizeSettings({ provider, model, apiKey, baseUrl, providerOverride });
+      saveSettings(n);
       // 试连也把配置落了盘，所以草稿不再算「未保存」。
-      setBaseline({ baseUrl, apiKey, model, providerOverride });
+      setBaseline({ baseUrl: n.baseUrl, apiKey: n.apiKey, model: n.model, providerOverride: n.providerOverride });
+      setBaseUrl(n.baseUrl);
+      setModel(n.model);
+      setApiKey(n.apiKey);
       const reply = await freeChat('', '回复"连接成功"四个字，别的什么都别说。'); // @i18n-keep 发给模型的探针 prompt，恒中文
       setMsg(`${t('settings.ai.connOk')}${reply.slice(0, 40)}`);
     } catch (e) {

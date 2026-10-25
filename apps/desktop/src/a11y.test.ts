@@ -1329,3 +1329,24 @@ describe('搜索框的可访问名（R433）', () => {
     expect(String(RAW_TSX['./components/SystemTools.tsx'])).toContain("aria-label={t('system.driver.searchAria')}");
   });
 });
+
+const RAW_PV = import.meta.glob('./advisor/provider.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+describe('AI 配置保存的空白归一化（R437）', () => {
+  const settings = RAW_TSX['./components/Settings.tsx'] ?? '';
+
+  it('保存与试连两处都先归一化，再把 canonical 值写回输入框', () => {
+    expect((settings.match(/const n = normalizeSettings\(/g) || []).length).toBe(2);
+    expect((settings.match(/setBaseUrl\(n\.baseUrl\)/g) || []).length).toBe(2);
+    expect((settings.match(/setModel\(n\.model\)/g) || []).length).toBe(2);
+    expect((settings.match(/setApiKey\(n\.apiKey\)/g) || []).length).toBe(2);
+    expect(settings).not.toContain('saveSettings({ provider, model, apiKey, baseUrl');
+  });
+
+  it('provider 层读与写都过同一个 normalizeSettings 收口', () => {
+    const src = RAW_PV['./advisor/provider.ts'] ?? '';
+    expect(src).toContain('export function normalizeSettings(');
+    expect(src).toContain('return normalizeSettings(parsed);');
+    expect(src).toContain('JSON.stringify(normalizeSettings(s))');
+  });
+});

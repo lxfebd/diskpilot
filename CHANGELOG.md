@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R437: AI 配置保存前归一化空白——粘贴带尾随空格不再「连接失败」查不出原因
+
+- 缺口：Settings 的保存与试连只用 trim 做非空校验，落盘存的仍是原样（含首尾空白、多余尾斜杠）；而 provider.ts 消费端只 replace(/\/$/, '') 剥一个斜杠、不剥空白。从文档或链接里粘贴 ' http://127.0.0.1:11434/ ' 这种值校验能过，实际请求却是带空格的非法 URL，报「连接失败」根本查不出是空格；model 带空格则 404 找不到模型。
+- 改动：apps/desktop/src/advisor/provider.ts 新增 export function normalizeSettings(s)——model/apiKey 去首尾空白、baseUrl 去首尾空白并剥掉全部尾斜杠；saveSettings 落盘前过它（单点收口，所有调用方都拿到 canonical 值）；loadSettings 返回前也过它，旧存值在下次读取时自动痊愈（与方法内 provider 重判同样的痊愈口径）。apps/desktop/src/components/Settings.tsx 的 save() 与 testConn() 先归一化再 saveSettings/setBaseline，并把 n.baseUrl/n.model/n.apiKey 写回输入框——输入框立即变成 canonical，所见即所存，也避免 dirty 判断与基线错位。
+- 守卫：apps/desktop/src/advisor/provider.test.ts 新增 describe（4 条）——首尾空白与多余尾斜杠收口、canonical 值原样保留、saveSettings 落盘的是归一化值、loadSettings 读回旧存值时自动痊愈。apps/desktop/src/a11y.test.ts 新增 describe「AI 配置保存的空白归一化（R437）」2 条——Settings 的保存与试连两处必须是 const n = normalizeSettings( 且 setBaseUrl/n.model/n.apiKey 各写回 2 次、不再出现裸 saveSettings({ provider, model, apiKey, baseUrl；provider.ts 必须含 normalizeSettings 定义与 return normalizeSettings(parsed) / JSON.stringify(normalizeSettings(s))。
+- 反向自检：把两处写回临时改回 raw（setBaseUrl(baseUrl)）→ R437 静态守卫恰好 1 failed，还原后 86 passed。
+- 验证：pnpm check EXIT=0，80 files / 1169 tests（1163+6）；check-changelog / check-docs-links EXIT=0。
+
 ### R436: localStorage 键读写对偶守卫——「只读不写」的死开关当场红
 
 - 缺口：apps/desktop/src/components/Studio.tsx 读 localStorage 键 diskpilot.hideStudio === '1' 决定整页隐藏，但全仓（含测试）没有任何地方写过这个键——该分支自公开仓库首发（57ae3bb）起就不可达，studio.hidden（已隐藏/Hidden）两条 i18n 键连同整段早退渲染是纯死代码；「键只读不写」这类缺陷此前零守卫，未来新增这样的开关会静默失效。

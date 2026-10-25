@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { detectProvider, isConfigured, parseFirstJson, extractAnthropicText, dataUrlBase64, isToolsUnsupportedError, saveSettings, clearSettings } from './provider';
+import { detectProvider, isConfigured, parseFirstJson, extractAnthropicText, dataUrlBase64, isToolsUnsupportedError, saveSettings, clearSettings, normalizeSettings, loadSettings } from './provider';
 
 describe('detectProvider', () => {
   it('defaults to openai for empty/unknown base urls', () => {
@@ -144,5 +144,53 @@ describe('设置持久化走 safeStorage（R415）', () => {
     expect(mem.getItem('diskpilot.advisor')).toContain('"m"');
     clearSettings();
     expect(mem.getItem('diskpilot.advisor')).toBeNull();
+  });
+});
+
+describe('AI 配置的空白归一化（R437）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function memStorage() {
+    const m = new Map<string, string>();
+    return {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => { m.set(k, v); },
+      removeItem: (k: string) => { m.delete(k); },
+      dump: () => m,
+    };
+  }
+
+  it('首尾空白与多余尾斜杠统一收口', () => {
+    const s = normalizeSettings({ provider: 'ollama', model: ' qwen2.5 ', apiKey: ' sk-1 ', baseUrl: ' http://localhost:11434// ' });
+    expect(s).toEqual({ provider: 'ollama', model: 'qwen2.5', apiKey: 'sk-1', baseUrl: 'http://localhost:11434' });
+  });
+
+  it('已是 canonical 的值原样保留（含路径），providerOverride 不动', () => {
+    const s = normalizeSettings({ provider: 'openai', model: 'gpt-4o', apiKey: 'sk', baseUrl: 'https://api.openai.com/v1' });
+    expect(s.baseUrl).toBe('https://api.openai.com/v1');
+    expect(s.model).toBe('gpt-4o');
+    expect(s.providerOverride).toBeUndefined();
+  });
+
+  it('saveSettings 落盘的是归一化值', () => {
+    const mem = memStorage();
+    vi.stubGlobal('localStorage', mem);
+    saveSettings({ provider: 'openai', model: ' m ', apiKey: 'k', baseUrl: ' https://api.openai.com/v1/ ' });
+    const raw = mem.getItem('diskpilot.advisor') as string;
+    expect(raw).toContain('"https://api.openai.com/v1"');
+    expect(raw).toContain('"m"');
+    expect(raw).not.toContain('https://api.openai.com/v1/ ');
+  });
+
+  it('loadSettings 读回旧存值时自动痊愈（带空白的存量配置）', () => {
+    const mem = memStorage();
+    mem.setItem('diskpilot.advisor', JSON.stringify({ provider: 'ollama', model: ' qwen2.5 ', apiKey: 'k', baseUrl: ' http://127.0.0.1:11434/ ' }));
+    vi.stubGlobal('localStorage', mem);
+    const s = loadSettings();
+    expect(s?.baseUrl).toBe('http://127.0.0.1:11434');
+    expect(s?.model).toBe('qwen2.5');
+    expect(s?.apiKey).toBe('k');
   });
 });

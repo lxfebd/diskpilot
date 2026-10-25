@@ -39,6 +39,19 @@ export function detectProvider(baseUrl: string): Provider {
   return 'openai';
 }
 
+// R437：粘贴来的配置常带首尾空白或多余尾斜杠（从文档/链接里复制很常见）。
+// 原样落盘会让 `${baseUrl}/api/chat` 变成带空格的非法 URL，报「连接失败」却
+// 查不出是空格；model 带空格则 404 找不到模型。统一在这里收口——读（loadSettings）
+// 与写（saveSettings）各过一次，旧存值在下次读取时自动痊愈。
+export function normalizeSettings(s: AdvisorSettings): AdvisorSettings {
+  return {
+    ...s,
+    model: s.model.trim(),
+    apiKey: (s.apiKey ?? '').trim(),
+    baseUrl: (s.baseUrl ?? '').trim().replace(/\/+$/, ''),
+  };
+}
+
 export function loadSettings(): AdvisorSettings | null {
   try {
     const raw = safeGetItem(STORAGE_KEY);
@@ -49,7 +62,8 @@ export function loadSettings(): AdvisorSettings | null {
     // 存成 provider: 'ollama'。没手动 override 的老数据在这里按新规则
     // 用 baseUrl 重判一次，让升级后的用户自动痊愈，不用手动去 Settings 改。
     if (!parsed.providerOverride) parsed.provider = detectProvider(parsed.baseUrl);
-    return parsed;
+    // R437：旧存值里的首尾空白 / 多余尾斜杠在这里一并收口，老配置不用手动改。
+    return normalizeSettings(parsed);
   } catch {
     return null;
   }
@@ -58,7 +72,8 @@ export function loadSettings(): AdvisorSettings | null {
 export function saveSettings(s: AdvisorSettings) {
   // R415：经 safeStorage 兜底——隐私模式/配额满时静默丢弃，不把存储异常
   // 冒充成「连接失败」弹给用户（Settings 保存与试连都包了 try/catch）。
-  safeSetItem(STORAGE_KEY, JSON.stringify(s));
+  // R437：写盘前归一化——所有调用方（保存 / 试连）落下的都是 canonical 值。
+  safeSetItem(STORAGE_KEY, JSON.stringify(normalizeSettings(s)));
 }
 
 export function clearSettings() {
