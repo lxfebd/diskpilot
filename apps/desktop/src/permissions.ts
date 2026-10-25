@@ -125,7 +125,9 @@ export function loadPermConfig(): PermConfig {
     if (parsed.enabled && typeof parsed.enabled === 'object') {
       for (const k of Object.keys(parsed.enabled)) {
         if (k in DEFAULT_ENABLED) {
-          enabled[k as PermId] = Boolean((parsed.enabled as Record<string, boolean>)[k]);
+          // R422：只认字面布尔 true——手写/异构存值（"false" 字符串、0/1）一律按关，
+          // Boolean("false")===true 会把「关闭」误读成「开启」。
+          enabled[k as PermId] = (parsed.enabled as Record<string, unknown>)[k] === true;
         }
       }
     }

@@ -7,6 +7,18 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R422: 权限表的防漂移守卫与读盘布尔卫生——手写的 "false" 字符串不再被误读成「开启」
+
+- 缺口：permissions.ts 的 loadPermConfig 用 Boolean(存值) 收布尔——Boolean("false")===true，手写/异构存值（"false" 字符串、0/1）会把这个「关闭」误读成「开启」；且 PERMS（22 项权限定义）与 DEFAULT_ENABLED（22 项默认开关）是两处互相依赖的表，加权限只改一张不会编译报错，isPermEnabled 的 L0 恒开 / L3 恒关短路与逐键合并就可能在静默里漂移。
+
+- 改动：loadPermConfig 只认字面布尔 true（=== true），异构值一律按关（与 L3「门没有锁孔」同口径——关是安全基线，宁可错关不可错开）。
+
+- 守卫：新增 permissions.test.ts（13 条）——表一致性（PERMS id 集 == DEFAULT_ENABLED 键集、无重复；labelKey/descKey 按 perm.<id>.label/.desc；L0 恰为三项只读、L3 恰为四项永久禁止）；isPermEnabled 短路契约（L0 显式 false 仍开、L3 显式 true 仍关、L1/L2 默认与逐项覆盖）；读盘卫生（无存值/坏 JSON 回落默认、未知键与异构形状丢弃、字符串 "false"/0/1 一律按关、L3 存 true 仍被 isPermEnabled 拒绝）；savePermConfig 往返 / 写盘失败静默 / 会话授权 grant-has-clear。
+
+- 反向自检：还原 Boolean(存值) → 1 failed 正点中「"false" 字符串」用例（expected true to be false），还原后 13 passed。
+
+- 验证：pnpm -C apps/desktop check EXIT=0，76 files / 1086 tests。
+
 ### R421: 压测与体检报告的卸载守卫——切走 tab 不再让长任务往已卸载面板落地
 
 - 缺口：BenchPanel 挂在 Toolbelt 的 view 条件渲染下（Toolbelt.tsx:118），切到别的 tab 直接卸载。压测 runStress 是 5–300s 的同步 call，期间 liveTimer 每 2s 打一次后端 sensor_trend，run() 的 await 返回后还会 setResults / setBusy(null) 落到已卸载组件；体检报告 runReport 的 setReport / setBusy(null) 同理。生产代码没有崩（React 18 只是警告），但轮询白打、状态错挂，违背仓内 R382/CleanupPage/Studio 一以贯之的 alive 房规。
