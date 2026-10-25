@@ -1585,3 +1585,16 @@ describe('当前项的语义（R445）', () => {
     expect(mk).toContain("aria-pressed={tab === 'community'}");
   });
 });
+describe('切换会话回到底部（R453）', () => {
+  it('切换会话时重置贴底并滚到新会话的底部', () => {
+    const cp = String(RAW_TSX['./components/ChatPanel.tsx'] ?? '');
+    const start = cp.indexOf('R453：切换会话时回到该会话的底部');
+    expect(start).toBeGreaterThan(-1);
+    const end = cp.indexOf('}, [activeChatId]);', start);
+    expect(end).toBeGreaterThan(start);
+    const region = cp.slice(start, end);
+    expect(region).toContain('stickRef.current = true;');
+    expect(region).toContain('scrollTo({ top: scrollerRef.current.scrollHeight');
+    expect(region).toContain('behavior: scrollBehavior() });');
+  });
+});

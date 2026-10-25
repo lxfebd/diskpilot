@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R453: 切换会话后回到该会话的底部——不再继承上一个会话的滚动位置
+
+- 缺口：R406 的贴底跟随只在「回合数变化 / 忙碌态变化」时触发，且要求 `stickRef.current` 为真。用户在上一个会话往上翻过历史，再切到另一个会话：turns 整个换掉、滚动位置却留在原地——长对话→长对话落在中间，短对话→长对话卡在顶部，想看最近消息得先自己滚到底。
+- 改动：apps/desktop/src/components/ChatPanel.tsx 新增 `useEffect(..., [activeChatId])`——切换会话时先把 `stickRef.current` 复位为 true（新会话视为「贴底」），再 `scrollTo` 到 `scrollHeight`（沿用 `scrollBehavior()`，系统开了减少动态效果就瞬时到位）。原 R406 的回合增长跟随逻辑不变，只是切会话这一次强制回底。
+- 守卫：apps/desktop/src/a11y.test.ts 尾部 describe「切换会话回到底部（R453）」1 条——切 `R453：` 注释到 `}, [activeChatId]);` 之间的 effect 体，断言含 `stickRef.current = true;`、`scrollTo({ top: scrollerRef.current.scrollHeight`、`behavior: scrollBehavior() });`。
+- 反向自检：删掉 `stickRef.current = true;` → 恰好 1 failed 点名该断言，还原后 104 passed。
+- 验证：pnpm -C apps/desktop check EXIT=0（84 files / 1212 tests）。
+
 ### R452: 会话列表的内存上限与写盘对齐——第 21 条会话不再「看得见、重启就消失」
 
 - 缺口：`persistChatSessions` 落盘时把列表截到 20 条，但内存里的 `chatSessions` 不截——`newChat` / `archiveActiveChat` 只做 `[新归档, ...旧列表]`。一次会话里聊出超过 20 段对话时，侧边栏照常显示第 21 条起的历史（可点、可切换），下一次落盘却写不进去，重启后这些会话静默消失：看得见、用过、却没了。

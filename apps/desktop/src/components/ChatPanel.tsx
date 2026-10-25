@@ -276,6 +276,13 @@ const composingRef = useRef(false);
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: scrollBehavior() });
   }, [turns.length, chatBusy]);
 
+  useEffect(() => {
+    // R453：切换会话时回到该会话的底部——否则上一个会话的滚动位置会原样
+    // 带进来（长对话→长对话落在中间，短对话→长对话卡在顶部）。
+    stickRef.current = true;
+    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: scrollBehavior() });
+  }, [activeChatId]);
+
   // Walk root, collect ALL nodes tagged with this scaffold. Mirrors Studio's
   // findAllMatchesByScaffold — a scaffold legitimately matches in multiple
   // places (e.g. wechat-pc hits Documents\WeChat Files + AppData\Roaming\Tencent\WeChat
