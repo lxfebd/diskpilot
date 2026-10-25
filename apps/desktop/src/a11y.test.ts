@@ -1423,3 +1423,36 @@ describe('截断文本的悬停提示（R440）', () => {
     expect(wh).toContain('<span className="wh-disks-name" title={');
   });
 });
+
+describe('台账刷新按钮的进行中反馈（R441）', () => {
+  it('HistoryPage 刷新防重入、按钮禁用并换成转圈', () => {
+    const page = RAW_TSX['./components/history/HistoryPage.tsx'] ?? '';
+    const start = page.indexOf('const refresh = useCallback(');
+    const region = start >= 0 ? page.slice(start, page.indexOf('}, [t, limit]);', start)) : '';
+    expect(region).toContain('if (refreshingRef.current) return;');
+    expect(region).toContain('setRefreshing(true);');
+    expect(region).toContain('.finally(() => {');
+    expect(region).toContain('setRefreshing(false);');
+    expect(page).toContain('const [refreshing, setRefreshing] = useState(false);');
+    expect(page).toContain('const refreshingRef = useRef(false);');
+    // 按钮：禁用 + aria-busy + 图标随 refreshing 切换（不再是恒 RotateCcw）
+    expect(page).toContain('disabled={refreshing}');
+    expect(page).toContain('aria-busy={refreshing || undefined}');
+    expect(page).toContain('{refreshing ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />}');
+    expect(page).not.toContain("<RotateCcw size={12} /> {t('history.refresh')}");
+  });
+  it('UndoPanel 重试按钮同样防重入并给进行中反馈', () => {
+    const panel = RAW_TSX['./components/UndoPanel.tsx'] ?? '';
+    const start = panel.indexOf('const refresh = useCallback(');
+    const region = start >= 0 ? panel.slice(start, panel.indexOf('}, []);', start)) : '';
+    expect(region).toContain('if (refreshingRef.current) return;');
+    expect(region).toContain('setRefreshing(true);');
+    expect(region).toContain('.finally(() => {');
+    expect(region).toContain('setRefreshing(false);');
+    expect(panel).toContain('const [refreshing, setRefreshing] = useState(false);');
+    expect(panel).toContain('const refreshingRef = useRef(false);');
+    expect(panel).toContain('disabled={refreshing}');
+    expect(panel).toContain('aria-busy={refreshing || undefined}');
+    expect(panel).toContain('{refreshing ? <Loader2 size={11} className="spin" /> : <RotateCcw size={11} />}');
+  });
+});

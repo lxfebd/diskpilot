@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw, History, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import { restoreKind } from '../history/model';
@@ -57,13 +57,23 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  // R441：重试进行中——防连点并发重复请求，按钮给出进行中反馈。
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
 
   const refresh = useCallback(() => {
     setLoadErr(null);
+    // R441：进行中不重入——连点重试撞上在途加载就拦下。
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
     api.listUndo(UNDO_PANEL_LIMIT).then(setEntries).catch((e) => {
       // 读取失败 ≠ 没有记录：如实显示读不到，不能伪装成空列表消失。
       setEntries([]);
       setLoadErr(String(e instanceof Error ? e.message : e));
+    }).finally(() => {
+      refreshingRef.current = false;
+      setRefreshing(false);
     });
   }, []);
 
@@ -113,7 +123,15 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
           <span className="muted small">{t('cleanup.loadFailedShort')}</span>
         </div>
         <div className="error undo-msg" role="alert">{t('cleanup.loadFailedMsg', { msg: loadErr })}</div>
-        <button type="button" className="ghost" onClick={refresh}>{t('cleanup.retry')}</button>
+        <button
+          type="button"
+          className="ghost"
+          onClick={refresh}
+          disabled={refreshing}
+          aria-busy={refreshing || undefined}
+        >
+          {refreshing ? <Loader2 size={11} className="spin" /> : <RotateCcw size={11} />} {t('cleanup.retry')}
+        </button>
       </div>
     );
   }

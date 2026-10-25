@@ -1,7 +1,7 @@
 // 操作历史整页（P2c）：undo.jsonl 全量台账。Studio 侧栏的 UndoPanel 只看
 // 最近 50 条，这里取后端上限内的全量 + 动作过滤 + 关键词搜索 + 按天分组；
 // 隔离条目可原地恢复（与 UndoPanel 同一 api.undo 双校验语义：index + source）。
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { History, Loader2, RotateCcw, Search } from 'lucide-react';
 import { api } from '../../api';
 import { useStore } from '../../store';
@@ -77,12 +77,22 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   const [busy, setBusy] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // R441：刷新进行中——防连点并发重复请求，按钮给出进行中反馈。
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
 
   const refresh = useCallback(() => {
     setLoadErr(null);
+    // R441：进行中不重入——连点或还原回调撞上在途加载都拦下。
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
     api.listUndo(limit).then(setEntries).catch((e) => {
       setEntries([]);
       setLoadErr(t('history.loadFailed', { msg: String(e) }));
+    }).finally(() => {
+      refreshingRef.current = false;
+      setRefreshing(false);
     });
   }, [t, limit]);
 
@@ -153,8 +163,15 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
             {t('history.rangeFrom', { date: fmtDay(filteredSummary.oldestAt) })}
           </span>
         )}
-        <button type="button" className="ghost hp-refresh" onClick={refresh} title={t('history.refresh')}>
-          <RotateCcw size={12} /> {t('history.refresh')}
+        <button
+          type="button"
+          className="ghost hp-refresh"
+          onClick={refresh}
+          disabled={refreshing}
+          aria-busy={refreshing || undefined}
+          title={t('history.refresh')}
+        >
+          {refreshing ? <Loader2 size={12} className="spin" /> : <RotateCcw size={12} />} {t('history.refresh')}
         </button>
       </div>
 

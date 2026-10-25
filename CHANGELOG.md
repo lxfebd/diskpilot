@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R441: 台账两处刷新按钮给出进行中反馈——连点不再并发重复请求
+
+- 缺口：巡检记录页的「刷新」按钮与 Studio 侧栏「最近清理」的「重试」按钮都没有进行中状态：点下去毫无动静（后端慢时更明显），按钮也不禁用，连点会并发发出多个 listUndo 请求；还原动作触发的刷新若撞上在途加载，同样会叠一次请求。
+- 改动：HistoryPage.tsx 与 UndoPanel.tsx 各加 refreshing 状态与 refreshingRef 重入闸门——refresh 开头遇到在途加载直接返回，请求链 finally 里复位；刷新 / 重试按钮 disabled={refreshing}，aria-busy 随状态暴露给读屏，图标在 RotateCcw 与转圈的 Loader2 之间切换，点下去当即有回应。
+- 守卫：a11y.test.ts 新增 describe「台账刷新按钮的进行中反馈（R441）」2 条——按 const refresh = useCallback( 到回调结尾切片，断言重入闸门、setRefreshing 置位与 finally 复位都在回调体内；按钮侧断言 disabled / aria-busy / 图标三目，并钉住旧的恒 RotateCcw 写法已消失。
+- 反向自检：临时删掉 UndoPanel 的重入闸门行 → 恰好 1 failed 点名该断言，还原后 96 passed（全量 80 files / 1179 tests）。
+
 ### R440: 截断的名字补悬停提示——磁盘型号 / 主板型号 / 清理规则名被省略号切掉后悬停能看到全文
 
 - 缺口：全仓 46 条 CSS 规则用 text-overflow: ellipsis 把长文本切成省略号，其中四处是动态名字却没有 title：硬件面板的磁盘型号名（hw-name）与主板型号、Studio 的 winapp2 清理规则名（winapp2-item-name）、周报的磁盘名（wh-disks-name）。省略号切掉的正是「这块盘是什么型号」「这条规则清理什么」，鼠标悬停也拿不回全文。其余 40 余处要么自带 title、要么父级容器已带 title（如文件视图行、预览清单行、规则卡），已逐一核验不是缺口。
