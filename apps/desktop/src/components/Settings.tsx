@@ -242,11 +242,14 @@ export function Settings({ onClose, initialTab }: Props) {
           total = event.data.contentLength;
         } else if (event.event === 'Progress') {
           downloaded += event.data.chunkLength;
-          if (total > 0) setUpdateProgress(Math.round((downloaded / total) * 100));
+          // R463：进度钳在 100 以内——内容长度与实际下载量不一致时，aria-valuenow 不会超过 aria-valuemax。
+          if (total > 0) setUpdateProgress(Math.min(100, Math.round((downloaded / total) * 100)));
         }
       });
       setUpdatePhase('installed');
     } catch (e) {
+      // R463：下载失败回到待装态——错误照样显示，安装按钮跟着回来，不必重启应用才能重试。
+      setUpdatePhase(null);
       setUpdateErr(String(e instanceof Error ? e.message : e));
     }
   };

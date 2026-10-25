@@ -1714,3 +1714,19 @@ describe('清空按钮清完把焦点还给输入框（R462 接线）', () => {
     }
   });
 });
+describe('更新下载失败后回到待装态（R463）', () => {
+  const src = String(RAW_TSX['./components/Settings.tsx'] ?? '');
+  const start = src.indexOf('const installUpdate = async (u: Update) => {');
+  const body = src.slice(start, src.indexOf('// 两步确认通过后才真正检查并下载', start));
+  it('下载失败会复位下载态，安装按钮跟着回来', () => {
+    expect(start).toBeGreaterThan(-1);
+    expect(body).toContain("setUpdatePhase('downloading');");
+    const fail = body.slice(body.indexOf('} catch (e) {'));
+    expect(fail).toContain('setUpdatePhase(null);');
+    expect(fail.indexOf('setUpdatePhase(null);')).toBeLessThan(fail.indexOf('setUpdateErr('));
+  });
+  it('进度钉在 100 以内', () => {
+    expect(body).toContain('setUpdateProgress(Math.min(100, Math.round((downloaded / total) * 100)));');
+    expect(body).not.toContain('setUpdateProgress(Math.round(');
+  });
+});

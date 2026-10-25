@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R463: 更新下载失败回到待装态——进度钳在 100 以内，错误可见也能立刻重试
+
+- 缺口：设置页在线更新，`installUpdate` 点「下载并安装」后进入 `updatePhase = 'downloading'`。下载失败（网络中断、文件损坏）时 catch 只写 `updateErr` 不复位 phase——进度条永远停在下载态，红字报错旁边却没有「下载并安装」按钮；再点「检查更新」也不会复位 phase，用户只能重启应用才能重试。另外进度 `Math.round((downloaded / total) * 100)` 未钳制：内容长度与实际下载量不一致时 `aria-valuenow` 可能超过 `aria-valuemax=100`，宽度也会溢出。
+- 改动：`apps/desktop/src/components/Settings.tsx` 的 `installUpdate` catch 里先 `setUpdatePhase(null)` 再写 `updateErr`——回到待装态，安装按钮恢复、「正在下载」进度条消失、错误红字保留；进度写回改 `Math.min(100, Math.round((downloaded / total) * 100))`，`aria-valuenow` 与宽度都不会超过 100%。
+- 守卫：a11y.test.ts 新增 describe「更新下载失败后回到待装态（R463）」2 条（安装流程失败分支存在 `setUpdatePhase(null);` 且先于 `setUpdateErr(`；进度写回必须是钳制式，且不再有裸 `setUpdateProgress(Math.round(`）。
+- 反向自检：删掉 catch 里的 `setUpdatePhase(null);` → 恰好 1 failed 点名该断言，已还原。
+
 ### R462: 清空按钮点完把焦点还给搜索框——清完还能接着打字
 
 - 缺口：R461 给四个搜索框补的清空按钮是「有词才渲染」的。键盘用户 Tab 到它、按 Enter（或鼠标点）清空后输入变空、按钮随即卸载，焦点掉到 `<body>`——想接着改搜索词得从文档开头重新 Tab 一遍。工具墙与 Steam 检查器里两个更早的清空按钮同样如此（R439 的 Esc 路径没这问题：焦点本来就在输入框里）。
