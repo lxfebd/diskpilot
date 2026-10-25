@@ -750,10 +750,26 @@ export const useStore = create<AppState>((set, get) => {
     }),
   switchChat: (id) =>
     set((s) => {
+      // R442：点自己正在看的会话是空操作——此前会用旧存档覆盖实时 turns
+      // （切走再点回来 = 在飞对话回滚成上次存档），造成「对话突然倒退」。
+      if (id === s.activeChatId) return {};
       const meta = s.chatSessions.find((x) => x.id === id);
       if (!meta) return {};
+      // R442：AI 流式在飞时切换会话，此前把 chat.turns 整个丢掉——在飞回合
+      // 既不归档也没有落盘点，回复到达时 patchChatTurn 在新会话里找不到
+      // turnId 静默丢弃，整段对话蒸发。这里按 newChat/archiveActiveChat 的
+      // 口径先净化归档（pending → needsResume / 中断文案），回切仍可见可续。
+      let list = s.chatSessions;
+      if (s.chat.busy && s.chat.turns.length > 0) {
+        const archId = s.activeChatId ?? `chat_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+        const title = s.chat.turns.find((turn) => turn.role === 'user')?.text.replace(/\s+/g, ' ').slice(0, 24) || t('common.chat.untitled');
+        const arch: ChatSessionMeta = { id: archId, title, ts: Date.now(), turns: sanitizeTurns(s.chat.turns) };
+        list = [arch, ...list.filter((x) => x.id !== archId)];
+        persistChatSessions(list);
+      }
       persistActiveChatId(id);
       return {
+        chatSessions: list,
         activeChatId: id,
         chat: { node: null, scaffoldId: null, turns: sanitizeTurns(meta.turns), busy: false },
       };

@@ -504,3 +504,95 @@ describe('toast 去重（R364）', () => {
     expect(ts[1].text).toBe('重复');
   });
 });
+
+// R442：切换会话曾把「AI 流式在飞」的当前 turns 直接丢掉——既不归档也没有
+// 落盘点，回复到达时 patchChatTurn 在新会话里找不到 turnId 静默丢弃，
+// 用户整段对话蒸发。这里按 newChat / archiveActiveChat 的口径先净化归档。
+describe('switchChat（切会话）在 AI 在飞时的归档（R442）', () => {
+  beforeEach(() => {
+    const storage = new Map<string, string>();
+    const fake: Storage = {
+      getItem: (k) => storage.get(k) ?? null,
+      setItem: (k, v) => { storage.set(k, String(v)); },
+      removeItem: (k) => { storage.delete(k); },
+      clear: () => storage.clear(),
+      key: (i) => [...storage.keys()][i] ?? null,
+      get length() { return storage.size; },
+    };
+    vi.stubGlobal('localStorage', fake);
+    useStore.setState({
+      root: null,
+      scanCache: {},
+      selectedPath: null,
+      selectedNode: null,
+      activeChatId: 'chat_a',
+      chatSessions: [
+        { id: 'chat_b', title: '旧会话', ts: 1, turns: [{ id: 'u0', role: 'user', text: '你好' }] },
+      ],
+      chat: { node: null, scaffoldId: null, turns: [], busy: false },
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('AI 生成中切走：在飞 turns 先净化归档，回切仍可见「待续跑」', () => {
+    const { switchChat } = useStore.getState() as unknown as {
+      switchChat: (id: string) => void;
+    };
+    useStore.setState({
+      chat: {
+        node: null,
+        scaffoldId: null,
+        busy: true,
+        turns: [
+          { id: 'u1', role: 'user', text: '扫一下 J:\\' },
+          { id: 'a1', role: 'assistant', text: '已扫完 J:\\ · 1.70 TB · 3,174,982 个文件。AI 正在生成整体解析…', pending: true, overviewPath: 'J:\\' },
+        ],
+      },
+    });
+    switchChat('chat_b');
+    // 在飞回合归档进 chatSessions：pending 已净化、保留 overviewPath 供补跑
+    const raw = localStorage.getItem('diskpilot.chatSessions') ?? '[]';
+    const sessions = JSON.parse(raw) as Array<{
+      id: string;
+      turns: Array<{ id: string; pending?: boolean; overviewPath?: string; needsResume?: boolean }>;
+    }>;
+    const a1 = sessions.find((x) => x.id === 'chat_a')?.turns.find((t) => t.id === 'a1');
+    expect(a1?.pending).toBe(false);
+    expect(a1?.needsResume).toBe(true);
+    expect(a1?.overviewPath).toBe('J:\\');
+    // 切到目标会话，在飞 busy 不复用（旧请求只属于旧会话）
+    expect(useStore.getState().activeChatId).toBe('chat_b');
+    expect(useStore.getState().chat.turns.map((tm) => tm.id)).toEqual(['u0']);
+    expect(useStore.getState().chat.busy).toBe(false);
+  });
+
+  it('非在飞切换：不写归档，chatSessions 原样', () => {
+    const { switchChat } = useStore.getState() as unknown as {
+      switchChat: (id: string) => void;
+    };
+    switchChat('chat_b');
+    expect(localStorage.getItem('diskpilot.chatSessions')).toBeNull();
+    expect(useStore.getState().chatSessions.map((x) => x.id)).toEqual(['chat_b']);
+    expect(useStore.getState().chat.turns.map((tm) => tm.id)).toEqual(['u0']);
+  });
+
+  it('点自己正在看的会话：空操作，实时 turns 不被旧存档覆盖', () => {
+    const { switchChat } = useStore.getState() as unknown as {
+      switchChat: (id: string) => void;
+    };
+    useStore.setState({
+      chat: {
+        node: null,
+        scaffoldId: null,
+        busy: false,
+        turns: [{ id: 'live', role: 'user', text: '新回合' }],
+      },
+    });
+    switchChat('chat_a');
+    expect(useStore.getState().chat.turns.map((tm) => tm.id)).toEqual(['live']);
+    expect(localStorage.getItem('diskpilot.chatSessions')).toBeNull();
+  });
+});

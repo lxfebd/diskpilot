@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R442: AI 在飞时切换会话不再丢对话——在飞回合先净化归档再切走
+
+- 缺口：store 的 switchChat 把当前 chat.turns 整个丢弃（不归档），且强制 busy:false；AI 流式在飞时点会话列表切走，在飞回合既不入库也没有落盘点，回复到达时 patchChatTurn 在新会话里找不到 turnId 静默丢弃，整段对话蒸发；切走再点自己还会拿旧存档覆盖实时 turns，对话「倒退」到上次存档。
+- 改动：apps/desktop/src/store.ts switchChat ① 目标 id 等于当前 activeChatId 时直接空操作（实时 turns 不再被旧存档覆盖）；② s.chat.busy 且有 turns 时，按 newChat/archiveActiveChat 口径先把在飞 turns 净化归档回 chatSessions（pending → needsResume / 中断文案，保留 overviewPath 供续跑），再切换目标会话。回复到达时 patchTurn 在新会话 no-op 无害，回切旧会话仍可见「待续跑/中断」。
+- 测试：apps/desktop/src/store.test.ts 新增 describe「switchChat（切会话）在 AI 在飞时的归档（R442）」3 条——在飞切走归档净化（pending→needsResume、保留 overviewPath）、非在飞切换不写归档、点自己空操作不覆盖实时 turns。
+- 反向自检：把在飞归档分支换成 if (false) → 恰好 1 failed 点名「AI 生成中切走」，还原后 30 passed。
+
 ### R441: 台账两处刷新按钮给出进行中反馈——连点不再并发重复请求
 
 - 缺口：巡检记录页的「刷新」按钮与 Studio 侧栏「最近清理」的「重试」按钮都没有进行中状态：点下去毫无动静（后端慢时更明显），按钮也不禁用，连点会并发发出多个 listUndo 请求；还原动作触发的刷新若撞上在途加载，同样会叠一次请求。
