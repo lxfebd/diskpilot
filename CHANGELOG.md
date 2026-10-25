@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R435: 性能档位判定的文档与实现对齐——「任一命中即降档」不再是注释与代码打架
+
+- 缺口：apps/desktop/src/hwProfile.ts 的档位注释写「弱(≤4核 且 ≤8GB) / 中(≤8核 且 ≤16GB)」，但 detect() 实现是「核数或内存**任一**命中即降档」（4 核配 64 GB 内存仍是弱机）——注释撒谎会误导后续维护者把 OR 改成 AND，弱机会被误判成强机、AI 建议直接崩。该模块（106 行，决定 Ollama 本地/云端建议）此前零测试。
+- 改动：hwProfile.ts 档位注释改为「弱(≤4 核 或 ≤8 GB) / 中(≤8 核 或 ≤16 GB) / 强(其余)——核数或内存任一命中即降档」，与实现一致；新增 apps/desktop/src/hwProfile.test.ts（137 行 / 12 条）：tierLabel 中英映射、recommendLocal 三档建议、后端探针四组边界（16核/32G→strong、4核/64G→weak、16核/6G→weak、6核/14G→medium）、探针失败回退浏览器近似值（fromBackend=false）、非 Tauri 用 hardwareConcurrency/deviceMemory、全空→strong 且 label 用 ?、无 force 复用缓存只探针一次、perfContextLine 按档位给中文 prompt（@i18n-keep 不译）。
+- 反向自检：把 hwProfile.ts 的 cores<=4 放宽到 cores<=3 → 恰好 2 failed（后端判定 + 浏览器近似值两条弱档用例），还原后 12 passed。
+- 验证：pnpm check EXIT=0，79 files / 1161 tests（1149+12）；check-changelog / check-docs-links EXIT=0。
+
 ### R434: 脚本命中收集纯函数补单测——DFS 深度上限与 R228 嵌套归属从此有据可查
 
 - 缺口：apps/desktop/src/cleanup/matches.ts（91 行）被 Studio 工作台卡片与 CleanupPage 脚本列表共用，含真实规则（回退名字命中的大小写/深度上限、R228 嵌套 detect 各算各的、命中优先+体量降序排序），但零测试——改动 DFS 或排序口径没有任何网兜住。

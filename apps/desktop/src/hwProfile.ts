@@ -14,7 +14,7 @@ import { ensureSysProbe } from './hwCache';
 export type PerfTier = 'weak' | 'medium' | 'strong';
 
 export interface HwProfile {
-  /** 档位：弱(≤4核 且 ≤8GB) / 中(≤8核 且 ≤16GB) / 强(其余) */
+  /** 档位：弱(≤4 核 或 ≤8 GB) / 中(≤8 核 或 ≤16 GB) / 强(其余)——核数或内存任一命中即降档 */
   tier: PerfTier;
   /** 逻辑 CPU 核心数；浏览器拿不到时为 null */
   cores: number | null;
