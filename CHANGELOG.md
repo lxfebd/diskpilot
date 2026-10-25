@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R430: 背景滚动锁可逐点关掉——右键菜单不再把滚轮锁死
+
+- 缺口：R429 把「打开期间锁住背景滚动」直接接进了 useReturnFocus / useDialogFocus，等于所有调用点都锁——但右键菜单（ContextMenu）是瞬态浮层不是模态：它本来靠在 window 上捕获 scroll 来自动关闭（滚轮一动菜单就收），锁住祖先 overflow 后滚动事件根本不发生，滚轮落在菜单上变成完全没反应，只能 Esc 或点空白处才能脱身。
+- 改动（apps/desktop/src/dialogFocus.ts）：新增 export type DialogFocusOptions = { lockScroll?: boolean }，useReturnFocus / useDialogFocus 加第二参数 options 并在 effect 外取 const lockScroll = options.lockScroll !== false（默认开，模态弹窗口径不变），解锁改成 `lockScroll ? lockAncestorScroll(...) : () => {}`，依赖数组同步为 [open, lockScroll]。
+- 改动（apps/desktop/src/components/ContextMenu.tsx）：调用点改为 useReturnFocus(state !== null, { lockScroll: false }) 并加 R430 注释——菜单不是模态，滚动照旧可滚、滚动关闭菜单的口径保持。
+- 守卫：a11y.test.ts 新增 describe「弹窗滚动的可配置锁（R430）」2 条——dialogFocus.ts 断言类型声明 / 默认开判定 / 两处 lockScroll ? … : () => {} / [open, lockScroll]；ContextMenu.tsx 断言显式传 { lockScroll: false } 且 window scroll capture 监听还在。R425 那条「保留 useReturnFocus」的断言同步改成新调用文本。
+- 反向自检：把 ContextMenu 的 opt-out 去掉 → 恰好 2 failed（R425 断言 + R430 守卫），还原后 98 passed。
+
 ### R429: 弹窗打开时锁住背景滚动——滚轮不再穿透遮罩把背景页滚走
 
 - 缺口：弹窗遮罩（.modal-bg 等）是 position:fixed 全屏，但它挂在各 view 的滚动容器里；滚轮落在遮罩上时浏览器去找「最近的可滚动祖先」——弹窗内容短时背景页跟着滚，正在看的内容被滚走（清理页 / 优化器 / 历史页的滚动容器还不一定是 main，各 view 各一套，没法用一条 CSS 锁死）。

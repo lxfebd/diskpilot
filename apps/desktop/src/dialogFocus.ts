@@ -24,23 +24,29 @@ export function focusReturnTarget(el: unknown): HTMLElement | null {
 // 焦点落在它上面意味着用户按一下 Enter/空格就把刚打开的弹窗关掉（破坏性默认）。
 // 这里优先选头部（.modal-head / .steam-modal-head）之外第一个可聚焦元素，即取消/
 // 主操作或主要交互（如 Steam 搜索框）；整个弹窗只剩头部有关键元素时才回退头一个。
-export function useReturnFocus(open: boolean): void {
+// R430：进场 / 归还的行为开关。lockScroll 默认开（模态弹窗该锁背景）；瞬态浮层
+// （右键菜单这种小浮层）传 false——它不是模态，锁住背景会让滚轮彻底没反应。
+export type DialogFocusOptions = { lockScroll?: boolean };
+
+export function useReturnFocus(open: boolean, options: DialogFocusOptions = {}): void {
   const prev = useRef<HTMLElement | null>(null);
+  const lockScroll = options.lockScroll !== false;
   useEffect(() => {
     if (!open) return;
-    // R429：打开期间锁住背景滚动（见下方 lockAncestorScroll）。
-    const unlockScroll = lockAncestorScroll(topDialog(), viewport());
+    // R429：打开期间锁住背景滚动（见下方 lockAncestorScroll）；R430 允许逐点关掉。
+    const unlockScroll = lockScroll ? lockAncestorScroll(topDialog(), viewport()) : () => {};
     prev.current = focusReturnTarget(typeof document === 'undefined' ? null : document.activeElement);
     return () => {
       prev.current?.focus?.();
       prev.current = null;
       unlockScroll();
     };
-  }, [open]);
+  }, [open, lockScroll]);
 }
 
-export function useDialogFocus(open: boolean): void {
+export function useDialogFocus(open: boolean, options: DialogFocusOptions = {}): void {
   const prev = useRef<HTMLElement | null>(null);
+  const lockScroll = options.lockScroll !== false;
   useEffect(() => {
     if (!open) return;
     // 进场前先抓住 opener（此时焦点还在触发按钮上），关闭时还给它。
@@ -48,8 +54,8 @@ export function useDialogFocus(open: boolean): void {
     // 最上层弹窗 = DOM 顺序最后一个（嵌套弹窗总在其父对话框之后渲染）。
     const dialogs = document.querySelectorAll<HTMLElement>(MODAL_SEL);
     const top = dialogs[dialogs.length - 1];
-    // R429：打开期间锁住背景滚动（见下方 lockAncestorScroll）。
-    const unlockScroll = lockAncestorScroll(top, viewport());
+    // R429：打开期间锁住背景滚动（见下方 lockAncestorScroll）；R430 可逐点关掉。
+    const unlockScroll = lockScroll ? lockAncestorScroll(top, viewport()) : () => {};
     if (top) {
       // 弹窗里第一个真能聚焦的元素；若容器自身可聚焦（tabIndex>=0）则回退容器。
       const list = focusableWithin(top);
@@ -64,7 +70,7 @@ export function useDialogFocus(open: boolean): void {
       prev.current = null;
       unlockScroll();
     };
-  }, [open]);
+  }, [open, lockScroll]);
 }
 
 // ── R429：弹窗打开时锁住背景滚动 ──

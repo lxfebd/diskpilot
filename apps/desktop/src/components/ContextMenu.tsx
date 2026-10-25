@@ -32,7 +32,9 @@ export function ContextMenu({ state, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   // R353：菜单也是「关掉要把焦点还回去」的一层（键盘唤出菜单时尤其重要）。
-  useReturnFocus(state !== null);
+  // R430：右键菜单是瞬态浮层不是模态——不锁背景滚动。锁住的话滚轮在菜单上会完全
+  // 没反应，而「滚动关闭菜单」本来就是本文件 window scroll capture 监听的口径。
+  useReturnFocus(state !== null, { lockScroll: false });
   // R353：Esc 交给 R349 的栈——菜单叠在别的弹窗上时只关菜单这一层。
   useEscapeKey(onClose, state !== null);
 

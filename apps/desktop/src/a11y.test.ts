@@ -1133,7 +1133,7 @@ describe('挂载式弹窗的进场焦点（R425）', () => {
   });
   it('已有初始焦点的挂载式弹窗保留 useReturnFocus（口径不变）', () => {
     expect(RAW_TSX['./components/ConfirmDialog.tsx'] ?? '').toContain('useReturnFocus(true)');
-    expect(RAW_TSX['./components/ContextMenu.tsx'] ?? '').toContain('useReturnFocus(state !== null)');
+    expect(RAW_TSX['./components/ContextMenu.tsx'] ?? '').toContain('useReturnFocus(state !== null, { lockScroll: false })');
     expect(RAW_TSX['./components/HwPanels.tsx'] ?? '').toContain('useReturnFocus(true)');
     expect(RAW_TSX['./components/Settings.tsx'] ?? '').toContain('useReturnFocus(true)');
   });
@@ -1235,5 +1235,24 @@ describe('弹窗打开锁背景滚动（R429）', () => {
       expect(seg).toContain('lockAncestorScroll(');
       expect(seg).toContain('unlockScroll();');
     }
+  });
+});
+describe('弹窗滚动的可配置锁（R430）', () => {
+  const RAW_CM = import.meta.glob('./components/ContextMenu.tsx', { query: '?raw', import: 'default', eager: true });
+  const ctx = String(RAW_CM['./components/ContextMenu.tsx'] ?? '');
+  const df = String(RAW_DF['./dialogFocus.ts'] ?? '');
+
+  it('useReturnFocus 与 useDialogFocus 支持 lockScroll 开关（默认开）', () => {
+    // R430：模态弹窗默认锁背景滚动；瞬态浮层（右键菜单）可关掉。
+    expect(String(df)).toContain('export type DialogFocusOptions = { lockScroll?: boolean };');
+    expect(String(df)).toContain('const lockScroll = options.lockScroll !== false;');
+    expect(String(df)).toContain('lockScroll ? lockAncestorScroll(topDialog(), viewport()) : () => {};');
+    expect(String(df)).toContain('lockScroll ? lockAncestorScroll(top, viewport()) : () => {};');
+    expect(String(df)).toContain('}, [open, lockScroll]);');
+  });
+
+  it('右键菜单是瞬态浮层，明确关掉背景滚动锁（滚动关闭菜单口径不变）', () => {
+    expect(String(ctx)).toContain('useReturnFocus(state !== null, { lockScroll: false });');
+    expect(String(ctx)).toContain("window.addEventListener('scroll', handleScroll, true);");
   });
 });
