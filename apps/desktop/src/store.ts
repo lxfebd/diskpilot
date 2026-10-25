@@ -97,6 +97,49 @@ function persistActiveChatId(id: string | null) {
     /* ignore */
   }
 }
+// R468：活动会话的 turns 平时只在归档（archiveActiveChat / newChat / switchChat）
+// 时才进历史列表落盘——托盘退出、系统关机、进程被杀时 beforeunload 未必触发，
+// 未归档的活跃对话就整段丢失。这里另存一份「活动会话草稿」：订阅 chat.turns
+// 变化节流写盘（流式回复每几十毫秒变一次，debounce 会永远等不到空闲），启动时
+// 按 activeChatId 匹配恢复。草稿只是兜底，写失败静默。
+const ACTIVE_DRAFT_KEY = 'diskpilot.activeChatDraft';
+const ACTIVE_DRAFT_MAX_TURNS = 200;
+const ACTIVE_DRAFT_THROTTLE_MS = 500;
+
+export type ActiveChatDraft = { id: string | null; turns: ChatTurn[] };
+
+function loadActiveChatDraft(): ActiveChatDraft | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ActiveChatDraft;
+    if (!parsed || !Array.isArray(parsed.turns)) return null;
+    const turns = parsed.turns.filter((turn) => turn && typeof turn.id === 'string' && typeof turn.text === 'string');
+    return { id: typeof parsed.id === 'string' ? parsed.id : null, turns: turns.slice(-ACTIVE_DRAFT_MAX_TURNS) };
+  } catch {
+    return null;
+  }
+}
+
+function persistActiveChatDraft(id: string | null, turns: ChatTurn[]) {
+  try {
+    const draft: ActiveChatDraft = { id, turns: turns.slice(-ACTIVE_DRAFT_MAX_TURNS) };
+    localStorage.setItem(ACTIVE_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* ignore */
+  }
+}
+
+// R468：启动恢复口径——草稿与当前活动会话 id 一致且非空时优先用它（比历史列表
+// 里的归档副本更新），否则回退历史命中，再否则空会话。纯函数便于单测。
+export function activeChatRestore(
+  activeId: string | null,
+  historyHit: ChatSessionMeta | undefined,
+  draft: ActiveChatDraft | null,
+): ChatTurn[] {
+  if (draft && draft.id === activeId && draft.turns.length > 0) return sanitizeTurns(draft.turns);
+  return historyHit ? historyHit.turns : [];
+}
 
 // 整盘扫描树在内存里是最大的数据结构，盘符很多（含多分区/虚拟盘/移动盘）
 // 时不能无限缓存。用「最近使用」序做 FIFO 淘汰：cacheDrives 写入把 key 提到
@@ -508,14 +551,13 @@ export const useStore = create<AppState>((set, get) => {
   selectedPath: null,
   selectedNode: null,
   reclaimedBytes: 0,
-  // 启动时恢复上次活动会话（turns 同步）；无则空会话
+  // 启动时恢复上次活动会话（turns 同步）；无则空会话。R468：优先活动草稿
+  // （比历史列表里的归档副本更新），再回退历史命中，再否则空会话。
   chat: (() => {
     const saved = loadChatSessions();
     const active = loadActiveChatId();
     const hit = active ? saved.find((s) => s.id === active) : undefined;
-    return hit
-      ? { node: null, scaffoldId: null, turns: hit.turns, busy: false }
-      : { node: null, scaffoldId: null, turns: [], busy: false };
+    return { node: null, scaffoldId: null, turns: activeChatRestore(active, hit, loadActiveChatDraft()), busy: false };
   })(),
   chatSessions: loadChatSessions(),
   activeChatId: loadActiveChatId(),
@@ -865,3 +907,26 @@ export const useStore = create<AppState>((set, get) => {
 
 // 启动异步恢复 IDB 里的整盘树（模块加载即触发；失败静默，不阻塞首屏）。
 void hydrateScanCache();
+
+// R468：活动会话草稿的节流写盘——只排一个定时器，在途期间的变化合并成一次
+// 写最新状态；chat.turns 与 activeChatId 都没变就不动（防无谓写盘）。
+let draftSaveTimer: ReturnType<typeof setTimeout> | null = null;
+// R468：立刻把当前活动会话写进草稿（清掉在途定时器）。关窗前调用——否则最后
+// 500ms 内敲的那句还在节流窗口里，草稿落后一句。
+export function flushActiveChatDraft() {
+  if (draftSaveTimer !== null) {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = null;
+  }
+  const st = useStore.getState();
+  persistActiveChatDraft(st.activeChatId, st.chat.turns);
+}
+useStore.subscribe((s, prev) => {
+  if (s.chat.turns === prev.chat.turns && s.activeChatId === prev.activeChatId) return;
+  if (draftSaveTimer !== null) return;
+  draftSaveTimer = setTimeout(() => {
+    draftSaveTimer = null;
+    const st = useStore.getState();
+    persistActiveChatDraft(st.activeChatId, st.chat.turns);
+  }, ACTIVE_DRAFT_THROTTLE_MS);
+});

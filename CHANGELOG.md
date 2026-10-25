@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R468: 活动会话草稿——托盘退出 / 进程被杀时，没归档的对话不再整段丢
+
+- **缺口**：活动会话的 turns 平时只在归档（`archiveActiveChat` / `newChat` / `switchChat`）时才进历史列表落盘；`beforeunload` 只在刷新/真正关窗时触发，而默认「关闭窗口进托盘」只是 `window.hide()`、托盘「退出」直接 `app.exit`，进程被杀更不用说——这些路径上未归档的活跃对话整段消失（连「中断」提示都留不下）。
+- **改动**：`store.ts` 新增活动草稿键 `diskpilot.activeChatDraft`（`{ id, turns }`，最多 200 条，与历史会话同口径），订阅 `chat.turns` / `activeChatId` 变化做 500ms 节流写盘（流式回复每几十毫秒变一次，debounce 会永远等不到空闲）；启动恢复改走纯函数 `activeChatRestore(activeId, historyHit, draft)`——草稿 id 与当前活动会话一致且非空时优先用它（比归档副本新，pending 回合顺手净化），否则回退历史命中，再否则空会话。另导出 `flushActiveChatDraft()`，`App.tsx` 的 `beforeunload` 处理器在归档后立刻再写一次，最后 500ms 内敲的那句也不落后。
+- **守卫**：`store.test.ts` 新增 6 条——500ms 后落盘含当前 activeChatId、窗口内多次变化合并成一次写（patch 三次只写一条最新文本）、草稿截断到 200 条、`flushActiveChatDraft` 立刻落盘、`activeChatRestore` 四分支（命中优先 / id 不匹配回退历史 / 草稿空回退历史 / 全空返回空）、init 确实调 `activeChatRestore(active, hit, loadActiveChatDraft())`；`a11y.test.ts` 新增 2 条钉住 `beforeunload` 里归档后接 `flushActiveChatDraft();` 与 store 的订阅/节流骨架。
+- **反向自检**：删掉 `App.tsx` 的 `flushActiveChatDraft();` → 恰好 1 条红（点名 beforeunload 断言），还原后 126 passed；`pnpm check` 87 files / 1266 tests 全绿。
+
 ### R467: toast 倒计时可以暂停——悬停或聚焦时不再「读着读着就消失」
 
 - 缺口：toast 的自动关闭是创建时一次性 `setTimeout`（`apps/desktop/src/store.ts` 的 `toast()` 末尾），R342 按级别分到 5–16 秒，但**倒计时无法暂停**：鼠标悬在提示条上读异常原文、或键盘 Tab 到「去调散热」「查看周报」按钮准备按下去时，条子照样到期消失——带动作按钮的提示等于白给，长错误串也来不及读完（WCAG 2.2.1：限时内容要能暂停/延长）。

@@ -4,7 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import { api } from './api';
 import { isTauri } from './env';
-import { useStore } from './store';
+import { useStore, flushActiveChatDraft } from './store';
 import { LeftPanel } from './components/LeftPanel';
 import { useCleanupStore } from './useCleanupStore';
 import { scanTargets } from './drives';
@@ -178,8 +178,14 @@ export default function App() {
 
   // 关窗/刷新前归档活动对话：活动 turns 平时不逐条落盘，不归档会在
   // 关闭后整段丢失。用 getState 取最新状态，避免 effect 闭包过期。
+  // R468：再把活动草稿立刻写一次——归档只进历史列表，而最后 500ms 内敲的那句
+  // 可能还在草稿的节流窗口里（托盘退出/进程被杀时 beforeunload 也未必触发，
+  // 草稿是更可靠的兜底）。
   useEffect(() => {
-    const onUnload = () => useStore.getState().archiveActiveChat();
+    const onUnload = () => {
+      useStore.getState().archiveActiveChat();
+      flushActiveChatDraft();
+    };
     window.addEventListener('beforeunload', onUnload);
     return () => window.removeEventListener('beforeunload', onUnload);
   }, []);

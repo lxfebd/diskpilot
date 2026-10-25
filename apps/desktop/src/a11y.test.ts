@@ -140,7 +140,7 @@ describe('弹窗焦点循环已挂载（R347）', () => {
 // box-shadow，也没补 :focus-visible。两者都让键盘用户看不出焦点在哪，且不会有断言变红。
 const RAW_CSS = import.meta.glob('./**/*.css', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 const RAW_SHELL = import.meta.glob('./i18n/namespaces/shell.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-const RAW_STORE = import.meta.glob('./store.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+const RAW_STORE = import.meta.glob('./store.ts', { query: '?raw', import: 'default', eager: true });
 
 describe('键盘焦点不许被 outline:none 抹掉（R348）', () => {
   it(':focus 规则里的 outline:none 必须有可见替身或 :focus-visible', () => {
@@ -1794,5 +1794,23 @@ describe('toast 倒计时的悬停 / 聚焦暂停（R467）', () => {
     const body = store.slice(at, at + 400);
     expect(body).toContain('clearTimeout(entry.timer);');
     expect(body).toContain('toastTimers.delete(id);');
+  });
+});
+
+// R468：关窗前把活动会话草稿也立刻落盘——归档进历史列表只保「列表」本身，
+// 而最后 500ms 节流窗口内敲的那句会落后于归档副本；托盘退出 / 进程被杀时
+// beforeunload 未必触发，草稿（diskpilot.activeChatDraft）是更可靠的兜底。
+describe('关窗前活动草稿落盘（R468）', () => {
+  it('beforeunload 处理器里归档后立刻 flush 草稿', () => {
+    const app = RAW_TSX['./App.tsx'];
+    const region = app.slice(app.indexOf('const onUnload = () => {'), app.indexOf('window.addEventListener(\'beforeunload\', onUnload)'));
+    expect(region).toContain('useStore.getState().archiveActiveChat();');
+    expect(region).toContain('flushActiveChatDraft();');
+  });
+  it('store 订阅与节流写盘骨架在', () => {
+    const st = String(RAW_STORE['./store.ts'] ?? '');
+    expect(st).toContain("const ACTIVE_DRAFT_KEY = 'diskpilot.activeChatDraft';");
+    expect(st).toContain('useStore.subscribe((s, prev) => {');
+    expect(st).toContain('ACTIVE_DRAFT_THROTTLE_MS);');
   });
 });

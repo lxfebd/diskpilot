@@ -12,8 +12,10 @@ vi.mock('./api', () => ({
   },
 }));
 
-import { useStore, toastDuration, toastKey, TOAST_MAX_VISIBLE, type ChatTurn } from './store';
+import { useStore, toastDuration, toastKey, TOAST_MAX_VISIBLE, activeChatRestore, flushActiveChatDraft, type ChatTurn } from './store';
 import { api } from './api';
+
+const RAW_STORE = import.meta.glob('./store.ts', { query: '?raw', import: 'default', eager: true });
 
 function mk(name: string, path: string, size: number, file_count: number, children: Node[] = []): Node {
   return { name, path, is_dir: true, size, file_count, children, top_extensions: [] };
@@ -802,5 +804,109 @@ describe('toast 倒计时可暂停（R467）', () => {
     expect(vi.getTimerCount()).toBe(0);
     vi.advanceTimersByTime(100000);
     expect(useStore.getState().toasts).toHaveLength(0);
+  });
+});
+
+// R468：活动会话的 turns 平时只在归档时才落盘，托盘退出 / 系统关机 / 进程被杀
+// 会整段丢。活动草稿（diskpilot.activeChatDraft）订阅节流写盘，启动按 id 恢复。
+describe('活动会话草稿（R468）', () => {
+  const storage = new Map<string, string>();
+  let draftWrites = 0;
+  const fake: Storage = {
+    getItem: (k) => storage.get(k) ?? null,
+    setItem: (k, v) => {
+      if (k === 'diskpilot.activeChatDraft') draftWrites += 1;
+      storage.set(k, String(v));
+    },
+    removeItem: (k) => { storage.delete(k); },
+    clear: () => storage.clear(),
+    key: (i) => [...storage.keys()][i] ?? null,
+    get length() { return storage.size; },
+  };
+  const readDraft = () => JSON.parse(storage.get('diskpilot.activeChatDraft') ?? 'null') as { id: string | null; turns: Array<{ id: string; text: string }> } | null;
+  const emptyChat = () => ({ node: null, scaffoldId: null, turns: [] as ChatTurn[], busy: false });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    storage.clear();
+    draftWrites = 0;
+    vi.stubGlobal('localStorage', fake);
+    useStore.setState({ activeChatId: null, chat: emptyChat() });
+    // 先把 beforeEach 自己这次状态变化触发的写盘冲掉（含此前测试遗留的真实定时器），
+    // 计数从干净态开始
+    flushActiveChatDraft();
+    vi.advanceTimersByTime(600);
+    storage.clear();
+    draftWrites = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+
+  it('flushActiveChatDraft 立刻落盘（关窗前补一句不丢）', () => {
+    useStore.setState({ activeChatId: 'chat_f' });
+    useStore.getState().pushChatTurn({ id: 'u9', role: 'user', text: '最后一句' });
+    flushActiveChatDraft();
+    const draft = readDraft();
+    expect(draft?.id).toBe('chat_f');
+    expect(draft?.turns.map((x) => x.id)).toEqual(['u9']);
+  });
+
+  it('活动回合变化后 500ms 写一份草稿（含当前 activeChatId）', () => {
+    useStore.setState({ activeChatId: 'chat_a' });
+    useStore.getState().pushChatTurn({ id: 'u1', role: 'user', text: '扫一下 J:\\' });
+    expect(readDraft()).toBeNull(); // 还在节流窗口内
+    vi.advanceTimersByTime(600);
+    const draft = readDraft();
+    expect(draft?.id).toBe('chat_a');
+    expect(draft?.turns.map((x) => x.id)).toEqual(['u1']);
+    expect(draftWrites).toBe(1);
+  });
+
+  it('窗口内的多次变化合并成一次写（流式回复不逐字刷盘）', () => {
+    useStore.getState().pushChatTurn({ id: 'u1', role: 'user', text: 'a' });
+    vi.advanceTimersByTime(600);
+    draftWrites = 0;
+    useStore.getState().pushChatTurn({ id: 'a1', role: 'assistant', text: 'b' });
+    useStore.getState().patchChatTurn('a1', { text: 'bc' });
+    useStore.getState().patchChatTurn('a1', { text: 'bcd' });
+    vi.advanceTimersByTime(600);
+    expect(draftWrites).toBe(1);
+    expect(readDraft()?.turns.map((x) => x.text)).toEqual(['a', 'bcd']);
+  });
+
+  it('草稿最多留 200 条（与历史会话同口径）', () => {
+    const many: ChatTurn[] = Array.from({ length: 205 }, (_, i) => ({ id: 'm' + i, role: 'user', text: 't' + i }));
+    useStore.setState({ chat: { ...emptyChat(), turns: many } });
+    vi.advanceTimersByTime(600);
+    const draft = readDraft();
+    expect(draft?.turns).toHaveLength(200);
+    expect(draft?.turns[0].id).toBe('m5');
+    expect(draft?.turns[199].id).toBe('m204');
+  });
+
+  it('恢复口径：草稿命中优先、id 不匹配回退历史、都没有则空会话', () => {
+    const hit = { id: 'chat_a', title: 'x', ts: 1, turns: [{ id: 'old', role: 'user' as const, text: '旧' }] };
+    // 草稿与活动会话一致 → 用草稿（比归档副本新），pending 顺手净化
+    const draft = { id: 'chat_a', turns: [{ id: 'new', role: 'assistant' as const, text: '新', pending: true }] };
+    const restored = activeChatRestore('chat_a', hit, draft);
+    expect(restored.map((x) => x.id)).toEqual(['new']);
+    expect(restored[0].pending).toBe(false);
+    // id 不匹配（草稿属于另一个会话）→ 回退历史命中
+    expect(activeChatRestore('chat_a', hit, { id: 'chat_b', turns: [{ id: 'z', role: 'user', text: 'z' }] }).map((x) => x.id)).toEqual(['old']);
+    // 草稿为空数组 → 同样回退历史
+    expect(activeChatRestore('chat_a', hit, { id: 'chat_a', turns: [] }).map((x) => x.id)).toEqual(['old']);
+    // 都没有 → 空会话
+    expect(activeChatRestore(null, undefined, null)).toEqual([]);
+  });
+
+  it('启动恢复接上了草稿（init 调 activeChatRestore + 载入草稿）', () => {
+    const raw = Object.values(RAW_STORE)[0];
+    expect(raw).toContain('turns: activeChatRestore(active, hit, loadActiveChatDraft())');
+    expect(raw).toContain('const ACTIVE_DRAFT_KEY = ' + String.fromCharCode(39) + 'diskpilot.activeChatDraft' + String.fromCharCode(39) + ';');
+    expect(raw).toContain('persistActiveChatDraft(st.activeChatId, st.chat.turns);');
   });
 });
