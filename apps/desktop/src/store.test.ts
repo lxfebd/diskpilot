@@ -12,7 +12,7 @@ vi.mock('./api', () => ({
   },
 }));
 
-import { useStore, toastDuration, toastKey, type ChatTurn } from './store';
+import { useStore, toastDuration, toastKey, TOAST_MAX_VISIBLE, type ChatTurn } from './store';
 import { api } from './api';
 
 function mk(name: string, path: string, size: number, file_count: number, children: Node[] = []): Node {
@@ -502,6 +502,34 @@ describe('toast 去重（R364）', () => {
     expect(ts).toHaveLength(2);
     expect(ts[0].text).toBe('第一条');
     expect(ts[1].text).toBe('重复');
+  });
+});
+
+// R459：去重只挡住了「同一句话反复喊」。批量安装/清理逐项失败、多盘体检各自报警时，
+// 一堆互不相同的提示仍会同时在场：.toast-stack 没有滚动也不封顶，攒到十几条就把
+// 窗口下半截糊满、底下按钮全点不到。同屏只留最近 TOAST_MAX_VISIBLE 条，最早的让位
+//  （它们本来就快到期；被丢掉的 id 稍后 dismiss 会扑空，无副作用）。
+describe('toast 同屏上限（R459）', () => {
+  beforeEach(() => {
+    useStore.setState({ toasts: [] });
+  });
+
+  it('超过上限时只留最近几条，最早的让位', () => {
+    for (const s of ['a', 'b', 'c', 'd', 'e', 'f']) useStore.getState().toast(s, 'err');
+    const ts = useStore.getState().toasts;
+    expect(ts).toHaveLength(TOAST_MAX_VISIBLE);
+    expect(ts.map((t) => t.text)).toEqual(['c', 'd', 'e', 'f']);
+  });
+
+  it('满员后重复触发的同一条原地替换，不挤掉别人', () => {
+    for (const s of ['a', 'b', 'c', 'd']) useStore.getState().toast(s, 'ok');
+    useStore.getState().toast('b', 'ok');
+    const ts = useStore.getState().toasts;
+    expect(ts.map((t) => t.text)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('上限就是 4 条（同屏再多也读不过来）', () => {
+    expect(TOAST_MAX_VISIBLE).toBe(4);
   });
 });
 

@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R459: toast 同屏上限 4 条——批量失败时不再用提示条糊满整个窗口
+
+- 缺口：R364 只做了「同一句话反复喊」的去重（文本 + 级别 + 动作按钮同键原位替换）。互不相同的提示仍会同时在场：批量安装插件逐项失败、清理清单多条路径各自报错、多盘体检同时超温——`.toast-stack`（overview.css）只有 fixed + flex column，既不能滚也不封顶，攒到十几条就从中下往上糊满窗口，每条 `pointer-events: auto`，下面的按钮点不到。
+- 改动：apps/desktop/src/store.ts 新增导出常量 `TOAST_MAX_VISIBLE = 4`，toast() 追加分支在推入后按上限裁掉最早的几条（被丢掉的 id 稍后它的 dismiss 定时器会扑空，无副作用；去重的原地替换分支不动，替换不挤掉别人）。
+- 守卫：apps/desktop/src/store.test.ts 新增 describe「toast 同屏上限（R459）」3 条——六条不同提示只留最近四条（顺序即 `c,d,e,f`）；满员后重复触发同一条仍原地替换、四条不变；上限常量就是 4。
+- 反向自检：删掉裁剪那行 → 恰好 1 failed（expected length 4 but got 6），还原后 store.test.ts 37 passed。
+
 ### R458: 搜索框 Esc 清空在输入法组合期让路——撤销组字不再把整段搜索词清掉
 
 - 缺口：R439 给六个搜索框（巡检记录 / 启动项 / 驱动 / 工具墙 / 文件视图 / Steam 检查器）接上「按 Esc 一键清空」，但中文/日文/韩文输入法组合期（拼音串、候选词）按 Esc 的本意是「取消组字」：原实现把这个按键当作清空指令，组好的整段搜索词被一次清掉，还 preventDefault + stopPropagation 把事件吞了，输入法收不到。

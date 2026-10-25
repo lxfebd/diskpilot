@@ -349,6 +349,13 @@ const TOAST_VERY_LONG_TEXT = 140;
 const TOAST_ACTION_BONUS_MS = 3000;
 const TOAST_MAX_MS = 16000;
 
+/** R459：同屏最多留几条 toast。R364 只做了同文案去重——批量安装/清理逐项失败、
+ *  多盘体检各自报警时，一堆「各不相同」的提示仍会同时在场；toast 栈没有滚动也不
+ *  封顶（overview.css 的 .toast-stack 只有 fixed + flex column），攒到十几条就把窗口
+ *  下半截糊满、底下的按钮全点不到。只留最近 4 条：超出的是更早的旧提示，本来也
+ *  读不过来，等它们自己到期不如直接让位。 */
+export const TOAST_MAX_VISIBLE = 4;
+
 /** 停留时长（毫秒）：ok 5s / warn 7s / err 9s；文案 >60 字 +2s、>140 字再 +2s；
  *  带动作按钮 +3s；总计封顶 16s。纯函数，便于单测钉住分级。 */
 export function toastDuration(
@@ -539,7 +546,11 @@ export const useStore = create<AppState>((set, get) => {
         next[idx] = { id, text, kind, action };
         return { toasts: next };
       }
-      return { toasts: [...s.toasts, { id, text, kind, action }] };
+      const next = [...s.toasts, { id, text, kind, action }];
+      // R459：超出同屏上限时丢掉最早的几条（它们的定时器稍后 dismiss 会扑空，无副作用），
+      // 保住最新提示的可读性——栈既不能滚也不能滚轮穿透，堆高了就是挡住整个界面。
+      if (next.length > TOAST_MAX_VISIBLE) next.splice(0, next.length - TOAST_MAX_VISIBLE);
+      return { toasts: next };
     });
     setTimeout(() => get().dismissToast(id), toastDuration(kind, text, action !== undefined));
   },
