@@ -35,7 +35,7 @@ describe('safeStorage（R395）', () => {
 
   it('迁移守卫：启动/渲染路径不再有裸 localStorage 调用（R395）', () => {
     const RAW = import.meta.glob('./**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-    const banned = ['./App.tsx', './components/LeftPanel.tsx', './components/Settings.tsx', './components/toolbelt/toolwall.tsx'];
+    const banned = ['./App.tsx', './components/LeftPanel.tsx', './components/Settings.tsx', './components/toolbelt/toolwall.tsx', './advisor/provider.ts'];
     const violations: string[] = [];
     for (const rel of banned) {
       const src = RAW[rel];

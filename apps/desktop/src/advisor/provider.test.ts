@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { detectProvider, isConfigured, parseFirstJson, extractAnthropicText, dataUrlBase64, isToolsUnsupportedError } from './provider';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { detectProvider, isConfigured, parseFirstJson, extractAnthropicText, dataUrlBase64, isToolsUnsupportedError, saveSettings, clearSettings } from './provider';
 
 describe('detectProvider', () => {
   it('defaults to openai for empty/unknown base urls', () => {
@@ -107,5 +107,42 @@ describe('isToolsUnsupportedError', () => {
     expect(isToolsUnsupportedError('HTTP 400: tool_call_id is required')).toBe(false);
     expect(isToolsUnsupportedError('HTTP 422: invalid tools parameter schema')).toBe(false);
     expect(isToolsUnsupportedError('HTTP 400: {"error":{"message":"invalid json"}}')).toBe(false);
+  });
+});
+
+describe('设置持久化走 safeStorage（R415）', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** node 环境没有 localStorage——测试自带内存版，读断言都走它。 */
+  function memStorage() {
+    const m = new Map<string, string>();
+    return {
+      getItem: (k: string) => m.get(k) ?? null,
+      setItem: (k: string, v: string) => { m.set(k, v); },
+      removeItem: (k: string) => { m.delete(k); },
+      dump: () => m,
+    };
+  }
+
+  it('隐私模式/配额满时 saveSettings 与 clearSettings 不抛（存储异常不冒充连接失败）', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => { throw new Error('disabled'); },
+      setItem: () => { throw new Error('quota'); },
+      removeItem: () => { throw new Error('denied'); },
+    });
+    const s = { provider: 'openai' as const, model: 'm', apiKey: 'k', baseUrl: 'u' };
+    expect(() => saveSettings(s)).not.toThrow();
+    expect(() => clearSettings()).not.toThrow();
+  });
+
+  it('存储正常时写入落盘、清除可读回', () => {
+    const mem = memStorage();
+    vi.stubGlobal('localStorage', mem);
+    saveSettings({ provider: 'openai', model: 'm', apiKey: 'k', baseUrl: 'u' });
+    expect(mem.getItem('diskpilot.advisor')).toContain('"m"');
+    clearSettings();
+    expect(mem.getItem('diskpilot.advisor')).toBeNull();
   });
 });

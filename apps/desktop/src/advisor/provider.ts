@@ -6,6 +6,7 @@
 
 import { api } from '../api';
 import { isTauri } from '../env';
+import { safeGetItem, safeRemoveItem, safeSetItem } from '../safeStorage';
 
 export type Provider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
 
@@ -40,7 +41,7 @@ export function detectProvider(baseUrl: string): Provider {
 
 export function loadSettings(): AdvisorSettings | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeGetItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as AdvisorSettings;
     if (!parsed.provider || !parsed.model) return null;
@@ -55,11 +56,14 @@ export function loadSettings(): AdvisorSettings | null {
 }
 
 export function saveSettings(s: AdvisorSettings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  // R415：经 safeStorage 兜底——隐私模式/配额满时静默丢弃，不把存储异常
+  // 冒充成「连接失败」弹给用户（Settings 保存与试连都包了 try/catch）。
+  safeSetItem(STORAGE_KEY, JSON.stringify(s));
 }
 
 export function clearSettings() {
-  localStorage.removeItem(STORAGE_KEY);
+  // R415：同上——「清除配置」按钮此前没包 try，存储异常会直接炸掉事件处理器。
+  safeRemoveItem(STORAGE_KEY);
 }
 
 export function isConfigured(s: AdvisorSettings | null): s is AdvisorSettings {

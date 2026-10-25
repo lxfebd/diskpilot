@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R415: AI 配置持久化接上 safeStorage——存储异常不再冒充「连接失败」
+
+- 缺口：advisor/provider.ts 的 saveSettings / clearSettings 是裸 localStorage.setItem / removeItem——R395 的兜底只覆盖 safeStorage 自身与 4 个启动文件。隐私模式 / 配额满时：Settings「保存 / 试连」包了 try/catch，存储异常被拼进「连接失败：<错误>」误导排查方向；「清除配置」按钮没包 try，异常直接炸掉事件处理器。
+- 改动：provider.ts 三处读写全部改走 safeStorage（saveSettings→safeSetItem、clearSettings→safeRemoveItem、loadSettings 的读→safeGetItem）——写失败静默丢弃（与 R395「存储不可用不影响主流程」口径一致），save/clear 不再抛。
+- 守卫：safeStorage.test.ts 的裸调用黑名单加入 ./advisor/provider.ts；provider.test.ts 新增 describe「设置持久化走 safeStorage（R415）」2 条——抛异常的存储 stub 下 saveSettings/clearSettings 不抛、正常存储下写入落盘清除可读回。
+- 反向自检：把 saveSettings 还原成裸 localStorage.setItem → 1 failed（报 advisor/provider.ts:61），还原后全绿。
+- 验证：pnpm -C apps/desktop check EXIT=0，75 files / 1061 tests。
+
 ### R414: 工具墙弹层 Esc 一致性——导出 / 回收确认框也能按 Esc 取消
 
 - 缺口：R142 给工具墙补了三个弹层的 Esc（启动确认 / exe 详情 / AI 工具详情），但 ToolDetailModal 里后加的导出确认（exportAsk）与回收确认（recycleAsk）两个确认框没有 Esc——同一界面里「有的弹窗能 Esc、有的不能」，且这俩恰是写操作确认。
