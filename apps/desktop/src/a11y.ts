@@ -53,8 +53,20 @@ export function contextMenuAnchor(el: Element | null): { x: number; y: number } 
 
 // R439：搜索框内按 Esc 一键清空——有文字时清空并吞掉事件（不冒泡去关弹窗），
 // 空输入时放行（Esc 照常走 R349 的弹窗栈关掉当前层）。
+// R458：输入法组合期（拼音串 / 候选词）按 Esc 是「取消组合」，不是清空搜索框；
+// 一律放行交给输入法，否则中文用户想撤销一次组字会把已输入的整段搜索词清掉。
+// 判定三路与 R404（聊天框 Enter）同口径：合成事件自带 isComposing，另外部分
+// 浏览器在组合结束的那一下 keydown 只留 nativeEvent.isComposing 或 keyCode 229。
 export function clearSearchOnEscape(clear: () => void) {
-  return (e: { key: string; preventDefault?: () => void; stopPropagation?: () => void; currentTarget?: { value: string } }) => {
+  return (e: {
+    key: string;
+    isComposing?: boolean;
+    nativeEvent?: { isComposing?: boolean; keyCode?: number };
+    preventDefault?: () => void;
+    stopPropagation?: () => void;
+    currentTarget?: { value: string };
+  }) => {
+    if (e.isComposing || e.nativeEvent?.isComposing || e.nativeEvent?.keyCode === 229) return;
     if (e.key === 'Escape' && (e.currentTarget?.value ?? '') !== '') {
       e.preventDefault?.();
       e.stopPropagation?.();

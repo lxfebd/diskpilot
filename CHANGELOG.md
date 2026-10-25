@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R458: 搜索框 Esc 清空在输入法组合期让路——撤销组字不再把整段搜索词清掉
+
+- 缺口：R439 给六个搜索框（巡检记录 / 启动项 / 驱动 / 工具墙 / 文件视图 / Steam 检查器）接上「按 Esc 一键清空」，但中文/日文/韩文输入法组合期（拼音串、候选词）按 Esc 的本意是「取消组字」：原实现把这个按键当作清空指令，组好的整段搜索词被一次清掉，还 preventDefault + stopPropagation 把事件吞了，输入法收不到。
+- 改动：apps/desktop/src/a11y.ts 的 clearSearchOnEscape 参数类型补 isComposing / nativeEvent{isComposing,keyCode}，函数体最前放行组合期——与 R404（聊天框 Enter 不发送）同一个三路口径：合成事件自带 isComposing，部分浏览器在组合结束的那一下 keydown 只留 nativeEvent.isComposing 或 keyCode 229，三路都认。六处调用点无需改动。
+- 守卫：a11y.test.ts 新增 describe「搜索框 Esc 清空的输入法组合守卫（R458）」4 条——组合中不清空、不吞事件；只留 nativeEvent 两路信号也算组合期；组合期之外仍照常清空（R439 行为不回归）；a11y.ts 三路判定与类型字段静态断言（新增 RAW_A11Y glob 读 .ts 原文）。
+- 反向自检：守卫行改成 if (false) return; → 恰好 3 failed 点名 R458 三条，还原后 a11y.test.ts 108 passed。
+
 ### R457: toast 长文本折行——Windows 长路径不再糊出卡片外
 
 - 缺口：`apps/desktop/src/styles/overview.css` 的 `.toast-text` 只有 `flex: 1; min-width: 0`，没有任何断行规则。toast 里常带无空格断点的内容（`reveal.ts` 的数据目录失败、`clipboard.ts` 的复制失败原文、`store.ts` 把 `String(e)` 拼进错误文案），Windows 路径一长就整段横向溢出：卡片 `max-width: 84vw` 拦不住，文字糊到页面上、压住下层内容（`.toast` 也没有 `overflow: hidden`，本就直接画出去）。

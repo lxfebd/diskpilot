@@ -47,6 +47,13 @@ const RAW_TSX = import.meta.glob('./**/*.tsx', {
   eager: true,
 }) as Record<string, string>;
 
+// R458：这次断言的是 a11y.ts 自身（.ts 不在上面的 .tsx glob 里）
+const RAW_A11Y = import.meta.glob('./a11y.ts', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
 describe('图标按钮的可访问名字（R318）', () => {
   it('没有「只有图标、既无 aria-label 也无 title」的 button', () => {
     const violations: string[] = [];
@@ -1405,6 +1412,36 @@ describe('搜索框 Esc 清空（R439）', () => {
       const src = RAW_TSX[path] ?? '';
       expect(src).toContain(needle);
     }
+  });
+});
+
+describe('搜索框 Esc 清空的输入法组合守卫（R458）', () => {
+  it('组合中按 Esc 不清空、也不吞事件（交给输入法取消组字）', () => {
+    const clear = vi.fn(); const pd = vi.fn(); const sp = vi.fn();
+    const ev = { key: 'Escape', isComposing: true, preventDefault: pd, stopPropagation: sp, currentTarget: { value: 'wo' } };
+    clearSearchOnEscape(clear)(ev);
+    expect(clear).not.toHaveBeenCalled();
+    expect(pd).not.toHaveBeenCalled();
+    expect(sp).not.toHaveBeenCalled();
+  });
+  it('原生事件只剩 isComposing / keyCode 229 时也算组合期', () => {
+    for (const nativeEvent of [{ isComposing: true }, { keyCode: 229 }]) {
+      const clear = vi.fn(); const pd = vi.fn();
+      clearSearchOnEscape(clear)({ key: 'Escape', nativeEvent, preventDefault: pd, currentTarget: { value: 'nihao' } });
+      expect(clear).not.toHaveBeenCalled();
+      expect(pd).not.toHaveBeenCalled();
+    }
+  });
+  it('组合期之外仍照常清空（没有把 R439 的行为改没）', () => {
+    const clear = vi.fn();
+    clearSearchOnEscape(clear)({ key: 'Escape', isComposing: false, nativeEvent: { keyCode: 27 }, currentTarget: { value: 'abc' } });
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+  it('a11y.ts 的三路组合判定都在（isComposing / nativeEvent.isComposing / keyCode 229）', () => {
+    const src = RAW_A11Y['./a11y.ts'] ?? '';
+    expect(src).toContain('if (e.isComposing || e.nativeEvent?.isComposing || e.nativeEvent?.keyCode === 229) return;');
+    expect(src).toContain('isComposing?: boolean;');
+    expect(src).toContain('nativeEvent?: { isComposing?: boolean; keyCode?: number };');
   });
 });
 
