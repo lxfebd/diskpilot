@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw, DownloadCloud, Fan, AlertTriangle, Search } from 'lucide-react';
+import { RefreshCw, DownloadCloud, Fan, AlertTriangle, Search, X } from 'lucide-react';
 import { api, type FanCurveAdvice, type FanStatus, type InstalledDriver, type DriverUpdate } from '../api';
 import {
   FAN_SNAP_KEY,
@@ -469,6 +469,8 @@ function SystemToolsInner() {
               aria-label={t('system.driver.searchAria')}
               placeholder={t('system.driver.searchPlaceholder')}
             />
+            {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
+            {drvQuery !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setDrvQuery('')}><X size={12} /></button>)}
           </label>
         </div>
       )}

@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R461: 四个搜索框补清空按钮——鼠标/触屏不必记 Esc
+
+- 缺口：R439 给六个搜索框接上了「按 Esc 一键清空」，但只有工具墙与 Steam 检查器两个搜索框有可见的清空按钮（`ghost icon` + X）。巡检记录、启动项、驱动、文件视图这四个搜索框只有图标在左、输入框在右：鼠标用户想清空只能全选删除，触屏连 Esc 都没有——同一个界面里六个搜索框两种交互。
+- 改动：`apps/desktop/src/i18n/namespaces/common.ts` 新增 `common.searchClear`（zh 清空搜索 / en Clear search，作为四个按钮共用的可访问名）；四个组件各在输入框后补一个有词才出现的按钮——`{query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setQuery('')}><X size={12} /></button>)}`（SystemTools 用 `drvQuery`、FileView 走 `onQueryChange('')`），并各自在 lucide 导入里加 `X`。`apps/desktop/src/styles/layout.css` 新增 `button.search-clear` 紧凑样式（padding 2px、透明底、`--ink-3` 字色、`border-radius: 999px`、`flex-shrink: 0`）——不复用 `ghost.icon` 的 8px 内边距，否则会把 28px 左右的搜索行撑高；hover 换 `--ink` + `--paper-3` 底，`:focus-visible` 补 2px `--accent-strong` 描边（沿用 R348/R405/R431 的键盘焦点口径）。
+- 守卫：a11y.test.ts 新增 describe「搜索框的清空按钮（R461）」3 条——四个站点各断言含 `common.searchClear`、`<X size={12} />`、条件前缀 `!== '' && (<button`，且文件里 `search-clear` 恰好出现 1 次（防空转）；`layout.css` 含紧凑类与 `:focus-visible` 描边；`common.searchClear` 中英成对。
+- 反向自检：删掉 FileView 里那行按钮 → 恰好 1 failed（断言点名 ./components/FileView.tsx），还原后 a11y.test.ts 111 passed。全量 pnpm check 87 files / 1241 tests 全绿。
+
 ### R460: Rust 命令面与前端 invoke 的契约守卫——漏挂 handler / 拼错命令名不再等到点下去才炸
 
 - 缺口：三张清单（`#[tauri::command]` 声明 117 条 / lib.rs 的 `generate_handler!` 注册 / 前端 api.ts + api/*.ts 的字面量 invoke）此前没有任何交叉校验。加命令忘了挂进 handler 时宏仍生成包装函数，cargo 编译通过，用户点下去才吃到 command not found；前端拼错命令名同理；Rust 侧改名后没人调则留下死命令。

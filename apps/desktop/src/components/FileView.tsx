@@ -1,5 +1,5 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { Search, ArrowDown, ArrowUp, Folder, Copy, Trash2 } from 'lucide-react';
+import { Search, ArrowDown, ArrowUp, Folder, Copy, Trash2, X } from 'lucide-react';
 import type { Node } from '../types';
 import { formatBytes, extOf as sharedExtOf } from '../format';
 import { ContextMenu, type ContextMenuState } from './ContextMenu';
@@ -168,6 +168,8 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={clearSearchOnEscape(() => onQueryChange(''))}
         />
+        {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
+        {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => onQueryChange('')}><X size={12} /></button>)}
       </div>
 
       <div className="fileview-stats">

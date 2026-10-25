@@ -2,7 +2,7 @@
 // 最近 50 条，这里取后端上限内的全量 + 动作过滤 + 关键词搜索 + 按天分组；
 // 隔离条目可原地恢复（与 UndoPanel 同一 api.undo 双校验语义：index + source）。
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { History, Loader2, RotateCcw, Search } from 'lucide-react';
+import { History, Loader2, RotateCcw, Search, X } from 'lucide-react';
 import { api } from '../../api';
 import { useStore } from '../../store';
 import { useT } from '../../i18n';
@@ -208,6 +208,8 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
             aria-label={t('history.searchAria')}
             placeholder={t('history.searchPlaceholder')}
           />
+          {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
+          {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setQuery('')}><X size={12} /></button>)}
         </label>
       </div>
 

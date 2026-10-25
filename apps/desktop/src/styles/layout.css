@@ -193,6 +193,25 @@ button.ghost:active:not(:disabled) {
   box-shadow: var(--shadow-sm);
 }
 button.ghost.icon { padding: 8px; }
+
+/* R461：搜索框内的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。
+   紧凑尺寸（padding 2px），不与 ghost.icon 的 8px 内边距串联，避免撑高搜索行。 */
+button.search-clear {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+button.search-clear:hover { color: var(--ink); background: var(--paper-3); }
+button.search-clear:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
 button.ghost.full { width: 100%; justify-content: center; margin-top: 6px; }
 /* 紧凑小按钮：统一 28px 高（≥24px 可点目标），避免个别组件用内联
    padding 把 ghost.small 压到 17px 而成不可点扁条（AssetOverview 打开清理页）。 */

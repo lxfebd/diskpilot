@@ -27,6 +27,8 @@ export const common = {
     // 打开所在文件夹的回音（R317：失败说明原因，不再静默吞 catch）
     'common.revealFailed': '打不开所在文件夹：{msg}',
   'common.openLinkFailed': '打不开链接：{msg}',
+    // R461：搜索框清空按钮的可访问名（四个搜索框共用）
+    'common.searchClear': '清空搜索',
 
     // 工具墙分类名（后端 toolbelt manifest 的 category 值；色值/图标按中文名匹配）
     'common.category.cpu': '处理器工具',
@@ -69,6 +71,7 @@ export const common = {
     'common.copyFailed': 'Copy failed: {msg}',
     'common.revealFailed': 'Cannot open the folder: {msg}',
   'common.openLinkFailed': 'Cannot open the link: {msg}',
+    'common.searchClear': 'Clear search',
 
     'common.category.cpu': 'CPU tools',
     'common.category.gpu': 'GPU tools',

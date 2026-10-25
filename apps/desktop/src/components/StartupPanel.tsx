@@ -1,7 +1,7 @@
 // 启动项管理面板（P4-4 抽取）：自包含状态 + 两步确认。
 // 被「系统工具（设置）」与「系统优化页」两处复用，样式沿用 sys-* 系列。
 import { useEffect, useRef, useState } from 'react';
-import { Trash2, RefreshCw, Search } from 'lucide-react';
+import { Trash2, RefreshCw, Search, X } from 'lucide-react';
 import { api, type StartupItem } from '../api';
 import { isPermEnabled } from '../permissions';
 import { useT } from '../i18n';
@@ -233,6 +233,8 @@ export function StartupPanel() {
                 aria-label={t('system.startup.searchAria')}
                 placeholder={t('system.startup.searchPlaceholder')}
               />
+              {/* R461：有词才出现的清空按钮——鼠标/触屏也能一键清，不必记 Esc（Esc 由 R439 提供）。 */}
+              {query !== '' && (<button type="button" className="search-clear" aria-label={t('common.searchClear')} onClick={() => setQuery('')}><X size={12} /></button>)}
             </label>
           </div>
           {visible.length === 0 && (

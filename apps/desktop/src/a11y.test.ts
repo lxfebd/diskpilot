@@ -1641,3 +1641,36 @@ describe('切换会话回到底部（R453）', () => {
     expect(region).toContain('behavior: scrollBehavior() });');
   });
 });
+
+describe('搜索框的清空按钮（R461）', () => {
+  const RAW_COMMON = import.meta.glob('./i18n/namespaces/common.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  // R461：四个搜索框（巡检记录 / 启动项 / 驱动 / 文件）都有有词才出现的清空按钮，
+  // 与工具墙、Steam 检查器里既有的两个清空按钮对齐——鼠标/触屏不必记 Esc。
+  const SITES = [
+    './components/history/HistoryPage.tsx',
+    './components/StartupPanel.tsx',
+    './components/SystemTools.tsx',
+    './components/FileView.tsx',
+  ];
+  it('四个搜索框各有一个条件渲染、带可访问名的清空按钮', () => {
+    for (const path of SITES) {
+      const src = String(RAW_TSX[path] ?? '');
+      expect(src, path).toContain('common.searchClear');
+      expect(src, path).toContain('<X size={12} />');
+      expect(src, path).toContain("!== '' && (<button");
+      const times = src.split('search-clear').length - 1;
+      expect(times, path).toBe(1);
+    }
+  });
+  it('清空按钮的样式是紧凑类，且键盘焦点有描边', () => {
+    const css = String(RAW_CSS['./styles/layout.css'] ?? '');
+    expect(css).toContain('button.search-clear {');
+    expect(css).toContain('button.search-clear:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 1px; }');
+    expect(css).toContain('flex-shrink: 0;');
+  });
+  it('清空按钮的可访问名中英成对', () => {
+    const common = String(RAW_COMMON['./i18n/namespaces/common.ts'] ?? '');
+    expect(common).toContain('清空搜索');
+    expect(common).toContain('Clear search');
+  });
+});
