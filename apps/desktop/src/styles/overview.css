@@ -36,7 +36,8 @@
   border-radius: var(--radius-md);
   padding: 8px 18px;
   font-weight: 700;
-  color: var(--ink);
+  /* R475：accent 底上的字随主色亮度走 */
+  color: var(--on-accent, var(--ink));
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   text-align: center;

@@ -367,10 +367,11 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
   background: var(--paper-2);
   color: var(--ink-2);
 }
-.trace-item.thinking .trace-chip { background: var(--sun); color: var(--ink); border-color: var(--ink); }
+/* R475：亮底 chip 用深字（on-tint），不再拿主题正文色 --ink（深色主题下是白字） */
+.trace-item.thinking .trace-chip { background: var(--sun); color: var(--on-tint, var(--ink)); border-color: var(--ink); }
 .trace-item.tool_call .trace-chip { background: var(--accent); color: var(--on-accent, var(--ink)); border-color: var(--ink); }
-.trace-item.tool_result .trace-chip { background: var(--mint); color: var(--ink); border-color: var(--ink); }
-.trace-item.note .trace-chip { background: var(--lavender); color: var(--ink); border-color: var(--ink); }
+.trace-item.tool_result .trace-chip { background: var(--mint); color: var(--on-tint, var(--ink)); border-color: var(--ink); }
+.trace-item.note .trace-chip { background: var(--lavender); color: var(--on-tint, var(--ink)); border-color: var(--ink); }
 .trace-text { flex: 1; min-width: 0; word-break: break-word; }
 .trace-detail {
   flex-basis: 100%;
@@ -817,7 +818,8 @@ html[data-theme="pro"] ::selection { background: var(--accent-soft); }
 .sys-confirm { display: inline-flex; align-items: center; gap: 6px; }
 button.danger {
   background: var(--risk-danger);
-  color: #fff;
+  /* R475：危险按钮文字改按 --on-danger 取白/深字（trae 等高饱和红上白字仅 3.88:1） */
+  color: var(--on-danger, #fff);
   border: none;
   border-radius: var(--radius-sm);
   padding: 5px 10px;

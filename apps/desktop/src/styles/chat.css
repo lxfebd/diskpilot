@@ -167,7 +167,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg) 16px 4px 16px;
   background: var(--accent);
-  color: var(--ink);
+  /* R475：accent 底上的字随主色亮度走（深色主色白字），不再一律 --ink */
+  color: var(--on-accent, var(--ink));
   box-shadow: var(--shadow-sm);
   white-space: pre-wrap;
   font-weight: 500;
@@ -199,7 +200,8 @@
   padding: 5px 12px;
   border-radius: 999px;
   white-space: pre-wrap;
-  color: var(--ink);
+  /* R475：mint 亮底用深字（--on-tint） */
+  color: var(--on-tint, var(--ink));
 }
 
 .chat-turn.pending .chat-bubble { opacity: 0.6; font-style: italic; }
@@ -437,7 +439,7 @@
   font-weight: 700;
   box-shadow: var(--shadow-sm);
 }
-.advice-pill .badge { background: var(--card); }
+.advice-pill .badge { background: var(--card); color: var(--ink); } /* R475：badge 换 on-tint 后，卡片底上的建议徽标显式回到主题正文色 */
 .chat-typing {
   font-size: 11px;
   color: var(--ink-3);

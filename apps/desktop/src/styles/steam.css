@@ -9,7 +9,8 @@
 .tool-card .tool-card-arrow { color: var(--ink-3); }
 .tool-card .tool-card-icon {
   background: var(--lavender);
-  color: var(--ink);
+  /* R475：lavender 亮底用深字 */
+  color: var(--on-tint, var(--ink));
   display: flex; align-items: center; justify-content: center;
 }
 

@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R475: 状态色与亮底标签的文字对比度收口——换主题不再读出 1.1:1 的隐形字
+
+- 缺口：`--mint/--sun/--lavender/--accent/--err` 都会当实心底色画在徽标、chip、横幅、气泡与危险按钮上，而此前一律配 `--ink`（5 个深色主题里是白字）或写死的 `#fff`——实测 minimal 用户气泡 1.19:1、motionfit 徽标 1.11:1、banner.preview 1.07:1、trae 危险按钮 3.88:1（WCAG 正文要 4.5）。另：`--ink-3/--muted` 落在 `--paper-1/2/3` 上共 173 对不达标（brand 2.6 / doubao 2.8 / 21th 2.81 等，属浅灰副文案，本轮不改）。
+- 改动（`theme.ts`）：新增 `relLuminance()`（WCAG 线性化）与 `contrastRatio()`（1..21）两个纯函数；`--on-accent` 从「按亮度拍脑袋」改为「白字/深字取对比度更优者」，深字候选定为 `#101010`（`#1a1a1a` 在高饱和红/紫上只剩 4.2~4.4:1）；新增 `--on-tint = #101010`（亮底状态字）与 `--on-danger`（`--err` 上白字/深字取优）；vibecamp 与 21th 的 `--err` / `--risk-danger` 从 `#d64527` 压暗到 `#c23a1d`（白字 4.49 → 5.37）。
+- 改动（CSS，全部保留 `var(--on-X, var(--ink))` 回退）：用户气泡 → `--on-accent`；系统气泡 / `button.secondary` / `.badge` / `.banner.preview` / `.ok` / `.card-meta strong` / 三处 `.trace-chip` / `.tool-card-icon` → `--on-tint`；`.banner.error` / `.error` → `--on-danger`；`.advice-pill .badge` 显式补 `color: var(--ink)`（卡片底不再继承 tint 暗字）；`.ao-strip-all` → `--on-accent`。危险三按钮（`button.danger` / `button.primary.stop` / `.cleanup-execute.armed`）文字 `#fff` → `var(--on-danger, #fff)`。
+- 守卫：新增 `contrast.test.ts` 8 条——17 个预设必需 token 齐全、`--ink` 在 bg/card/paper 上 ≥4.5、`--on-accent`/`--on-tint`/`--on-danger` 全主题 ≥4.5、`applyTheme` 真写出 token、CSS 里不再有「`--ink` 落在实心亮底」组合、`--risk-danger` 底的危险按钮不再写死白字。反向自检：把 `--err` 改回 `#d64527` / 还原 `button.primary.stop` 的白字 → 各 1 failed 点名还原。
+- 验证：`pnpm -C apps/desktop check` 90 files / 1292 tests 全绿；`scripts/check-changelog.mjs` 与 `scripts/check-docs-links.mjs` 通过。
+
 ### R474: 权限「恢复默认」加确认带——一键不再把用户打开的开关静默关掉
 
 - 缺口：权限中心右上角「恢复默认」点一下立刻把 22 个开关重置为出厂值，而默认表是双向的：`power.plan` / `cleanup.execute` / `plugin.manage` / `scaffold.manage` / `startup.manage` / `fan.adjust` / `fan.control` / `driver.check` / `mcp.manage` / `sys.control` / `file.recycle` / `app.uninstall` 默认关（会静默关掉用户手动打开的），`hw.stress` / `hw.export` / `cli.run` 默认开（会重新打开用户特意关掉的压测、导出与工具执行权限）。没有确认、没有结果反馈、没有撤销，误点一次就要逐项重调。

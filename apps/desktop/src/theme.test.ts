@@ -196,7 +196,7 @@ describe('applyTheme 写 DOM（R423）', () => {
     applyTheme({ id: 'vercel', accent: '#3ca0ff', fontScale: 1 });
     expect(dom.props['--pink']).toBe('#3ca0ff');
     expect(dom.props['--accent']).toBe('#3ca0ff');
-    expect(dom.props['--on-accent']).toBe('#1a1a1a');
+    expect(dom.props['--on-accent']).toBe('#101010');
     expect(dom.props['--ok']).toBe('#3ca0ff');
     expect(dom.props['--risk-safe']).toBe('#3ca0ff');
     applyTheme({ id: 'vercel', accent: '#123456', fontScale: 1 });

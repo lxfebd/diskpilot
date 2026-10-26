@@ -320,7 +320,7 @@ const PRESETS: Record<ThemeId, C> = {
     '--paper': '#e3dfd9', '--paper-2': '#ded9d2', '--paper-3': '#d3ccc3', '--card': '#f3f0eb',
     '--pink': '#f1481e', '--pink-deep': '#ad472a', '--pink-soft': '#f8c9b8', '--pink-bg': '#fce8e0',
     '--lavender': '#9a8fd9', '--mint': '#6fae7d', '--peach': '#f0a35e', '--sun': '#d4b45c',
-    '--ok': '#3e7a52', '--warn': '#a56a2e', '--err': '#d64527',
+    '--ok': '#3e7a52', '--warn': '#a56a2e', '--err': '#c23a1d',
     '--line': '#cbc3ba', '--border': '#cbc3ba', '--border-strong': '#b0a79d',
     '--shadow-sm': '0 1px 2px rgba(33,29,26,.08)',
     '--shadow': '0 2px 8px rgba(33,29,26,.1)',
@@ -329,7 +329,7 @@ const PRESETS: Record<ThemeId, C> = {
     '--paper-1': '#ded9d2', '--muted': '#5c5650',
     '--text': '#211d1a', '--text-2': '#423c36', '--text-3': '#5c5650',
     '--accent': '#f1481e', '--accent-strong': '#ad472a', '--accent-soft': '#f8c9b8', '--accent-bg': '#fce8e0',
-    '--risk-safe': '#3e7a52', '--risk-caution': '#a56a2e', '--risk-danger': '#d64527',
+    '--risk-safe': '#3e7a52', '--risk-caution': '#a56a2e', '--risk-danger': '#c23a1d',
     '--radius': '1rem',
   },
   // ── 21st ────────────────────────────────────────────────────────────────
@@ -341,7 +341,7 @@ const PRESETS: Record<ThemeId, C> = {
     '--paper': '#d8dadf', '--paper-2': '#e2e4e8', '--paper-3': '#c9ccd2', '--card': '#e2e4e8',
     '--pink': '#232327', '--pink-deep': '#4d4d55', '--pink-soft': '#c3c7ce', '--pink-bg': '#d0d3d9',
     '--lavender': '#6a6ff0', '--mint': '#55b68d', '--peach': '#f2a776', '--sun': '#d6b45c',
-    '--ok': '#2f9e63', '--warn': '#b07a2e', '--err': '#d64527',
+    '--ok': '#2f9e63', '--warn': '#b07a2e', '--err': '#c23a1d',
     '--line': '#c1c4cb', '--border': '#c1c4cb', '--border-strong': '#a9adb5',
     '--shadow-sm': '0 1px 2px rgba(45,45,47,.1)',
     '--shadow': '0 2px 8px rgba(45,45,47,.12)',
@@ -350,7 +350,7 @@ const PRESETS: Record<ThemeId, C> = {
     '--paper-1': '#c9ccd2', '--muted': '#76767c',
     '--text': '#2d2d2f', '--text-2': '#535358', '--text-3': '#76767c',
     '--accent': '#5262e8', '--accent-strong': '#3f4ec0', '--accent-soft': '#d3d8f8', '--accent-bg': '#e6e9fb',
-    '--risk-safe': '#2f9e63', '--risk-caution': '#b07a2e', '--risk-danger': '#d64527',
+    '--risk-safe': '#2f9e63', '--risk-caution': '#b07a2e', '--risk-danger': '#c23a1d',
     '--radius': '0',
   },
   // ── Steam-ish (dwarven tech green, dark) ───────────────────────────────
@@ -447,6 +447,24 @@ function brightness(h: string): number {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
+// R475：WCAG 相对亮度下的对比度（1..21），危险底挑白字还是深字用。
+function relLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex);
+  const ch = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+}
+
+function contrastRatio(a: string, b: string): number {
+  const la = relLuminance(a);
+  const lb = relLuminance(b);
+  const hi = Math.max(la, lb);
+  const lo = Math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 const DARK_IDS: ReadonlySet<ThemeId> = new Set<ThemeId>([
   'nerv', 'motionfit', 'steam', 'dark', 'pro',
 ] as ThemeId[]);
@@ -468,8 +486,9 @@ function applyAccent(el: CSSStyleDeclaration, accent: string, themeId: ThemeId) 
   el.setProperty('--accent-soft', soft);
   el.setProperty('--accent-bg', bg);
   // 主色上的文字色（--on-accent）：primary 按钮文字/active seg 用。
-  // 深色 accent 用白字，浅色 accent 用深字，保证 WCAG ≥4.5:1。
-  el.setProperty('--on-accent', brightness(accent) > 0.45 ? '#1a1a1a' : '#ffffff');
+  // R475：不再按亮度拍脑袋——白字/深字按 WCAG 对比度取更优者（深字 #101010），
+  // 亮主色（#ff4000 / #f1481e / #c96442）不会再压出 3.5~4.4:1 的正文。
+  el.setProperty('--on-accent', contrastRatio(accent, '#ffffff') > contrastRatio(accent, '#101010') ? '#ffffff' : '#101010');
   // Status "ok" follows the accent so custom-colored themes feel coherent —
   // but only if the accent is bright enough to act as a button fill.
   if (brightness(accent) > 0.25) {
@@ -486,11 +505,19 @@ export function applyTheme(t: ThemeSettings) {
   if (t.accent && /^#[0-9a-fA-F]{6}$/.test(t.accent)) {
     applyAccent(el, t.accent, t.id);
   } else {
-    // 无自定义主色：preset 自带 accent 不经过 applyAccent，这里按亮度补
+    // 无自定义主色：preset 自带 accent 不经过 applyAccent，这里按对比度补
     // --on-accent（accent 上文字色，primary/seg/selection 共用）。
     const a = preset['--accent'] ?? '#1447e6';
-    el.setProperty('--on-accent', brightness(a) > 0.45 ? '#1a1a1a' : '#ffffff');
+    el.setProperty('--on-accent', contrastRatio(a, '#ffffff') > contrastRatio(a, '#101010') ? '#ffffff' : '#101010');
   }
+  // R475：亮底状态色（--mint/--sun/--lavender 在所有预设里都是亮色系）一律配
+  // 深字；危险底（--err）按白字/深字中对比度更高者取——与 --on-accent 同一套
+  // 对比度口径。深字用 #101010（#1a1a1a 在高饱和红/紫上只剩 4.2~4.4:1）。
+  el.setProperty('--on-tint', '#101010');
+  const errHex = preset['--err'] ?? '#e7000b';
+  const dark = contrastRatio(errHex, '#101010');
+  const white = contrastRatio(errHex, '#ffffff');
+  el.setProperty('--on-danger', white > dark ? '#ffffff' : '#101010');
   const scale = Math.max(0.8, Math.min(1.3, t.fontScale || 1));
   el.setProperty('--font-scale', String(scale));
   document.documentElement.setAttribute('data-theme', t.id);

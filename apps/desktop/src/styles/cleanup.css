@@ -411,7 +411,8 @@ main.cleanup-page > .cleanup-page {
 .cleanup-actions { display: flex; gap: 6px; }
 .cleanup-execute.armed {
   background: var(--risk-danger);
-  color: #fff;
+  /* R475：凑近清理按钮文字也走 on-danger 取优 */
+  color: var(--on-danger, #fff);
   border-color: color-mix(in srgb, var(--risk-danger) 55%, #000);
   animation: pulse-armed 1s ease-in-out infinite;
 }
