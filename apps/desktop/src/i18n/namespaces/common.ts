@@ -58,9 +58,9 @@ export const common = {
     'common.chatModel.earlierAssistant': '（早前回答：{text}…）',
   },
   en: {
-    'common.recycle.done': 'Recycled {n} items · about {size} freed',
-    'common.recycle.doneNoBytes': 'Recycled {n} items (could not measure freed space; not inventing a number)',
-    'common.recycle.aiDone': 'Recycled {n} items as you confirmed (recoverable from the Recycle Bin) · about {size}',
+    'common.recycle.done': 'Recycled {n:item|items} · about {size} freed',
+    'common.recycle.doneNoBytes': 'Recycled {n:item|items} (could not measure freed space; not inventing a number)',
+    'common.recycle.aiDone': 'Recycled {n:item|items} as you confirmed (recoverable from the Recycle Bin) · about {size}',
 
     'common.chat.untitled': 'Untitled',
     'common.close': 'Close',

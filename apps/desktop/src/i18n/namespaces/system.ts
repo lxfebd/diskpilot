@@ -305,7 +305,7 @@ export const system = {
     'system.driver.hint': 'Installed-driver list (local CIM, instant) plus optional Windows Update driver updates (online query, needs approval). Install drivers from Windows Settings or the vendor site — DiskPilot never installs them for you.',
     'system.driver.permOff': 'The “Driver update check” permission is off.',
     'system.driver.loading': 'Reading installed drivers…',
-    'system.driver.installedCount': '{n} drivers installed',
+    'system.driver.installedCount': '{n:driver|drivers} installed',
     'system.driver.unknownProvider': 'Unknown vendor',
     'system.driver.onlyFirst200': 'Showing the first 200 only',
     'system.driver.classAll': 'All classes',
@@ -313,7 +313,7 @@ export const system = {
     'system.driver.searchPlaceholder': 'Search name / provider / version…',
     'system.driver.searchAria': 'Search drivers',
     'system.driver.noneMatched': 'No driver matches — try another keyword or switch back to All classes.',
-    'system.driver.wuCounts': '{total} optional updates · {drivers} are drivers',
+    'system.driver.wuCounts': '{total:optional update|optional updates} · {drivers:driver|drivers}',
     'system.driver.wuFilterAll': 'All optional updates',
     'system.driver.wuFilterDrivers': 'Drivers only',
     'system.driver.wuNoDrivers': 'No driver updates in this batch.',
@@ -335,7 +335,7 @@ export const system = {
     'system.reminder.enabledDescB': 'It only lists items — it never deletes on its own',
     'system.reminder.enabledDescC': '. Cleanup still needs your per-item confirmation on the Overview page, then it goes to the Recycle Bin.',
     'system.reminder.intervalTitle': 'Check interval',
-    'system.reminder.hours': '{n} hours',
+    'system.reminder.hours': '{n:hour|hours}',
     'system.reminder.days3': '3 days',
     'system.reminder.intervalHint': 'Each check runs a scan pass and can take tens of seconds — too short an interval burns disk IO.',
     'system.reminder.thresholdTitle': 'Reminder threshold',
@@ -358,7 +358,7 @@ export const system = {
     'system.reminder.weeklyDescA': 'Creates a read-only health snapshot every week (scan suggestions + temperature + hardware changes).',
     'system.reminder.weeklyDescB': 'Read-only statistics — never deletes any files',
     'system.reminder.weeklyIntervalTitle': 'Report interval',
-    'system.reminder.weeklyDays': '{n} days',
+    'system.reminder.weeklyDays': '{n:day|days}',
     'system.reminder.weeklyIntervalHint': 'Generating a report runs a scan pass over every drive and may take tens of seconds; it is scheduled for idle times when possible. You can also generate one manually on the History page.',
 
     // ── Days-to-full warning (R99) ──
@@ -366,7 +366,7 @@ export const system = {
     'system.reminder.fullWarnDescA': 'Extrapolates from the space trend how many days until a drive is full; drives within the threshold get a background reminder.',
     'system.reminder.fullWarnDescB': 'Read-only statistics — never auto-cleans',
     'system.reminder.fullWarnOff': 'Off',
-    'system.reminder.fullWarnDays': '{n} days',
+    'system.reminder.fullWarnDays': '{n:day|days}',
     'system.reminder.fullWarnHint': 'Needs at least two scan samples to have a trend; freeing space by cleaning or uninstalling clears the warning automatically.',
 
     // ── R298 thermal + startup watch (switches and thresholds for R291/R292) ──
@@ -376,7 +376,7 @@ export const system = {
     'system.reminder.thermalThreshold': 'Threshold',
     'system.reminder.thermalC': '{c} °C',
     'system.reminder.thermalSamplesLabel': 'Consecutive samples',
-    'system.reminder.thermalSamples': '{n} samples (~{min} min)',
+    'system.reminder.thermalSamples': '{n:sample|samples} (~{min} min)',
     'system.reminder.thermalHint': 'The default 5 samples means 25 straight minutes with no dip; 1 sample degenerates into an instant spike check. A threshold below 50 °C reports light load as overheating.',
     'system.reminder.startupTitle': 'Startup item change watch',
     'system.reminder.startupDescA': 'Takes a startup item snapshot on a fixed interval and alerts only when the set actually changed (something was added or removed).',
@@ -389,7 +389,7 @@ export const system = {
     'system.reminder.startupChecking': 'Comparing…',
     'system.reminder.startupNoHistory': 'Only one snapshot so far (the first one is recorded; a comparison needs the next one)',
     'system.reminder.startupSame': 'Identical to the previous snapshot — no changes',
-    'system.reminder.startupDelta': 'Since the snapshot {days} days ago: {add} added, {gone} gone',
+    'system.reminder.startupDelta': 'Since the snapshot {days:day|days} ago: {add} added, {gone} gone',
     'system.reminder.startupDeltaHint': 'This only reports what appeared or disappeared; it does not attribute the change. The comparison is read-only and never touches startup items.',
 
     // ── R297 scan-staleness reminder threshold ──

@@ -131,7 +131,7 @@ export const chat = {
     'chat.trace.analyzing': 'Analyzing the result…',
     'chat.trace.thinking': 'Thinking…',
     'chat.trace.thinkingShort': 'Thinking…',
-    'chat.trace.head': 'Reasoning · {n} steps',
+    'chat.trace.head': 'Reasoning · {n:step|steps}',
     'chat.trace.inProgress': ' (in progress…)',
     'chat.trace.elapsed': 'running {secs}s',
     'chat.trace.runningNow': 'Running…',
@@ -160,11 +160,11 @@ export const chat = {
 
     // AI turn openers and fallbacks
     'chat.studio.analyzing': 'Analyzing {name}…',
-    'chat.overview.scanned': 'Scanned {path} · {size} · {count} files. Writing the overview…',
+    'chat.overview.scanned': 'Scanned {path} · {size} · {count:file|files}. Writing the overview…',
     'chat.overview.generating': 'Writing the overview…',
     'chat.overview.dragHint': 'You can drag any folder or file from the left into the chat.',
     'chat.drop.about': '(about: {paths})',
-    'chat.drop.images': '({n} image attached)',
+    'chat.drop.images': '({n:image|images} attached)',
     'chat.removePending': 'Remove pending item',
 
     // System turns (never sent back to the model)
@@ -183,7 +183,7 @@ export const chat = {
     'chat.sessions.deleteAskTitle': 'Delete this session?',
     'chat.sessions.deleteAskBody': 'All messages in "{title}" will be deleted from this device. This cannot be undone.',
     'chat.sessions.deleteConfirm': 'Delete',
-    'chat.head.stats': '{path} · {size} · {count} files',
+    'chat.head.stats': '{path} · {size} · {count:file|files}',
     'chat.head.idle': 'Chat anytime — or scan a drive and let the AI dig in',
     'chat.head.clearTitle': "Clear (also drops this session's no-confirm grants)",
 

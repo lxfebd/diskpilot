@@ -33,7 +33,7 @@ export const errors = {
     'errors.confirmPluginWrite': 'Plugin write operations require user confirmation (confirmed=true)',
     'errors.confirmSystemWrite': 'System write operations require user confirmation (confirmed=true)',
 
-    'errors.recycleFailed': '{n} items failed to recycle (possibly in use or needs admin rights)',
+    'errors.recycleFailed': '{n:item|items} failed to recycle (possibly in use or needs admin rights)',
     'errors.permExecuteMissing': 'Cleanup execution is not authorized: enable "Execute cleanup plan" under Settings → AI Permissions, then try again.',
     'errors.pluginManageMissing': 'The "Manage plugins" permission (plugin.manage) is off. Enable it in the Permission Center first.',
   },

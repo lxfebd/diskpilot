@@ -111,8 +111,14 @@ export function t(key: string, params?: Record<string, string | number>): string
     }
     v = v.replace(PLURAL_RE, (m, k: string, one: string, other: string) => {
       const raw = params[k];
+      // R471：参数没传就保留原样（开发期一眼能看见漏传）；但「传了、只是不是数字」
+      // （例如调用方已把数字本地化成「1,234」）必须按复数渲染 —— 否则 {n:x|xs}
+      // 会原样漏到界面上，比单复数用错还难看。
+      if (raw === undefined || raw === null) return m;
       const n = typeof raw === 'number' ? raw : Number(raw);
-      return Number.isFinite(n) ? formatPluralUnit(n, one, other) : m;
+      if (Number.isFinite(n)) return formatPluralUnit(n, one, other);
+      const text = String(raw);
+      return other === '' ? text : text + ' ' + other;
     });
   }
   return v;

@@ -225,7 +225,7 @@ export const shell = {
     'shell.nav.wsHint': 'Pick a drive above or a folder, then scan',
     'shell.nav.reclaimed': '{size} freed',
     'shell.nav.reclaimedTitle': 'Space you freed with DiskPilot in this session',
-    'shell.nav.rootStatus': '{size} · {n} files',
+    'shell.nav.rootStatus': '{size} · {n:file|files}',
     'shell.nav.settingsBound': 'Connected to {provider} · click to manage',
     'shell.nav.settingsUnbound': 'No AI provider set up yet · open settings',
     'shell.nav.settings': 'Settings',
@@ -256,9 +256,9 @@ export const shell = {
     'shell.scanbar.preparing': 'Preparing scan…',
     'shell.scanbar.aria': 'Scan progress',
     'shell.skipToMain': 'Skip to main content',
-    'shell.scanbar.progress': '{files} files · {bytes}',
-    'shell.scanbar.done': 'This scan: {files} files · {bytes}',
-    'shell.scanbar.cancelled': 'Scan cancelled · saw {files} files · {bytes}',
+    'shell.scanbar.progress': '{files:file|files} · {bytes}',
+    'shell.scanbar.done': 'This scan: {files:file|files} · {bytes}',
+    'shell.scanbar.cancelled': 'Scan cancelled · saw {files:file|files} · {bytes}',
 
     // 扫描结果树根节点
     'shell.root.allDrives': 'My Computer (all drives)',
@@ -270,7 +270,7 @@ export const shell = {
     'shell.toast.spaceFullNow': '0 days',
     'shell.toast.spaceFullMore': ', {n:more drive|more drives} also approaching full',
     // R291 sustained high temperature (notification only; fan writes still require L2 double-confirm)
-    'shell.toast.thermalSustained': 'Sustained high temperature: {temp}C (threshold {threshold}C, {samples} consecutive samples over limit)',
+    'shell.toast.thermalSustained': 'Sustained high temperature: {temp}C (threshold {threshold}C, {samples:consecutive sample|consecutive samples} over limit)',
     // R292 startup items changed (only reports added/removed counts; never claims who did it)
     'shell.toast.startupChanged': 'Startup items changed: {added} added{gone} (vs. a snapshot from {days:day|days} ago)',
     'shell.toast.startupGone': ', {gone} removed',
@@ -315,7 +315,7 @@ export const shell = {
     'shell.fdp.topChildren': 'Top 6 items by size',
 
     // 页脚
-    'shell.footer.rules': 'DiskPilot v{version} · {n} built-in cleanup rules',
+    'shell.footer.rules': 'DiskPilot v{version} · {n:built-in cleanup rule|built-in cleanup rules}',
     'shell.footer.noScan': 'Nothing scanned yet',
 
     // 错误边界

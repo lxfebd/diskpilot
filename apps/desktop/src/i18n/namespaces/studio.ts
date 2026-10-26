@@ -110,7 +110,7 @@ export const studio = {
   en: {
     // ── Panel and section headings ──
     'studio.title': 'Cleanup scripts',
-    'studio.scriptCount': '{n} scripts',
+    'studio.scriptCount': '{n:script|scripts}',
     'studio.featured': 'Recommended',
     'studio.more': 'More',
     'studio.installTitle': 'Install a community script (paste TOML)',
@@ -168,7 +168,7 @@ export const studio = {
     'studio.winapp2Reparse': 'Re-parse',
     'studio.winapp2Empty': 'No installable file-cleanup rules parsed (the text may contain only registry entries or be empty).',
     'studio.winapp2ParseFailed': 'Parse failed: {msg}',
-    'studio.winapp2Scopes': '{n} cleanup scopes',
+    'studio.winapp2Scopes': '{n:cleanup scope|cleanup scopes}',
     'studio.winapp2RedLine': 'Refused by red line: {msg}',
     'studio.winapp2InstallSelected': 'Install {n}',
     'studio.winapp2Installing': 'Installing…',
@@ -183,12 +183,12 @@ export const studio = {
     // ── Script card details ──
     'studio.reveal': 'Open in File Explorer',
     'studio.copyPath': 'Copy path',
-    'studio.locations': '{n} locations',
+    'studio.locations': '{n:location|locations}',
     'studio.notDetected': 'Not in this scan · using the script’s default paths',
     'studio.pathLabel': 'Paths',
     'studio.sizeLabel': 'Size',
-    'studio.sizeMeta': '{size} · {files} files',
-    'studio.acrossN': '(across {n} locations)',
+    'studio.sizeMeta': '{size} · {files:file|files}',
+    'studio.acrossN': '(across {n:location|locations})',
     'studio.dragTip': 'Drag into the chat to ask the AI · right-click for options',
     'studio.topChildren': 'Largest sub-items',
     'studio.collapse': 'Collapse',

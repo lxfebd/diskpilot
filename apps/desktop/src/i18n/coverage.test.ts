@@ -108,6 +108,34 @@ describe('i18n 文案表', () => {
 
   // R350：英文的单复数不许再手写 "(s)"——"1 day(s)" 是语法错误，读着也别扭。
   // 复数交给 {n:day|days} 语法（core.ts 的 formatPluralUnit），单数/复数各写一遍。
+  // R471：数字后面直接跟名词时，英文必须写复数语法 `{n:one|other}`——否则界面会出现
+  // 「1 files」「3 day ago」这种每个人都会截图发来的错。守卫连「名词短语」一起管：
+  // `{n} hardware snapshots` / `{n} cleanup scopes` 这类中间夹修饰语的也要写成复数语法。
+  it('英文表里数字后面不许再裸接数量名词', () => {
+    const NOUNS = [
+      'days', 'months', 'years', 'weeks', 'hours', 'items', 'files', 'entries', 'scripts',
+      'steps', 'points', 'samples', 'snapshots', 'tools', 'plugins', 'games', 'drives', 'drivers',
+      'servers', 'runs', 'locations', 'copies', 'versions', 'downloads', 'sensors', 'sticks',
+      'scopes', 'matches', 'results', 'scans', 'tasks', 'images', 'messages', 'processes',
+      'duplicates', 'rules', 'categories', 'folders', 'updates', 'cores', 'threads',
+      'image', 'match', 'sample',
+    ];
+    const offenders: string[] = [];
+    for (const ns of NAMESPACES) {
+      for (const [k, v] of Object.entries(ns.en) as [string, string][]) {
+        if (typeof v !== 'string') continue;
+        // 一个占位符后面可能跟一小段修饰语（hardware / built-in cleanup），取最后那个词判名词。
+        // 短语最多 3 个词：够覆盖「hardware snapshots」「built-in cleanup rules」，又不会把整句尾巴当成名词短语。
+        for (const m of v.matchAll(/\{(\w+)\} ((?:[a-z][a-z-]* ){0,2}[a-z]+)\b/g)) {
+          const phrase = m[2];
+          const noun = phrase.split(' ')[phrase.split(' ').length - 1];
+          if (!NOUNS.includes(noun)) continue;
+          offenders.push(`${k}：“${m[0]}” 改成 {${m[1]}:<单数>|${phrase}}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
   it('英文表不再手写 (s) 单复数', () => {
     const bad: string[] = [];
     for (const ns of NAMESPACES) {

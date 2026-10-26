@@ -30,10 +30,20 @@ describe('英文单复数（R350）', () => {
     expect(t('overview.clean.peekFiles', { n: '2' })).toBe('2 files');
   });
 
-  it('参数缺失或不是数字时保留占位符原样（不显示 NaN）', () => {
+  it('参数缺失时保留占位符原样（开发期一眼看见漏传）', () => {
     setLang('en');
     expect(t('overview.clean.peekFiles', {})).toBe('{n:file|files}');
-    expect(t('overview.clean.peekFiles', { n: 'many' })).toBe('{n:file|files}');
+  });
+
+  // R471：调用方常把已本地化的数字（「1,234」）直接传进来，Number() 得到 NaN。
+  // 旧行为是把 {n:file|files} 原样漏到界面上；现在按复数渲染，界面上永远是数字 + 名词。
+  it('参数不是数字时按复数渲染（不漏出原始语法）', () => {
+    setLang('en');
+    expect(t('overview.clean.peekFiles', { n: 'many' })).toBe('many files');
+    expect(t('overview.clean.peekFiles', { n: '1,234' })).toBe('1,234 files');
+    expect(t('cleanup.done', { n: '1,234', size: '10 GB' })).toBe(
+      'Cleaned 1,234 files · about 10 GB (estimate) · moved to the system Recycle Bin',
+    );
   });
 
   it('htmlLangOf 把语言映射成 html lang 值', () => {

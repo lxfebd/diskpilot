@@ -7,6 +7,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R471: 英文数字文案的单复数收口——「1 files」「3 day ago」不再出现在界面上
+
+- **缺口**：R350 立了 `{n:one|other}` 复数语法（`1 day` / `3 days`），但只有十来个键真的用了；全仓还有两百多处「数字 + 名词」直接拼死，英文界面一旦数量是 1 就出 `1 files` / `3 day ago` / `1 copies in the group` / `Reasoning · 1 steps`。反过来又有一批键写成单数（`{n} match`、`{n} image attached`），数量大于 1 时同样错。
+- **更隐蔽的一层**：不少调用方把数字**本地化后**传进来（`file_count.toLocaleString()` → `"1,234"`），`Number("1,234")` 是 `NaN`。旧实现遇到非数字参数会把 `{n:file|files}` **原样漏到界面上**，一换语法就变成满屏花括号。
+- **改动**：13 个命名空间的 `en` 表共 116 行改成复数语法，含多词形式——`{n:sample point|sample points}`、`{n:built-in cleanup rule|built-in cleanup rules}`、`{n:hardware snapshot|hardware snapshots}`、`{n:cleanup scope|cleanup scopes}`、`{n:MCP tool|MCP tools}`、`{n:duplicate entry|duplicate entries}`、`{n:startup item|startup items}`、`{n:Workshop item|Workshop items}`、`{n:more category|more categories}`；中文表一字未动（中文不分单复数）。
+- **core.ts**：`t()` 的复数分支改为——参数没传仍保留 `{n:x|xs}` 原样（开发期一眼看见漏传）；参数传了但 `Number()` 出来不是有限数（如 `"1,234"`）则按**复数**渲染成 `1,234 files`，绝不再把原始语法漏到界面。
+- **守卫**：`coverage.test.ts` 新增一条——英文表里「占位符 + 数量名词（短语最多 3 个词）」不许裸写，命中即指出键名与建议写法；`core.test.ts` 把「非数字参数保留占位符」的旧断言改成新口径（`many files` / `1,234 files`），并保留「缺参保留原样」一例。
+- **反向自检**：把 `cleanup.done` 还原成 `{n} files` → 守卫 1 红点名该键；把 `core.ts` 改回非数字返回原串 → core 用例 1 红（`expected {n:file|files} to be many files`）；把多词的 `shell.footer.rules` 还原 → 守卫同样点名（短语规则没有只认单个词）。
+- **验证**：`pnpm check` 88 files / 1277 tests 全绿。
+
 ### R470: 两处「有类名没样式」补齐——空态副标题与风险提示小字不再继承正文字号
 
 - **缺口**：`App.tsx` 的空态副标题写着 `className="empty-sub"`、提醒设置里未知脚手架的提示写着 `className="muted xsmall"`，但 `styles/*.css` 里**根本没有这两个类**。于是空态副标题与 15px 的标题同处一段却按正文 Default 字号渲染、拉不开层级；「未知脚手架」那枚警示小字继承正文字号，比紧挨着的 11px 字节数**还大**——提示反而比正常信息更抢眼。
