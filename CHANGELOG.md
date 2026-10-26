@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R474: 权限「恢复默认」加确认带——一键不再把用户打开的开关静默关掉
+
+- 缺口：权限中心右上角「恢复默认」点一下立刻把 22 个开关重置为出厂值，而默认表是双向的：`power.plan` / `cleanup.execute` / `plugin.manage` / `scaffold.manage` / `startup.manage` / `fan.adjust` / `fan.control` / `driver.check` / `mcp.manage` / `sys.control` / `file.recycle` / `app.uninstall` 默认关（会静默关掉用户手动打开的），`hw.stress` / `hw.export` / `cli.run` 默认开（会重新打开用户特意关掉的压测、导出与工具执行权限）。没有确认、没有结果反馈、没有撤销，误点一次就要逐项重调。
+- 改动：`PermissionCenter.tsx` 加两步确认——图例按钮改为打开确认带（`role="alert"`，正文说明两个方向的影响），确认带里「取消」（autoFocus）与「确认恢复」（danger）；执行后 toast「已恢复默认权限」；取消与执行两条路都把焦点还给「恢复默认」按钮（确认带卸载后焦点会掉到 body）。`dark.css` 新增 `.perm-reset-confirm` / `.perm-reset-text` / `.perm-reset-confirm-actions` 三条规则（`--risk-caution` 描边 + 10% 底色，随主题走）。新增四个文案键：`perm.center.resetConfirm` / `resetCancel` / `resetYes` / `resetDone`（中英成对）。
+- 守卫：`a11y.test.ts` 新增 describe「权限恢复默认的两步确认（R474）」两条——① 状态与接线（`confirmReset` 声明、图例按钮走 `setConfirmReset(true)` 且带 `resetBtnRef`、取消 autoFocus、确认走 danger、`role="alert"`、`resetBtnRef.current?.focus();` 恰 2 处、旧的一键 `onClick={reset} title=` 已消失）；② 四个键中英各出现两次。反向自检把图例按钮改回一键 → 恰好 1 failed 点名该断言。
+- 验证：`pnpm -C apps/desktop check` 89 files / 1284 tests 全绿。
+
 ### R473: 错误提示带上动作上下文——不再只扔一行裸 os error
 
 - 缺口：六处 catch 把后端错误原文直接塞进提示条（`toast(String(e), 'err')`）：工具箱卡片的「读取用量」、CLI 的「运行」、硬件聚合卡片的首次加载与刷新、工具启动、网络检测。失败时用户只看到 `os error 5` / `spawn ENOENT`，不知道是哪一步失败，也分不清是权限、路径还是文件缺失。

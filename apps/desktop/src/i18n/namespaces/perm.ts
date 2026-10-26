@@ -8,7 +8,10 @@ export const perm = {
     'perm.center.resetTitle': '恢复默认',
     'perm.center.l0Title': 'L0 只读始终开启，不可关闭',
     'perm.center.foot': '设置只存你本机 localStorage（diskpilot.perms.v1），重装或换电脑不会带到新环境。',
-
+    'perm.center.resetCancel': '取消',
+    'perm.center.resetYes': '确认恢复',
+    'perm.center.resetDone': '已恢复默认权限',
+    'perm.center.resetConfirm': '恢复默认会把所有开关重置为出厂状态：你手动打开的（清理执行 / 系统控制 / 卸载应用 等）会被关掉，出厂默认开启的（压力测试 / 导出体检报告 / CLI 运行）会重新打开。确认恢复？',
     'perm.level.l0.label': 'L0 · 只读（始终开，不可关）',
     'perm.level.l0.desc': '读硬件信息 / 硬盘健康 / 生成报告。零风险，随时可调。',
     'perm.level.l1.label': 'L1 · 受控（默认开，每次执行需确认）',
@@ -69,7 +72,10 @@ export const perm = {
     'perm.center.resetTitle': 'Restore defaults',
     'perm.center.l0Title': 'L0 read-only is always on and cannot be turned off',
     'perm.center.foot': 'Settings live only in this machine\'s localStorage (diskpilot.perms.v1); reinstalling or switching computers will not carry them over.',
-    
+    'perm.center.resetCancel': 'Cancel',
+    'perm.center.resetYes': 'Restore',
+    'perm.center.resetDone': 'Permissions restored to defaults',
+    'perm.center.resetConfirm': 'Restoring defaults resets every switch to the factory state: ones you turned on (cleanup execution / system control / app uninstall, etc.) go off, and ones that ship on (stress test / export health report / CLI run) come back on. Restore defaults?',
     'perm.level.l0.label': 'L0 · Read-only (always on, cannot be disabled)',
     'perm.level.l0.desc': 'Hardware info / disk health / reports. Zero risk, always available.',
     'perm.level.l1.label': 'L1 · Controlled (default on, confirm per execution)',

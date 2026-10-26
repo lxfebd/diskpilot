@@ -1883,3 +1883,32 @@ describe('提示条按钮接了焦点归还（R469 接线）', () => {
     expect(stack).toContain('dismissToast(toast.id);');
   });
 });
+
+describe('权限恢复默认的两步确认（R474）', () => {
+  const RAW_PC = (import.meta.glob('./components/PermissionCenter.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)['./components/PermissionCenter.tsx'];
+  const RAW_PERM = (import.meta.glob('./i18n/namespaces/perm.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)['./i18n/namespaces/perm.ts'];
+
+  it('恢复默认要先过确认带，不再一键静默改状态', () => {
+    expect(RAW_PC).toContain('const [confirmReset, setConfirmReset] = useState(false);');
+    // 图例按钮先打开确认带（引用 resetBtnRef 以便关掉后把焦点还回来）
+    expect(RAW_PC).toContain('ref={resetBtnRef} className="ghost small" onClick={() => setConfirmReset(true)}');
+    expect(RAW_PC).toContain('onClick={cancelReset} autoFocus');
+    expect(RAW_PC).toContain('className="danger small" onClick={reset}');
+    expect(RAW_PC).toContain('role="alert"');
+    // 焦点归还：取消与执行两条路都把焦点还给「恢复默认」按钮
+    expect(RAW_PC.split('resetBtnRef.current?.focus();').length - 1, 'focus restore count').toBe(2);
+    // 旧的一键绑定已消失
+    expect(RAW_PC).not.toContain('onClick={reset} title=');
+  });
+
+  it('确认带与结果的文案中英成对', () => {
+    for (const k of [
+      'perm.center.resetCancel',
+      'perm.center.resetYes',
+      'perm.center.resetDone',
+      'perm.center.resetConfirm',
+    ]) {
+      expect(RAW_PERM.split(k).length - 1, k).toBe(2);
+    }
+  });
+});

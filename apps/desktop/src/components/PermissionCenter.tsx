@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ShieldCheck, ShieldAlert, ShieldX, Lock, Unlock, RotateCcw } from 'lucide-react';
 import { api } from '../api';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../permissions';
 import { LEVEL_COLORS } from '../colors';
 import { useT } from '../i18n';
+import { useStore } from '../store';
 
 // 存文案键而非中文：顶层常量在定义处求值会把中文烤死在首次 import，切语言不生效。
 const LEVEL_META: Record<'L0' | 'L1' | 'L2' | 'L3', { labelKey: string; icon: typeof ShieldCheck; color: string; descKey: string }> = {
@@ -23,6 +24,11 @@ const LEVEL_META: Record<'L0' | 'L1' | 'L2' | 'L3', { labelKey: string; icon: ty
 export function PermissionCenter() {
   const t = useT();
   const [cfg, setCfg] = useState(loadPermConfig());
+  // R474：恢复默认是双向状态改写（会关掉用户手动打开的、也会重新打开出厂默认开启的），
+  // 一键生效太危险——先给确认带说明影响再执行。
+  const [confirmReset, setConfirmReset] = useState(false);
+  const resetBtnRef = useRef<HTMLButtonElement>(null);
+  const toast = useStore((s) => s.toast);
 
   // 权限快照同步到后端（纵深防御：后端写命令也要校验权限）。
   const pushToBackend = (next: typeof cfg) => {
@@ -33,6 +39,7 @@ export function PermissionCenter() {
   };
 
   const toggle = (id: string) => {
+    setConfirmReset(false);
     const next: typeof cfg = {
       enabled: { ...cfg.enabled, [id as keyof typeof cfg.enabled]: !cfg.enabled[id as keyof typeof cfg.enabled] },
     };
@@ -45,6 +52,15 @@ export function PermissionCenter() {
     const next = resetPermConfig();
     setCfg(next);
     pushToBackend(next);
+    setConfirmReset(false);
+    toast(t('perm.center.resetDone'), 'ok');
+    // 确认带卸载后焦点会掉到 body：还给「恢复默认」按钮。
+    resetBtnRef.current?.focus();
+  };
+
+  const cancelReset = () => {
+    setConfirmReset(false);
+    resetBtnRef.current?.focus();
   };
 
   const groups: Array<'L0' | 'L1' | 'L2' | 'L3'> = ['L0', 'L1', 'L2', 'L3'];
@@ -57,10 +73,26 @@ export function PermissionCenter() {
         <span className="muted small">
           {t('perm.center.legend')}
         </span>
-        <button className="ghost small" onClick={reset} title={t('perm.center.resetTitle')}>
+        <button ref={resetBtnRef} className="ghost small" onClick={() => setConfirmReset(true)} title={t('perm.center.resetTitle')}>
           <RotateCcw size={11} /> {t('perm.center.reset')}
         </button>
       </div>
+
+      {confirmReset && (
+        <div className="perm-reset-confirm" role="alert">
+          <span className="perm-reset-text">
+            {t('perm.center.resetConfirm')}
+          </span>
+          <div className="perm-reset-confirm-actions">
+            <button type="button" className="ghost small" onClick={cancelReset} autoFocus>
+              {t('perm.center.resetCancel')}
+            </button>
+            <button type="button" className="danger small" onClick={reset}>
+              {t('perm.center.resetYes')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {groups.map((lv) => {
         const meta = LEVEL_META[lv];

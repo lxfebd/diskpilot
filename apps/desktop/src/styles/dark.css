@@ -220,6 +220,10 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 /* AI 权限中心 */
 .perm-center { display: flex; flex-direction: column; gap: 14px; }
 .perm-legend { display: flex; align-items: center; justify-content: space-between; }
+.perm-reset-confirm { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; margin-top: 4px; border: 1px solid var(--risk-caution); border-radius: var(--radius-sm); background: color-mix(in srgb, var(--risk-caution) 10%, transparent); }
+.perm-reset-confirm .perm-reset-text { flex: 1 1 260px; min-width: 0; font-size: 11.5px; line-height: 1.6; color: var(--ink-2); }
+.perm-reset-confirm-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
 .perm-level { border: 1px solid var(--line); border-radius: var(--radius-btn); padding: 10px 12px; background: var(--paper-2); }
 .perm-level-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
 .perm-level-desc { margin-top: 2px; }
