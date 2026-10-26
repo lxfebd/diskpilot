@@ -1912,3 +1912,26 @@ describe('权限恢复默认的两步确认（R474）', () => {
     }
   });
 });
+
+describe('市场 URL 输入框的回车提交（R476）', () => {
+  it('两个 URL 输入框都有 Enter 提交且带 IME 守卫', () => {
+    const m = RAW_TSX['./components/toolbelt/market.tsx'];
+    const comp = m.split("if (e.key === 'Enter' && !e.nativeEvent.isComposing").length - 1;
+    expect(comp).toBe(2);
+    expect(m).toContain('void installByUrl();');
+    expect(m).toContain("&& !regBusy) { e.preventDefault(); saveRegistryUrl(); }");
+    expect(m).toContain('onClick={() => saveRegistryUrl()}');
+    expect(m).not.toContain('onClick={() => {\n                  const u = registryUrl.trim();');
+  });
+  it('saveRegistryUrl 保有确认与 R346 校验清空逻辑（重构不丢行为）', () => {
+    const m = RAW_TSX['./components/toolbelt/market.tsx'];
+    const start = m.indexOf('const saveRegistryUrl = useCallback');
+    const end = m.indexOf('}, [registryUrl, t]);', start);
+    const seg = m.slice(start, end);
+    expect(seg).toContain("t('toolbelt.mkt.confirmSetUrlTitle')");
+    expect(seg).toContain('await api.pluginSetRegistryUrl(u, true);');
+    expect(seg).toContain('setVerifyOut(null);');
+    expect(seg).toContain('setConfirmAsk(null);');
+    expect(m.split('saveRegistryUrl()').length - 1).toBe(2);
+  });
+});

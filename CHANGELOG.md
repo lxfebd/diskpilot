@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R476: 市场两个 URL 输入框回车即提交——粘贴完按 Enter 不再没反应
+
+- 缺口：市场「URL 直装」输入框与进阶「索引 URL」输入框都没有回车处理（全仓无 `<form>`，不回车不提交）——从插件包地址/索引地址粘贴完按 Enter 毫无反应，必须摸到旁边按钮；更糟的是索引 URL 的保存逻辑整段内联在按钮的 `onClick` 里，无独立函数可复用的。
+- 改动（`toolbelt/market.tsx`）：① 把索引 URL 保存逻辑抽成 `saveRegistryUrl` 回调（`useCallback`，含两步确认 `confirmAsk`、`api.pluginSetRegistryUrl`、成功后 `setVerifyOut(null)` 清旧校验结论的 R346 逻辑原样保留），按钮 `onClick` 改调它；② 两个输入框各加 `onKeyDown`：`Enter` 且非 IME 组合中（`!e.nativeEvent.isComposing`，R404 同口径）即提交——URL 直装走 `void installByUrl()`，索引 URL 走 `saveRegistryUrl()`（额外 `!regBusy` 防在途重入）。
+- 守卫：`a11y.test.ts` 新增 describe「市场 URL 输入框的回车提交（R476）」两条——① 两个输入框都有 Enter 守卫（`if (e.key === 'Enter' && !e.nativeEvent.isComposing` 恰 2 处）、`void installByUrl();`、`&& !regBusy) { e.preventDefault(); saveRegistryUrl(); }`、`onClick={() => saveRegistryUrl()}`，且旧的整段内联 `onClick={() => { const u = registryUrl.trim();` 写法消失；② `saveRegistryUrl` 切片仍含确认、`pluginSetRegistryUrl`、`setVerifyOut(null)`、`setConfirmAsk(null)`（重构不丢行为）。反向自检删索引框回车行 → 恰好 2 failed 点名还原。
+- 验证：`pnpm -C apps/desktop check` 90 files / 1294 tests 全绿。
+
 ### R475: 状态色与亮底标签的文字对比度收口——换主题不再读出 1.1:1 的隐形字
 
 - 缺口：`--mint/--sun/--lavender/--accent/--err` 都会当实心底色画在徽标、chip、横幅、气泡与危险按钮上，而此前一律配 `--ink`（5 个深色主题里是白字）或写死的 `#fff`——实测 minimal 用户气泡 1.19:1、motionfit 徽标 1.11:1、banner.preview 1.07:1、trae 危险按钮 3.88:1（WCAG 正文要 4.5）。另：`--ink-3/--muted` 落在 `--paper-1/2/3` 上共 173 对不达标（brand 2.6 / doubao 2.8 / 21th 2.81 等，属浅灰副文案，本轮不改）。

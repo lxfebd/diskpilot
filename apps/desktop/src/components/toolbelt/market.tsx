@@ -257,6 +257,33 @@ export function MarketPanel() {
     });
   }, [url, refresh, t]);
 
+  // R476：索引 URL 保存抽出成可复用回调——按钮与回车共用，不再把一长串 confirm 逻辑
+  // 内联在 onClick 里（回车提交与按钮走同一路径，改一处两处生效）。
+  const saveRegistryUrl = useCallback(() => {
+    const u = registryUrl.trim();
+    setConfirmAsk({
+      title: t('toolbelt.mkt.confirmSetUrlTitle'),
+      body: t('toolbelt.mkt.confirmSetUrlBody', { url: u || t('toolbelt.mkt.confirmSetUrlEmpty') }),
+      onConfirm: () => {
+        setConfirmAsk(null);
+        void (async () => {
+          setRegBusy(true);
+          setMsg(null);
+          try {
+            await api.pluginSetRegistryUrl(u, true);
+            setRegInfo((prev) => ({ ...(prev ?? { fetched_at: 0, signed: false, verified: false, plugins: 0 }), indexed: !!u, registry_url: u }));
+            setMsg(u ? t('toolbelt.mkt.urlSaved') : t('toolbelt.mkt.urlCleared'));
+            setVerifyOut(null); // R346：索引地址变了，旧的校验结论不再指同一份索引
+          } catch (e) {
+            setMsg(t('toolbelt.mkt.urlSaveFailed', { msg: String(e) }));
+          } finally {
+            setRegBusy(false);
+          }
+        })();
+      },
+    });
+  }, [registryUrl, t]);
+
   const act = useCallback(async (p: MarketPlugin) => {
     const deactivating = p.installed;
     setConfirmAsk({
@@ -503,6 +530,7 @@ export function MarketPanel() {
               onChange={(e) => setUrl(e.target.value)}
               placeholder={t('toolbelt.mkt.urlPlaceholder')}
               disabled={urlBusy}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void installByUrl(); } }}
             />
             <button className="primary small" onClick={installByUrl} disabled={urlBusy}>
               {urlBusy ? t('toolbelt.mkt.downloading') : t('toolbelt.mkt.installByUrl')}
@@ -593,34 +621,12 @@ export function MarketPanel() {
                 placeholder={t('toolbelt.mkt.indexUrlPlaceholder')}
                 style={{ flex: 1, minWidth: 180 }}
                 spellCheck={false}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && !regBusy) { e.preventDefault(); saveRegistryUrl(); } }}
               />
               <button
                 className="ghost small"
                 disabled={regBusy}
-                onClick={() => {
-                  const u = registryUrl.trim();
-                  setConfirmAsk({
-                    title: t('toolbelt.mkt.confirmSetUrlTitle'),
-                    body: t('toolbelt.mkt.confirmSetUrlBody', { url: u || t('toolbelt.mkt.confirmSetUrlEmpty') }),
-                    onConfirm: () => {
-                      setConfirmAsk(null);
-                      void (async () => {
-                        setRegBusy(true);
-                        setMsg(null);
-                        try {
-                          await api.pluginSetRegistryUrl(u, true);
-                          setRegInfo((prev) => ({ ...(prev ?? { fetched_at: 0, signed: false, verified: false, plugins: 0 }), indexed: !!u, registry_url: u }));
-                          setMsg(u ? t('toolbelt.mkt.urlSaved') : t('toolbelt.mkt.urlCleared'));
-                          setVerifyOut(null); // R346：索引地址变了，旧的校验结论不再指同一份索引
-                        } catch (e) {
-                          setMsg(t('toolbelt.mkt.urlSaveFailed', { msg: String(e) }));
-                        } finally {
-                          setRegBusy(false);
-                        }
-                      })();
-                    },
-                  });
-                }}
+                onClick={() => saveRegistryUrl()}
                 title={t('toolbelt.mkt.saveUrlTitle')}
               >
                 {t('toolbelt.mkt.saveUrl')}
