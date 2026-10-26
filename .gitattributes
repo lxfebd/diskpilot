@@ -1,0 +1,45 @@
+# 行尾归一化策略。此前本仓库无 .gitattributes，仓库内存的是 LF、但 checkout 出什么
+# 取决于每台开发机的 core.autocrlf 配置（本机 --system 恰好是 true，故 Windows 上
+# 拿到的是 CRLF），同一份代码在不同协作者机器上呈现两种形态。
+#
+# 这里只钉「仓库里存什么」= 恒为 LF，不强制协作者工作区的换行形态：
+# 用 text=auto 而非 eol=lf。eol=lf 会覆盖各机器的 autocrlf，把 336 个已 checkout
+# 成 CRLF 的文件一次性翻成 LF，Windows 协作者随后又会被编辑器写回 CRLF，形成长期
+# 拉锯；而只要 blob 恒为 LF，diff 与 blame 就是干净的，这才是要解决的问题。
+#
+# 实测（git ls-files --eol）：跟踪文件 1481 个，索引中 i/crlf=0、i/mixed=0，
+# 故本文件不改变任何已提交内容、不触发 renormalize。
+
+* text=auto
+
+# 随安装包再分发的第三方工具箱：绝不做行尾转换，必须与仓库字节一致
+# （内含 106 个 exe、108 个 dll、17 个 .so、9 个 .sys、3 个 .pdb 等）。
+# 这些文件不由本项目维护，转换即等于篡改再分发内容。
+Tools/** -text
+
+# 已知二进制类型显式声明，防止未来新增文件被 text=auto 猜错
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.webp binary
+*.wav binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.sys binary
+*.vxd binary
+*.pdb binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.xz binary
+*.mdb binary
+*.img binary
+*.spzip binary
