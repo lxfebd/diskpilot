@@ -475,7 +475,7 @@ function SystemToolsInner() {
         </div>
       )}
       {drivers && drivers.length > 0 && visibleDrivers.length === 0 && (
-        <div className="muted small">{t('system.driver.noneMatched')}</div>
+        <div className="muted small" role="status">{t('system.driver.noneMatched')}</div>
       )}
       {drivers && drivers.length > 0 && visibleDrivers.length > 0 && (
         <div className="sys-list sys-list-scroll">

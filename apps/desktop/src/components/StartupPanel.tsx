@@ -238,7 +238,7 @@ export function StartupPanel() {
             </label>
           </div>
           {visible.length === 0 && (
-            <div className="muted small">{t('system.startup.emptyFiltered')}</div>
+            <div className="muted small" role="status">{t('system.startup.emptyFiltered')}</div>
           )}
         </>
       )}

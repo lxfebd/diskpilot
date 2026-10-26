@@ -235,9 +235,9 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
         // 错误横幅带原因），避免失败与空态并存。
         <div className="hp-empty muted small">{t('history.unreadBody')}</div>
       ) : historyListState(entries, loadErr) === 'empty' ? (
-        <div className="hp-empty">{t('history.empty')}</div>
+        <div className="hp-empty" role="status">{t('history.empty')}</div>
       ) : filtered.length === 0 ? (
-        <div className="hp-empty">{t('history.emptyFiltered')}</div>
+        <div className="hp-empty" role="status">{t('history.emptyFiltered')}</div>
       ) : (
         groups.map((g) => (
           <section key={g.key || 'unknown'} className="hp-day">

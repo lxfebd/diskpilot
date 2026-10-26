@@ -548,7 +548,7 @@ export function MarketPanel() {
           ) : market === null ? (
             <p className="muted">{t('toolbelt.mkt.loading')}</p>
           ) : filtered.length === 0 ? (
-            <p className="muted">{t('toolbelt.mkt.noMatch')}</p>
+            <p className="muted" role="status">{t('toolbelt.mkt.noMatch')}</p>
           ) : (
             <div className="toolbelt-market-list">
               {filtered.map((p) => (

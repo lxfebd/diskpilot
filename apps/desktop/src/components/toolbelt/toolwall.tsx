@@ -1086,7 +1086,7 @@ export function CatalogWall({
               </span>
             </div>
             {activeTools.length === 0 ? (
-              <div className="tb-empty small">
+              <div className="tb-empty small" role="status">
                 <div>{query ? t('toolbelt.wall.noMatch', { query }) : t('toolbelt.wall.catEmpty')}</div>
               </div>
             ) : (

@@ -205,7 +205,7 @@ export function FileView({ root, selectedPath, onSelect }: Props) {
       </div>
 
       <div className="fileview-body">
-        {top.length === 0 && <div className="fileview-empty">{t('overview.fileview.empty')}</div>}
+        {top.length === 0 && <div className="fileview-empty" role="status">{t('overview.fileview.empty')}</div>}
         {top.map((f) => (
           <FileRow
             key={f.path}

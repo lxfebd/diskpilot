@@ -1935,3 +1935,27 @@ describe('市场 URL 输入框的回车提交（R476）', () => {
     expect(m.split('saveRegistryUrl()').length - 1).toBe(2);
   });
 });
+
+describe('空结果播报（R477）', () => {
+  it('七个空态节点都带 role="status"（含 HistoryPage 两条）', () => {
+    const hp = RAW_TSX['./components/history/HistoryPage.tsx'];
+    expect(hp).toContain(`<div className="hp-empty" role="status">{t('history.empty')}</div>`);
+    expect(hp).toContain(`<div className="hp-empty" role="status">{t('history.emptyFiltered')}</div>`);
+    const sites: [string, string][] = [
+      ['./components/StartupPanel.tsx', `<div className="muted small" role="status">{t('system.startup.emptyFiltered')}</div>`],
+      ['./components/SystemTools.tsx', `<div className="muted small" role="status">{t('system.driver.noneMatched')}</div>`],
+      ['./components/toolbelt/toolwall.tsx', `<div className="tb-empty small" role="status">`],
+      ['./components/toolbelt/market.tsx', `<p className="muted" role="status">{t('toolbelt.mkt.noMatch')}</p>`],
+      ['./components/FileView.tsx', `<div className="fileview-empty" role="status">{t('overview.fileview.empty')}</div>`],
+      ['./components/SteamInspector.tsx', `<div className="steam-list-empty" role="status">{t('steam.noMatches')}</div>`],
+    ];
+    for (const [path, frag] of sites) {
+      expect(RAW_TSX[path].split(frag).length - 1, path).toBe(1);
+    }
+  });
+  it('market 的 loading 态保持无声（不是结果为空不该插嘴）', () => {
+    const m = RAW_TSX['./components/toolbelt/market.tsx'];
+    expect(m).toContain(`<p className="muted">{t('toolbelt.mkt.loading')}</p>`);
+    expect(m).not.toContain(`role="status">{t('toolbelt.mkt.loading')}</p>`);
+  });
+});

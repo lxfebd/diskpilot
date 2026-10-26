@@ -674,7 +674,7 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
             </div>
             <div className="steam-list" ref={listRef} role="listbox">
               {allGames.length === 0 && (
-                <div className="steam-list-empty">{t('steam.noMatches')}</div>
+                <div className="steam-list-empty" role="status">{t('steam.noMatches')}</div>
               )}
               {allGames.map((g) => (
                 <SteamRow

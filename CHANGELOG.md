@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R477: 搜索结果为空也播报一声——读屏不再「打了字却听不到结果为空」
+
+- 缺口：七个过滤器/搜索框结果为空时只把列表换成一句灰字，没有任何 live region——读屏用户输入关键字、列表清空，屏上没有任何播报，只能靠手动逐行重扫确认「没有匹配」；键盘与触屏用户同样得不到结果反馈。
+- 改动：七个空态节点补 `role="status"`（polite 播报，出现即朗读）——`HistoryPage` 的 `history.empty` / `history.emptyFiltered`（无记录与无匹配两条）、`StartupPanel` 的 `system.startup.emptyFiltered`、`SystemTools` 的 `system.driver.noneMatched`、`toolwall` 的 `toolbelt.wall.noMatch`/`catEmpty` 外层容器、`market` 的 `toolbelt.mkt.noMatch`、`FileView` 的 `overview.fileview.empty`、`SteamInspector` 的 `steam.noMatches`。`market` 的 loading 态保持无声（不是结果为空、不该插嘴）。
+- 守卫：`a11y.test.ts` 新增 describe「空结果播报（R477）」两条——① 七个站点逐一路径断言精确文本（HistoryPage 两条都在、其余各 1 处）；② market 的 loading 文案 `toolbelt.mkt.loading` 仍是无 `role="status"` 的 `p.muted`。反向自检删 SystemTools 一处 role → 恰好 1 failed 点名 `./components/SystemTools.tsx`，还原。
+- 验证：`pnpm -C apps/desktop check` 90 files / 1296 tests 全绿。
+
 ### R476: 市场两个 URL 输入框回车即提交——粘贴完按 Enter 不再没反应
 
 - 缺口：市场「URL 直装」输入框与进阶「索引 URL」输入框都没有回车处理（全仓无 `<form>`，不回车不提交）——从插件包地址/索引地址粘贴完按 Enter 毫无反应，必须摸到旁边按钮；更糟的是索引 URL 的保存逻辑整段内联在按钮的 `onClick` 里，无独立函数可复用的。
