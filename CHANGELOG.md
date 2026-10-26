@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R473: 错误提示带上动作上下文——不再只扔一行裸 os error
+
+- 缺口：六处 catch 把后端错误原文直接塞进提示条（`toast(String(e), 'err')`）：工具箱卡片的「读取用量」、CLI 的「运行」、硬件聚合卡片的首次加载与刷新、工具启动、网络检测。失败时用户只看到 `os error 5` / `spawn ENOENT`，不知道是哪一步失败，也分不清是权限、路径还是文件缺失。
+- 改动：新增五个文案键（中英成对）并把六处接上——`toolbelt.wall.usageFailed`（读取工具用量失败：{msg}）、`toolbelt.cli.runFailed`（运行工具失败：{msg}）、`toolbelt.hw.loadFailed`（读取硬件信息失败：{msg}）、`toolbelt.wall.launchFailed`（启动工具失败：{msg}）、`toolbelt.net.probeFailed`（网络连通性测试失败：{msg}）。硬件聚合卡片的 effect 依赖数组同步补 `t`（否则 react-hooks 报缺失依赖）。
+- 守卫：新增 `apps/desktop/src/toastCopy.test.ts` 四条——① 解析器不空转（非测试源码 >50 个文件、两个 glob 分别命中 `store.ts` 与 `App.tsx`、`toast(` 总数 >50）；② 全仓 `toast(` 的第一个参数不得以裸 `String(` 开头；③ 错误信息必须是表达式而不是被引号包住的字面量（本轮踩坑：写成 `{ msg: 'String(e ...)' }` 会让界面原样显示那行代码）；④ 五个键中英各出现两次。反向自检把 services.tsx 那处还原成裸 `String(` → 恰好 1 failed 点名 `./components/toolbelt/services.tsx:49`。
+- 验证：`pnpm -C apps/desktop check` 89 files / 1282 tests 全绿，eslint 0 warning。
+
 ### R472: AI 回答里的表格斑马行随主题走——深色主题下正文对比度从 3.16:1 回到 9.39:1
 
 - **缺口**：聊天气泡里的 Markdown 表格隔行底色是写死的 `rgba(255, 234, 242, 0.35)`（浅粉）。浅色主题下叠在近白气泡上是「淡淡的粉」，深色主题下同样这层粉叠在深卡片（`#111112`）上就变成 `#645D60` 的中灰粉——正文用的 `--ink-2`（`#b8b4c4`）压在上面只有 **3.16:1**，低于 WCAG AA 正文门槛 4.5:1；同一张表里没被涂色的行是 9.31:1。等于深色主题下每张表的隔行都变成「糊掉的那一行」。

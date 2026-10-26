@@ -46,7 +46,7 @@ export function NetworkPanel({ ctx: _ctx }: { ctx: ToolContext }) {
       for (const p of res) map[p.url] = p;
       setPingResult(map);
     } catch (e) {
-      toast(String(e instanceof Error ? e.message : e), 'err');
+      toast(t('toolbelt.net.probeFailed', { msg: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
       setBusy(false);
     }

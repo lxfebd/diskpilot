@@ -29,6 +29,7 @@ export const toolbelt = {
     'toolbelt.net.site.baidu': '百度',
     'toolbelt.net.site.bing': '必应',
     'toolbelt.net.site.github': 'GitHub',
+    'toolbelt.net.probeFailed': '网络连通性测试失败：{msg}',
 
     // 内置工具 2：系统信息
     'toolbelt.sys.title': '系统信息',
@@ -81,6 +82,7 @@ export const toolbelt = {
     'toolbelt.cli.timedOut': '⏱ 已超时终止',
     'toolbelt.cli.exitCode': '退出码 {code}',
     'toolbelt.cli.notInDir': '未在当前 Tools 目录中找到该工具',
+    'toolbelt.cli.runFailed': '运行工具失败：{msg}',
 
     // 分类显示名（目录名不统一：处理器工具/CPU工具、硬盘工具/磁盘工具…）
     'toolbelt.cat.hardware': '硬件信息',
@@ -224,8 +226,11 @@ export const toolbelt = {
     'toolbelt.wall.launchConfirmAsk': '确认要启动它吗？',
     'toolbelt.wall.launchConfirmBtn': '确认启动',
     'toolbelt.wall.launching': '启动中…',
+    'toolbelt.hw.loadFailed': '读取硬件信息失败：{msg}',
     'toolbelt.wall.launched': '已启动「{name}」',
     'toolbelt.wall.l3Blocked': '「{name}」为 L3 永久禁止操作（BIOS 刷写/格式化），不可解锁执行',
+    'toolbelt.wall.usageFailed': '读取工具用量失败：{msg}',
+    'toolbelt.wall.launchFailed': '启动工具失败：{msg}',
 
     // 工具卡片（徽标 / 悬停提示）
     'toolbelt.card.clickHint': '单击看详情 · 双击启动',
@@ -658,6 +663,7 @@ export const toolbelt = {
     'toolbelt.net.site.baidu': 'Baidu',
     'toolbelt.net.site.bing': 'Bing',
     'toolbelt.net.site.github': 'GitHub',
+    'toolbelt.net.probeFailed': 'Network probe failed: {msg}',
 
     // Built-in tool 2: system info
     'toolbelt.sys.title': 'System information',
@@ -710,6 +716,7 @@ export const toolbelt = {
     'toolbelt.cli.timedOut': '⏱ Timed out and killed',
     'toolbelt.cli.exitCode': 'Exit code {code}',
     'toolbelt.cli.notInDir': 'This tool was not found in the current Tools directory',
+    'toolbelt.cli.runFailed': 'Failed to run tool: {msg}',
 
     // Category display names (directory names are inconsistent: 处理器工具/CPU工具, 硬盘工具/磁盘工具…)
     'toolbelt.cat.hardware': 'Hardware info',
@@ -853,8 +860,11 @@ export const toolbelt = {
     'toolbelt.wall.launchConfirmAsk': 'Launch it?',
     'toolbelt.wall.launchConfirmBtn': 'Confirm launch',
     'toolbelt.wall.launching': 'Launching…',
+    'toolbelt.hw.loadFailed': 'Failed to read hardware info: {msg}',
     'toolbelt.wall.launched': 'Launched "{name}"',
     'toolbelt.wall.l3Blocked': '"{name}" is a permanently forbidden L3 operation (BIOS flashing / formatting) and cannot be unlocked',
+    'toolbelt.wall.usageFailed': 'Failed to load tool usage: {msg}',
+    'toolbelt.wall.launchFailed': 'Failed to launch tool: {msg}',
 
     // Tool cards (badges / hover hints)
     'toolbelt.card.clickHint': 'Click for details · double-click to launch',

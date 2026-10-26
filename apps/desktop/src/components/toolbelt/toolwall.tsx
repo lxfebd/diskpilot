@@ -88,7 +88,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
     if (next && !usages[name]) {
       api.toolbeltUsage(name)
         .then((u) => setUsages((m) => ({ ...m, [name]: u })))
-        .catch((e) => toast(String(e instanceof Error ? e.message : e), 'err'));
+        .catch((e) => toast(t('toolbelt.wall.usageFailed', { msg: String(e instanceof Error ? e.message : e) }), 'err'));
     }
   };
 
@@ -104,7 +104,7 @@ export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
       const r = await api.toolbeltRun(tool.name, args, undefined, confirmed);
       setReports((m) => ({ ...m, [tool.name]: r }));
     } catch (e) {
-      toast(String(e instanceof Error ? e.message : e), 'err');
+      toast(t('toolbelt.cli.runFailed', { msg: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
       setRunning(null);
     }
@@ -286,12 +286,12 @@ function HwAggregatePanel() {
   useEffect(() => {
     const unsub = subscribeHwCache(() => setCache(getHwCache()));
     // 有缓存直接复用；无缓存才发起读取（并发请求合并为一次）。
-    void ensureHwLoaded().catch((e) => toast(String(e instanceof Error ? e.message : e), 'err'));
+    void ensureHwLoaded().catch((e) => toast(t('toolbelt.hw.loadFailed', { msg: String(e instanceof Error ? e.message : e) }), 'err'));
     return unsub;
-  }, [toast]);
+  }, [toast, t]);
 
   const refresh = () => {
-    void ensureHwLoaded(true).catch((e) => toast(String(e instanceof Error ? e.message : e), 'err'));
+    void ensureHwLoaded(true).catch((e) => toast(t('toolbelt.hw.loadFailed', { msg: String(e instanceof Error ? e.message : e) }), 'err'));
   };
 
   return (
@@ -908,7 +908,7 @@ export function CatalogWall({
       setRecent(pushRecent(tool.name));
       toast(t('toolbelt.wall.launched', { name: tool.name }), 'ok');
     } catch (e) {
-      toast(String(e instanceof Error ? e.message : e), 'err');
+      toast(t('toolbelt.wall.launchFailed', { msg: String(e instanceof Error ? e.message : e) }), 'err');
     } finally {
       setLaunching(false);
     }
