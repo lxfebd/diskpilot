@@ -15,7 +15,7 @@ const SOURCES = import.meta.glob('./*.css', {
 const WHITELIST = new Set(['./tokens.css', './dark.css']);
 
 const BASELINE: Record<string, number> = {
-  './chat.css': 14,
+  './chat.css': 13,
   './toolwall.css': 6,
   './settings.css': 5,
   './overview.css': 3,
@@ -129,5 +129,21 @@ describe('toast 长文本不溢出卡片（R457）', () => {
     const tstart = ov.indexOf('.toast {');
     const tcard = ov.slice(tstart, ov.indexOf('}', tstart) + 1);
     expect(tcard).toContain('pointer-events: auto');
+  });
+});
+
+// ── 聊天气泡斑马行随主题（R472）────────────────────────────────
+// .chat-turn.assistant .chat-bubble tr:nth-child(even) td 曾写死 rgba(255, 234, 242, 0.35)：
+// 深色主题下叠在深卡片底上合成 #645D60，ink-2 文字对比度掉到 3.16:1（AA 门槛 4.5）。
+// 规则：斑马行背景必须走语义 token 的 color-mix，不许再出现 rgba。
+describe('聊天表格斑马行随主题（R472）', () => {
+  it('斑马行背景是 color-mix 调 accent，不是写死浅粉', () => {
+    const chat = SOURCES['./chat.css'];
+    const sel = '.chat-turn.assistant .chat-bubble tr:nth-child(even) td {';
+    const start = chat.indexOf(sel);
+    expect(start).toBeGreaterThan(-1);
+    const rule = chat.slice(start, chat.indexOf('}', start) + 1);
+    expect(rule).toContain('color-mix(in srgb, var(--accent) 8%, transparent)');
+    expect(rule).not.toContain('rgba(');
   });
 });

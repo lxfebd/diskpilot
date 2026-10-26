@@ -412,8 +412,12 @@
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
+/* R472：斑马行用主题 accent 的淡色调，不再写死浅粉 rgba。
+   写死浅粉的问题在深色主题：气泡底是深卡片(#111112)，35% 浅粉叠上去
+   变成 #645D60 的中灰粉，ink-2 文字对比度只剩 3.16:1（AA 要 4.5）；
+   换 color-mix 后合成 16,16,17、对比度 9.39:1，浅色主题仍是淡色调。 */
 .chat-turn.assistant .chat-bubble tr:nth-child(even) td {
-  background: rgba(255, 234, 242, 0.35);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .chat-actions {
   display: flex;
