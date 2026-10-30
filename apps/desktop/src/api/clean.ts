@@ -206,6 +206,11 @@ export const cleanApi = {
   scanStaleness: (root: string): Promise<ScanStaleness | null> =>
     isTauri ? invoke<ScanStaleness>('scan_staleness_cmd', { root }) : Promise.resolve(null),
 
+  /** R480 扫描摘要历史：scan-summary.jsonl 全量（按追加序，每 root 最近 30 条）。
+   *  缺文件返回空数组；读失败由后端 Err 直接抛给调用侧。 */
+  scanSummaryHistory: (): Promise<ScanSummaryView[] | null> =>
+    isTauri ? invoke<ScanSummaryView[]>('scan_summary_history') : Promise.resolve(null),
+
   getReminderConfig: () =>
     isTauri
       ? invoke<ReminderConfig>('get_reminder_config')
@@ -463,6 +468,28 @@ export interface ScanStaleness {
   days: number | null;
   /** 上次扫描的 unix 秒（展示「上次扫于 X」用）；null = 无有效记录。 */
   last_at: number | null;
+}
+
+/** scan_summary_history 的返回条目（R480），与后端 ScanSummary 一一对应：
+ *  一次真实扫描的聚合统计（不含路径明细）。 */
+export interface ScanSummaryView {
+  v: number;
+  /** 归一化扫描根（c:/）。 */
+  root: string;
+  /** 扫描完成时刻（unix 秒）。 */
+  at: number;
+  duration_ms: number;
+  /** mft | walkdir。 */
+  mode: string;
+  file_count: number;
+  dir_count: number;
+  total_bytes: number;
+  /** 一级子目录体量 Top20（按 bytes 降序）。 */
+  top_dirs: { path: string; bytes: number; files: number }[];
+  /** 大文件 Top50（按 bytes 降序）。 */
+  top_files: { path: string; bytes: number }[];
+  /** 体量分档直方图。 */
+  buckets: { label: string; count: number; bytes: number }[];
 }
 
 /** R293 扫描久未提醒（scan-stale 负载，逐盘）。只通知「多久没扫」，

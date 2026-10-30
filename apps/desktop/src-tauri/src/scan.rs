@@ -361,6 +361,11 @@ async fn commit_scan(
     // 「昨天刚扫」。静默失败，不影响扫描主流程。
     crate::scan_stamp::record_scan_stamp_now(&app, key);
 
+    // R480 扫描摘要落盘：把这次真实扫描的聚合统计（计数/总量/一级子目录 Top20/
+    // 大文件 Top50/体量分档）追加到 scan-summary.jsonl，每 root 最近 30 条。
+    // 必须在下方 node_full 被 move 进缓存之前调用。静默失败，不影响扫描主流程。
+    crate::scan_summary::record_scan_summary(&app, key, &outcome.stats, &outcome.node_full);
+
     // 建议统计与完整树：cleanup_suggestions / AI 总览 / dry_run 目录匹配都从
     // 内存树秒算，替代每次切页都重新全盘 walk。
     if let Ok(mut cache) = state.cleanup_cache.lock() {
