@@ -4,7 +4,8 @@
 //!
 //! 设计约束：
 //! - 归档只发生在报告生成成功之后（`hw_report` 主流程尾部，失败不影响报告返回）；
-//! - 归档文件按时间命名 `hw-<yyyyMMdd-HHmmss>.json`，永不覆盖旧快照；
+//! - 归档文件按时间命名 `hw-<yyyyMMdd-HHmmss>.json`，永不覆盖旧快照
+//!   （R479：写入走 obs::write_state，tmp + rename 原子替换，崩溃不留半个文件）；
 //! - 快照内容 = 报告同源的 `{info, health, note}`（与 json 格式报告完全一致），
 //!   对比字段从中提取；
 //! - 只读查询命令不触发任何硬件采集（对比用已有归档，绝不重跑 PowerShell）；
@@ -97,9 +98,6 @@ pub(crate) fn archive_snapshot(
     note: &str,
 ) {
     let Some(dir) = history_dir(app) else { return };
-    if std::fs::create_dir_all(&dir).is_err() {
-        return;
-    }
     let now = chrono::Utc::now();
     let file = format!("hw-{}.json", now.format("%Y%m%d-%H%M%S"));
     let path = dir.join(&file);
@@ -110,15 +108,10 @@ pub(crate) fn archive_snapshot(
         "at": now.timestamp(),
         "machine": machine_label(info),
     });
-    if std::fs::write(
-        &path,
-        serde_json::to_string_pretty(&payload).unwrap_or_default(),
-    )
-    .is_err()
-    {
-        return;
+    // R479：obs::write_state 原子写（自动建父目录），成功才裁剪。
+    if crate::obs::write_state(&path, &payload) {
+        prune(&dir);
     }
-    prune(&dir);
 }
 
 /// 裁剪到最近 MAX_SNAPSHOTS 份（按文件名排序，删最旧）。
@@ -209,13 +202,13 @@ fn safe_snapshot_file(file: &str) -> bool {
 }
 
 /// 读取单份归档的完整内容（{info, health, note, at, machine}）。
-fn read_snapshot(app: &tauri::AppHandle, file: &str) -> Option<serde_json::Value> {
-    let dir = history_dir(app)?;
+/// R479 起走 obs::read_state：缺文件 = Ok(None)；读失败/内容损坏 = Err（R88 诚实）。
+fn read_snapshot(app: &tauri::AppHandle, file: &str) -> Result<Option<serde_json::Value>, String> {
+    let dir = history_dir(app).ok_or_else(|| "无法定位硬件快照目录".to_string())?;
     if !safe_snapshot_file(file) {
-        return None;
+        return Ok(None);
     }
-    let text = std::fs::read_to_string(dir.join(file)).ok()?;
-    serde_json::from_str(&text).ok()
+    crate::obs::read_state(&dir.join(file))
 }
 
 fn v_str(v: &serde_json::Value, key: &str) -> String {
@@ -338,8 +331,8 @@ pub(crate) fn compare_hw_snapshots(
             .map(|m| m.file.clone())
             .ok_or_else(|| "只有一份快照，无法对比（生成第二次报告后即可对比）".to_string())?,
     };
-    let va = read_snapshot(&app, &fa).ok_or_else(|| format!("读取归档 {fa} 失败"))?;
-    let vb = read_snapshot(&app, &fb).ok_or_else(|| format!("读取归档 {fb} 失败"))?;
+    let va = read_snapshot(&app, &fa)?.ok_or_else(|| format!("读取归档 {fa} 失败"))?;
+    let vb = read_snapshot(&app, &fb)?.ok_or_else(|| format!("读取归档 {fb} 失败"))?;
 
     // 磁盘对齐：旧的 health.disk[] 或 info.disk[] 与新的同设备名配对。
     let disks_of = |v: &serde_json::Value| -> Vec<serde_json::Value> {
@@ -428,7 +421,7 @@ pub(crate) fn hw_snapshot_series(app: tauri::AppHandle) -> Result<Vec<serde_json
     let all = get_hw_history(app.clone())?;
     let mut out: Vec<serde_json::Value> = Vec::new();
     for m in all.iter().rev() {
-        let Some(v) = read_snapshot(&app, &m.file) else {
+        let Some(v) = read_snapshot(&app, &m.file)? else {
             continue;
         };
         out.push(series_point(&v, m.at));

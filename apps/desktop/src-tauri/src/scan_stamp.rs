@@ -16,12 +16,15 @@
 //! - **追加式 jsonl**，单行极短；
 //! - **同 root 60s 去重**：一次扫描事件只落一行；
 //! - **每 root 最近 MAX_PER_ROOT 条**，超长丢最旧（防跨年无限增长）；
-//! - **缺文件 = 真空态 → 空 vec**（从未扫过）；**文件在但读失败 → Err**
+//! - **缺文件 = 真空态 → 空 vec**（从未扫过）；**文件在但读失败/全部行损坏 → Err**
 //!   （R88：读失败不得伪装成「刚扫过」——那会让该提醒时完全不提醒）；
+//!   单条撕裂行（R479 obs 内核）跳过并计数上报，不整体 Err；
 //! - 本模块无写盘以外的任何副作用，`record` 失败一律静默（bool 返回值）。
 
+#[cfg(test)]
 use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
+#[cfg(test)]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -68,11 +71,6 @@ pub(crate) fn record_scan_stamp(app: &tauri::AppHandle, root: &str, at: u64) -> 
     let Some(p) = history_path(app) else {
         return false;
     };
-    if let Some(parent) = p.parent() {
-        if !parent.exists() && std::fs::create_dir_all(parent).is_err() {
-            return false;
-        }
-    }
     // 读一次现有 stamp 做 dedup + 裁剪：文件最多数百行（每 root 30 条 × 盘数），
     // 全读成本可忽略，换来的是不需要额外索引文件。
     let mut stamps = read_stamps_at(&p).unwrap_or_default();
@@ -111,47 +109,15 @@ fn distinct_roots(stamps: &[ScanStamp]) -> Vec<&String> {
     v
 }
 
-/// 整文件覆写（临时文件 + rename，避免写到一半崩掉留下半个文件）。
-/// 静默失败。
+/// 整文件覆写（R479：经 obs 内核，临时文件 + rename 原子替换）。静默失败。
 fn write_stamps(p: &Path, stamps: &[ScanStamp]) -> bool {
-    let tmp = p.with_extension("jsonl.tmp");
-    let Ok(mut out) = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(&tmp)
-    else {
-        return false;
-    };
-    for s in stamps {
-        let Ok(line) = serde_json::to_string(s) else {
-            continue;
-        };
-        if writeln!(out, "{line}").is_err() {
-            return false;
-        }
-    }
-    drop(out);
-    std::fs::rename(&tmp, p).is_ok()
+    crate::obs::write_jsonl(p, stamps)
 }
 
 pub(crate) fn read_stamps_at(p: &Path) -> Result<Vec<ScanStamp>, String> {
-    if !p.exists() {
-        return Ok(Vec::new());
-    }
-    let f = std::fs::File::open(p).map_err(|e| format!("打开扫描时间戳失败: {e}"))?;
-    let reader = BufReader::new(f);
-    let mut out: Vec<ScanStamp> = Vec::new();
-    for line in reader.lines().map_while(Result::ok) {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        let s: ScanStamp =
-            serde_json::from_str(line).map_err(|e| format!("扫描时间戳存在损坏行: {e}"))?;
-        out.push(s);
-    }
-    Ok(out)
+    // R479 起走 obs 内核：缺文件 = 真空态 Ok 空；坏行跳过+计数；
+    // 只有全部行损坏才 Err（R88 保住：故障不得伪装成真空态）。
+    Ok(crate::obs::read_jsonl(p)?.items)
 }
 
 pub(crate) fn read_stamps(app: &tauri::AppHandle) -> Result<Vec<ScanStamp>, String> {
@@ -375,6 +341,30 @@ mod tests {
         let p = dir.join("scan-stamps.jsonl");
         std::fs::write(&p, "not json !!!\n").unwrap();
         assert!(read_stamps_at(&p).is_err(), "损坏必须 Err");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn torn_line_is_skipped_and_counted_not_fatal() {
+        // R479：崩溃时写一半的撕裂行不该杀掉全部历史——跳过并计数，
+        // 由 obs::read_jsonl 的 corrupt_lines 上报给 observations 聚合层；只有全坏才 Err。
+        let dir = std::env::temp_dir().join(format!("dp-scanstamp-torn-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = dir.join("scan-stamps.jsonl");
+        std::fs::write(
+            &p,
+            format!(
+                "{}\nnot json !!!\n{}\n",
+                serde_json::to_string(&st("c:/", 1)).unwrap(),
+                serde_json::to_string(&st("c:/", 2)).unwrap()
+            ),
+        )
+        .unwrap();
+        let v = read_stamps_at(&p).expect("一行撕裂不该让整体 Err");
+        assert_eq!(v.len(), 2);
+        let full = crate::obs::read_jsonl::<ScanStamp>(&p).unwrap();
+        assert_eq!(full.corrupt_lines, 1, "撕裂行要被计数上报");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

@@ -17,16 +17,15 @@
 //! 不能说是**谁**加的、也不能断言它有害。软件自己装的启动项与恶意软件装的
 //! 在数据上长得一模一样，本模块没有能力区分，也不假装能。
 //!
-//! 设计约束（对齐 space_history / suggestion_history / thermal_history 族规）：
+//! 设计约束（对齐 space_history / suggestion_history / thermal_history 族规，
+//! R479 起由 obs 内核统一落地）：
 //! - **追加式 jsonl**：单行极短（只存身份键集合），追加成本可忽略；
 //! - **写失败静默**：底座不阻塞任何主流程；
 //! - **同源 dedup**：60s 内重复采样丢弃（调用方 tick 是 60s 粒度）；
-//! - **裁剪上限**：最多保留 MAX_SNAPSHOTS 份，超长丢最旧；
-//! - **只读查询区分真空态与读失败**：缺文件 = 从未快照（空 vec）；文件在但
-//!   读失败 → Err（R88：读失败不得伪装成「从无变化」）。
+//! - **裁剪上限**：最多保留 MAX_SNAPSHOTS 份，超长丢最旧（原子覆写）；
+//! - **只读查询区分真空态与读失败**：缺文件 = 从未快照（空 vec）；坏行跳过+计数，
+//!   全部行损坏 → Err（R88：读失败不得伪装成「从无变化」）。
 
-use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -88,103 +87,48 @@ pub(crate) fn record_startup_snapshot(
     let Some(p) = history_path(app) else {
         return false;
     };
-    if let Some(parent) = p.parent() {
-        if !parent.exists() && std::fs::create_dir_all(parent).is_err() {
-            return false;
-        }
-    }
     let at = now_secs();
-    // 倒查最后一行：dedup（时间）+ 去重（内容相同）。
-    if let Ok(f) = std::fs::File::open(&p) {
-        let mut last: Option<StartupSnapshot> = None;
-        for line in BufReader::new(f).lines().map_while(Result::ok) {
-            if let Ok(sn) = serde_json::from_str::<StartupSnapshot>(&line) {
-                last = Some(sn);
-            }
-        }
-        if let Some(l) = last {
-            if at.saturating_sub(l.at) < DEDUP_SECS {
-                return false;
-            }
-            if &l.keys == keys {
-                return false;
-            }
-        }
-    }
-    let line = match serde_json::to_string(&StartupSnapshot {
-        keys: keys.clone(),
-        at,
-    }) {
-        Ok(l) => l,
-        Err(_) => return false,
-    };
-    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&p) {
-        if writeln!(f, "{line}").is_err() {
+    // 看最后一份有效快照：dedup（时间）+ 去重（内容相同）（R479：obs 尾读）。
+    if let Ok(Some(l)) = crate::obs::read_jsonl_latest::<StartupSnapshot>(&p) {
+        if at.saturating_sub(l.at) < DEDUP_SECS {
             return false;
         }
-    } else {
-        return false;
+        if &l.keys == keys {
+            return false;
+        }
     }
-    prune_snapshots(&p);
-    true
+    let ok = crate::obs::append_jsonl(
+        &p,
+        &StartupSnapshot {
+            keys: keys.clone(),
+            at,
+        },
+    );
+    if ok {
+        prune_snapshots(&p);
+    }
+    ok
 }
 
 /// 裁剪到最近 MAX_SNAPSHOTS 份。失败静默（多留几份旧的只影响 diff 的历史深度）。
 fn prune_snapshots(p: &Path) {
-    let Ok(f) = std::fs::File::open(p) else {
+    // R479：obs 内核读 + 原子覆写（tmp + rename）。
+    let Ok(out) = crate::obs::read_jsonl::<StartupSnapshot>(p) else {
         return;
     };
-    let reader = BufReader::new(f);
-    let mut valid: Vec<StartupSnapshot> = Vec::new();
-    for line in reader.lines().map_while(Result::ok) {
-        if let Ok(sn) = serde_json::from_str::<StartupSnapshot>(&line) {
-            valid.push(sn);
-        }
-    }
-    if valid.len() <= MAX_SNAPSHOTS {
+    if out.items.len() <= MAX_SNAPSHOTS {
         return;
     }
-    let keep: Vec<StartupSnapshot> = valid.split_off(valid.len() - MAX_SNAPSHOTS);
-    let tmp = p.with_extension("jsonl.tmp");
-    let Ok(mut out) = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(&tmp)
-    else {
-        return;
-    };
-    for sn in &keep {
-        let Ok(l) = serde_json::to_string(sn) else {
-            continue;
-        };
-        if writeln!(out, "{l}").is_err() {
-            return;
-        }
-    }
-    drop(out);
-    let _ = std::fs::rename(&tmp, p);
+    let keep = &out.items[out.items.len() - MAX_SNAPSHOTS..];
+    crate::obs::write_jsonl(p, keep);
 }
 
 /// 读全部快照（按写入顺序）。
 /// 缺文件 = 从未快照（真空态）→ 空 vec；文件在但读失败 → Err（R88）。
 pub(crate) fn read_history_at(p: &Path) -> Result<Vec<StartupSnapshot>, String> {
-    if !p.exists() {
-        return Ok(Vec::new());
-    }
-    let f = std::fs::File::open(p).map_err(|e| format!("打开启动项历史失败: {e}"))?;
-    let reader = BufReader::new(f);
-    let mut out: Vec<StartupSnapshot> = Vec::new();
-    for line in reader.lines().map_while(Result::ok) {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        let sn: StartupSnapshot =
-            serde_json::from_str(line).map_err(|e| format!("启动项历史存在损坏行: {e}"))?;
-        out.push(sn);
-    }
-    Ok(out)
+    // R479：obs 内核读取——缺文件 = 真空态空 vec；坏行跳过+计数；
+    // 只有全部行损坏才 Err（R88：读失败不得伪装成「从无变化」）。
+    Ok(crate::obs::read_jsonl::<StartupSnapshot>(p)?.items)
 }
 
 /// 读应用的历史。

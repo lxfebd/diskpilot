@@ -19,6 +19,7 @@ pub(crate) mod mcp;
 mod mcp_bridge;
 mod net_http;
 mod net_proxy;
+mod obs;
 mod plugin_registry;
 mod plugin_registry_types;
 mod plugin_remote;

@@ -7,16 +7,18 @@
 //! 同一处——**没有"持续"可言**：瞬时尖峰（编译/解压让 CPU 冲高 10 秒）与真的散热不济
 //! 在单帧里长得一模一样。瞬时即判定会把正常机器唱成过热机，是比不报更坏的谎。
 //!
-//! 设计约束（对齐 space_history / suggestion_history 族规）：
+//! 设计约束（对齐 space_history / suggestion_history 族规，R479 起由 obs 内核落地）：
 //! - **追加式 jsonl**：单行极短，追加成本可忽略；
 //! - **写失败静默**：底座不阻塞任何主流程（调用方是 reminder 后台线程的顺手采样）；
 //! - **同源 dedup**：60s 内重复采样丢弃（后台 tick 是 60s 粒度，天然合一）;
-//! - **裁剪上限**：最多保留 MAX_SAMPLES 条，超长丢最旧（跨年无限增长要防）；
-//! - **只读查询区分真空态与读失败**：缺文件 = 从未采样（空 vec）；文件在但读不开 → Err
-//!   （R88 诚实性族规：读失败不得伪装成"从未过热"）。
+//! - **裁剪上限**：最多保留 MAX_SAMPLES 条，超长丢最旧（原子覆写；跨年无限增长要防）；
+//! - **只读查询区分真空态与读失败**：缺文件 = 从未采样（空 vec）；坏行跳过+计数，
+//!   文件在但读不开/全部行损坏 → Err（R88：读失败不得伪装成"从未过热"）。
 
+#[cfg(test)]
 use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
+#[cfg(test)]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -60,99 +62,39 @@ pub(crate) fn record_thermal_sample(app: &tauri::AppHandle, temp_max_c: f32) -> 
     let Some(p) = history_path(app) else {
         return false;
     };
-    if let Some(parent) = p.parent() {
-        if !parent.exists() && std::fs::create_dir_all(parent).is_err() {
-            return false;
-        }
-    }
     let at = now_secs();
-    // 只倒查最后一行做 dedup：jsonl 单行极短，成本可忽略（对齐 space_history）。
-    if let Ok(f) = std::fs::File::open(&p) {
-        let mut last: Option<ThermalPoint> = None;
-        for line in BufReader::new(f).lines().map_while(Result::ok) {
-            if let Ok(pt) = serde_json::from_str::<ThermalPoint>(&line) {
-                last = Some(pt);
-            }
-        }
-        if let Some(l) = last {
-            if at.saturating_sub(l.at) < DEDUP_SECS {
-                return false;
-            }
-        }
-    }
-    let line = match serde_json::to_string(&ThermalPoint { temp_max_c, at }) {
-        Ok(l) => l,
-        Err(_) => return false,
-    };
-    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&p) {
-        if writeln!(f, "{line}").is_err() {
+    // 只看最后一条有效记录做 dedup（R479：obs 尾读；对齐 space_history）。
+    if let Ok(Some(l)) = crate::obs::read_jsonl_latest::<ThermalPoint>(&p) {
+        if at.saturating_sub(l.at) < DEDUP_SECS {
             return false;
         }
-    } else {
-        return false;
     }
-    prune_samples(&p);
-    true
+    let ok = crate::obs::append_jsonl(&p, &ThermalPoint { temp_max_c, at });
+    if ok {
+        prune_samples(&p);
+    }
+    ok
 }
 
-/// 裁剪到最近 MAX_SAMPLES 条（整文件重写；文件最大数百 KB，成本可接受）。
+/// 裁剪到最近 MAX_SAMPLES 条（R479：obs 原子覆写 tmp+rename；文件最大数百 KB，成本可接受）。
 /// 失败静默——多留几条旧点不影响判定，而抛错会波及调用方。
 fn prune_samples(p: &Path) {
-    let Ok(f) = std::fs::File::open(p) else {
+    let Ok(out) = crate::obs::read_jsonl::<ThermalPoint>(p) else {
         return;
     };
-    let reader = BufReader::new(f);
-    let mut valid: Vec<ThermalPoint> = Vec::new();
-    for line in reader.lines().map_while(Result::ok) {
-        if let Ok(pt) = serde_json::from_str::<ThermalPoint>(&line) {
-            valid.push(pt);
-        }
-    }
-    if valid.len() <= MAX_SAMPLES {
+    if out.items.len() <= MAX_SAMPLES {
         return;
     }
-    let keep: Vec<ThermalPoint> = valid.split_off(valid.len() - MAX_SAMPLES);
-    let tmp = p.with_extension("jsonl.tmp");
-    let Ok(mut out) = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(&tmp)
-    else {
-        return;
-    };
-    for pt in &keep {
-        let Ok(l) = serde_json::to_string(pt) else {
-            continue;
-        };
-        if writeln!(out, "{l}").is_err() {
-            return;
-        }
-    }
-    drop(out);
-    let _ = std::fs::rename(&tmp, p);
+    let keep = &out.items[out.items.len() - MAX_SAMPLES..];
+    crate::obs::write_jsonl(p, keep);
 }
 
 /// 读全部历史。
 /// - 缺文件 = 从未采样（真空态）→ 空 vec 诚实；
-/// - 文件存在但打开/读取失败 → Err（R88：读失败不得伪装成"从未过热"）。
+/// - 坏行跳过+计数；文件存在但打开/读取失败或全部行损坏 → Err（R88：读失败不得伪装成"从未过热"）。
 pub(crate) fn read_history_at(p: &Path) -> Result<Vec<ThermalPoint>, String> {
-    if !p.exists() {
-        return Ok(Vec::new());
-    }
-    let f = std::fs::File::open(p).map_err(|e| format!("打开温度历史失败: {e}"))?;
-    let reader = BufReader::new(f);
-    let mut out: Vec<ThermalPoint> = Vec::new();
-    for line in reader.lines().map_while(Result::ok) {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        let pt: ThermalPoint =
-            serde_json::from_str(line).map_err(|e| format!("温度历史存在损坏行: {e}"))?;
-        out.push(pt);
-    }
-    Ok(out)
+    // R479：obs 内核读取。
+    Ok(crate::obs::read_jsonl::<ThermalPoint>(p)?.items)
 }
 
 /// 读应用的历史（命令/后台线程用）。

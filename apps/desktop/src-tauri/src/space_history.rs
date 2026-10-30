@@ -4,14 +4,16 @@
 //!
 //! 设计约束：
 //! - 追加式 jsonl，避免整文件重写（扫描次数有限，文件天然小）；
-//! - 缺文件 / 解析坏行一律静默跳过（历史记录是锦上添花，不能因它失败）；
+//! - 缺文件 = 真空态空 map；单条坏行跳过+计数（R479 obs 内核），全部行损坏才 Err；
 //! - 同 root 短时间（<60s）重复记录去重，避免一次扫描事件写两行；
 //! - 每 root 最多保留最近 180 条，超长裁剪，防止跨年无限增长。
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(test)]
 use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
+#[cfg(test)]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tauri::Manager;
@@ -56,48 +58,29 @@ pub(crate) fn record_space_point(
     let Some(p) = history_path(app) else {
         return;
     };
-    if let Some(parent) = p.parent() {
-        if !parent.exists() && std::fs::create_dir_all(parent).is_err() {
-            return;
-        }
-    }
     let at = now_secs();
-    // 追加前看一眼最后一行同 root 的时间戳，去重（读 1 行成本可忽略）。
+    // 追加前看一眼末尾同 root 的时间戳，去重（R479：obs 尾读）。
     if last_same_root_within(&p, root, at, DEDUP_SECS) {
         return;
     }
-    let line = match serde_json::to_string(&SpacePoint {
-        root: root.to_string(),
-        total_bytes,
-        used_bytes,
-        at,
-    }) {
-        Ok(l) => l,
-        Err(_) => return,
-    };
-    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&p) {
-        let _ = writeln!(f, "{line}");
-    }
+    let _ = crate::obs::append_jsonl(
+        &p,
+        &SpacePoint {
+            root: root.to_string(),
+            total_bytes,
+            used_bytes,
+            at,
+        },
+    );
 }
 
-/// 检查文件最后一条同 root 记录是否在 `now - within_secs` 内。
+/// 检查文件末尾至多 64 条有效记录里，是否有同 root 且在 `now - within_secs` 内的。
 fn last_same_root_within(p: &Path, root: &str, now: u64, within_secs: u64) -> bool {
-    let Ok(f) = std::fs::File::open(p) else {
+    // R479：obs 尾读；文件不存在/全损坏 → false（不当有记录）。
+    let Ok(out) = crate::obs::read_jsonl_tail::<SpacePoint>(p, 64) else {
         return false;
     };
-    let reader = BufReader::new(f);
-    // 只倒查最后 ~64 行：jsonl 单行极短，倒查成本可忽略且避免全文件读。
-    let mut lines: Vec<String> = Vec::new();
-    for line in reader.lines().map_while(Result::ok) {
-        lines.push(line);
-        if lines.len() > 64 {
-            lines.remove(0);
-        }
-    }
-    for line in lines.into_iter().rev() {
-        let Ok(pt) = serde_json::from_str::<SpacePoint>(&line) else {
-            continue;
-        };
+    for pt in out.items.iter().rev() {
         if pt.root == root {
             return now.saturating_sub(pt.at) < within_secs;
         }
@@ -121,23 +104,19 @@ pub(crate) fn read_history(
 
 /// 供单测使用的纯函数入口（不依赖 AppHandle）。
 fn read_history_at(p: &Path) -> Result<HashMap<String, Vec<SpacePoint>>, String> {
-    if !p.exists() {
-        // 从未记录过（真空态），不是读失败。
-        return Ok(HashMap::new());
+    // R479：obs 内核读取——缺文件 = 真空态空 map；坏行跳过+计数；
+    // 只有全部行损坏才 Err（R88 收紧：此前坏行被静默吞掉，故障被演成空历史）。
+    let out = crate::obs::read_jsonl::<SpacePoint>(p)?;
+    let mut map: HashMap<String, Vec<SpacePoint>> = HashMap::new();
+    for pt in out.items {
+        map.entry(pt.root.clone()).or_default().push(pt);
     }
-    let f = std::fs::File::open(p).map_err(|e| format!("读取空间历史失败: {e}"))?;
-    let mut out: HashMap<String, Vec<SpacePoint>> = HashMap::new();
-    for line in BufReader::new(f).lines().map_while(Result::ok) {
-        if let Ok(pt) = serde_json::from_str::<SpacePoint>(&line) {
-            out.entry(pt.root.clone()).or_default().push(pt);
-        }
-    }
-    for v in out.values_mut() {
+    for v in map.values_mut() {
         if v.len() > MAX_PER_ROOT {
             v.drain(..v.len() - MAX_PER_ROOT);
         }
     }
-    Ok(out)
+    Ok(map)
 }
 
 /// 读回并裁剪超长历史（写文件）。由 `get_space_history` 在返回前调用，
@@ -153,28 +132,10 @@ pub(crate) fn prune_history(app: &tauri::AppHandle) {
     if map.values().all(|v| v.len() <= MAX_PER_ROOT) {
         return;
     }
-    let mut lines: Vec<(u64, String)> = Vec::new();
-    for v in map.values() {
-        for pt in v {
-            if let Ok(l) = serde_json::to_string(pt) {
-                lines.push((pt.at, l));
-            }
-        }
-    }
-    lines.sort_by_key(|(at, _)| *at);
-    if let Some(parent) = p.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if let Ok(mut f) = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(&p)
-    {
-        for (_, l) in lines {
-            let _ = writeln!(f, "{l}");
-        }
-    }
+    let mut pts: Vec<SpacePoint> = map.into_values().flatten().collect();
+    pts.sort_by_key(|pt| pt.at);
+    // R479：obs 原子覆写（tmp + rename），补上此前直接 truncate 写的原子性缺口。
+    crate::obs::write_jsonl(&p, &pts);
 }
 
 /// 映射盘（`subst D: J:\D`）的扫描根换成它真正的目标根。

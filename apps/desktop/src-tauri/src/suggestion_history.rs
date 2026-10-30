@@ -7,13 +7,13 @@
 //! 统计），跨次对比不可能靠"再算一次上次"得到——上次的树早就变了。所以必须在
 //! 建议算出来那一刻把汇总数字记下来，与 `space_history`（卷容量趋势）同一范式。
 //!
-//! ## 设计约束（对齐 space_history / hw_history 既有族规）
+//! ## 设计约束（对齐 space_history / hw_history 既有族规，R479 起由 obs 内核落地）
 //! - 追加式 jsonl，单行极短，天然小文件；绝不整文件重写；
 //! - 写失败一律静默（对比是增强功能，不能阻塞扫描/建议主流程）；
 //! - 缺文件 = 真空态（从未记录过）→ 空，不是错误；
-//! - 文件存在但读失败 → Err（诚实性族规 R88：读失败不得伪装成"没有历史"）；
+//! - 坏行跳过+计数；文件存在但打不开/全部行损坏 → Err（R88：读失败不得伪装成"没有历史"）；
 //! - 单 root 短时间内重复记录去重，避免一次扫描事件写两行；
-//! - 每 root 保留最近 N 条，超长裁剪，防跨年无限增长。
+//! - 每 root 保留最近 N 条，超长裁剪（原子覆写），防跨年无限增长。
 //!
 //! ## 只存汇总，不存明细
 //! 快照只记 root 级总量 + 每 scaffold 小计，不记每条 scope 的路径/大小：
@@ -23,8 +23,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(test)]
 use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
+#[cfg(test)]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tauri::Manager;
@@ -104,46 +106,29 @@ pub(crate) fn record_suggestion_point(
     let Some(p) = history_path(app) else {
         return;
     };
-    if let Some(parent) = p.parent() {
-        if !parent.exists() && std::fs::create_dir_all(parent).is_err() {
-            return;
-        }
-    }
     let at = now_secs();
     if last_same_root_within(&p, root, at, DEDUP_SECS) {
         return;
     }
-    let line = match serde_json::to_string(&SuggestionPoint {
-        root: root.to_string(),
-        total_bytes,
-        scaffolds: scaffolds.clone(),
-        at,
-    }) {
-        Ok(l) => l,
-        Err(_) => return,
-    };
-    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&p) {
-        let _ = writeln!(f, "{line}");
-    }
+    let _ = crate::obs::append_jsonl(
+        &p,
+        &SuggestionPoint {
+            root: root.to_string(),
+            total_bytes,
+            scaffolds: scaffolds.clone(),
+            at,
+        },
+    );
 }
 
 /// 检查文件最后一条同 root 记录是否在 `now - within_secs` 内。
 /// 只倒查最后 64 行（单行极短），成本可忽略且避免全文件读。
 fn last_same_root_within(p: &Path, root: &str, now: u64, within_secs: u64) -> bool {
-    let Ok(f) = std::fs::File::open(p) else {
+    // R479：obs 尾读；文件不存在/全损坏 → false（不当有记录）。
+    let Ok(out) = crate::obs::read_jsonl_tail::<SuggestionPoint>(p, 64) else {
         return false;
     };
-    let mut lines: Vec<String> = Vec::new();
-    for line in BufReader::new(f).lines().map_while(Result::ok) {
-        lines.push(line);
-        if lines.len() > 64 {
-            lines.remove(0);
-        }
-    }
-    for line in lines.into_iter().rev() {
-        let Ok(pt) = serde_json::from_str::<SuggestionPoint>(&line) else {
-            continue;
-        };
+    for pt in out.items.iter().rev() {
         if pt.root == root {
             return now.saturating_sub(pt.at) < within_secs;
         }
@@ -153,25 +138,20 @@ fn last_same_root_within(p: &Path, root: &str, now: u64, within_secs: u64) -> bo
 
 /// 读取全部历史（按写入顺序）。
 /// - 缺文件 = 真空态 → 空 map；
-/// - 存在但打不开 → Err（R88：读失败不得伪装成"没有历史"，前端要能提示未读到）；
-/// - 坏行静默跳过。
+/// - 存在但打不开/全部行损坏 → Err（R88：读失败不得伪装成"没有历史"，前端要能提示未读到）；
+/// - 坏行跳过+计数（R479 obs 内核）。
 fn read_history_at(p: &Path) -> Result<HashMap<String, Vec<SuggestionPoint>>, String> {
-    if !p.exists() {
-        return Ok(HashMap::new());
+    let out = crate::obs::read_jsonl::<SuggestionPoint>(p)?;
+    let mut map: HashMap<String, Vec<SuggestionPoint>> = HashMap::new();
+    for pt in out.items {
+        map.entry(pt.root.clone()).or_default().push(pt);
     }
-    let f = std::fs::File::open(p).map_err(|e| format!("读取建议历史失败: {e}"))?;
-    let mut out: HashMap<String, Vec<SuggestionPoint>> = HashMap::new();
-    for line in BufReader::new(f).lines().map_while(Result::ok) {
-        if let Ok(pt) = serde_json::from_str::<SuggestionPoint>(&line) {
-            out.entry(pt.root.clone()).or_default().push(pt);
-        }
-    }
-    for v in out.values_mut() {
+    for v in map.values_mut() {
         if v.len() > MAX_PER_ROOT {
             v.drain(..v.len() - MAX_PER_ROOT);
         }
     }
-    Ok(out)
+    Ok(map)
 }
 
 pub(crate) fn read_history(
@@ -194,28 +174,10 @@ pub(crate) fn prune_history(app: &tauri::AppHandle) {
     if map.values().all(|v| v.len() <= MAX_PER_ROOT) {
         return;
     }
-    let mut lines: Vec<(u64, String)> = Vec::new();
-    for v in map.values() {
-        for pt in v {
-            if let Ok(l) = serde_json::to_string(pt) {
-                lines.push((pt.at, l));
-            }
-        }
-    }
-    lines.sort_by_key(|(at, _)| *at);
-    if let Some(parent) = p.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if let Ok(mut f) = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(&p)
-    {
-        for (_, l) in lines {
-            let _ = writeln!(f, "{l}");
-        }
-    }
+    let mut pts: Vec<SuggestionPoint> = map.into_values().flatten().collect();
+    pts.sort_by_key(|pt| pt.at);
+    // R479：obs 原子覆写（tmp + rename）。
+    crate::obs::write_jsonl(&p, &pts);
 }
 
 const DAY_SECS: i64 = 86_400;
