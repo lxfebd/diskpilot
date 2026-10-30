@@ -20,6 +20,7 @@ mod mcp_bridge;
 mod net_http;
 mod net_proxy;
 mod obs;
+mod observations;
 mod plugin_registry;
 mod plugin_registry_types;
 mod plugin_remote;
@@ -262,6 +263,7 @@ pub fn run() {
             reminder::check_startup_delta_cmd,
             scan_stamp::scan_staleness_cmd,
             scan_summary::scan_summary_history,
+            observations::observations_overview,
             thermal_history::get_thermal_history,
             reminder::check_space_forecast_cmd,
             auto_list::set_auto_list_config,

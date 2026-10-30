@@ -4,8 +4,17 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-/// 数据目录：%LOCALAPPDATA%/diskpilot/agent-server/，创建失败给 None（静默容错）。
+/// 数据目录：优先非空环境变量 DISKPILOT_DATA_DIR（R482：主进程注入的统一数据根，
+/// 与主项目 app_data_dir 同根）；未设置时回退 %LOCALAPPDATA%/diskpilot/agent-server/
+///（旧目录保留不迁移）。创建失败给 None（静默容错）。
 pub(crate) fn data_dir() -> Option<PathBuf> {
+    if let Ok(dir) = std::env::var("DISKPILOT_DATA_DIR") {
+        if !dir.trim().is_empty() {
+            let dir = PathBuf::from(dir);
+            let _ = std::fs::create_dir_all(&dir);
+            return Some(dir);
+        }
+    }
     let base = std::env::var("LOCALAPPDATA")
         .or_else(|_| std::env::var("TEMP"))
         .ok()?;

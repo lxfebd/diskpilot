@@ -211,6 +211,11 @@ export const cleanApi = {
   scanSummaryHistory: (): Promise<ScanSummaryView[] | null> =>
     isTauri ? invoke<ScanSummaryView[]>('scan_summary_history') : Promise.resolve(null),
 
+  /** R482 观测总览：app_data_dir 下各历史/状态文件的索引
+   *  （entries / corrupt_lines / latest / present，读失败的域带 error）。只读。 */
+  observationsOverview: (): Promise<ObservationsOverview | null> =>
+    isTauri ? invoke<ObservationsOverview>('observations_overview') : Promise.resolve(null),
+
   getReminderConfig: () =>
     isTauri
       ? invoke<ReminderConfig>('get_reminder_config')
@@ -490,6 +495,26 @@ export interface ScanSummaryView {
   top_files: { path: string; bytes: number }[];
   /** 体量分档直方图。 */
   buckets: { label: string; count: number; bytes: number }[];
+}
+
+/** observations_overview 的返回（R482）。domains 各值形态：
+ *  jsonl 域 {kind,file,entries,corrupt_lines,latest}，state 域 {kind,file,present}，
+ *  dir 域 {kind,file,entries,latest}；读失败的域带 error 字段而非统计字段。 */
+export interface ObservationsOverview {
+  v: number;
+  data_root: string;
+  domains: Record<
+    string,
+    {
+      kind: 'jsonl' | 'state' | 'dir';
+      file: string;
+      entries?: number;
+      corrupt_lines?: number;
+      latest?: unknown;
+      present?: boolean;
+      error?: string;
+    }
+  >;
 }
 
 /** R293 扫描久未提醒（scan-stale 负载，逐盘）。只通知「多久没扫」，

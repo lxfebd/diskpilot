@@ -243,6 +243,11 @@ async fn connect(
     // 注入 undo 日志路径（写操作工具进回收站后追加 undo 条目，与主项目同文件）。
     if let Some(log) = undo_log {
         cmd.env("DISKPILOT_UNDO_LOG", log);
+        // R482：把主数据根（undo.jsonl 的父目录 = app_data_dir）注入子进程，
+        // 让 agent-server 的观测文件也落进同一根，observations_overview 一眼可见。
+        if let Some(root) = log.parent() {
+            cmd.env("DISKPILOT_DATA_DIR", root);
+        }
     }
     // 写操作令牌：只有通过主进程确认门（confirmed=true 已在 agent_call_tool_core
     // 校验）的调用才注入 DISKPILOT_CONFIRMED=1。agent-server 内部写工具执行前
