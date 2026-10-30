@@ -388,6 +388,11 @@ async fn commit_scan(
         if let Ok(mut cursors) = state.usn_cursors.lock() {
             cursors.insert(key.to_string(), c.clone());
         }
+        // R481 游标落盘（usn-cursors.json）：进程重启后增量扫描仍有起点；
+        // 启动加载时会对照卷 journal 校验，失效游标被丢弃（诚实回退全量）。
+        // 静默失败，不影响扫描主流程。
+        #[cfg(windows)]
+        crate::usn_cursor_store::record_cursor(&app, key, c);
     }
     // R6 磁盘空间趋势：扫描完成后追加一条卷容量快照（只读展示数据，失败静默）。
     // key 是规范化的扫描根（"C:\" / "D:\dir"），用它直接查卷容量；同一卷下

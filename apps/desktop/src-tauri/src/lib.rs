@@ -38,6 +38,8 @@ pub(crate) mod system;
 mod thermal_history;
 pub(crate) mod toolbelt;
 pub(crate) mod updates;
+#[cfg(windows)]
+mod usn_cursor_store;
 mod webview;
 mod weekly_report;
 
@@ -179,6 +181,13 @@ pub fn run() {
             let scaffolds = scaffold_cmds::load_all_scaffolds(app.handle());
             tracing::info!("loaded {} scaffolds", scaffolds.len());
 
+            // R481 启动装载仍有效的 USN 游标：逐条对照卷 live journal 校验，
+            // journal 重置/回绕/查不了的一律丢弃——丢弃就意味着该盘下次诚实全量扫描。
+            #[cfg(windows)]
+            let usn_cursors = usn_cursor_store::load_validated_cursors(app.handle());
+            #[cfg(not(windows))]
+            let usn_cursors: HashMap<String, ()> = HashMap::new();
+
             app.manage(AppState {
                 scaffolds: Mutex::new(scaffolds),
                 quarantine_root,
@@ -186,7 +195,7 @@ pub fn run() {
                 scan_cancel: Arc::new(AtomicBool::new(false)),
                 cleanup_cache: Mutex::new(HashMap::new()),
                 scan_tree: Mutex::new(HashMap::new()),
-                usn_cursors: Mutex::new(HashMap::new()),
+                usn_cursors: Mutex::new(usn_cursors),
                 hw_stops: Mutex::new(Vec::new()),
                 perm_grants: Mutex::new(std::collections::HashSet::new()),
                 last_heartbeat: Mutex::new(None),
