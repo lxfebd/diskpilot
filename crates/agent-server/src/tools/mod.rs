@@ -366,3 +366,53 @@ impl ServerHandler for AgentServer {
         crate::server::get_prompt(request).await
     }
 }
+
+#[cfg(test)]
+mod tool_catalog_guard {
+    //! R484 守卫：运行时 tools/list 清单必须与 docs/mcp-tools.md 表格强一致。
+    //! 背景：2026-10-13 commit 56142ee 加入第 76 个工具时 CI 未拦截（当时没有任何
+    //! 计数断言）。此后「加/删工具忘了同步文档」会在本测试直接失败。
+
+    use super::*;
+
+    /// 解析 docs/mcp-tools.md 里所有 `| ` + 反引号 + 工具名 表格行，返回去重排序后的工具名。
+    fn doc_tool_names() -> Vec<String> {
+        let doc = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/mcp-tools.md");
+        let text = std::fs::read_to_string(&doc).expect("docs/mcp-tools.md 必须可读");
+        let mut names: Vec<String> = text
+            .lines()
+            .filter_map(|l| {
+                l.trim_start()
+                    .strip_prefix("| `")
+                    .and_then(|r| r.split('`').next())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    }
+
+    #[test]
+    fn tool_router_matches_mcp_tools_doc() {
+        let router = AgentServer::tool_router();
+        let mut runtime: Vec<String> = router
+            .list_all()
+            .iter()
+            .map(|t| t.name.to_string())
+            .collect();
+        runtime.sort();
+        let doc = doc_tool_names();
+        assert_eq!(
+            runtime.len(),
+            doc.len(),
+            "MCP 工具数量漂移：运行时 {} 个，docs/mcp-tools.md {} 个——加/删工具必须同步更新该文档",
+            runtime.len(),
+            doc.len()
+        );
+        assert_eq!(
+            runtime, doc,
+            "MCP 工具名单不一致：左 = 运行时 tools/list，右 = docs/mcp-tools.md"
+        );
+    }
+}
