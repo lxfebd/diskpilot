@@ -38,7 +38,7 @@ impl AgentServer {
     }
 
     #[tool(
-        description = "传感器趋势（只读 L0，写应用自有历史文件）：追加一条当前传感器快照（含 CPU 最高温/GPU 温度/内存占用）到历史 JSONL（%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl，追加式 + 自动裁剪 500 条——只写应用自己的数据目录，不改不动用户文件），返回最近 n 条（默认 10，上限 50）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。AI 在用户问『温度趋势/散热表现』时调用（多次调用可见随时间变化）。"
+        description = "传感器趋势（只读 L0，写应用自有历史文件）：追加一条当前传感器快照（含 CPU 最高温/GPU 温度/内存占用）到历史 JSONL（应用数据目录/sensor-history.jsonl（DISKPILOT_DATA_DIR 统一数据根），追加式 + 自动裁剪 500 条——只写应用自己的数据目录，不改不动用户文件），返回最近 n 条（默认 10，上限 50）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。AI 在用户问『温度趋势/散热表现』时调用（多次调用可见随时间变化）。"
     )]
     async fn sensor_trend(
         &self,
@@ -50,7 +50,7 @@ impl AgentServer {
     }
 
     #[tool(
-        description = "传感器历史（纯只读 L0，不采集不追加）：只读 %LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl 已记录的历史快照（sensor_trend 追加写入、自动裁剪 500 条），返回最近 n 条（默认全部，上限 500）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。与 sensor_trend 的区别是它不做任何新采集/写入，纯展示历史。AI 在用户问『今天散热/温度变化历史/长时间趋势』时调用。"
+        description = "传感器历史（纯只读 L0，不采集不追加）：只读 应用数据目录/sensor-history.jsonl（DISKPILOT_DATA_DIR 统一数据根） 已记录的历史快照（sensor_trend 追加写入、自动裁剪 500 条），返回最近 n 条（默认全部，上限 500）。format=json 时返回结构化数组供前端折线图（ts + cpu_temp_c + gpu_temp_c + mem_percent 可空）。与 sensor_trend 的区别是它不做任何新采集/写入，纯展示历史。AI 在用户问『今天散热/温度变化历史/长时间趋势』时调用。"
     )]
     async fn sensor_history(
         &self,
@@ -62,7 +62,7 @@ impl AgentServer {
     }
 
     #[tool(
-        description = "传感器阈值告警（只读 L0，persist=true 时写应用自有告警日志）：体检 CPU 温度/磁盘温度/GPU 温度/内存占用/磁盘剩余是否超阈值，输出告警清单（只读采集 + 阈值比较，无系统改动）。参数 cpu_temp=CPU 温度阈值℃（默认 85）、disk_temp=磁盘温度阈值℃（默认 55）、gpu_temp=GPU 阈值℃（默认 85）、mem_percent=内存占用阈值%（默认 90）、disk_free_gb=磁盘剩余阈值 GB（默认 20）、persist=是否把告警写历史到 %LOCALAPPDATA%/diskpilot/agent-server/sensor-alerts.jsonl（默认 false，只写应用自有数据目录）。AI 在用户问『电脑状态健康吗/该注意什么』时调用。"
+        description = "传感器阈值告警（只读 L0，persist=true 时写应用自有告警日志）：体检 CPU 温度/磁盘温度/GPU 温度/内存占用/磁盘剩余是否超阈值，输出告警清单（只读采集 + 阈值比较，无系统改动）。参数 cpu_temp=CPU 温度阈值℃（默认 85）、disk_temp=磁盘温度阈值℃（默认 55）、gpu_temp=GPU 阈值℃（默认 85）、mem_percent=内存占用阈值%（默认 90）、disk_free_gb=磁盘剩余阈值 GB（默认 20）、persist=是否把告警写历史到 应用数据目录/sensor-alerts.jsonl（同上）（默认 false，只写应用自有数据目录）。AI 在用户问『电脑状态健康吗/该注意什么』时调用。"
     )]
     async fn sensor_alert(
         &self,

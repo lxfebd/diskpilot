@@ -3,7 +3,7 @@
 
 use crate::tools::{hw, system};
 
-use super::rep_storage::{append_jsonl, read_jsonl, trim_jsonl, ts_secs};
+use super::rep_storage::{append_jsonl, data_dir_label, read_jsonl, trim_jsonl, ts_secs};
 use super::rep_util::{fmt_ts, fmt_uptime, format_f1, now_str};
 
 /// 一键体检报告：8 段串行只读采集（每段 PowerShell/CIM 1-5s，总 10-30s）。
@@ -171,7 +171,10 @@ pub fn sensor_trend(n: Option<usize>, format: Option<String>) -> Result<String, 
             .unwrap_or_default();
         out.push_str(&format!("- {} CPU 最高温：{temp}{gpu}{mem}\n", fmt_ts(ts)));
     }
-    out.push_str("\n完整快照见 sensor_trend 数据目录 sensor-history.jsonl（%LOCALAPPDATA%/diskpilot/agent-server/）。");
+    out.push_str(&format!(
+        "\n完整快照见 sensor_trend 数据目录 sensor-history.jsonl（{}）。",
+        data_dir_label()
+    ));
     Ok(out)
 }
 
@@ -212,6 +215,9 @@ pub fn sensor_history(n: Option<usize>, format: Option<String>) -> Result<String
             .unwrap_or_default();
         out.push_str(&format!("- {} CPU 最高温：{temp}{gpu}{mem}\n", fmt_ts(ts)));
     }
-    out.push_str("\n数据源：%LOCALAPPDATA%/diskpilot/agent-server/sensor-history.jsonl（sensor_trend 追加写入）。");
+    out.push_str(&format!(
+        "\n数据源：{}/sensor-history.jsonl（sensor_trend 追加写入）。",
+        data_dir_label()
+    ));
     Ok(out)
 }

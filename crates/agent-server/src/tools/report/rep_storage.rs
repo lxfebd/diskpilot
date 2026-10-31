@@ -23,6 +23,14 @@ pub(crate) fn data_dir() -> Option<PathBuf> {
     Some(dir)
 }
 
+/// 数据目录的展示标签（R483）：用户/AI 可见的路径文案一律用实际解析结果，
+/// 不再硬编码 %LOCALAPPDATA%/diskpilot/agent-server/（R482 单根统一后以此为准）。
+pub(crate) fn data_dir_label() -> String {
+    data_dir()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "应用数据目录（未解析）".to_string())
+}
+
 /// 追加一行 JSONL（失败静默）。
 pub(crate) fn append_jsonl(file: &str, line: &str) {
     let Some(dir) = data_dir() else { return };

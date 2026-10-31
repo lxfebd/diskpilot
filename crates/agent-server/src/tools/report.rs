@@ -9,8 +9,9 @@
 //!   / 内存占用 / 磁盘剩余），超阈值输出告警。默认只读出结果，`persist=true` 时
 //!   才把历史写入磁盘文件。
 //!
-//! 数据目录：`%LOCALAPPDATA%/diskpilot/agent-server/`（追加式 JSONL + 原子写裁剪，
-//! 失败全静默，与主项目 R6 同款容错）。
+//! 数据目录：优先 DISKPILOT_DATA_DIR（R482 主进程注入的统一数据根），未设置时
+//! 回退 %LOCALAPPDATA%/diskpilot/agent-server/（追加式 JSONL + 原子写裁剪，
+//! 失败全静默，与主项目 R6 同款容错）。用户可见文案走 data_dir_label()，不硬编码路径。
 //!
 //! 2026-10-12 拆分：存储 → `rep_storage`，报告/趋势 → `rep_report`，
 //! 阈值告警 → `rep_alert`，格式化/解析小工具 → `rep_util`。
