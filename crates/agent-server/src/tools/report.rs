@@ -17,11 +17,13 @@
 //! 阈值告警 → `rep_alert`，格式化/解析小工具 → `rep_util`。
 
 mod rep_alert;
+mod rep_observations;
 mod rep_report;
 mod rep_storage;
 mod rep_util;
 
 pub use rep_alert::sensor_alert;
+pub use rep_observations::observations_overview;
 pub use rep_report::{sensor_history, sensor_trend, system_report};
 
 // 回归测试引用的内部符号。

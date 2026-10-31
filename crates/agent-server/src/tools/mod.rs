@@ -54,6 +54,7 @@ mod tool_hw_core;
 mod tool_hw_ext;
 mod tool_hw_report;
 mod tool_misc;
+mod tool_observations;
 mod tool_sys;
 mod tool_sys_apps;
 mod tool_sys_misc;
@@ -310,6 +311,7 @@ impl AgentServer {
             + Self::tool_router_hw_bench()
             + Self::tool_router_hw_report()
             + Self::tool_router_misc()
+            + Self::tool_router_observations()
     }
 }
 

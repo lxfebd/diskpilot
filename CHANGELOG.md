@@ -7,6 +7,23 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R485: observations_overview——MCP 侧观测总览只读工具，一眼看尽这台机器被观测成什么样
+
+- 改动：crates/agent-server/src/tools/report/rep_observations.rs 新增（纯函数 build_overview + 入口 observations_overview），复刻桌面端 observations.rs（R482）的域表与族规：jsonl 域 entries/corrupt_lines/latest、state 域 present、hw-history/ 目录快照数+最新文件名；缺文件=真空态、读取失败/全损坏=error（R88 诚实性）。经新域 tool_observations.rs 注册为第 77 个 MCP 工具（纯只读 L0，不采集不写入）。单测覆盖混合域索引与全损坏=error 两条。
+- 文档：docs/mcp-tools.md 表格+详述新增 observations_overview；工具计数 76→77、只读 65→66 同步到 docs/health-butler.md 与 website/index.html（R484 守卫测试保证此后名单与文档强一致）。
+- 验证：cargo test -p agent-server 全绿（含 tool_catalog_guard 新名单断言与 rep_observations 单测）；clippy --workspace --all-targets -D warnings 干净；cargo fmt --check 干净。
+
+### R484: MCP 工具目录守卫测试——tools/list 与 docs/mcp-tools.md 强一致，76≠75 漂移不再漏网
+
+- 根因：2026-10-13 commit 56142ee 加入第 76 个工具时仓库内没有任何计数断言，CI test-rust（cargo test --workspace）自然拦不住文档漂移。
+- 改动：tools/mod.rs 追加 #[cfg(test)] mod tool_catalog_guard——doc_tool_names() 解析 docs/mcp-tools.md 全部表格行，tool_router_matches_mcp_tools_doc 比较 AgentServer::tool_router().list_all() 与文档（先断数量、再断名单，失败信息提示同步更新文档）。
+- 验证：cargo test -p agent-server 97 passed（守卫测试绿）。
+
+### R483: 清理 agent-server 过期数据路径文案，统一走 DISKPILOT_DATA_DIR（R482 单根）
+
+- 改动：rep_storage.rs 新增 data_dir_label()（用户可见文案一律用实际解析路径）；rep_report.rs 输出、tool_hw_report.rs 的 #[tool] description（字面量）、report.rs 注释、docs/mcp-tools.md、docs/health-butler.md、website/index.html、smoke_full.py 全部去掉硬编码 %LOCALAPPDATA%/diskpilot/agent-server/ 与 75 计数（改为 76 / 65 只读 + 11 写）。
+- 验证：cargo fmt --check 干净；clippy -D warnings 干净（exit 0，仅上游 binrw future-incompat 备注）。
+
 ### R477: 搜索结果为空也播报一声——读屏不再「打了字却听不到结果为空」
 
 - 缺口：七个过滤器/搜索框结果为空时只把列表换成一句灰字，没有任何 live region——读屏用户输入关键字、列表清空，屏上没有任何播报，只能靠手动逐行重扫确认「没有匹配」；键盘与触屏用户同样得不到结果反馈。

@@ -87,6 +87,9 @@ pub(crate) struct BsodAnalyzeParams {
 pub(crate) struct SystemReportParams {}
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(crate) struct ObservationsOverviewParams {}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(crate) struct SensorTrendParams {
     #[schemars(description = "返回最近 N 条趋势（默认 10，上限 50）")]
     #[serde(default, deserialize_with = "lenient::opt_usize")]

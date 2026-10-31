@@ -25,6 +25,7 @@
 | 工具 | 参数 | 说明 |
 |---|---|---|
 | `env_vars` | name:Option<String> | 读取环境变量值（只读）：传 name 查指定变量；不传列出常用子集（PATH/TEMP/USERPROFILE/APPDATA 等）。用户问『某个路径在哪/环境变量配没配/命令找不到是不是 PATH 问题』时调用。 |
+| `observations_overview` | — | 观测总览（纯只读 L0）：读取统一数据根（DISKPILOT_DATA_DIR，与主进程 app_data_dir 同根）下全部观测域的索引——jsonl 域（entries/corrupt_lines/latest）、state 域（present）、hw-history/ 目录（快照数 + 最新文件名），返回 { v, data_root, domains } JSON。不采集、不写入任何文件。用户问『这台机器被观测成什么样/有哪些历史记录/扫描过几次盘』时调用，作为周报与洞察的统一入口。 |
 | `recycle_bin_stats` | — | 查询本机回收站状态（只读，Windows API）：逐卷文件数与总大小 + 合计。用户问『回收站占了多少空间/回收站里有多少东西/能不能清回收站腾空间』时调用。 |
 | `sys_defender_status` | — | 读取 Windows Defender 安全中心状态（只读）：服务状态 + 实时保护开关 + 病毒库/引擎版本 + 最近快速扫描时间。用户问『杀毒软件开没开/Windows 安全中心状态/病毒库新不新』时调用；若系统用第三方杀软（Defender 被替换）会如实说明。 |
 | `sys_user_accounts` | — | 枚举本机用户账户（只读）：账户名/全名/是否禁用/是否锁定/本地或域账户/SID 尾段，排除内置系统账户（defaultuser0 等）。用户问『这台电脑有哪些用户/有几个账户/禁用账户是谁』时调用；无需管理员即可读取，受限时如实降级。 |
@@ -328,6 +329,10 @@ IPMI 服务器接口探测（只读 L0，复刻 AIDA64 IPMI）：检测主板是
 ### `net_wifi`
 
 读取无线网络信息：本机无线网卡状态 + 已保存的 WiFi 网络名称列表（绝不读取密码，只读）。用户问『WiFi 连的是什么/保存了哪些 WiFi』时调用；无无线网卡会明确说明。
+
+### `observations_overview`
+
+观测总览（纯只读 L0）：读取统一数据根（DISKPILOT_DATA_DIR，与主进程 app_data_dir 同根）下全部观测域的索引——jsonl 域（scan_stamps / scan_summary / space_history / startup_history / suggestion_history / thermal_history / undo / sensor_history / sensor_alerts：entries 有效行数、corrupt_lines 损坏行数、latest 最后一条）、state 域（usn_cursors / general / reminder / auto_list / mcp_servers / scaffolds_registry / tool_plugin：present 是否存在且可解析）、hw-history/ 目录（快照数 + 最新文件名），返回 { v, data_root, domains } JSON。缺文件 = 真空态 entries=0，读取失败/全部行损坏 = error 字段（R88 诚实性）。不采集、不写入任何文件。AI 在用户问『这台机器被观测成什么样/有哪些历史记录/扫描过几次盘』时调用，作为周报与洞察的统一入口。
 
 ### `process_cpu_usage`
 
