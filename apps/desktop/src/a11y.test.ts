@@ -1959,3 +1959,29 @@ describe('空结果播报（R477）', () => {
     expect(m).not.toContain(`role="status">{t('toolbelt.mkt.loading')}</p>`);
   });
 });
+
+describe('SteamInspector 游戏行的键盘操作（R491）', () => {
+  it('行可聚焦（roving tabindex）、Enter/空格激活、方向键导航', () => {
+    const s = RAW_TSX['./components/SteamInspector.tsx'];
+    // roving 焦点：行带下标、落点 tabIndex={i === rowFocus ? 0 : -1}
+    expect(s).toContain(`tabIndex={i === rowFocus ? 0 : -1}`);
+    expect(s).toContain(`onRowKeyDown={activateOnKey(select)}`);
+    // 键盘与鼠标同一条 select 函数
+    expect(s).toContain(`onClick={select}`);
+    // 方向键在列表容器上：下/上/Home/End
+    expect(s).toContain(`else if (e.key === 'ArrowUp')`);
+    expect(s).toContain(`else if (e.key === 'End') next = rows.length - 1;`);
+    // capture 列表的挂点
+    expect(s).toContain(`list.addEventListener('keydown', onKeys);`);
+    // 卸载清理
+    expect(s).toContain(`return () => list.removeEventListener('keydown', onKeys);`);
+  });
+  it('steam.css 给可聚焦行描边（forced-colors/键盘用户可见）', () => {
+    const css = RAW_CSS['./styles/steam.css'].replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const m = css.match(/\.steam-row:focus-visible\s*\{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    const body = m ? m[1] : ' ';
+    expect(body).toContain('outline: 2px solid var(--accent-strong);');
+    expect(body).toContain('outline-offset: -2px;');
+  });
+});

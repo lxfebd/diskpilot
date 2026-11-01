@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R491: Steam 盘点游戏行可键盘操作——roving tabindex + 方向键走行，不再几十个 Tab 停靠点
+
+- 缺口：SteamInspector 的游戏行是可点选的 div（role="option"），但没有 tabIndex——键盘用户 Tab 不进列表，想用键盘勾选只能靠鼠标；一装几十个游戏的书库若按原生做法每个行都可 Tab，又会变成几十个停靠点。
+- 改动（`SteamInspector.tsx`）：① roving tabindex——行带下标，落点 `tabIndex={i === rowFocus ? 0 : -1}`，Tab 进列表只停一行；② 搜索/透视切换时行集合变化，`useEffect` 把落点收回第一行；③ 方向键（下/上/Home/End）挂在列表容器的 keydown 上（挂点、卸载时 removeEventListener），焦点在哪就在哪落、没聚焦任何行时默认第一行；④ 行自己的 Enter/空格走既有 `activateOnKey(select)`（R314 口径），与鼠标 `onClick` 是同一条 `select` 函数——键盘与鼠标行为一致。
+- 改动（`steam.css`）：新增 `.steam-row:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }`——键盘聚焦行有可见描边（R348 口径：键盘焦点亮出、鼠标点击仍是背景换色）。
+- 守卫：`a11y.test.ts` 新增 describe「SteamInspector 游戏行的键盘操作（R491）」两条——① roving 落点、`activateOnKey(select)` 与 `onClick={select}` 同源、方向键四支与挂点/卸载语句齐全；② steam.css 的 `:focus-visible` 规则含两条 outline 声明（注释剥离后匹配）。
+- 验证：`pnpm -C apps/desktop exec vitest run` 90 files / 1298 tests 全绿；tsc -b 与 eslint 0 warning。
+
 ### R490: 补齐工具数 76→77 的全部残留硬编码断言与文案（CI test-rust windows 失败根因）
 
   - R489 的 CI run 41315244461 显示 test-rust(windows) 失败：agent_tests.rs 的 agent_list_tools_returns_76_tools 断言 76，R485 加 observations_overview 后实际 77（该测试仅在 agent-server 二进制存在时跑，本地漏网）。

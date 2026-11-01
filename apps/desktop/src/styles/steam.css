@@ -505,6 +505,11 @@
   background: var(--paper-2);
   border-color: var(--ink-3);
 }
+.steam-row:focus-visible {
+  /* R491：行可键盘聚焦（tabIndex=0），给可见焦点描边（R348 口径：键盘焦点亮出、鼠标点击仍是背景换色） */
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+}
 .steam-row.recommended {
   background: var(--accent-bg);
   border-left: 4px solid var(--lavender);

@@ -23,7 +23,7 @@ import { formatBytes, formatDateTime, formatDateKey } from '../format';
 import { t, useT } from '../i18n';
 import { SteamWorkshopModal } from './SteamWorkshopModal';
 import { scrollBehavior } from '../motion';
-import { clearSearchOnClick, clearSearchOnEscape } from '../a11y';
+import { activateOnKey, clearSearchOnClick, clearSearchOnEscape } from '../a11y';
 
 type Pivot = 'sleep' | 'size' | 'library' | 'lastplayed';
 
@@ -124,8 +124,37 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
   // appid → 中文名（翻译管线异步填充；null = 翻译不可用/未命中）。
   const [nameCn, setNameCn] = useState<Record<number, string>>({});
 
+  // R491：列表行的 roving tabindex。键盘用户 Tab 进列表只落一行（0），方向键在行间走——
+  // 否则一个装上几十个游戏的书库会变成几十个 Tab 停靠点，反而更难用。
+  const [rowFocus, setRowFocus] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // R491：搜索或透视换了，行集合就换了一批——roving 落点收回第一行。
+  useEffect(() => { setRowFocus(0); }, [searchQuery, pivot]);
+
+  // R491:方向键在行间走。行自己的 onKeyDown（activateOnKey）处理 Enter/空格，
+  // 这里只拦方向键：焦点在哪就在哪落（没聚焦任何行时默认第一行）。
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const onKeys = (e: KeyboardEvent) => {
+      const rows = list.querySelectorAll<HTMLElement>('[role="option"]');
+      if (rows.length === 0) return;
+      const cur = Array.prototype.indexOf.call(rows, document.activeElement);
+      let next = cur;
+      if (e.key === 'ArrowDown') next = cur < 0 ? 0 : Math.min(rows.length - 1, cur + 1);
+      else if (e.key === 'ArrowUp') next = cur <= 0 ? rows.length - 1 : cur - 1;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = rows.length - 1;
+      else return;
+      e.preventDefault();
+      setRowFocus(next);
+      rows[next]?.focus();
+    };
+    list.addEventListener('keydown', onKeys);
+    return () => list.removeEventListener('keydown', onKeys);
+  }, []);
+
   // 一次性 toast/教学条定时器统一登记，卸载时全部清理：避免已关闭的组件
   // 里迟到触发 setState，以及长驻的回调引用的泄漏。
   const timersRef = useRef<number[]>([]);
@@ -676,15 +705,23 @@ export function SteamInspector({ onDismissBack }: { onDismissBack?: () => void }
               {allGames.length === 0 && (
                 <div className="steam-list-empty" role="status">{t('steam.noMatches')}</div>
               )}
-              {allGames.map((g) => (
-                <SteamRow
-                  key={`${g.library_root}-${g.appid}`}
-                  game={g}
-                  nameCn={nameCn[g.appid] ?? null}
-                  selected={g.appid === selectedAppid}
-                  onClick={() => setSelectedAppid(g.appid === selectedAppid ? null : g.appid)}
-                />
-              ))}
+              {allGames.map((g, i) => {
+                const select = () => {
+                  setRowFocus(i);
+                  setSelectedAppid(g.appid === selectedAppid ? null : g.appid);
+                };
+                return (
+                  <SteamRow
+                    key={`${g.library_root}-${g.appid}`}
+                    game={g}
+                    nameCn={nameCn[g.appid] ?? null}
+                    selected={g.appid === selectedAppid}
+                    onClick={select}
+                    tabIndex={i === rowFocus ? 0 : -1}
+                    onRowKeyDown={activateOnKey(select)}
+                  />
+                );
+              })}
             </div>
           </section>
 
@@ -728,11 +765,15 @@ function SteamRow({
   nameCn,
   selected,
   onClick,
+  tabIndex,
+  onRowKeyDown,
 }: {
   game: SteamGame;
   nameCn: string | null;
   selected: boolean;
   onClick: () => void;
+  tabIndex?: number;
+  onRowKeyDown?: (e: { key: string; preventDefault?: () => void }) => void;
 }) {
   const displayName = nameCn ?? game.name_en;
   const altName = nameCn ? game.name_en : game.install_dir_name;
@@ -747,6 +788,8 @@ function SteamRow({
         ghost: game.is_ghost,
       })}
       onClick={onClick}
+      tabIndex={tabIndex}
+      onKeyDown={onRowKeyDown}
     >
       <div className="steam-row-icon">
         {game.is_ghost ? <AlertTriangle size={14} /> : game.default_recommended ? <Zap size={14} /> : null}
