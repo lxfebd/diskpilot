@@ -309,6 +309,38 @@ export function WeeklyHealthCard({
               <div className="muted small">{t('history.weekly.deltaNone')}</div>
             )}
           </div>
+
+          {/* R486：扫描趋势（后端已格式化好的行）。旧归档没有 scan_trends 字段 → 整块不显示，不猜。 */}
+          {report.scan_trends !== undefined && (
+            <div className="wh-delta">
+              <div className="wh-delta-title">{t('history.weekly.scanTrend')}</div>
+              {report.scan_trends.length > 0 ? (
+                <ul className="wh-delta-list">
+                  {report.scan_trends.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="muted small">{t('history.weekly.scanTrendNone')}</div>
+              )}
+            </div>
+          )}
+
+          {/* R486：观测层异常（损坏行 / 读取失败的域）。字段存在才代表后端真读到过观测层。 */}
+          {report.obs_alerts !== undefined && (
+            <div className="wh-delta">
+              <div className="wh-delta-title">{t('history.weekly.obsAlerts')}</div>
+              {report.obs_alerts.length > 0 ? (
+                <ul className="wh-delta-list">
+                  {report.obs_alerts.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="muted small">{t('history.weekly.obsNone')}</div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>

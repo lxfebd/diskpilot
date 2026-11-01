@@ -40,6 +40,14 @@ pub(crate) struct WeeklyReport {
     /// 旧归档没有此字段 → 前端按「旧格式无数据」处理（不显示失败提示）。
     #[serde(default)]
     pub disks_note: Option<String>,
+    /// 各扫描根最近两次扫描的环比趋势行（R486，后端已格式化）。
+    /// 旧归档没有此字段 → 前端整块不显示（不猜）。
+    #[serde(default)]
+    pub scan_trends: Vec<String>,
+    /// 观测层异常告警行（损坏行 / 读取失败的域，R486）。无异常则空。
+    /// 旧归档没有此字段 → 前端整块不显示。
+    #[serde(default)]
+    pub obs_alerts: Vec<String>,
 }
 
 /// 周报里的单块盘健康摘要。`health` 是后端原值（Healthy / Warning / …），
@@ -220,6 +228,20 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         Err(e) => (Vec::new(), Some(format!("硬盘健康读取失败：{e}"))),
     };
 
+    // 5) R486：扫描趋势环比（scan-summary.jsonl 各 root 最近两条）+ 观测层异常
+    //    （observations_overview 的 domains 里 corrupt_lines>0 或 error 的域）。
+    //    两个数据源失败都降级为空行——周报是聚合概览，不为单个数据源作废，
+    //    但也不伪造「一切正常」（obs_alerts 空 = 真没异常，字段存在才代表读到过）。
+    let scan_trends = crate::scan_summary::read_summaries(app)
+        .map(|s| scan_trend_lines(&s))
+        .unwrap_or_default();
+    let obs_alerts = app
+        .path()
+        .app_data_dir()
+        .ok()
+        .map(|d| obs_alert_lines(&crate::observations::build_overview(&d)))
+        .unwrap_or_default();
+
     Ok(WeeklyReport {
         ts: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -232,7 +254,80 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         hw_delta,
         disks,
         disks_note,
+        scan_trends,
+        obs_alerts,
     })
+}
+
+/// 带符号的体量文案：+1.2 GB / -300.0 MB（R486 趋势行用）。
+fn fmt_bytes_signed(b: i64) -> String {
+    let a = (b as f64).abs();
+    let units = ["B", "KB", "MB", "GB", "TB"];
+    let mut v = a;
+    let mut u = 0;
+    while v >= 1024.0 && u < units.len() - 1 {
+        v /= 1024.0;
+        u += 1;
+    }
+    let sign = if b < 0 { "-" } else { "+" };
+    format!("{sign}{v:.1} {}", units[u])
+}
+
+/// R486：按 root 分组，取文件序里最近两条做环比，产出一行中文趋势。
+/// 纯函数：同一 root 不足两条、时间戳倒序都跳过（不编造对比）。
+fn scan_trend_lines(summaries: &[crate::scan_summary::ScanSummary]) -> Vec<String> {
+    use std::collections::HashMap;
+    let mut order: Vec<&str> = Vec::new();
+    let mut groups: HashMap<&str, Vec<&crate::scan_summary::ScanSummary>> = HashMap::new();
+    for s in summaries {
+        if !groups.contains_key(s.root.as_str()) {
+            order.push(s.root.as_str());
+        }
+        groups.entry(s.root.as_str()).or_default().push(s);
+    }
+    let mut lines: Vec<String> = Vec::new();
+    for root in order {
+        let g = &groups[root];
+        if g.len() < 2 {
+            continue;
+        }
+        let prev = &g[g.len() - 2];
+        let cur = &g[g.len() - 1];
+        if cur.at <= prev.at {
+            continue;
+        }
+        let days = (cur.at - prev.at) / 86400;
+        let fdelta = cur.file_count as i64 - prev.file_count as i64;
+        let bdelta = cur.total_bytes as i64 - prev.total_bytes as i64;
+        lines.push(format!(
+            "{} 文件 {fdelta:+}，体量 {}（距上次 {days} 天）",
+            root,
+            fmt_bytes_signed(bdelta)
+        ));
+        if lines.len() >= 8 {
+            break;
+        }
+    }
+    lines
+}
+
+/// R486：从 observations_overview 的 domains 里挑出异常域——读取失败（error）
+/// 或损坏行（corrupt_lines > 0）。纯函数：结构不符返回空。
+fn obs_alert_lines(overview: &serde_json::Value) -> Vec<String> {
+    let Some(domains) = overview.get("domains").and_then(|d| d.as_object()) else {
+        return Vec::new();
+    };
+    let mut lines: Vec<String> = Vec::new();
+    for (name, e) in domains {
+        if let Some(err) = e.get("error").and_then(|x| x.as_str()) {
+            lines.push(format!("{name} 读取失败：{err}"));
+        } else if let Some(c) = e.get("corrupt_lines").and_then(|x| x.as_u64()) {
+            if c > 0 {
+                lines.push(format!("{name} 有 {c} 行损坏（已跳过，文件未丢弃）"));
+            }
+        }
+    }
+    lines
 }
 
 /// 归档周报：写入 weekly-report/*.json，裁剪旧份（最多 MAX_REPORTS）。
@@ -342,6 +437,8 @@ mod tests {
                 },
             ],
             disks_note: None,
+            scan_trends: vec!["C:\\ 文件 +12，体量 +1.0 GB（距上次 7 天)".into()],
+            obs_alerts: vec!["undo 有 2 行损坏（已跳过，文件未丢弃）".into()],
         };
         let text = serde_json::to_string_pretty(&r).unwrap();
         let back: WeeklyReport = serde_json::from_str(&text).unwrap();
@@ -352,6 +449,8 @@ mod tests {
         assert_eq!(back.disks.len(), 2);
         assert_eq!(back.disks[1].letters, "F,G");
         assert_eq!(back.disks[1].grade, "caution");
+        assert_eq!(back.scan_trends.len(), 1);
+        assert_eq!(back.obs_alerts.len(), 1);
     }
 
     #[test]
@@ -363,6 +462,9 @@ mod tests {
         assert!(back.disks.is_empty());
         // 旧格式也没有 disks_note（R86 新字段）→ 前端据此不显示失败提示。
         assert!(back.disks_note.is_none());
+        // R486 新字段同样 serde(default)：旧归档读出为空
+        assert!(back.scan_trends.is_empty());
+        assert!(back.obs_alerts.is_empty());
     }
 
     #[test]
@@ -378,6 +480,8 @@ mod tests {
             hw_delta: Vec::new(),
             disks: Vec::new(),
             disks_note: Some("硬盘健康读取失败：timeout".into()),
+            scan_trends: Vec::new(),
+            obs_alerts: Vec::new(),
         };
         let text = serde_json::to_string(&r).unwrap();
         let back: WeeklyReport = serde_json::from_str(&text).unwrap();
@@ -385,5 +489,69 @@ mod tests {
             back.disks_note.as_deref(),
             Some("硬盘健康读取失败：timeout")
         );
+    }
+
+    fn mk_summary(root: &str, at: u64, files: u64, bytes: u64) -> crate::scan_summary::ScanSummary {
+        crate::scan_summary::ScanSummary {
+            v: 1,
+            root: root.to_string(),
+            at,
+            duration_ms: 1000,
+            mode: "full".into(),
+            file_count: files,
+            dir_count: 10,
+            total_bytes: bytes,
+            top_dirs: Vec::new(),
+            top_files: Vec::new(),
+            buckets: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn scan_trend_lines_compares_latest_two_per_root() {
+        // C: 三条历史只对比最近两条；D: 只有一条 → 跳过（不编造对比）
+        let s = vec![
+            mk_summary("C:\\", 100, 1000, 1_000_000),
+            mk_summary("D:\\", 100, 5, 50),
+            mk_summary("C:\\", 100 + 7 * 86400, 1500, 3_221_225_472),
+            mk_summary("C:\\", 100 + 14 * 86400, 1200, 1_073_741_824),
+        ];
+        let lines = scan_trend_lines(&s);
+        assert_eq!(lines.len(), 1);
+        let l = &lines[0];
+        assert!(l.starts_with("C:\\"), "{l}");
+        // 最近两条：at=14d vs 7d，文件 -300，体量 1GiB - 3GiB = -2.0 GB，间隔 7 天
+        assert!(l.contains("-300"), "{l}");
+        assert!(l.contains("-2.0 GB"), "{l}");
+        assert!(l.contains("7 天"), "{l}");
+    }
+
+    #[test]
+    fn obs_alert_lines_flags_corrupt_and_error_only() {
+        let v = serde_json::json!({
+            "v": 1,
+            "domains": {
+                "scan_summary": {"kind": "jsonl", "entries": 5, "corrupt_lines": 2},
+                "undo": {"kind": "jsonl", "error": "全部行损坏"},
+                "general": {"kind": "state", "present": true},
+                "space_history": {"kind": "jsonl", "entries": 9, "corrupt_lines": 0}
+            }
+        });
+        let lines = obs_alert_lines(&v);
+        assert_eq!(lines.len(), 2);
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("scan_summary") && l.contains('2')),
+            "{lines:?}"
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("undo") && l.contains("全部行损坏")),
+            "{lines:?}"
+        );
+        // 结构不符（没有 domains）→ 空而不是 panic
+        assert!(obs_alert_lines(&serde_json::json!({"v": 1})).is_empty());
     }
 }

@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R486: 周报增强——扫描趋势环比 + 观测层异常告警，巡检从单次快照升级为带趋势/异常的洞察
+
+- 后端（apps/desktop/src-tauri/src/weekly_report.rs）：WeeklyReport 新增 #[serde(default)] scan_trends / obs_alerts 两个 Vec<String>（旧归档照常反序列化，前端按字段缺失整块不显示）。生成时 ① scan_summary::read_summaries 按 root 分组取最近两条算环比，格式化「C:\ 文件 +N，体量 ±X（距上次 N 天）」，不足两条或时间倒序的 root 跳过不编造；② observations::build_overview（R482 改 pub(crate) 复用）的 domains 里 corrupt_lines>0 或带 error 的域格式化为告警行。两个数据源失败都降级为空，不让周报整体作废。纯函数 scan_trend_lines / obs_alert_lines + 两条单测（跨周环比取最近两条、corrupt/error 才告警）。
+- 前端：api/clean.ts WeeklyReport 加可选 scan_trends / obs_alerts；WeeklyHealthCard 新增「扫描趋势」「观测异常」两个区块（复用 wh-delta 样式，字段存在才渲染）；i18n namespaces/history.ts 中英各加 4 键（coverage 守卫全绿）。
+- 验证：cargo fmt --check、cargo test -p diskpilot-desktop、clippy --workspace --all-targets -D warnings、pnpm -C apps/desktop check、check-changelog、check-docs-links 全绿（见下）。
+
 ### R485: observations_overview——MCP 侧观测总览只读工具，一眼看尽这台机器被观测成什么样
 
 - 改动：crates/agent-server/src/tools/report/rep_observations.rs 新增（纯函数 build_overview + 入口 observations_overview），复刻桌面端 observations.rs（R482）的域表与族规：jsonl 域 entries/corrupt_lines/latest、state 域 present、hw-history/ 目录快照数+最新文件名；缺文件=真空态、读取失败/全损坏=error（R88 诚实性）。经新域 tool_observations.rs 注册为第 77 个 MCP 工具（纯只读 L0，不采集不写入）。单测覆盖混合域索引与全损坏=error 两条。

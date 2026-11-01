@@ -148,8 +148,8 @@ describe('parseProposalFromText', () => {
 });
 
 describe('mcpToolRegistry（agent-server 工具集）', () => {
-  it('registers exactly 76 tools（65 只读 + 11 写操作，含 AIDA64 复刻 14 个 + 装机验收 3 个 + 信息补全 4 个 + SuperIO 兜底 + 压测停止信号）', () => {
-    expect(mcpToolRegistry).toHaveLength(76);
+  it('registers exactly 77 tools（66 只读 + 11 写操作，含 AIDA64 复刻 14 个 + 装机验收 3 个 + 信息补全 4 个 + SuperIO 兜底 + 压测停止信号）', () => {
+    expect(mcpToolRegistry).toHaveLength(77);
   });
 
   it('写操作工具 process_kill / service_control / fan_selfheal_fix / fan_control 存在', () => {
@@ -263,7 +263,7 @@ describe('dynamicMcpTools（用户 MCP 服务器）', () => {
     const before = mcpToolRegistry.length;
     await refreshMcpTools();
     expect(mcpToolRegistry.length).toBe(before);
-    expect(mcpToolRegistry).toHaveLength(76);
+    expect(mcpToolRegistry).toHaveLength(77);
   });
 });
 

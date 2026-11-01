@@ -585,6 +585,10 @@ export interface WeeklyReport {
   disks?: WeeklyDiskHealth[];
   /** 盘健康读取失败的原因（R86）：非空 = 读失败（不是「没读到」）。 */
   disks_note?: string | null;
+  /** R486：各扫描根最近两次扫描的环比趋势行（后端已格式化）。旧归档无此字段。 */
+  scan_trends?: string[];
+  /** R486：观测层异常告警行（损坏行/读取失败的域）。旧归档无此字段。 */
+  obs_alerts?: string[];
 }
 
 /** 周报里的单块盘健康：health 是后端原值，grade 是统一分级（good/caution/bad/unknown）。 */

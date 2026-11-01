@@ -48,7 +48,8 @@ const STATE_DOMAINS: &[(&str, &str)] = &[
 const HW_HISTORY_DIR: &str = "hw-history";
 
 /// 汇总一个数据根下的全部观测域。纯函数，便于测试。
-fn build_overview(root: &Path) -> Value {
+/// R486 起 pub(crate)：周报（weekly_report.rs）聚合观测异常时复用。
+pub(crate) fn build_overview(root: &Path) -> Value {
     let mut domains = Map::new();
 
     for &(name, file) in JSONL_DOMAINS {

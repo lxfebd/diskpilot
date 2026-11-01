@@ -68,6 +68,11 @@ export const history = {
     'history.weekly.vsTempDown': '最高温比上周低 {delta}°C',
     'history.weekly.vsTempSame': '最高温与上周持平',
     'history.weekly.vsTempNone': '温度对比不可用（某一周没读到温度）',
+    // R486：扫描趋势 + 观测异常区块
+    'history.weekly.scanTrend': '扫描趋势',
+    'history.weekly.scanTrendNone': '还没有足够的扫描历史来对比趋势（同一扫描根至少需要两次扫描）。',
+    'history.weekly.obsAlerts': '观测异常',
+    'history.weekly.obsNone': '观测数据完好：没有损坏行，也没有读取失败。',
   },
   en: {
     'history.title': 'History',
@@ -132,5 +137,10 @@ export const history = {
     'history.weekly.vsTempDown': 'Max temp is {delta}°C lower than last week',
     'history.weekly.vsTempSame': 'Max temp is unchanged vs last week',
     'history.weekly.vsTempNone': 'Temp comparison unavailable (a week lacked a reading)',
+    // R486: scan trend + observation anomaly blocks
+    'history.weekly.scanTrend': 'Scan trends',
+    'history.weekly.scanTrendNone': 'Not enough scan history to compare yet (the same scan root needs at least two scans).',
+    'history.weekly.obsAlerts': 'Observation anomalies',
+    'history.weekly.obsNone': 'Observation data intact: no corrupt lines, no read failures.',
   },
 };
