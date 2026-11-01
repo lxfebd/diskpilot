@@ -233,7 +233,7 @@ export const toolbelt = {
     'toolbelt.wall.launchFailed': '启动工具失败：{msg}',
 
     // 工具卡片（徽标 / 悬停提示）
-    'toolbelt.card.clickHint': '单击看详情 · 双击启动',
+    'toolbelt.card.clickHint': '单击 / Enter 看详情 · 双击 / Shift+Enter 启动',
     'toolbelt.card.builtinOp': '内置操作',
     'toolbelt.card.promoHint': '⚠ 推广项：仅打开推广网页，非工具软件',
     'toolbelt.card.detail': '查看详情',
@@ -867,7 +867,7 @@ export const toolbelt = {
     'toolbelt.wall.launchFailed': 'Failed to launch tool: {msg}',
 
     // Tool cards (badges / hover hints)
-    'toolbelt.card.clickHint': 'Click for details · double-click to launch',
+    'toolbelt.card.clickHint': 'Click / Enter for details · double-click / Shift+Enter to launch',
     'toolbelt.card.builtinOp': 'Built-in operation',
     'toolbelt.card.promoHint': '⚠ Promotion: opens a promo web page only, not a tool',
     'toolbelt.card.detail': 'View details',

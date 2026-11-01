@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R492: 工具墙卡片可键盘操作——roving tabindex + 网格方向键，Enter 开详情 / Shift+Enter 启动
+
+- 缺口：`ToolCard` 是可点 div（单击开详情、双击启动），但没有 role/tabIndex/onKeyDown——键盘用户 Tab 跳过整面工具墙，90+ 张卡片对他们不存在；就算逐卡可 Tab 也会变成上百个停靠点。
+- 改动（`toolwall.tsx`）：① 卡片 `role="button"` + roving `tabIndex`（落点 `cardFocus`，搜索/分类/排序/风险筛/最近列表一变即清空回第一张），`data-focus-key` 供方向键回写；② 两个 `.toolwall-grid` 容器挂 `onKeyDown={onGridKeys}`——左右 ±1、上下 ±列数（列数从 `getComputedStyle(grid).gridTemplateColumns` 实读，读不到按 1 列）、Home/End 跳首尾，环绕语义复用 `cycleIndex`（R365）；③ 键盘与鼠标两路一一对应：Enter/空格走 `activateOnKey(() => onOpenDetail(tool))`（= 单击），Shift+Enter 且可启动走 `onLaunch()`（= 双击）——启动确认门（中/高危就地确认、L2 双确认）在 `onCardClick` 内完全不变。
+- 改动（`dark.css`）：`.toolwall-card:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }`（R491 同款焦点描边）。
+- 文案：`toolbelt.card.clickHint` 中英改为「单击 / Enter 看详情 · 双击 / Shift+Enter 启动」，键盘提示上墙。
+- 守卫：`a11y.test.ts` 新增 describe「工具墙卡片的键盘操作（R492）」两条——① role/tabIndex/data-focus-key、Enter 详情与 Shift+Enter 启动分支、网格方向键五支与列数读取、落点重置；② dark.css 的 `:focus-visible` 规则 + clickHint 中英两条都含 Enter。
+- 验证：`pnpm -C apps/desktop exec vitest run` 90 files / 1300 tests 全绿；tsc -b 与 eslint 0 warning。
+
 ### R491: Steam 盘点游戏行可键盘操作——roving tabindex + 方向键走行，不再几十个 Tab 停靠点
 
 - 缺口：SteamInspector 的游戏行是可点选的 div（role="option"），但没有 tabIndex——键盘用户 Tab 不进列表，想用键盘勾选只能靠鼠标；一装几十个游戏的书库若按原生做法每个行都可 Tab，又会变成几十个停靠点。

@@ -1985,3 +1985,40 @@ describe('SteamInspector 游戏行的键盘操作（R491）', () => {
     expect(body).toContain('outline-offset: -2px;');
   });
 });
+
+describe('工具墙卡片的键盘操作（R492）', () => {
+  it('卡片 role=button + roving tabIndex；Enter 开详情、Shift+Enter 启动；网格方向键导航', () => {
+    const s = RAW_TSX['./components/toolbelt/toolwall.tsx'];
+    // 卡片可聚焦且带语义
+    expect(s).toContain(`role="button"`);
+    expect(s).toContain(`tabIndex={tabIndex}`);
+    expect(s).toContain(`data-focus-key={focusKey}`);
+    // 键盘与鼠标同源：Enter/空格走单击（详情），Shift+Enter 走双击（启动）
+    expect(s).toContain(`activateOnKey(() => onOpenDetail(tool))`);
+    expect(s).toContain(`e.key === 'Enter' && e.shiftKey`);
+    expect(s).toContain(`onLaunch();`);
+    // 网格容器方向键：左右 ±1、上下 ±列数、Home/End，落点用 data-focus-key 回写
+    expect(s).toContain(`onKeyDown={onGridKeys}`);
+    expect(s).toContain(`e.key === 'ArrowRight'`);
+    expect(s).toContain(`e.key === 'ArrowDown'`);
+    expect(s).toContain(`gridTemplateColumns`);
+    expect(s).toContain(`e.key === 'End'`);
+    expect(s).toContain(`card?.dataset.focusKey`);
+    // 搜索/分类/排序变化时落点清空回第一张
+    expect(s).toContain(`setCardFocus('')`);
+  });
+  it('dark.css 给可聚焦卡片描边，clickHint 文案带键盘提示（中英成对）', () => {
+    const css = RAW_CSS['./styles/dark.css'].replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const m = css.match(/\.toolwall-card:focus-visible\s*\{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    const body = m ? m[1] : ' ';
+    expect(body).toContain('outline: 2px solid var(--accent-strong);');
+    expect(body).toContain('outline-offset: -2px;');
+    const ns = import.meta.glob('./i18n/namespaces/toolbelt.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    const src = ns['./i18n/namespaces/toolbelt.ts'];
+    const hints = src.match(/'toolbelt\.card\.clickHint': '[^']*'/g) ?? [];
+    expect(hints.length).toBe(2);
+    expect(hints[0]).toContain('Enter');
+    expect(hints[1]).toContain('Enter');
+  });
+});

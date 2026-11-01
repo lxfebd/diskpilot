@@ -35,7 +35,7 @@ import {
 } from './catalog';
 import type { ToolContext } from './shared';
 import { formatTime } from '../../format';
-import { clearSearchOnClick, clearSearchOnEscape } from '../../a11y';
+import { activateOnKey, clearSearchOnClick, clearSearchOnEscape, cycleIndex } from '../../a11y';
 
 export function HardwarePanel({ ctx }: { ctx: ToolContext }) {
   const t = useT();
@@ -859,6 +859,32 @@ export function CatalogWall({
     return out;
   }, [recent, allTools, activeCat, query]);
 
+  // R492：卡片墙 roving tabindex。卡片几十上百张，Tab 只停一张（落点 cardFocus），
+  // 方向键在网格里走：左右 ±1，上下 ±列数（列数从 grid 实际模板读，读不到按 1 列），
+  // Home/End 跳首尾。落点用卡片 key 表示，列表一变就清空回第一张。
+  const [cardFocus, setCardFocus] = useState('');
+  useEffect(() => { setCardFocus(''); }, [activeCat, query, sortBy, riskFilter, hidePromo, recent]);
+  const onGridKeys = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const grid = e.currentTarget;
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>('.toolwall-card'));
+    if (cards.length === 0) return;
+    const cur = cards.indexOf(document.activeElement as HTMLElement);
+    let next = cur;
+    if (e.key === 'ArrowRight') next = cycleIndex(cur, cards.length, 1);
+    else if (e.key === 'ArrowLeft') next = cycleIndex(cur, cards.length, -1);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const cols = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length);
+      next = cycleIndex(cur, cards.length, e.key === 'ArrowDown' ? cols : -cols);
+    }
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = cards.length - 1;
+    else return;
+    e.preventDefault();
+    const card = cards[next];
+    setCardFocus(card?.dataset.focusKey ?? '');
+    card?.focus();
+  }, []);
+
   // R120：AI 分区工具按搜索词过滤（name/description），无词时全量。
   // 与 exe 工具墙同一口径，一次搜遍两个分区。
   const aiTools = useMemo(() => {
@@ -1034,17 +1060,22 @@ export function CatalogWall({
             {hasRecent && (
               <div className="toolwall-recent">
                 <div className="toolwall-grid-title recent-title">{t('toolbelt.wall.recent')}</div>
-                <div className="toolwall-grid">
-                  {recentTools.map((t) => (
-                    <ToolCard
-                      key={'recent-' + (t.dir_rel || t.name)}
-                      tool={t}
-                      manifest={manifestFor(t.name)}
-                      onOpenDetail={setDetail}
-                      onLaunch={() => onCardClick(t)}
-                      launching={launching}
-                    />
-                  ))}
+                <div className="toolwall-grid" onKeyDown={onGridKeys}>
+                  {recentTools.map((t, i) => {
+                    const fk = 'recent-' + (t.dir_rel || t.name);
+                    return (
+                      <ToolCard
+                        key={fk}
+                        focusKey={fk}
+                        tabIndex={cardFocus === fk || (cardFocus === '' && i === 0) ? 0 : -1}
+                        tool={t}
+                        manifest={manifestFor(t.name)}
+                        onOpenDetail={setDetail}
+                        onLaunch={() => onCardClick(t)}
+                        launching={launching}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1090,17 +1121,22 @@ export function CatalogWall({
                 <div>{query ? t('toolbelt.wall.noMatch', { query }) : t('toolbelt.wall.catEmpty')}</div>
               </div>
             ) : (
-              <div className="toolwall-grid">
-                {activeTools.map((t) => (
-                  <ToolCard
-                    key={(t as ToolbeltCatalogItem & { _key?: string })._key ?? t.dir_rel}
-                    tool={t}
-                    manifest={manifestFor(t.name)}
-                    onOpenDetail={setDetail}
-                    onLaunch={() => onCardClick(t)}
-                    launching={launching}
-                  />
-                ))}
+              <div className="toolwall-grid" onKeyDown={onGridKeys}>
+                {activeTools.map((t, i) => {
+                  const fk = (t as ToolbeltCatalogItem & { _key?: string })._key ?? t.dir_rel;
+                  return (
+                    <ToolCard
+                      key={fk}
+                      focusKey={fk}
+                      tabIndex={cardFocus === fk || (cardFocus === '' && i === 0) ? 0 : -1}
+                      tool={t}
+                      manifest={manifestFor(t.name)}
+                      onOpenDetail={setDetail}
+                      onLaunch={() => onCardClick(t)}
+                      launching={launching}
+                    />
+                  );
+                })}
               </div>
             )}
 
@@ -1326,12 +1362,16 @@ function ToolCard({
   onOpenDetail,
   onLaunch,
   launching,
+  focusKey,
+  tabIndex,
 }: {
   tool: ToolbeltCatalogItem & { _cat?: string };
   manifest: ToolManifest | undefined;
   onOpenDetail: (t: ToolbeltCatalogItem) => void;
   onLaunch: () => void;
   launching: boolean;
+  focusKey: string;
+  tabIndex: number;
 }) {
   const t = useT();
   const color = CATEGORY_COLOR[tool.category] ?? '#64748b';
@@ -1342,10 +1382,24 @@ function ToolCard({
   const adNotice = adNoticeFor(tool.name);
   const isPromo = !!tool.is_promotion;
 
+  // R492：键盘与鼠标两路一一对应——Enter/空格 = 单击（开详情），
+  // Shift+Enter = 双击（可启动卡直接走 onLaunch，确认门在 onCardClick 内不变）。
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && e.shiftKey) {
+      if (clickable && !isPromo && !launching) { e.preventDefault(); onLaunch(); }
+      return;
+    }
+    activateOnKey(() => onOpenDetail(tool))(e);
+  };
+
   return (
     <div
       className={'toolwall-card' + (clickable ? ' clickable' : '') + (isPromo ? ' toolwall-promo' : '')}
+      role="button"
+      tabIndex={tabIndex}
+      data-focus-key={focusKey}
       onClick={() => onOpenDetail(tool)}
+      onKeyDown={onKey}
       onDoubleClick={() => clickable && !isPromo && !launching && onLaunch()}
       title={clickable ? `${tool.name}\n${t('toolbelt.card.clickHint')}${isPromo ? '\n' + t('toolbelt.card.promoHint') : ''}${adNotice ? ' · ' + adNotice : ''}` : `${tool.name}\n${t('toolbelt.card.builtinOp')}`}
     >

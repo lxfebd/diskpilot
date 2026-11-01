@@ -287,6 +287,8 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
   user-select: none;
 }
 .toolwall-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--accent-strong); }
+/* R492：卡片可键盘聚焦（roving tabIndex），键盘焦点亮出描边（R491 同款口径） */
+.toolwall-card:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: -2px; }
 .toolwall-icon {
   width: 46px; height: 46px; border-radius: 12px;
   display: grid; place-items: center;
