@@ -17,6 +17,18 @@ pnpm lint               # eslint + prettier check
 pnpm check:rust         # cargo fmt --check + clippy -D warnings（同 CI lint-rust）
 ```
 
+### Windows long-path note
+
+If the checkout lives on a deep path (e.g. `J:\...\diskpilot_src`), a cold build of the `aws-lc-sys` dependency can fail inside MSVC `lib.exe` with exit code 1104 — the link command line exceeds the 32k limit because of hundreds of long `.o` paths under `target\`. This is unrelated to your change. Workaround:
+
+```bash
+# use a short target dir (e.g. C:\t) and skip admin-only tests
+export CARGO_TARGET_DIR=/c/t
+export DISKPILOT_NO_ADMIN=1
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
 ## Branching & commits
 
 - Branch from `main`, named `feat/...`, `fix/...`, `scaffold/<app>`.
