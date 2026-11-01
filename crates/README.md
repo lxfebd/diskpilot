@@ -6,7 +6,7 @@
 
 | 目录 | 包名 | 产物 | 职责 | 源码规模 |
 | --- | --- | --- | --- | --- |
-| [agent-server](agent-server) | `agent-server` | bin | AI 可操作工具集 —— MCP（Model Context Protocol）stdio 服务，76 个工具（65 只读 + 11 写） | 110 文件 / 18,769 行 / 27 个测试模块 |
+| [agent-server](agent-server) | `agent-server` | bin | AI 可操作工具集 —— MCP（Model Context Protocol）stdio 服务，77 个工具（66 只读 + 11 写） | 110 文件 / 18,769 行 / 27 个测试模块 |
 | scanner | `diskpilot-scanner` | bin | 跨平台磁盘扫描：NTFS MFT 直读、USN 日志增量、jwalk 并行兜底 | 20 文件 / 5,014 行 |
 | scaffold | `diskpilot-scaffold` | lib + bin | 清理脚本装载与匹配：TOML 解析、红线单一尺子、WinApp2 规则 | 7 文件 / 1,946 行 / 24 个测试 |
 | scaffold-lint | `diskpilot-scaffold-lint` | bin | 清理脚本静态校验器（CI 门禁） | 1 文件 / 398 行 |

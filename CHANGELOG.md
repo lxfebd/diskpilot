@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R490: 补齐工具数 76→77 的全部残留硬编码断言与文案（CI test-rust windows 失败根因）
+
+  - R489 的 CI run 41315244461 显示 test-rust(windows) 失败：agent_tests.rs 的 agent_list_tools_returns_76_tools 断言 76，R485 加 observations_overview 后实际 77（该测试仅在 agent-server 二进制存在时跑，本地漏网）。
+  - 修复：agent_tests.rs 断言 76→77、测试改名 _77_tools、消息 65 只读→66 只读、抽查名单加 observations_overview；同文件头注释 75→77。
+  - 文案同步：agent.rs 头注释 3 处、mcp.rs:7、advisor/tools.ts:1076、crates/agent-server/README.md:18、crates/README.md:9、docs/architecture.md:86、docs/guide.md:93 全部 76→77、65→66。
+  - 经验：工具数漂移应以 R484 的 tool_catalog_guard（doc vs router 名单）为唯一真相源；硬编码数字断言（agent_tests、tools.test.ts）是第二漏点，加新工具时必须同步改。
+
 ### R489: unix clippy -D warnings 清零——Windows 专属死代码按平台门控
 
  - 背景：R488 修掉 E0432 后，lint-rust(macos/ubuntu) 暴露下一层：clippy -D warnings 下 unix 侧 13 处死代码（Windows 专属功能的 helper 在 unix 无调用方）。

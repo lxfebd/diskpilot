@@ -83,7 +83,7 @@ walk/MFT → 平铺 (path,size,children) → build_tree（复用扫描一趟数�
 - 上下文只含**目录元数据**：路径名、大小、文件数、扩展名占比、≤20 条样本路径；永不读文件内容
 - 拖拽目标 = 树节点 / treemap 区块；AI 回答 markdown 渲染（react-markdown）
 
-### 4.2 agent-server（76 个 MCP 工具 = 65 只读 + 11 写）
+### 4.2 agent-server（77 个 MCP 工具 = 66 只读 + 11 写）
 
 - 独立二进制，MCP stdio 传输（rmcp 框架），可被 Claude Desktop 等任意外部 agent 挂接
 - `tools/mod.rs` 用 `#[tool_router]` 声明全部工具；`tools/*.rs` 按域实现（disk/hw/net/process/sec/bench/steam/…）
