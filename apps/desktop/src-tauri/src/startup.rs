@@ -27,6 +27,7 @@ pub(crate) struct StartupItem {
 
 const HKCU_RUN: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const HKLM_RUN: &str = r"HKLM\Software\Microsoft\Windows\CurrentVersion\Run";
+#[cfg(windows)]
 const FOLDER_REL: &str = r"\Microsoft\Windows\Start Menu\Programs\Startup";
 
 // PowerShell 单引号字面量转义（单引号翻倍 `''`）统一在共享 crate

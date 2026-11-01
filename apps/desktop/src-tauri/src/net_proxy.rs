@@ -13,6 +13,7 @@ pub(crate) fn system_https_proxy() -> Option<String> {
 }
 
 #[cfg(not(windows))]
+#[allow(dead_code)] // unix 下无调用方（reqwest 自行遵循 HTTPS_PROXY），留作回退契约
 pub(crate) fn system_https_proxy() -> Option<String> {
     None
 }

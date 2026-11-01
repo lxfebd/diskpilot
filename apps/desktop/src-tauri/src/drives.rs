@@ -19,6 +19,7 @@ pub(crate) struct VolumeInfo {
 
 /// `subst` 的一行输出 → (盘符, 目标路径)。本机实测格式：`D:\: => J:\D`。
 /// 认不出的一律 None，不猜。
+#[cfg_attr(not(windows), allow(dead_code))] // 仅 Windows subst 路径调用；单测全平台跑
 pub(crate) fn parse_subst_line(line: &str) -> Option<(char, String)> {
     let (left, right) = line.split_once("=>")?;
     let letter = left.trim().trim_end_matches(['\\', ':']);

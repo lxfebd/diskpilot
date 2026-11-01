@@ -180,6 +180,7 @@ pub struct VolumeMeta {
 }
 
 /// 把 subst 表标到分区元数据上（纯函数，可测）。字母大小写不敏感。
+#[cfg_attr(not(windows), allow(dead_code))] // 仅 Windows collect_volume_meta 调用
 pub fn apply_subst_marks(metas: &mut [VolumeMeta], substs: &[(String, String)]) {
     for m in metas.iter_mut() {
         let letter = m.drive.trim_end_matches(':').to_ascii_uppercase();
@@ -293,6 +294,7 @@ pub fn path_drive_letter(p: &str) -> String {
 
 /// `subst` 的一行输出 → (盘符, 目标路径)。本机实测格式：`D:\: => J:\D`。
 /// 认不出的一律 None，不猜。
+#[cfg_attr(not(windows), allow(dead_code))] // 仅 Windows collect_substs 调用；单测全平台跑
 pub fn parse_subst_line(line: &str) -> Option<(String, String)> {
     let (left, right) = line.split_once("=>")?;
     let letter = left.trim().trim_end_matches(['\\', ':']);
@@ -306,6 +308,7 @@ pub fn parse_subst_line(line: &str) -> Option<(String, String)> {
 }
 
 /// `subst` 的全部输出 → 映射盘表。
+#[cfg_attr(not(windows), allow(dead_code))] // 仅 Windows collect_substs 调用；单测全平台跑
 pub fn parse_subst_output(text: &str) -> Vec<(String, String)> {
     text.lines().filter_map(parse_subst_line).collect()
 }

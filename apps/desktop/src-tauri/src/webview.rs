@@ -29,11 +29,13 @@ pub(crate) fn webview_heartbeat(app: AppHandle) {
 /// 不自杀，但日志会明确提示，避免「无声假死」。
 pub(crate) fn spawn_webview_watchdog(app: AppHandle) {
     use chrono::Utc;
+    #[cfg(windows)]
     use std::sync::atomic::{AtomicBool, Ordering};
     const TICK: Duration = Duration::from_secs(2);
     const STALE_AFTER: chrono::Duration = chrono::Duration::seconds(12);
     // 重建/重载必须发生在主线程（WebView2 的窗口操作线程模型），
     // 这里用标志位避免后台线程每 2s 狂投递，也避免上一次还没做完又叠一次。
+    #[cfg(windows)]
     let recreate_pending = std::sync::Arc::new(AtomicBool::new(false));
 
     std::thread::spawn(move || loop {

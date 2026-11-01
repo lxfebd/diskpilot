@@ -24,6 +24,7 @@ use crate::tools::fmt_bytes;
 ///
 /// 每处必须带上**完整路径**：只报「有 N 处残留」等于把能力卡在报告里——AI 拿不到
 /// 路径就没法在用户确认后调 file_recycle 真的回收，用户也没法照着描述去找目录。
+#[cfg_attr(not(windows), allow(dead_code))] // 仅 Windows 工具路径调用；单测全平台跑
 fn residue_lines(residue: &[diskpilot_steam_inspector::SteamResidue], limit: usize) -> String {
     let mut out = String::new();
     for r in residue.iter().take(limit) {

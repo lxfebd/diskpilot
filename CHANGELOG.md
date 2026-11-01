@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R489: unix clippy -D warnings 清零——Windows 专属死代码按平台门控
+
+ - 背景：R488 修掉 E0432 后，lint-rust(macos/ubuntu) 暴露下一层：clippy -D warnings 下 unix 侧 13 处死代码（Windows 专属功能的 helper 在 unix 无调用方）。
+ - 门控 #[cfg(windows)]：webview.rs watchdog 重建闩（recreate_pending + atomic import）、startup.rs 的 FOLDER_REL、executor.rs 测试里的 Node import；net_http.rs 的 `let mut b` 加 cfg_attr(not(windows), allow(unused_mut))。
+ - cfg_attr(not(windows), allow(dead_code))（保留单测全平台跑）：drives.rs 与 agent-server disk.rs 的 parse_subst_line/parse_subst_output/apply_subst_marks、system.rs 的 busy_delta_pct、steam.rs 的 residue_lines、net_proxy.rs 的 not(windows) 回退桩。
+ - scan.rs:389 的 unit_arg/clone_on_copy（unix 下 USN 游标退化为 ()）改为语句级 cfg_attr allow，保证 usn_cursors 字段在 unix 仍被读、不引入新 dead_code。
+ - 验证：windows 门禁全绿（fmt/clippy -D warnings/test）；unix 以 CI lint-rust(macos/ubuntu) 为准。
+
 ### R488: 修复 main CI 三根因——unix 编译门控、node20 无 navigator、cargo audit 15 个漏洞全部清零
 
  - Unix 编译（lint-rust/test-rust macos+ubuntu，E0432）：crates/psutil/src/lib.rs 的 escape_ps_single_quoted 去掉 #[cfg(windows)] 门控（纯字符串翻倍函数无平台依赖，startup.rs:37 在三平台都被引用）；安全单测同步去门控，全平台跑。

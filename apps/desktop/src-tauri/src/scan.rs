@@ -386,6 +386,7 @@ async fn commit_scan(
     // 游标与树生命周期一致：树被覆盖时同步更新，保证增量始终有有效起点。
     if let Some(c) = new_cursor {
         if let Ok(mut cursors) = state.usn_cursors.lock() {
+            #[cfg_attr(not(windows), allow(clippy::unit_arg, clippy::clone_on_copy))]
             cursors.insert(key.to_string(), c.clone());
         }
         // R481 游标落盘（usn-cursors.json）：进程重启后增量扫描仍有起点；

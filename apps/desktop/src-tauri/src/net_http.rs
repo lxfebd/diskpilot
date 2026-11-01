@@ -13,6 +13,7 @@ static SHARED_HTTP: OnceLock<reqwest::Client> = OnceLock::new();
 static SHARED_HTTP_NO_REDIRECT: OnceLock<reqwest::Client> = OnceLock::new();
 
 fn http_client_base() -> reqwest::ClientBuilder {
+    #[cfg_attr(not(windows), allow(unused_mut))]
     let mut b = reqwest::Client::builder().user_agent(concat!(
         "DiskPilot/",
         env!("CARGO_PKG_VERSION"),

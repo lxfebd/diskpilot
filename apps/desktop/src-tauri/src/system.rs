@@ -321,6 +321,7 @@ pub(crate) async fn network_probe(targets: Vec<String>) -> Result<Vec<PingProbe>
 
 /// 由 (前次采样, 本次 busy, 本次 idle) 求 CPU 占用百分比（纯函数，可测）。
 /// 样本间 busy/idle 差值比即占用率；差值全 0（同刻度）返回 0。
+#[cfg_attr(not(windows), allow(dead_code))] // 仅 Windows GetSystemTimes 路径调用；单测全平台跑
 fn busy_delta_pct(prev: Option<(u64, u64)>, busy: u64, idle: u64) -> f64 {
     match prev {
         Some((p_busy, p_idle)) => {

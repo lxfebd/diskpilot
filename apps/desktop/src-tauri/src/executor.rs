@@ -40,6 +40,7 @@ mod tests {
     use super::exec_undo_core::undo_core;
     use super::*;
     use diskpilot_executor::{execute, list_undo as list_undo_log, Plan};
+    #[cfg(windows)]
     use diskpilot_scanner::Node;
     use std::path::PathBuf;
 
