@@ -121,7 +121,6 @@ pub fn ps_capture_timeout(_script: &str, _timeout: Duration) -> Result<String, S
 /// 所有把外部可控文本（注册表值名、服务名、Wi-Fi 名、用户输入…）放进
 /// PowerShell 源码字面量的位置都必须过这里，否则 `'` 可逃出字符串、
 /// `;` 后接任意命令（命令注入）。desktop 与 agent-server 共用的安全铁律。
-#[cfg(windows)]
 pub fn escape_ps_single_quoted(s: &str) -> String {
     s.replace('\'', "''")
 }
@@ -230,7 +229,6 @@ $result | ConvertTo-Json -Depth 4 -Compress
 mod tests {
     use super::*;
 
-    #[cfg(windows)]
     #[test]
     fn escape_ps_single_quoted_escapes_quote() {
         assert_eq!(escape_ps_single_quoted("plain"), "plain");

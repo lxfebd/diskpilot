@@ -30,7 +30,10 @@ pub fn install_plugin_zip(zip_path: &Path, tools_root: &Path) -> Result<String, 
             if f.is_dir() {
                 continue;
             }
-            let Some(name) = f.name().split('/').next_back() else {
+            let Ok(raw_name) = f.name().map(|c| c.into_owned()) else {
+                continue;
+            };
+            let Some(name) = raw_name.split('/').next_back() else {
                 continue;
             };
             if name == "tool.plugin.json" {
@@ -42,8 +45,7 @@ pub fn install_plugin_zip(zip_path: &Path, tools_root: &Path) -> Result<String, 
                     ToolbeltError::BadArgs(format!("tool.plugin.json 解析失败: {e}"))
                 })?;
                 // 取该文件所在目录（去尾 '/'），作为解压基目录
-                let dir = f
-                    .name()
+                let dir = raw_name
                     .rsplit_once('/')
                     .map(|(d, _)| d.to_string())
                     .unwrap_or_default();
@@ -70,7 +72,10 @@ pub fn install_plugin_zip(zip_path: &Path, tools_root: &Path) -> Result<String, 
         if f.is_dir() {
             continue;
         }
-        let name = f.name().replace('\\', "/");
+        let Ok(nm) = f.name() else {
+            continue;
+        };
+        let name = nm.replace('\\', "/");
         let base = name.split('/').next().unwrap_or("");
         if base == "tool.plugin.json"
             || name == "tool.plugin.json"
@@ -152,8 +157,10 @@ pub fn install_plugin_zip(zip_path: &Path, tools_root: &Path) -> Result<String, 
                     break;
                 }
             };
-            let Some(rel) = f
-                .name()
+            let Ok(nm) = f.name() else {
+                continue;
+            };
+            let Some(rel) = nm
                 .strip_prefix(&base_dir)
                 .map(|s| s.trim_start_matches('/'))
             else {

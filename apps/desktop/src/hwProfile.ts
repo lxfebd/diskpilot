@@ -50,8 +50,9 @@ async function detect(): Promise<HwProfile> {
     }
   } catch { /* 预览/非 Tauri 环境走浏览器近似值 */ }
 
-  const cores = backend?.cores ?? navigator.hardwareConcurrency ?? null;
-  const memGb = backend?.memGb ?? (navigator as { deviceMemory?: number }).deviceMemory ?? null;
+  const nav = typeof navigator !== 'undefined' ? (navigator as { hardwareConcurrency?: number; deviceMemory?: number }) : null;
+  const cores = backend?.cores ?? nav?.hardwareConcurrency ?? null;
+  const memGb = backend?.memGb ?? nav?.deviceMemory ?? null;
 
   let tier: PerfTier;
   if ((cores !== null && cores <= 4) || (memGb !== null && memGb <= 8)) tier = 'weak';

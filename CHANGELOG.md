@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R488: 修复 main CI 三根因——unix 编译门控、node20 无 navigator、cargo audit 15 个漏洞全部清零
+
+ - Unix 编译（lint-rust/test-rust macos+ubuntu，E0432）：crates/psutil/src/lib.rs 的 escape_ps_single_quoted 去掉 #[cfg(windows)] 门控（纯字符串翻倍函数无平台依赖，startup.rs:37 在三平台都被引用）；安全单测同步去门控，全平台跑。
+ - frontend（node 20 无全局 navigator，ReferenceError）：apps/desktop/src/advisor/tools.ts:533 与 apps/desktop/src/hwProfile.ts:53 的裸 navigator 访问改为 typeof 守卫（与同文件既有模式一致）。
+ - cargo audit 15 个漏洞清零：rustls 0.23.45→0.23.46、rustls-webpki→0.103.16、webpki-root-certs→1.0.11、quinn-proto→0.11.19（cargo update 语义兼容自动取大）；tauri-plugin-updater 2.12.0→2.14.1（其 zip 依赖 ^4→^9，锁里 zip 4.6.1 消失）；workspace 根 Cargo.toml 的 zip "2"→"9"，toolbelt 五处 ZipFile::name() 调用适配 zip 9 新签名（返回 Result<Cow<str>>，解码失败跳过条目）。audit 余 3 个 allowed warnings（unmaintained 提示），0 漏洞。
+ - 验证：cargo fmt --check、cargo test -p diskpilot-toolbelt/-p diskpilot-psutil/-p agent-server、cargo audit 全绿；clippy --workspace -D warnings 与 pnpm check 见提交时补跑记录。
+
 ### R486: 周报增强——扫描趋势环比 + 观测层异常告警，巡检从单次快照升级为带趋势/异常的洞察
 
 - 后端（apps/desktop/src-tauri/src/weekly_report.rs）：WeeklyReport 新增 #[serde(default)] scan_trends / obs_alerts 两个 Vec<String>（旧归档照常反序列化，前端按字段缺失整块不显示）。生成时 ① scan_summary::read_summaries 按 root 分组取最近两条算环比，格式化「C:\ 文件 +N，体量 ±X（距上次 N 天）」，不足两条或时间倒序的 root 跳过不编造；② observations::build_overview（R482 改 pub(crate) 复用）的 domains 里 corrupt_lines>0 或带 error 的域格式化为告警行。两个数据源失败都降级为空，不让周报整体作废。纯函数 scan_trend_lines / obs_alert_lines + 两条单测（跨周环比取最近两条、corrupt/error 才告警）。

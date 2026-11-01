@@ -44,7 +44,7 @@ shellexpand        = "3"
 tempfile           = "3"
 include_dir        = "0.7"
 png                = "0.17"
-zip                = { version = "2", default-features = false, features = ["deflate"] }
+zip                = { version = "9", default-features = false, features = ["deflate"] }
 
 # MCP（Model Context Protocol）官方 Rust SDK —— agent-server（AI 可操作工具集）
 # server+schemars+transport-io = agent-server（被 spawn 的一侧）

@@ -528,10 +528,11 @@ export const toolRegistry: ToolDef[] = [
           }
         }
       } catch {
+        const nav = typeof navigator !== 'undefined' ? (navigator as { hardwareConcurrency?: number; deviceMemory?: number }) : null;
         lines.push(
           '- 实时数据不可用（非 Tauri 环境），CPU 核心 / 内存为浏览器近似值：',
-          `- CPU 逻辑核心：${(navigator as { hardwareConcurrency?: number }).hardwareConcurrency ?? '未知'}`,
-          `- 内存：${(navigator as { deviceMemory?: number }).deviceMemory ?? '未知'} GB`,
+          `- CPU 逻辑核心：${nav?.hardwareConcurrency ?? '未知'}`,
+          `- 内存：${nav?.deviceMemory ?? '未知'} GB`,
         );
       }
       return lines.join('\n');

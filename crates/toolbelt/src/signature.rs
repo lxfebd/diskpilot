@@ -239,7 +239,10 @@ pub fn plugin_zip_has_ed25519(zip_path: &std::path::Path) -> Result<bool, String
         if f.is_dir() {
             continue;
         }
-        if f.name().split('/').next_back() == Some("tool.plugin.json") {
+        let Ok(nm) = f.name() else {
+            continue;
+        };
+        if nm.split('/').next_back() == Some("tool.plugin.json") {
             let mut buf = String::new();
             f.read_to_string(&mut buf)
                 .map_err(|e| format!("读取插件清单失败: {e}"))?;
