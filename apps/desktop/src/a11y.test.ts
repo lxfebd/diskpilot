@@ -2022,3 +2022,32 @@ describe('工具墙卡片的键盘操作（R492）', () => {
     expect(hints[1]).toContain('Enter');
   });
 });
+
+describe('Treemap 块的键盘操作（R493）', () => {
+  it('svg 是 listbox、块是 option + roving tabIndex，方向键环绕、Enter/空格选中', () => {
+    const s = RAW_TSX['./components/Treemap.tsx'];
+    expect(s).toContain(`role="listbox"`);
+    expect(s).toContain(`role="option"`);
+    expect(s).toContain(`aria-selected={isSelected}`);
+    expect(s).toContain(`tabIndex={i === focusIdx ? 0 : -1}`);
+    expect(s).toContain(`data-tm-idx={i}`);
+    // 激活键与鼠标单击同源
+    expect(s).toContain(`isActivationKey(e.key)`);
+    expect(s).toContain(`onSelect(d.data.path, d.data)`);
+    // 方向键 + Home/End，环绕复用 cycleIndex；焦点回写到对应块
+    expect(s).toContain(`onKeyDown={onSvgKey}`);
+    expect(s).toContain(`e.key === 'ArrowRight'`);
+    expect(s).toContain(`e.key === 'ArrowUp'`);
+    expect(s).toContain(`e.key === 'End'`);
+    expect(s).toContain(`cycleIndex(focusIdx, n, 1)`);
+    expect(s).toContain(`blocks?.[next]?.focus()`);
+    // 布局一变落点回第一块
+    expect(s).toContain(`setFocusIdx(0)`);
+  });
+  it('layout.css 给键盘聚焦的 treemap 块加亮描边', () => {
+    const css = RAW_CSS['./styles/layout.css'].replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const m = css.match(/\.treemap g:focus-visible rect\s*\{([^}]*)\}/);
+    expect(m).not.toBeNull();
+    expect(m?.[1]).toContain('stroke: var(--accent-strong);');
+  });
+});

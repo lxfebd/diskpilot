@@ -582,6 +582,9 @@ aside::-webkit-scrollbar-thumb {
   border-radius: 0;
 }
 .treemap text { user-select: none; pointer-events: none; }
+/* R493：treemap 块可键盘聚焦（roving tabIndex），键盘焦点给块加亮描边 */
+.treemap g:focus-visible { outline: none; }
+.treemap g:focus-visible rect { stroke: var(--accent-strong); stroke-width: 2.5px; }
 
 /* ── WizTree-style tree ────────────────────────────────────────────── */
 .treeview {

@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R493: Treemap 空间图块可键盘操作——listbox/option + roving tabindex，方向键走块、Enter 选中
+
+- 缺口：`Treemap.tsx` 的块是 `<g onClick>`——纯鼠标。键盘用户看得见空间图、点不了任何块（旁边树视图早已支持键盘，treemap 是主视图之一却是盲区）。
+- 改动（`Treemap.tsx`）：svg 改 `role="listbox"`（保留 aria-label），每个块 `role="option"` + `aria-selected` + roving `tabIndex`（`i === focusIdx ? 0 : -1`，Tab 只停一块）+ `data-tm-idx`；svg 上挂 `onKeyDown={onSvgKey}`——方向键按布局顺序环绕（复用 `cycleIndex`，R365 口径）、Home/End 跳首尾、焦点 `blocks?.[next]?.focus()`；Enter/空格走 `isActivationKey` 触发与鼠标单击同源的 `onSelect(path, node)`；`node/width/height` 一变落点回第一块。
+- 改动（`layout.css`）：`.treemap g:focus-visible rect { stroke: var(--accent-strong); stroke-width: 2.5px; }`——键盘焦点块加亮描边（CSS 规则优先于 rect 的 presentation attribute，选中白边在聚焦时让位给焦点框）。
+- 守卫：`a11y.test.ts` 新增 describe「Treemap 块的键盘操作（R493）」两条——① listbox/option/roving tabIndex/激活键同源/方向键五支与焦点回写/落点重置；② layout.css 的 `:focus-visible rect` 描边规则。
+- 验证：`pnpm -C apps/desktop exec vitest run` 90 files / 1302 tests 全绿；tsc -b 与 eslint 0 warning。
+
 ### R492: 工具墙卡片可键盘操作——roving tabindex + 网格方向键，Enter 开详情 / Shift+Enter 启动
 
 - 缺口：`ToolCard` 是可点 div（单击开详情、双击启动），但没有 role/tabIndex/onKeyDown——键盘用户 Tab 跳过整面工具墙，90+ 张卡片对他们不存在；就算逐卡可 Tab 也会变成上百个停靠点。

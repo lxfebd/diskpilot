@@ -1,8 +1,9 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { hierarchy, treemap, treemapSquarify } from 'd3-hierarchy';
 import type { Node } from '../types';
 import { formatBytes } from '../format';
 import { useT } from '../i18n';
+import { cycleIndex, isActivationKey } from '../a11y';
 import { FAMILY_COLORS, FILE_FALLBACK, DIR_COLORS, JUNK_DIR_RE, JUNK_COLOR } from '../colors';
 
 type Props = {
@@ -71,8 +72,42 @@ export const Treemap = memo(function Treemap({ node, width, height, onSelect, se
     return laidOut.descendants().filter((n) => n.depth >= 1 && n.depth <= 2);
   }, [node, width, height]);
 
+  // R493：treemap 块可键盘操作。此前 <g onClick> 只有鼠标——键盘用户看得见图、
+  // 点不了块。现在 svg 是 listbox、块是 option：roving tabindex（Tab 只停一块），
+  // 方向键在块间走（按布局顺序环绕），Enter/空格 = 点击选中，与树视图同义。
+  const [focusIdx, setFocusIdx] = useState(0);
+  const svgRef = useRef<SVGSVGElement>(null);
+  useEffect(() => { setFocusIdx(0); }, [node, width, height]);
+  const onSvgKey = (e: React.KeyboardEvent<SVGSVGElement>) => {
+    const n = layout.length;
+    if (n === 0) return;
+    if (isActivationKey(e.key)) {
+      const d = layout[focusIdx];
+      if (d) { e.preventDefault(); onSelect(d.data.path, d.data); }
+      return;
+    }
+    let next = focusIdx;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = cycleIndex(focusIdx, n, 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = cycleIndex(focusIdx, n, -1);
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = n - 1;
+    else return;
+    e.preventDefault();
+    setFocusIdx(next);
+    const blocks = svgRef.current?.querySelectorAll<SVGGElement>('g[data-tm-idx]');
+    blocks?.[next]?.focus();
+  };
+
   return (
-    <svg width={width} height={height} className="treemap" role="img" aria-label={t('overview.treemap.aria')}>
+    <svg
+      ref={svgRef}
+      width={width}
+      height={height}
+      className="treemap"
+      role="listbox"
+      aria-label={t('overview.treemap.aria')}
+      onKeyDown={onSvgKey}
+    >
       {layout.map((d, i) => {
         const x = d.x0;
         const y = d.y0;
@@ -87,6 +122,10 @@ export const Treemap = memo(function Treemap({ node, width, height, onSelect, se
         return (
           <g
             key={i}
+            role="option"
+            aria-selected={isSelected}
+            tabIndex={i === focusIdx ? 0 : -1}
+            data-tm-idx={i}
             onClick={() => onSelect(d.data.path, d.data)}
             style={{ cursor: 'pointer' }}
           >
