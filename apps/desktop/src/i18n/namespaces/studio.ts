@@ -40,6 +40,14 @@ export const studio = {
     'studio.installing': '安装中…',
     'studio.confirmInstall': '确认安装',
     'studio.cancel': '取消',
+    // R497：社区索引远程刷新
+    'studio.refreshRegistry': '刷新索引',
+    'studio.refreshingRegistry': '拉取最新索引…',
+    'studio.refreshed': '已更新到 {count} 条社区脚本（来源 {url}）',
+    'studio.refreshIndexFailed': '刷新索引失败：{msg}',
+    'studio.registrySource': '来源 {url} · 更新于 {time}',
+    'studio.registrySeed': '内置种子索引（尚未拉取远端）',
+    'studio.unsignedIndex': '未签名索引',
 
     // ── 粘贴 toml 安装弹窗 ──
     'studio.installHead': '安装社区脚本',
@@ -142,6 +150,14 @@ export const studio = {
     'studio.installing': 'Installing…',
     'studio.confirmInstall': 'Install',
     'studio.cancel': 'Cancel',
+    // R497: community index remote refresh
+    'studio.refreshRegistry': 'Refresh index',
+    'studio.refreshingRegistry': 'Fetching latest index…',
+    'studio.refreshed': 'Index updated: {count:community script|community scripts} (from {url})',
+    'studio.refreshIndexFailed': 'Index refresh failed: {msg}',
+    'studio.registrySource': 'Source {url} · updated {time}',
+    'studio.registrySeed': 'Built-in seed index (remote not fetched yet)',
+    'studio.unsignedIndex': 'unsigned index',
 
     // ── Paste-TOML install dialog ──
     'studio.installHead': 'Install a community script',

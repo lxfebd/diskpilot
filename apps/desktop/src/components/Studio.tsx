@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, ChevronDown, Sparkles, MessageSquare, Trash2, FolderOpen, Copy, ExternalLink, Gamepad2, Plus, X, RotateCcw, Download, ShieldAlert } from 'lucide-react';
+import { ChevronRight, ChevronDown, Sparkles, MessageSquare, Trash2, FolderOpen, Copy, ExternalLink, Gamepad2, Plus, X, RotateCcw, Download, ShieldAlert, RefreshCw } from 'lucide-react';
 import { useStore } from '../store';
 import { formatBytes } from '../format';
 import { t, useT } from '../i18n';
@@ -152,6 +152,19 @@ function CommunityScaffolds({ onInstalled }: { onInstalled: (id: string) => void
   const [installing, setInstalling] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // R497：索引来源元信息 + 刷新状态
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [fetchedAt, setFetchedAt] = useState(0);
+  const [verified, setVerified] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const applyList = (r: Awaited<ReturnType<typeof api.scaffoldRegistryList>>) => {
+    setItems(r.items);
+    setWarning(r.warning);
+    setSourceUrl(r.source_url);
+    setFetchedAt(r.fetched_at);
+    setVerified(r.verified);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -159,8 +172,7 @@ function CommunityScaffolds({ onInstalled }: { onInstalled: (id: string) => void
       .scaffoldRegistryList()
       .then((r) => {
         if (cancelled) return;
-        setItems(r.items);
-        setWarning(r.warning);
+        applyList(r);
       })
       .catch((e) => {
         if (!cancelled) setError(String(e));
@@ -169,6 +181,26 @@ function CommunityScaffolds({ onInstalled }: { onInstalled: (id: string) => void
       cancelled = true;
     };
   }, []);
+
+  // R497：刷新社区索引（默认拉官方索引；写操作走 scaffold.manage 权限 + 后端 confirmed 双校验）。
+  const refresh = async () => {
+    if (!isPermEnabled('scaffold.manage')) {
+      setError(t('studio.permMissing'));
+      return;
+    }
+    setRefreshing(true);
+    setError(null);
+    try {
+      const r = await api.scaffoldRegistryRefresh();
+      const l = await api.scaffoldRegistryList();
+      applyList(l);
+      toast(t('studio.refreshed', { count: r.count, url: r.source_url }), 'ok');
+    } catch (e) {
+      setError(t('studio.refreshIndexFailed', { msg: String(e) }));
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const install = async (id: string) => {
     if (!isPermEnabled('scaffold.manage')) {
@@ -196,6 +228,22 @@ function CommunityScaffolds({ onInstalled }: { onInstalled: (id: string) => void
 
   return (
     <div className="studio-community-list">
+      {/* R497：索引来源 + 刷新按钮 */}
+      <div className="studio-community-toolbar">
+        <span className="muted small">
+          {sourceUrl
+            ? t('studio.registrySource', {
+                url: sourceUrl,
+                time: fetchedAt > 0 ? new Date(fetchedAt * 1000).toLocaleString() : '—',
+              })
+            : t('studio.registrySeed')}
+          {sourceUrl && !verified && <span> · {t('studio.unsignedIndex')}</span>}
+        </span>
+        <button className="ghost small" onClick={() => void refresh()} disabled={refreshing}>
+          <RefreshCw size={12} className={refreshing ? 'spin' : ''} />
+          {refreshing ? t('studio.refreshingRegistry') : t('studio.refreshRegistry')}
+        </button>
+      </div>
       {warning && <div className="muted small">{warning}</div>}
       {error && <div className="studio-community-err" role="alert">{error}</div>}
       {items.length === 0 && <div className="muted small">{t('studio.registryEmpty')}</div>}

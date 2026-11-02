@@ -31,11 +31,18 @@ export const cleanApi = {
   scaffoldSource: (id: string): Promise<string> =>
     isTauri ? invoke<string>('scaffold_source', { id }) : Promise.resolve('embedded'),
 
-  /** 社区脚本仓库列表（只读 L0）：条目 + 告警。 */
+  /** 社区脚本仓库列表（只读 L0）：条目 + 告警 + 索引来源元信息。 */
   scaffoldRegistryList: (): Promise<ScaffoldRegistryOut> =>
     isTauri
       ? invoke<ScaffoldRegistryOut>('scaffold_registry_list')
       : mocks.scaffoldRegistryList(),
+
+  /** 刷新社区脚本索引（R497，L2 scaffold.manage + confirmed 双校验）：
+   *  不传 url 时拉官方索引；返回条目数 + 来源 + 验签状态。 */
+  scaffoldRegistryRefresh: (url?: string): Promise<ScaffoldRegistryRefreshOut> =>
+    isTauri
+      ? invoke<ScaffoldRegistryRefreshOut>('scaffold_registry_refresh', { url: url ?? null, confirmed: true })
+      : mocks.scaffoldRegistryRefresh(),
 
   /** 从社区仓库一键安装（L2 scaffold.manage + confirmed 双校验，Ed25519 签名强制）。 */
   scaffoldRegistryInstall: (id: string, confirmed: boolean): Promise<string> =>
@@ -671,11 +678,27 @@ export interface RegistryScaffold {
   downloads: number;
 }
 
-/** scaffold_registry_list 返回：条目 + 告警 + 更新时间 */
+/** scaffold_registry_list 返回：条目 + 告警 + 索引来源元信息（R497 信封字段） */
 export interface ScaffoldRegistryOut {
   items: RegistryScaffold[];
   warning: string | null;
   updated_at: number;
+  /** R497：索引来源 URL（种子/旧格式为空串） */
+  source_url: string;
+  /** R497：索引拉取时间（unix 秒；0 = 未知） */
+  fetched_at: number;
+  /** R497：索引 Ed25519 验签是否通过（未签名索引为 false） */
+  verified: boolean;
+}
+
+/** scaffold_registry_refresh 返回（R497） */
+export interface ScaffoldRegistryRefreshOut {
+  ok: boolean;
+  count: number;
+  source_url: string;
+  fetched_at: number;
+  verified: boolean;
+  signed: boolean;
 }
 
 // ── Winapp2.ini 社区规则导入（后端 parse_winapp2 返回形状）──

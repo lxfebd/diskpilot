@@ -1234,6 +1234,9 @@ export async function scaffoldRegistryList(): Promise<{
   }>;
   warning: string | null;
   updated_at: number;
+  source_url: string;
+  fetched_at: number;
+  verified: boolean;
 }> {
   await wait(60);
   return {
@@ -1283,6 +1286,30 @@ export async function scaffoldRegistryList(): Promise<{
     ],
     warning: null,
     updated_at: Math.floor(Date.now() / 1000) - 3600,
+    // R497：索引来源元信息（演示数据视为已刷新的官方索引）
+    source_url: 'https://raw.githubusercontent.com/lxfebd/diskpilot-scaffolds-index/main/index.json',
+    fetched_at: Math.floor(Date.now() / 1000) - 3600,
+    verified: true,
+  };
+}
+
+// R497：预览模式的索引刷新演示——浏览器里没有真实远端，直接返回成功假信封。
+export async function scaffoldRegistryRefresh(): Promise<{
+  ok: boolean;
+  count: number;
+  source_url: string;
+  fetched_at: number;
+  verified: boolean;
+  signed: boolean;
+}> {
+  await wait(120);
+  return {
+    ok: true,
+    count: 3,
+    source_url: 'https://raw.githubusercontent.com/lxfebd/diskpilot-scaffolds-index/main/index.json',
+    fetched_at: Math.floor(Date.now() / 1000),
+    verified: true,
+    signed: true,
   };
 }
 

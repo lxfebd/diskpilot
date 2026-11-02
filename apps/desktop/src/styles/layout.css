@@ -1198,6 +1198,9 @@ footer {
   padding: 6px 4px; text-align: left;
 }
 .studio-community-head .muted { margin-left: auto; font-family: var(--font-ui); font-weight: 400; }
+/* R497：社区仓库工具行（索引来源 + 刷新按钮） */
+.studio-community-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.studio-community-toolbar button { display: inline-flex; align-items: center; gap: 4px; }
 .studio-community-list { display: flex; flex-direction: column; gap: 8px; padding: 4px 4px 6px; }
 .studio-community-row {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;

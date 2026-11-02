@@ -7,6 +7,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R497: 社区清理脚本索引支持远程刷新——官方索引一键拉取，Ed25519 信封验签，安装链路不变
+
+- 缺口：`scaffold_registry`（R8）只有本地索引 + 手动导入替换，社区脚本永远停留在种子占位——分享渠道缺"远程拉取"这一环。
+- 后端（`scaffold_registry.rs`）：新增索引信封 `ScaffoldEnvelope`（schema/source_url/fetched_at/signature/signer + `scaffolds[]`，对齐插件市场 `RegistryEnvelope`）；`parse_scaffold_envelope` 纯函数完成 JSON → schema=1 校验 → 非空 → 条目 id kebab-case 校验 → 可选 Ed25519 验签（签名对象为 `scaffolds[]` 的规范 JSON，复用 `toolbelt::signature::verify_ed25519`）→ 补 source_url/fetched_at。
+- 新命令 `scaffold_registry_refresh`（已注册 lib.rs）：不传 URL 时拉官方索引 `lxfebd/diskpilot-scaffolds-index`（与 `docs/index.example.json` 的 source_url 同源）；自定义 URL 同样强制 https + `blocked_private_target` + `ssrf_safe_get`（8MB 上限）；写操作走 confirmed=true + `scaffold.manage` 双硬校验；原子写入 `scaffolds-registry.json`，失败保留旧索引。`load_registry` 兼容新旧两种本地格式（信封优先、裸数组兜底、种子兜底），`scaffold_registry_list` 新增返回 source_url/fetched_at/verified。
+- 安装链路零放宽：`scaffold_registry_install` 仍强制条目级 Ed25519 签名 + sha256 + 红线校验后才落盘。
+- 前端：`api.scaffoldRegistryRefresh` + mock；Studio 社区仓库区加「刷新索引」按钮与来源/更新时间/未签名提示行（`.studio-community-toolbar`）；i18n 新增 7 键中英成对（英文数字量词走 ICU 复数，过 coverage 守卫）。
+- 测试：Rust 侧 6 个新单测（schema 拒绝 / 空索引拒绝 / 非法 id 拒绝 / 未签名 verified=false / 坏签名 Err / 合法签名 verified=true，签名用 `generate_keypair`+`sign_entries` 现场构造）；前端 `commands.test.ts` 三向契约守卫自动覆盖新命令（声明⇄注册⇄invoke）。
+- 验证：`cargo test -p diskpilot-desktop` 全绿（scaffold_registry 10 tests）、clippy `-D warnings` 过、fmt 干净；前端 91 files / 1305 tests 全绿，tsc + eslint 0。
+
 ### R496: 前端例行依赖更新——10 个包升到 package.json 声明范围内最新，主版本不跨
 
 - 与 R495（Rust 侧）对称的前端例行更新。定向 `pnpm update` 只升 semver 兼容范围内最新：
