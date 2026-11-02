@@ -229,3 +229,16 @@ main:focus-visible {
   outline: 2px solid var(--accent-strong);
   outline-offset: -2px;
 }
+
+/* ── 键盘快捷键帮助面板（R494）────────────────────────────────────────── */
+.help-modal { max-width: 560px; max-height: 72vh; overflow: auto; }
+.help-hint { margin: -2px 0 12px; }
+.help-group { margin-bottom: 10px; }
+.help-group-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-bottom: 2px;
+}
+.help-keys { margin: 0; padding-left: 18px; }
+.help-keys li { font-size: 13px; line-height: 1.7; }

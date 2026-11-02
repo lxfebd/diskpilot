@@ -7,6 +7,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R494: 键盘快捷键帮助面板——? 键全局唤出，把散落的快捷键集中成一张可查的表
+
+- 缺口：应用里已有 Esc 关窗栈（R349）、Shift+F10 右键菜单（R368）、搜索框 Esc 清空（R439）、方向键走行/走卡/走块（R491–R493）、死像素空格翻页等快捷键，但没有一处集中可查——键盘用户只能摸索发现，读屏用户更无文字清单。
+- 改动（`App.tsx`）：全局 keydown 监听 `?` 键切换帮助面板；输入框 / 可编辑区 / 输入法组合期（`isComposing`，R458 口径）一律放行，那里的 ? 是正常输入。
+- 新组件 `KeyboardHelp.tsx`：`modal-bg` + `role="dialog" aria-modal="true"`（同既有弹窗口径），接入 `useEscapeKey`（R349 Esc 栈）与 `useDialogFocus`（焦点进场/陷阱），分 7 组列出全部快捷键（全局 / 浏览与选中 / 菜单与搜索 / 工具卡片 / 设置标签 / 死像素 / AI 对话）。
+- 文案：`shell.help.*` 20 个键，中英各一份（i18n parity 守卫自动盯住）。
+- 样式（`app-shell.css`）：`.help-modal` 限宽 560px、限高 72vh 可滚动，分组标题 + 条目列表。
+- 守卫：新增 `keyboardHelp.test.ts` 三条——① App 的 ? 监听与输入框/IME 豁免；② 面板的 Esc 栈 / 焦点管理 / dialog 语义；③ i18n 键中英成对且非空。
+- 验证：`pnpm -C apps/desktop exec vitest run` 90+1 files / 1305 tests 全绿；tsc -b 与 eslint 0 warning。
+
 ### R493: Treemap 空间图块可键盘操作——listbox/option + roving tabindex，方向键走块、Enter 选中
 
 - 缺口：`Treemap.tsx` 的块是 `<g onClick>`——纯鼠标。键盘用户看得见空间图、点不了任何块（旁边树视图早已支持键盘，treemap 是主视图之一却是盲区）。

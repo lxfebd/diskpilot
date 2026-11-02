@@ -14,6 +14,7 @@ import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
 import { PageHeader } from './components/PageHeader';
 import { Sidebar } from './components/Sidebar';
+import { KeyboardHelp } from './components/KeyboardHelp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CleanupProposalDialog } from './components/CleanupProposalDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
@@ -135,6 +136,8 @@ export default function App() {
   const scanGate = useRef(new ScanGate()).current;
   const [pickedPath, setPickedPath] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
+  // R494：? 键唤出的键盘快捷键帮助面板
+  const [showHelp, setShowHelp] = useState(false);
   const [settingsTab, setSettingsTab] = useState<import('./components/Settings').SettingsTab | undefined>(undefined);
   const [advisorTag, setAdvisorTag] = useState<{ provider: string } | null>(null);
   const [drives, setDrives] = useState<DriveInfo[]>([]);
@@ -205,6 +208,19 @@ export default function App() {
     safeSetItem('diskpilot.sidebarExpanded', sidebar.preferredExpanded ? '1' : '0');
   }, [sidebar.preferredExpanded]);
   const toggleSidebar = () => setSidebar(toggleSidebarLayout);
+  // R494：? 键全局唤出 / 关闭快捷键帮助。输入框、可编辑区与输入法组合期
+  // （R458 口径：isComposing）里的 ? 是正常输入，一律放行不拦截。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.isComposing) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      e.preventDefault();
+      setShowHelp((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   // 侧栏占的横向宽度（含 1px 右边框）：下面所有内容区宽度预算都要扣掉它，
   // 否则「侧栏展开 + AI 栏打开」时三栏工作台会溢出被裁。
   const sidebarFootprint = (sidebar.expanded ? SIDEBAR_EXPANDED_WIDTH_PX : SIDEBAR_COLLAPSED_WIDTH_PX) + 1;
@@ -891,6 +907,8 @@ export default function App() {
         </ErrorBoundary>
       )}
       <CleanupProposalDialog />
+      {/* R494：键盘快捷键帮助（? 键唤出） */}
+      <KeyboardHelp open={showHelp} onClose={() => setShowHelp(false)} />
 
       {/* R319：toast 是本应用的主要反馈通道，之前没有任何 live region——
           读屏软件对「清理完成 / 打不开 / 提醒」一律静默。容器常驻，内容一变就播报。 */}
