@@ -7,6 +7,8 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R501: 补跑全量门禁发现 R497 测试代码 fmt 不 clean——cargo fmt --all 修复（8 行缩进），clippy -D warnings 全 workspace 重跑通过
+
 ### R500: 发布准备——版本号三处 bump 到 0.2.4，CHANGELOG 未发布区封版为 [0.2.4] - 2026-11-02，用户向更新日志草稿 docs/releases/v0.2.4.md
 
 - `Cargo.toml` workspace version、`apps/desktop/package.json`、`tauri.conf.json` 三处 0.2.3→0.2.4 一致；Cargo.lock 内 10 个 workspace crate 版本同步（cargo metadata 刷新）。

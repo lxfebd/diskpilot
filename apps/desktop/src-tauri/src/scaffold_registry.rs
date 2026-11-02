@@ -453,23 +453,24 @@ mod tests {
 
     #[test]
     fn envelope_parse_rejects_unknown_schema() {
-        let err = parse_scaffold_envelope(&envelope_json(2, &one_scaffold()), "https://x/i.json", 0)
-            .unwrap_err();
+        let err =
+            parse_scaffold_envelope(&envelope_json(2, &one_scaffold()), "https://x/i.json", 0)
+                .unwrap_err();
         assert!(err.contains("schema"), "应报告 schema 不兼容：{err}");
     }
 
     #[test]
     fn envelope_parse_rejects_empty_scaffolds() {
-        let err = parse_scaffold_envelope(&envelope_json(1, "[]"), "https://x/i.json", 0)
-            .unwrap_err();
+        let err =
+            parse_scaffold_envelope(&envelope_json(1, "[]"), "https://x/i.json", 0).unwrap_err();
         assert!(err.contains("为空"), "空索引应拒绝：{err}");
     }
 
     #[test]
     fn envelope_parse_rejects_illegal_id() {
         let bad = r#"[{"id":"Bad_ID","name":"x","version":"1","author":"a","description":"d","risk":"low"}]"#;
-        let err = parse_scaffold_envelope(&envelope_json(1, bad), "https://x/i.json", 0)
-            .unwrap_err();
+        let err =
+            parse_scaffold_envelope(&envelope_json(1, bad), "https://x/i.json", 0).unwrap_err();
         assert!(err.contains("id 非法"), "非法 id 应拒绝：{err}");
     }
 
@@ -499,8 +500,7 @@ mod tests {
     fn envelope_parse_valid_signature_verified_true() {
         // generate_keypair 返回 (公钥 hex, 私钥 hex)。
         let (public, secret) = diskpilot_toolbelt::signature::generate_keypair();
-        let scaffolds: Vec<RegistryScaffold> =
-            serde_json::from_str(&one_scaffold()).unwrap();
+        let scaffolds: Vec<RegistryScaffold> = serde_json::from_str(&one_scaffold()).unwrap();
         let payload = serde_json::to_string(&scaffolds).unwrap();
         let sig = diskpilot_toolbelt::signature::sign_entries(
             &[(String::new(), payload.into_bytes())],
