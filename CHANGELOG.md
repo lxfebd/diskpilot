@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R498: 作者侧上架工具——scaffold-lint 新增 sign 子命令，给 TOML 做 Ed25519 签名
+
+- 缺口：社区脚本安装强制 Ed25519 签名（R8/R497），但作者没有签名工具，上架链路缺"作者侧"。
+- `crates/scaffold-lint` 新增 `sign <file.toml> [--key <secret_hex>]` 子命令（新增 diskpilot-toolbelt 依赖复用同一签名实现）：先跑 lint（不合格脚本拒绝签名），再对 TOML 全文签名（entries 形态 `[("scaffold.toml", 内容)]`，与安装端 `scaffold_registry_install` 验签零漂移）；不带 `--key` 时现场生成密钥对并一次性打印私钥。输出 `signer`/`signature` 填入社区索引条目。
+- 纯函数 `sign_scaffold_text` 抽出便于单测：3 个新测试（签名→验签往返、篡改内容验签失败、非法私钥拒绝）。
+- 文档：`docs/scaffold-authoring.md` 新增「§5 签名并上架社区索引」（签名命令、私钥保管告警、用户端刷新入口说明），章节号顺延。
+- 验证：`cargo test --workspace` 46 个 suite 全 ok（scaffold-lint 11 tests），clippy `-D warnings`、fmt 干净。
+
 ### R497: 社区清理脚本索引支持远程刷新——官方索引一键拉取，Ed25519 信封验签，安装链路不变
 
 - 缺口：`scaffold_registry`（R8）只有本地索引 + 手动导入替换，社区脚本永远停留在种子占位——分享渠道缺"远程拉取"这一环。

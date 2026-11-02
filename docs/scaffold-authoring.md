@@ -63,6 +63,27 @@ pnpm install && pnpm tauri dev      # Studio 里看到卡片、scope 数字合�
 全仓门前自检（与 CI 同一条命令）：`pnpm check:rust`（fmt + clippy `-D warnings`）、
 `pnpm -C apps/desktop check`（tsc + eslint + vitest）、`pnpm check:docs`（相对链接）。
 
-## 5. 提 PR
+## 5. 签名并上架社区索引（R498）
+
+社区仓库安装强制 Ed25519 签名（未签名脚本只能本地粘贴安装），所以上架前必须签名：
+
+```bash
+# lint 先过（不合格脚本 sign 会拒绝），再签名；不带 --key 时现场生成新密钥对
+cargo run -p diskpilot-scaffold-lint -- sign scaffolds/<id>.toml
+# 已有私钥（续签/更新版本）时复用：
+cargo run -p diskpilot-scaffold-lint -- sign scaffolds/<id>.toml --key <secret_hex>
+```
+
+输出的 `signer`（公钥 hex）与 `signature`（签名 hex）填进社区索引仓库
+（`lxfebd/diskpilot-scaffolds-index`）对应条目的 `signer` / `signature` 字段。
+签名对象是 TOML 全文（单文件 `scaffold.toml`），安装端 `scaffold_registry_install`
+下载后强制验签 + sha256 校验 + 红线校验，任一步失败都不会落盘。
+
+私钥只打印一次，请妥善保存；泄露后任何人都能冒充你签名，需要轮换密钥并通知索引维护者。
+
+用户端拉取最新索引：Studio → 清理脚本 → 社区脚本仓库 → 「刷新索引」
+（默认拉官方索引，`scaffold_registry_refresh` 命令，https + SSRF 校验 + 可选索引级验签）。
+
+## 6. 提 PR
 
 模板会带检查清单。CI 全绿（fmt / clippy / cargo test / scaffold-lint / vitest / tsc）即进入 review。

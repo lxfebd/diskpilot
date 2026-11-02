@@ -254,11 +254,91 @@ fn cmd_new(scaffolds_dir: &Path, args: &[String]) -> i32 {
     0
 }
 
+/// R498：给 scaffold TOML 做 Ed25519 签名（上架社区索引用）。
+/// 签名对象与安装端 `scaffold_registry_install` 的验签完全一致：
+/// 单文件 entries `[("scaffold.toml", toml 内容)]`。
+/// 抽成纯函数便于单测（签名→验签往返 + 篡改拒绝）。
+fn sign_scaffold_text(text: &str, secret_hex: &str) -> Result<(String, String), String> {
+    let signer = diskpilot_toolbelt::signature::public_key_from_secret(secret_hex)?;
+    let sig = diskpilot_toolbelt::signature::sign_entries(
+        &[("scaffold.toml".to_string(), text.as_bytes().to_vec())],
+        secret_hex,
+    )?;
+    Ok((signer, sig))
+}
+
+/// sign 子命令：先跑 lint（不合格脚本不许签名上架），再签名输出 signer/signature。
+/// 不带 --key 时现场生成新密钥对（私钥只打印一次，务必保存）。
+fn cmd_sign(args: &[String]) -> i32 {
+    let mut file: Option<String> = None;
+    let mut key: Option<String> = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--key" => {
+                key = args.get(i + 1).cloned();
+                i += 2;
+            }
+            other if file.is_none() => {
+                file = Some(other.to_string());
+                i += 1;
+            }
+            _ => {
+                eprintln!("未知参数: {}", args[i]);
+                return 2;
+            }
+        }
+    }
+    let Some(file) = file else {
+        eprintln!("usage: diskpilot-scaffold-lint sign <file.toml> [--key <secret_hex>]");
+        return 2;
+    };
+    let Ok(text) = std::fs::read_to_string(&file) else {
+        eprintln!("读不了文件: {file}");
+        return 1;
+    };
+    let (ok, errors) = lint_text(&file, &text);
+    if !ok {
+        eprintln!("lint 未通过（{errors} 处错误）——不合格脚本不能签名上架");
+        return 1;
+    }
+    let secret = match &key {
+        Some(k) => {
+            // 校验私钥能推导出公钥（非法私钥签不出合法签名）。
+            if let Err(e) = diskpilot_toolbelt::signature::public_key_from_secret(k) {
+                eprintln!("私钥非法: {e}");
+                return 1;
+            }
+            k.clone()
+        }
+        None => {
+            // generate_keypair 返回 (公钥 hex, 私钥 hex)。
+            let (_pubk, sk) = diskpilot_toolbelt::signature::generate_keypair();
+            eprintln!("已生成新密钥对——私钥只此一次显示，请妥善保存（丢失后无法再签名）:");
+            eprintln!("  secret = {sk}");
+            sk
+        }
+    };
+    match sign_scaffold_text(&text, &secret) {
+        Ok((signer, sig)) => {
+            println!("签名完成: {file}");
+            println!("  signer    = {signer}");
+            println!("  signature = {sig}");
+            println!("把这两行填进社区索引条目（signer / signature 字段），安装端会强制验签。");
+            0
+        }
+        Err(e) => {
+            eprintln!("签名失败: {e}");
+            1
+        }
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.is_empty() {
         eprintln!(
-            "usage: diskpilot-scaffold-lint <file.toml> [...] | list | new <id> [--name NAME] [--risk low|medium|high]"
+            "usage: diskpilot-scaffold-lint <file.toml> [...] | list | new <id> [--name NAME] [--risk low|medium|high] | sign <file.toml> [--key <secret_hex>]"
         );
         std::process::exit(2);
     }
@@ -267,6 +347,7 @@ fn main() -> anyhow::Result<()> {
     match args[0].as_str() {
         "list" => std::process::exit(list_scaffolds(&scaffolds_dir)),
         "new" => std::process::exit(cmd_new(&scaffolds_dir, &args[1..])),
+        "sign" => std::process::exit(cmd_sign(&args[1..])),
         _ => {
             // 兼容旧用法：逐个 lint 文件
             let mut code = 0i32;
@@ -394,5 +475,42 @@ mode = "recycle"
     fn build_set_rejects_bad_glob() {
         assert!(build_set("**/[abc").is_err());
         assert!(build_set("**/ok/**").is_ok());
+    }
+
+    // ── R498：sign 子命令的签名往返契约 ────────────────────────────────
+
+    #[test]
+    fn sign_then_verify_roundtrip() {
+        // generate_keypair 返回 (公钥 hex, 私钥 hex)。
+        let (_pubk, secret) = diskpilot_toolbelt::signature::generate_keypair();
+        let (signer, sig) = sign_scaffold_text(VALID, &secret).unwrap();
+        assert_eq!(signer.len(), 64, "signer 是 32 字节公钥 hex");
+        assert_eq!(sig.len(), 128, "signature 是 64 字节签名 hex");
+        // 安装端同款验签路径必须通过。
+        diskpilot_toolbelt::signature::verify_ed25519(
+            &[("scaffold.toml".to_string(), VALID.as_bytes().to_vec())],
+            &sig,
+            &signer,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn sign_verify_rejects_tampered_content() {
+        let (_pubk, secret) = diskpilot_toolbelt::signature::generate_keypair();
+        let (signer, sig) = sign_scaffold_text(VALID, &secret).unwrap();
+        let tampered = VALID.replace("TestApp", "EvilApp");
+        let err = diskpilot_toolbelt::signature::verify_ed25519(
+            &[("scaffold.toml".to_string(), tampered.into_bytes())],
+            &sig,
+            &signer,
+        )
+        .unwrap_err();
+        assert!(err.contains("签名校验失败"), "篡改内容必须验签失败：{err}");
+    }
+
+    #[test]
+    fn sign_rejects_bad_secret() {
+        assert!(sign_scaffold_text(VALID, "not-hex").is_err());
     }
 }

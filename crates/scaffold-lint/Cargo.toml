@@ -12,6 +12,8 @@ path = "src/main.rs"
 
 [dependencies]
 diskpilot-scaffold = { path = "../scaffold" }
+# R498：sign 子命令给 TOML 做 Ed25519 签名（上架社区索引用），与安装端验签同一实现
+diskpilot-toolbelt = { path = "../toolbelt" }
 globset.workspace = true
 toml.workspace    = true
 anyhow.workspace  = true
