@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R495: 例行依赖更新——Cargo.lock 113 个包升到兼容范围内最新，构建链（aws-lc-sys/cc/embed-resource 等）精确锁回原版不动
+
+- `cargo update` 全量后，把会触发 C 重编或构建链行为变化的包 `--precise` 回退原版：aws-lc-sys 0.45.0 / aws-lc-rs 1.18.1 / cc 1.4.5 / find-msvc-tools 0.1.12 / embed-resource 3.0.11（winreg 随 embed-resource 回到 0.55.0）——规避本机无 NASM 时 aws-lc-sys 冷构建失败（见 .github/CONTRIBUTING.md 的长路径/MSVC 绕过说明）。
+- 其余 100+ 个包升级到 semver 兼容范围内最新（tokio 1.54.1、hyper 1.12.0、uuid 1.29.0 等 minor；bitflags/libc/log 等 patch）。
+- 验证：`cargo test --workspace` 46 个测试套件全部 ok；`cargo clippy --workspace --all-targets` 0 warning；`cargo audit` 告警 3 → 2（均为既有 allow 的间接依赖 unmaintained/unsound，无新增高危）。
+
 ### R494: 键盘快捷键帮助面板——? 键全局唤出，把散落的快捷键集中成一张可查的表
 
 - 缺口：应用里已有 Esc 关窗栈（R349）、Shift+F10 右键菜单（R368）、搜索框 Esc 清空（R439）、方向键走行/走卡/走块（R491–R493）、死像素空格翻页等快捷键，但没有一处集中可查——键盘用户只能摸索发现，读屏用户更无文字清单。
