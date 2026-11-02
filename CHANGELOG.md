@@ -7,6 +7,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R500: 发布准备——版本号三处 bump 到 0.2.4，CHANGELOG 未发布区封版为 [0.2.4] - 2026-11-02，用户向更新日志草稿 docs/releases/v0.2.4.md
+
+- `Cargo.toml` workspace version、`apps/desktop/package.json`、`tauri.conf.json` 三处 0.2.3→0.2.4 一致；Cargo.lock 内 10 个 workspace crate 版本同步（cargo metadata 刷新）。
+- CHANGELOG `[未发布]` 段整体封版为 `## [0.2.4] - 2026-11-02`（R485–R499，15 条），未发布区清空待下一轮。
+- 新增面向用户的发布说明草稿 [docs/releases/v0.2.4.md](docs/releases/v0.2.4.md)（亮点：社区脚本闭环 / 键盘可访问性专项 / ? 快捷键面板；工程化：CI 根因修复 + audit 清零 + 例行依赖更新），GitHub Release 描述可直接粘贴。
+- 发布流水线核对：`.github/workflows/release.yml` push tag `v*` 触发 5 平台矩阵（win/mac x64+arm64/linux），tauri-action 出 draft release + latest.json（updater 端点 `releases/latest/download/latest.json`，签名公钥已写入 tauri.conf.json，私钥走 Actions Secret `TAURI_SIGNING_PRIVATE_KEY`），SHA256SUMS 按 target 分文件上传。发版动作 = `git tag v0.2.4 && git push origin v0.2.4`。
+- 验证：check-changelog / check-docs-links 通过（63 条链接）；前端 91 files / 1305 tests 全绿、tsc + eslint 0；`cargo test --workspace` 46 suite 全 ok。
+
+## [0.2.4] - 2026-11-02
+
 ### R499: 文档同步——README 路线图勾选「用户自制清理脚本闭环」（R497 远程索引 + R498 作者签名 + R8 安装验签）
 
 ### R498: 作者侧上架工具——scaffold-lint 新增 sign 子命令，给 TOML 做 Ed25519 签名
