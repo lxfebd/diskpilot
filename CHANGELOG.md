@@ -7,6 +7,8 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R499: 文档同步——README 路线图勾选「用户自制清理脚本闭环」（R497 远程索引 + R498 作者签名 + R8 安装验签）
+
 ### R498: 作者侧上架工具——scaffold-lint 新增 sign 子命令，给 TOML 做 Ed25519 签名
 
 - 缺口：社区脚本安装强制 Ed25519 签名（R8/R497），但作者没有签名工具，上架链路缺"作者侧"。
