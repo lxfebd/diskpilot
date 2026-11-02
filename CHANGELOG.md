@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R496: 前端例行依赖更新——10 个包升到 package.json 声明范围内最新，主版本不跨
+
+- 与 R495（Rust 侧）对称的前端例行更新。定向 `pnpm update` 只升 semver 兼容范围内最新：
+  `@tauri-apps/api` 2.11.0→2.12.4、`@tauri-apps/cli` →2.12.4、plugin-dialog 2.7.0→2.8.4、plugin-fs 2.5.0→2.7.1、plugin-process 2.3.1→2.4.0、plugin-shell 2.3.5→2.6.0、plugin-updater 2.12.0→2.14.1（恰好与 R495 后 Cargo.lock 里 Rust 侧 tauri 2.12.5 / 各插件 2.x 最新对齐，JS-Rust 协议版本一致）、`@tanstack/react-virtual` 3.14.10→3.14.25、`@typescript-eslint/*` 8.59.1→8.72.1。
+- 有意跳过的 major 跳变（需专项评估，不混入例行更新）：`@types/react` 18→19、`@vitejs/plugin-react` 4→6、`eslint` 9→10。
+- 本机 store 与全局 config 不一致（node_modules 链接自 `tools/.pnpm-store`），更新时用 `--store-dir` 指回原 store，未动全局配置。
+- 验证：`pnpm -C apps/desktop exec vitest run` 91 files / 1305 tests 全绿；tsc -b 与 eslint 0 warning。
+
 ### R495: 例行依赖更新——Cargo.lock 113 个包升到兼容范围内最新，构建链（aws-lc-sys/cc/embed-resource 等）精确锁回原版不动
 
 - `cargo update` 全量后，把会触发 C 重编或构建链行为变化的包 `--precise` 回退原版：aws-lc-sys 0.45.0 / aws-lc-rs 1.18.1 / cc 1.4.5 / find-msvc-tools 0.1.12 / embed-resource 3.0.11（winreg 随 embed-resource 回到 0.55.0）——规避本机无 NASM 时 aws-lc-sys 冷构建失败（见 .github/CONTRIBUTING.md 的长路径/MSVC 绕过说明）。
