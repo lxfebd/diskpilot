@@ -8,6 +8,21 @@ use serde::{Deserialize, Serialize};
 /// 索引 schema 版本（信封 schema 字段；不兼容时 refresh 拒绝写入）。
 pub(crate) const REGISTRY_SCHEMA: u32 = 1;
 
+/// 官方插件市场索引地址（R504 起作为默认值：用户未配置自定义索引时，
+/// 客户端直接拉官方索引，市场不再空荡荡；用户仍可换成自己的社区索引）。
+pub(crate) const OFFICIAL_REGISTRY_URL: &str =
+    "https://raw.githubusercontent.com/lxfebd/diskpilot-plugin-index/main/index.json";
+
+/// 配置为空时回落到官方索引地址；非空时原样返回（trim 后）。
+pub(crate) fn registry_url_or_default(cfg: &RegistryConfig) -> String {
+    let t = cfg.registry_url.trim();
+    if t.is_empty() {
+        OFFICIAL_REGISTRY_URL.to_string()
+    } else {
+        t.to_string()
+    }
+}
+
 // ── 索引条目结构 ───────────────────────────────────────────────────────
 
 /// 单个可安装版本（多版本列表；顶层 version/url 是 latest 的快捷字段）。
@@ -321,5 +336,20 @@ mod tests {
         let (ver, url, ..) = p.resolve(None);
         assert_eq!(ver, "2.1.0");
         assert_eq!(url, "https://e.com/2.zip");
+    }
+
+    #[test]
+    fn registry_url_falls_back_to_official_when_empty() {
+        // R504：未配置自定义索引时回落官方地址，市场默认有内容。
+        let empty = RegistryConfig::default();
+        assert_eq!(registry_url_or_default(&empty), OFFICIAL_REGISTRY_URL);
+        assert!(OFFICIAL_REGISTRY_URL.starts_with("https://"));
+        let custom = RegistryConfig {
+            registry_url: "  https://example.com/my-index.json  ".into(),
+        };
+        assert_eq!(
+            registry_url_or_default(&custom),
+            "https://example.com/my-index.json"
+        );
     }
 }

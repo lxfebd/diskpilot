@@ -238,6 +238,32 @@ mod tests {
     }
 
     #[test]
+    fn signed_envelope_roundtrip_and_tamper_rejected() {
+        // R504 回归：官方索引带信封 Ed25519 签名——现场生成密钥签一个信封，
+        // parse_and_verify_envelope 解析后 verify() 必须通过；篡改 plugins 后必须失败。
+        use diskpilot_toolbelt::signature::{generate_keypair, sign_entries};
+        let (pubk, sk) = generate_keypair();
+        let plugins = vec![plugin("good-tool-1", "OK")];
+        let payload = serde_json::to_string(&plugins).unwrap();
+        let sig = sign_entries(&[(String::new(), payload.into_bytes())], &sk).unwrap();
+        let mut env = serde_json::json!({
+            "schema": REGISTRY_SCHEMA,
+            "plugins": plugins,
+            "signature": sig,
+            "signer": pubk,
+        });
+        let (parsed, _) =
+            parse_and_verify_envelope(&env.to_string(), "https://example.com/index.json", 0)
+                .expect("合法签名信封应解析通过");
+        assert!(parsed.verify().unwrap(), "现场签名的信封验签应通过");
+
+        env["plugins"][0]["name"] = serde_json::json!("被篡改");
+        // parse 内已强制验签（L45 env.verify()?），篡改应直接 Err —— 调用方据此保留旧索引。
+        let r = parse_and_verify_envelope(&env.to_string(), "https://example.com/index.json", 0);
+        assert!(r.is_err(), "篡改后的信封 parse 内验签应直接拒绝: {r:?}");
+    }
+
+    #[test]
     fn filter_builtin_dupes_drops_overlapping_entries() {
         let builtin: std::collections::HashSet<String> = ["hwinfo", "crystaldiskinfo"]
             .iter()

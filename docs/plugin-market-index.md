@@ -76,15 +76,27 @@
 - [ ] 有签名的：`signer` 公钥 hex 与包内一致
 - [ ] `id` 是合法 kebab-case，不与内置工具净化名撞车（撞车会被 `filter_builtin_dupes` 剔除）
 
-## 4. 官方索引仓库布局（建仓模板）
+## 4. 官方索引仓库（已上线）
+
+官方索引仓库：**<https://github.com/lxfebd/diskpilot-plugin-index>**（R504 建立）。
+
+- 客户端默认地址（R504 起未配置自定义索引时自动使用）：
+  `https://raw.githubusercontent.com/lxfebd/diskpilot-plugin-index/main/index.json`
+- 布局：
 
 ```
-diskpilot-scaffolds-index/
-├── index.json          # 信封（schema 1，plugins[] 按 id 排序）
+diskpilot-plugin-index/
+├── index.json          # 信封（schema 1，Ed25519 签名，plugins[] 按 id 排序）
 ├── README.md           # 认领/发布说明，指回本文档
-├── plugins/            # （可选）各插件 zip 的源文件目录，Releases 发布
-└── .github/            # CI：校验 index.json 可解析 + schema=1（见下）
+└── .github/workflows/validate-index.yml  # CI 门禁（schema/https/sha256/id kebab）
 ```
+
+- 插件 zip 上传到该仓库的 **Releases**（当前 `v1.0.0`），直链填入 `plugins[].url`。
+- 首批官方插件（源码在主仓库 `plugins/`，均为只读诊断工具，risk=low）：
+  - `bigfile-finder` 大文件扫描器（硬盘工具）
+  - `dup-finder` 重复文件查找（硬盘工具，输出标注「疑似」）
+  - `startup-audit` 启动项审计（综合检测）
+- 官方发布签名密钥：Ed25519 私钥只在本机保管（`~/.diskpilot/release-signing/secret.hex`，权限收紧，绝不入库），公钥写入信封 `signer` 与每个条目的 `signer`；客户端 R502 起强制锚定（包内 signer 必须等于索引声明）。
 
 **建议 CI 门禁**（照 .github/workflows/ci.yml 风格）：
 

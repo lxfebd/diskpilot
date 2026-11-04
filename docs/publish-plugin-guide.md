@@ -60,9 +60,9 @@ cargo run -p diskpilot-toolbelt --example export_plugin
 
 ### 第 3 步：上传 + 填索引 + 提 PR
 
-1. 把 zip 传到 **GitHub Releases**（自己仓库或官方索引仓库均可），拿到 https 直链。
+1. 把 zip 传到 **GitHub Releases**（自己仓库均可），拿到 https 直链。
 2. 算好 zip 的 sha256（`sha256sum my-app-cleaner-1.0.0.zip`）。
-3. 在官方索引仓库 `index.json` 的 `plugins[]` 加一条：
+3. 在官方索引仓库 [`lxfebd/diskpilot-plugin-index`](https://github.com/lxfebd/diskpilot-plugin-index) 的 `index.json` 的 `plugins[]` 加一条（PR 由 CI 校验；官方发布的包还需要 Ed25519 签名，见主仓库 `docs/plugin-market-index.md` §4）：
 
 ```json
 {

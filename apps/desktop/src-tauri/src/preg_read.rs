@@ -9,8 +9,9 @@ use crate::plugin_registry_types::{InstalledPlugin, RegistryPlugin};
 // ── 只读命令 ───────────────────────────────────────────────────────────
 
 /// 兼容旧调用：直接读配置文件；这是唯一读索引 URL 的入口。
+/// R504：未配置时回落到官方索引地址（registry_url_or_default）。
 pub(crate) fn load_registry_url(app: &AppHandle) -> String {
-    super::load_config(app).registry_url
+    crate::plugin_registry_types::registry_url_or_default(&super::load_config(app))
 }
 
 /// 内置工具目录的插件 id 集合（复用 toolbelt 的 manifest 清单：plugin 元数据 id；

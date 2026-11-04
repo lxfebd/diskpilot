@@ -7,6 +7,21 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R504: 插件市场首批官方内容上线——新建官方索引仓库 + 3 个只读诊断插件（全部 Ed25519 双签），客户端默认拉官方索引
+
+- **官方索引仓库** `lxfebd/diskpilot-plugin-index`（新建，public）：`index.json` 信封带 Ed25519 签名 + CI 门禁（schema=1 / https / sha256 必填 / id kebab / 条目 signer 与信封一致）；插件 zip 上传在仓库 Releases `v1.0.0`。
+- **首批 3 个官方插件**（源码入主仓库 `plugins/<id>/`，纯 std Rust 编译的小 exe，全部 **只读诊断**、risk=low，不做任何删除——删除统一走主程序的确认链路）：
+  - `bigfile-finder` 大文件扫描器（硬盘工具）：递归扫描按大小列 TopN，跳过符号链接防目录环
+  - `dup-finder` 重复文件查找（硬盘工具）：大小分组 + 全量 SipHash 比对，输出标注「疑似重复」需人工确认
+  - `startup-audit` 启动项审计（综合检测）：只读列 HKCU/HKLM Run 键 + 启动文件夹
+  - 每个包经 `sign_plugin_dir` 签名（包内 `signature`/`signer`/`digest`，verify=ed25519）后 `export_plugin_zip` 打包
+- **客户端默认索引**：`load_registry_url` 未配置时回落 `OFFICIAL_REGISTRY_URL`（官方 raw 地址）——用户打开市场即有内容，仍可换自定义社区索引。
+- **安全机制（纵深）**：索引信封签名强制验签（篡改保留旧索引）→ 条目 sha256 下载后强校验 → 包内 Ed25519 验签 → R502 起 signer 锚定（包内 signer 必须等于索引声明，冒名自签名被拒）→ 安装路径 safe_join 防穿越 + zip 条目防 `../`。
+- **验证（端到端实测线上数据）**：拉取线上 index.json 验信封签名通过/篡改拒绝；3 个线上 zip 的 sha256 与索引逐字节一致；包签名有效且 signer 锚定一致；`install_plugin_zip` 落到 `硬盘工具|综合检测/<id>/` 且 entry 存在；篡改 zip 一字节被内容验签拒绝；安装产物 exe 实际运行正常。新增永久回归测试：信封签名往返+篡改拒绝、默认索引回落。
+- 发布私钥保管：`~/.diskpilot/release-signing/secret.hex`（icacls 收紧为仅当前用户，绝不入任何仓库），公钥 `4eac4122…af00a5` 写入信封与条目 signer。
+- 文档：`docs/plugin-market-index.md` §4 改为已上线的官方仓库说明，publish-guide 指向真实仓库。
+- 验证：fmt clean、clippy `-D warnings` 0、`cargo test --workspace` 全绿（新增 3 例）、vitest 1305/tsc/eslint 全过、check-changelog/check-docs-links 通过。
+
 ### R503: 插件市场小修两处——resolve 最新版改按版本号实际比较（不信任索引倒序）+ verify 命令 Ed25519 验签只算一次
 
 - `RegistryPlugin::resolve(None)` 原取 `versions[0]` 当最新（靠"索引倒序"约定）；改为 `cmp_version` 按主.次.修订数字比较取最大（正式版 > 预发布版），乱序索引也正确。新增 2 例测试（版本号比较、乱序选最大）。
