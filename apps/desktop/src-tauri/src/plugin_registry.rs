@@ -210,6 +210,34 @@ mod tests {
     }
 
     #[test]
+    fn envelope_rejects_path_traversal_plugin_id() {
+        // R502：id 会拼进缓存/备份文件名，含 ../ 的非法 id 必须拒掉整份索引。
+        let entry = |id: &str| {
+            serde_json::json!({
+                "id": id, "name": "x", "version": "1.0.0", "author": "",
+                "description": "", "category": "", "risk": "low", "tags": [],
+                "url": "", "sha256": "", "signer": "", "downloads": 0,
+                "versions": [], "license": "", "depends_on": [],
+                "verified": false, "homepage": ""
+            })
+        };
+        let body = serde_json::json!({"schema": REGISTRY_SCHEMA, "plugins": [entry("../evil")]})
+            .to_string();
+        let err = parse_and_verify_envelope(&body, "https://example.com/index.json", 0)
+            .expect_err("含 ../ 的 id 必须被拒绝");
+        assert!(err.contains("非法"), "错误信息应说明 id 非法：{err}");
+
+        let body2 = serde_json::json!({"schema": REGISTRY_SCHEMA, "plugins": [entry("Bad_ID")]})
+            .to_string();
+        assert!(parse_and_verify_envelope(&body2, "https://example.com/index.json", 0).is_err());
+
+        let body3 =
+            serde_json::json!({"schema": REGISTRY_SCHEMA, "plugins": [entry("good-tool-1")]})
+                .to_string();
+        assert!(parse_and_verify_envelope(&body3, "https://example.com/index.json", 0).is_ok());
+    }
+
+    #[test]
     fn filter_builtin_dupes_drops_overlapping_entries() {
         let builtin: std::collections::HashSet<String> = ["hwinfo", "crystaldiskinfo"]
             .iter()

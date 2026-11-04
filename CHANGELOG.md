@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R502: 插件市场安全加固——台账路径防穿越（safe_join）+ 注册表安装签名者锚定（包内 signer 必须等于索引声明）
+
+- 巡检插件市场发现两处缺口并修复：
+  - **HIGH 路径穿越**：`plugin_registry_update` / `plugin_registry_rollback` 直接把台账（本地 JSON，可被篡改）里的 `dir_rel` / `blob` / `from_ver` 拼进 `root.join(...)` 后做 rename / remove_dir_all，含 `../` 时可删改 Tools 根之外的任意目录。新增 `preg_misc::safe_join`（拒绝空、绝对路径、`..`/根成分），update/rollback 的目录路径与备份包路径全部改走 safe_join；另有单测覆盖。
+  - **MEDIUM 签名者未锚定**：注册表安装只验包内 Ed25519 自洽，未校验包内 signer 是否等于索引条目声明的 signer——未签名索引下可冒名自签名。现在 `require_registry_signed` 新增 `expected_signer` 参数（toolbelt 新增 `plugin_zip_signer` 读取包内 signer），install/update/rollback 重下路径强制比对，且索引条目未声明 signer 的一律拒绝远程安装。
+  - 顺手：`parse_and_verify_envelope` 逐条校验索引插件 id 为 kebab-case（净化自洽），堵住 id 拼缓存/备份文件名的穿越面；toolbelt 抽出 `read_plugin_meta` 复用清单读取。
+- 新测试：safe_join 穿越拒绝 3 例、check_signer_anchor 匹配/不匹配/空 signer 4 例、envelope 非法 id 拒绝 3 例、plugin_zip_signer 读取 2 例。
+- 验证：`cargo fmt --all -- --check` 干净，clippy workspace `-D warnings` 0，`cargo test --workspace` 全 suite 绿（含新增 9 例），audit 仅 2 个已知 allowed warnings，前端 vitest 1305 tests / tsc / eslint 全绿。
+
 ### R501: 补跑全量门禁发现 R497 测试代码 fmt 不 clean——cargo fmt --all 修复（8 行缩进），clippy -D warnings 全 workspace 重跑通过
 
 ### R500: 发布准备——版本号三处 bump 到 0.2.4，CHANGELOG 未发布区封版为 [0.2.4] - 2026-11-02，用户向更新日志草稿 docs/releases/v0.2.4.md

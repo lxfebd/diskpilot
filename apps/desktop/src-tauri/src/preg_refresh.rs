@@ -30,6 +30,18 @@ pub(crate) fn parse_and_verify_envelope(
     if env.plugins.is_empty() {
         return Err("索引为空（plugins 数组无条目）".into());
     }
+    // R502：逐条校验插件 id 合法（kebab-case 自洽）。id 会拼进缓存/备份文件名，
+    // 非法 id（含 ../ 等）会路径穿越；净化后与原 id 不一致即拒绝整份索引。
+    for p in &env.plugins {
+        let id = p.id.trim();
+        let normalized = diskpilot_toolbelt::plugin_id_from_name(id)
+            .map_err(|e| format!("索引条目 id「{id}」非法：{e}"))?;
+        if normalized != id {
+            return Err(format!(
+                "索引条目 id「{id}」非法：必须是 kebab-case（净化结果为「{normalized}」）"
+            ));
+        }
+    }
     let verified = env.verify()?;
     let env = RegistryEnvelope {
         schema: REGISTRY_SCHEMA,

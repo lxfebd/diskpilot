@@ -225,10 +225,8 @@ pub fn sign_plugin_dir(plugin_dir: &std::path::Path, secret_hex: &str) -> Result
     Ok(())
 }
 
-/// 预检 zip 内 `tool.plugin.json` 是否带完整 Ed25519 签名（signature + signer 齐备，
-/// 且 verify 字段不是 "none"）。只读解压清单，不解压内容。URL 安装强制要求
-/// 签名（本地 zip 直装才允许无签名）。
-pub fn plugin_zip_has_ed25519(zip_path: &std::path::Path) -> Result<bool, String> {
+/// 读取 zip 内 `tool.plugin.json` 清单（只读解压清单，不解压内容）。
+fn read_plugin_meta(zip_path: &std::path::Path) -> Result<Option<crate::ToolPluginMeta>, String> {
     use std::io::Read;
     let file = std::fs::File::open(zip_path).map_err(|e| format!("无法打开插件包: {e}"))?;
     let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("不是合法 zip 包: {e}"))?;
@@ -248,13 +246,32 @@ pub fn plugin_zip_has_ed25519(zip_path: &std::path::Path) -> Result<bool, String
                 .map_err(|e| format!("读取插件清单失败: {e}"))?;
             let meta: crate::ToolPluginMeta =
                 serde_json::from_str(&buf).map_err(|e| format!("插件清单解析失败: {e}"))?;
-            if meta.verify.trim().eq_ignore_ascii_case("none") {
-                return Ok(false);
-            }
-            return Ok(!meta.signature.trim().is_empty() && !meta.signer.trim().is_empty());
+            return Ok(Some(meta));
         }
     }
-    Ok(false)
+    Ok(None)
+}
+
+/// 预检 zip 内 `tool.plugin.json` 是否带完整 Ed25519 签名（signature + signer 齐备，
+/// 且 verify 字段不是 "none"）。只读解压清单，不解压内容。URL 安装强制要求
+/// 签名（本地 zip 直装才允许无签名）。
+pub fn plugin_zip_has_ed25519(zip_path: &std::path::Path) -> Result<bool, String> {
+    let Some(meta) = read_plugin_meta(zip_path)? else {
+        return Ok(false);
+    };
+    if meta.verify.trim().eq_ignore_ascii_case("none") {
+        return Ok(false);
+    }
+    Ok(!meta.signature.trim().is_empty() && !meta.signer.trim().is_empty())
+}
+
+/// R502：读取 zip 内清单声明的签名者公钥 hex（trim 后；无清单/无 signer 返回空串）。
+/// 注册表安装用它与索引条目声明的 signer 做锚定比对——包"谁签的"必须等于索引"说是谁签的"。
+pub fn plugin_zip_signer(zip_path: &std::path::Path) -> Result<String, String> {
+    let Some(meta) = read_plugin_meta(zip_path)? else {
+        return Ok(String::new());
+    };
+    Ok(meta.signer.trim().to_string())
 }
 
 fn decode_hex(s: &str, what: &str) -> Result<Vec<u8>, String> {
@@ -268,4 +285,54 @@ fn decode_hex(s: &str, what: &str) -> Result<Vec<u8>, String> {
 fn getrandom_bytes(out: &mut [u8]) {
     use getrandom::getrandom;
     let _ = getrandom(out);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 造一个含 tool.plugin.json 的最小插件 zip 到临时目录。
+    fn make_zip(meta_json: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "dp-sig-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let zp = dir.join("p.zip");
+        let f = std::fs::File::create(&zp).unwrap();
+        let mut zw = zip::ZipWriter::new(f);
+        let opt = zip::write::SimpleFileOptions::default();
+        zw.start_file("tool.plugin.json", opt).unwrap();
+        use std::io::Write;
+        zw.write_all(meta_json.as_bytes()).unwrap();
+        zw.start_file("bin/tool.exe", opt).unwrap();
+        zw.write_all(b"MZ").unwrap();
+        zw.finish().unwrap();
+        zp
+    }
+
+    #[test]
+    fn plugin_zip_signer_reads_declared_signer() {
+        let (pubk, _sk) = generate_keypair();
+        let meta = format!(
+            r#"{{"id":"t","name":"t","version":"1.0.0","entry":"run.sh","verify":"ed25519","signature":"ab","signer":"{pubk}"}}"#
+        );
+        let zp = make_zip(&meta);
+        assert_eq!(plugin_zip_signer(&zp).unwrap(), pubk);
+        assert!(plugin_zip_has_ed25519(&zp).unwrap());
+        let _ = std::fs::remove_dir_all(zp.parent().unwrap());
+    }
+
+    #[test]
+    fn plugin_zip_signer_empty_when_unsigned() {
+        let zp =
+            make_zip(r#"{"id":"t","name":"t","version":"1.0.0","entry":"run.sh","verify":"none"}"#);
+        assert_eq!(plugin_zip_signer(&zp).unwrap(), "");
+        assert!(!plugin_zip_has_ed25519(&zp).unwrap());
+        let _ = std::fs::remove_dir_all(zp.parent().unwrap());
+    }
 }

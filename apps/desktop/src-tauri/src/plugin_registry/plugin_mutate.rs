@@ -7,11 +7,30 @@
 
 use tauri::{AppHandle, State};
 
+use crate::plugin_registry::preg_misc::safe_join;
 use crate::plugin_registry::{
     append_ledger, cache_file_path, data_dir, load_envelope, load_ledger, now_secs,
     resolve_tools_root,
 };
 use crate::plugin_registry_types::{LedgerEntry, RegistryPlugin};
+
+/// R502：签名者锚定比对（纯函数，便于单测）。
+/// 远程（注册表）来源安装时，包内 signer 必须等于索引条目声明的 expected_signer；
+/// expected 为 None（URL 直装无索引声明）时只要求包内自洽签名存在。
+fn check_signer_anchor(pkg_signer: &str, expected: Option<&str>) -> Result<(), String> {
+    let pkg = pkg_signer.trim();
+    if pkg.is_empty() {
+        return Err("插件包未声明签名者（signer 空）".into());
+    }
+    if let Some(exp) = expected.map(str::trim).filter(|s| !s.is_empty()) {
+        if !pkg.eq_ignore_ascii_case(exp) {
+            return Err(format!(
+                "签名者不匹配：包内 signer 与索引声明不一致（防冒名签名）。包：{pkg:.16}…，索引：{exp:.16}…"
+            ));
+        }
+    }
+    Ok(())
+}
 
 // ── 写操作：安装 / 更新 / 回滚 ──────────────────────────────────────────
 
@@ -31,7 +50,10 @@ async fn install_zip_bytes(
 /// 强制 Ed25519 签名检查（与 URL 安装 plugin_install_url_inner 同标准，③-2）：
 /// 社区注册表下载的插件包必须带完整签名；未签名/仅 sha256 的包只能
 /// 本地 zip 直装。索引声明不验签（verify="none"）也在这里被拦下。
-async fn require_registry_signed(zip: &std::path::Path) -> Result<(), String> {
+async fn require_registry_signed(
+    zip: &std::path::Path,
+    expected_signer: Option<&str>,
+) -> Result<(), String> {
     let has = diskpilot_toolbelt::signature::plugin_zip_has_ed25519(zip)?;
     if !has {
         let _ = std::fs::remove_file(zip);
@@ -40,6 +62,12 @@ async fn require_registry_signed(zip: &std::path::Path) -> Result<(), String> {
              未签名/仅 sha256 的包只能通过本地 zip 安装。"
                 .into(),
         );
+    }
+    // R502：锚定签名者——包内 signer 必须等于索引声明的 expected_signer。
+    let pkg_signer = diskpilot_toolbelt::signature::plugin_zip_signer(zip)?;
+    if let Err(e) = check_signer_anchor(&pkg_signer, expected_signer) {
+        let _ = std::fs::remove_file(zip);
+        return Err(e);
     }
     Ok(())
 }
@@ -127,14 +155,21 @@ pub(crate) async fn plugin_registry_install(
     if url.trim().is_empty() {
         return Err(format!("插件「{}」尚未提供下载地址（即将上架）", p.name));
     }
+    // R502：注册表来源必须在索引里声明 signer，否则无法锚定包签名、拒绝安装。
+    if signer.trim().is_empty() {
+        return Err(format!(
+            "插件「{}」的索引条目未声明 signer，无法锚定 Ed25519 签名，拒绝安装。请联系索引维护者补全。",
+            p.name
+        ));
+    }
     let (blob, blob_hash, cached) = fetch_to_cache(&app, &p, ver_opt).await?;
     let root = resolve_tools_root(&app)?;
-    // blob 相对 app_data_dir；解析回绝对路径（含 plugin-cache/ 前缀）。
+    // blob 相对 app_data_dir（由 cache_file_path 净化生成，可信）；解析回绝对路径。
     let cache = data_dir(&app)
         .map(|d| d.join(&blob))
         .ok_or_else(|| "无法定位数据目录".to_string())?;
-    // 社区注册表来源强制 Ed25519 签名（与 URL 安装同标准）；缓存命中也要验。
-    require_registry_signed(&cache).await?;
+    // 社区注册表来源强制 Ed25519 签名 + 签名者锚定（与索引声明比对）；缓存命中也要验。
+    require_registry_signed(&cache, Some(&signer)).await?;
     let dir_rel = install_zip_bytes(&cache, &root).await?;
     let _ = append_ledger(
         &app,
@@ -189,6 +224,13 @@ pub(crate) async fn plugin_registry_update(
     if target_url.trim().is_empty() {
         return Err(format!("插件「{}」尚未提供下载地址（即将上架）", p.name));
     }
+    // R502：注册表来源必须在索引里声明 signer，否则无法锚定包签名、拒绝更新。
+    if target_signer.trim().is_empty() {
+        return Err(format!(
+            "插件「{}」的索引条目未声明 signer，无法锚定 Ed25519 签名，拒绝更新。请联系索引维护者补全。",
+            p.name
+        ));
+    }
     // 已装版本（台账最新条目）。
     let ledger = load_ledger(&app);
     let (from_ver, dir_rel) = ledger
@@ -201,18 +243,21 @@ pub(crate) async fn plugin_registry_update(
         return Err(format!("插件「{}」已是最新版本（v{target_ver}）", p.name));
     }
     let root = resolve_tools_root(&app)?;
-    let dir = root.join(dir_rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+    // R502：台账 dir_rel 不可信（本地 JSON 可被篡改），safe_join 拒绝 ../ 与绝对路径，
+    // 防止把 Tools 根之外的目录 rename/remove_dir_all 掉。
+    let dir = safe_join(&root, &dir_rel)?;
     if !dir.is_dir() {
         return Err(format!("插件目录不存在：{}", dir.display()));
     }
 
     // 1. 备份旧目录（打包成 zip 存进 blob 缓存，作为回滚恢复源）。
     //    备份必须在移走旧目录之前完成，否则失败时无法恢复。
+    //    R502：from_ver 同样来自台账，备份路径也走 safe_join 防穿越。
     let backup_rel = format!("plugin-cache/{}-v{from_ver}-backup.zip", p.id);
     let Some(data) = data_dir(&app) else {
         return Err("无法定位数据目录".into());
     };
-    let backup_path = data.join(&backup_rel);
+    let backup_path = safe_join(&data, &backup_rel)?;
     if let Some(parent) = backup_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -228,9 +273,9 @@ pub(crate) async fn plugin_registry_update(
     // 2. 下载新包到 blob 缓存。
     let (blob, blob_hash, _cached) = fetch_to_cache(&app, &p, version.as_deref()).await?;
     let cache = data.join(&blob);
-    // 社区注册表来源强制 Ed25519 签名（与 URL 安装同标准）；未签名包不装，
-    // 且此刻旧版目录还在原位（校验放移开之前，失败零扰动）。
-    require_registry_signed(&cache).await?;
+    // 社区注册表来源强制 Ed25519 签名 + 签名者锚定（与索引声明比对）；
+    // 未签名/冒名包不装，且此刻旧版目录还在原位（校验放移开之前，失败零扰动）。
+    require_registry_signed(&cache, Some(&target_signer)).await?;
 
     // 3. 移开旧目录（install_plugin_zip 对已存在同名插件会报错）。
     let tmp_dir = dir.with_extension("dp-old-tmp");
@@ -326,27 +371,36 @@ pub(crate) async fn plugin_registry_rollback(
         .find(|e| e.id == id.trim() && e.version == target_ver)
         .ok_or_else(|| format!("台账里没有插件「{id}」的 v{target_ver} 记录"))?;
     let root = resolve_tools_root(&app)?;
-    let dir = root.join(cur.dir_rel.replace('/', std::path::MAIN_SEPARATOR_STR));
+    // R502：台账 dir_rel 不可信，safe_join 拒绝 ../ 与绝对路径（防越出 Tools 根删目录）。
+    let dir = safe_join(&root, &cur.dir_rel)?;
     if !dir.is_dir() {
         return Err(format!("插件目录不存在：{}", dir.display()));
     }
 
     // 目标版本的 blob：优先备份包，其次注册表下载。
+    // R502：台账 blob 字段同样不可信，非空时走 safe_join 防路径穿越。
     let mut blob_zip: Option<std::path::PathBuf> = None;
     if let Some(data) = data_dir(&app) {
-        let backup = data.join(&target.blob);
-        if backup.is_file() {
-            blob_zip = Some(backup);
+        if !target.blob.trim().is_empty() {
+            let backup = safe_join(&data, &target.blob)?;
+            if backup.is_file() {
+                blob_zip = Some(backup);
+            }
         }
     }
     if blob_zip.is_none() {
         // 无备份 → 从注册表重新下载（blob 缓存）。重新下载的来源与全新安装
-        // 同标准，强制 Ed25519 签名（备份包例外：是以前装过的版本，已验过）。
+        // 同标准，强制 Ed25519 签名 + 签名者锚定（备份包例外：是以前装过的版本，已验过）。
         let p = plugin_entry_by_id(&app, &id)?;
         let (blob, _h, _c) = fetch_to_cache(&app, &p, Some(&target_ver)).await?;
         let zip = data_dir(&app).map(|d| d.join(&blob));
         if let Some(z) = &zip {
-            require_registry_signed(z).await?;
+            let expected = if target.signer.trim().is_empty() {
+                None
+            } else {
+                Some(target.signer.as_str())
+            };
+            require_registry_signed(z, expected).await?;
         }
         blob_zip = zip;
     }
@@ -389,5 +443,41 @@ pub(crate) async fn plugin_registry_rollback(
             let _ = std::fs::rename(&tmp_dir, &dir);
             Err(format!("回滚失败，已恢复当前版：{e}"))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::check_signer_anchor;
+
+    #[test]
+    fn signer_anchor_matches_case_insensitive() {
+        let exp = "AB".repeat(32);
+        let pkg = exp.to_lowercase();
+        assert!(check_signer_anchor(&pkg, Some(&exp)).is_ok());
+    }
+
+    #[test]
+    fn signer_anchor_rejects_mismatch_and_empty() {
+        assert!(
+            check_signer_anchor("aa", Some("bb")).is_err(),
+            "包 signer 与索引声明不同必须拒"
+        );
+        assert!(
+            check_signer_anchor("", Some("bb")).is_err(),
+            "包 signer 空必须拒"
+        );
+        assert!(
+            check_signer_anchor("", None).is_err(),
+            "无索引声明时包 signer 空也拒"
+        );
+        assert!(
+            check_signer_anchor("aa", None).is_ok(),
+            "URL 直装无索引声明时只要求自洽存在"
+        );
+        assert!(
+            check_signer_anchor("aa", Some("  ")).is_ok(),
+            "索引 signer 空白视为无声明"
+        );
     }
 }
