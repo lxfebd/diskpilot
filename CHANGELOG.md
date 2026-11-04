@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R503: 插件市场小修两处——resolve 最新版改按版本号实际比较（不信任索引倒序）+ verify 命令 Ed25519 验签只算一次
+
+- `RegistryPlugin::resolve(None)` 原取 `versions[0]` 当最新（靠"索引倒序"约定）；改为 `cmp_version` 按主.次.修订数字比较取最大（正式版 > 预发布版），乱序索引也正确。新增 2 例测试（版本号比较、乱序选最大）。
+- `plugin_registry_verify` 原调了两次 `env.verify()`，合并为一次计算后复用到 `envelope_ok`/`envelope_error`。
+- 验证：fmt clean、clippy `-D warnings` 0、`cargo test --workspace` 全绿、vitest 1305 全过。
+
 ### R502: 插件市场安全加固——台账路径防穿越（safe_join）+ 注册表安装签名者锚定（包内 signer 必须等于索引声明）
 
 - 巡检插件市场发现两处缺口并修复：

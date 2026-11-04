@@ -182,11 +182,18 @@ pub(crate) fn plugin_registry_verify(app: AppHandle) -> serde_json::Value {
         }));
     }
     let signed = !env.signature.trim().is_empty() && !env.signer.trim().is_empty();
-    let envelope_ok = if signed { env.verify().is_ok() } else { false };
+    // R503：验签只算一次（Ed25519 验签有开销），结果复用到 ok/error 两个字段。
+    let verify_res: Option<Result<bool, String>> = if signed { Some(env.verify()) } else { None };
+    let envelope_ok = verify_res.as_ref().map(|r| r.is_ok()).unwrap_or(false);
+    let envelope_error = match &verify_res {
+        Some(Ok(_)) => None,
+        Some(Err(e)) => Some(e.clone()),
+        None => Some("索引未签名".into()),
+    };
     serde_json::json!({
         "signed": signed,
         "envelope_ok": envelope_ok,
-        "envelope_error": if signed { env.verify().err() } else { Some("索引未签名".into()) },
+        "envelope_error": envelope_error,
         "schema": env.schema,
         "fetched_at": env.fetched_at,
         "items": items,

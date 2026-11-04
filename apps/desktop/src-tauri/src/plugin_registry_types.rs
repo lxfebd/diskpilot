@@ -76,8 +76,35 @@ pub struct RegistryPlugin {
     pub homepage: String,
 }
 
+/// 简易版本号比较：主.次.修订按数字比较；`-` 预发布后缀字典序比较，
+/// 且正式版（无后缀）大于任何同号预发布版（1.0.0 > 1.0.0-beta）。
+/// R503：不再信任索引"倒序"约定，resolve 最新版改按版本号实际比较。
+fn cmp_version(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    fn parse(v: &str) -> (u64, u64, u64, &str) {
+        let (core, pre) = match v.split_once('-') {
+            Some((c, p)) => (c, p),
+            None => (v, ""),
+        };
+        let mut it = core.split('.');
+        let num = |s: Option<&str>| s.and_then(|x| x.parse::<u64>().ok()).unwrap_or(0);
+        (num(it.next()), num(it.next()), num(it.next()), pre)
+    }
+    let (a0, a1, a2, ap) = parse(a.trim());
+    let (b0, b1, b2, bp) = parse(b.trim());
+    a0.cmp(&b0)
+        .then(a1.cmp(&b1))
+        .then(a2.cmp(&b2))
+        .then_with(|| match (ap.is_empty(), bp.is_empty()) {
+            (true, false) => Ordering::Greater,
+            (false, true) => Ordering::Less,
+            _ => ap.cmp(bp),
+        })
+}
+
 impl RegistryPlugin {
-    /// 取指定版本的下载信息；`version=None` 时取最新版（顶层字段，兼容无 versions 的旧索引）。
+    /// 取指定版本的下载信息；`version=None` 时取最新版（versions 里版本号最大者；
+    /// 无 versions 时用顶层快捷字段，兼容旧索引）。
     pub fn resolve(&self, version: Option<&str>) -> (String, String, String, String, u64, String) {
         let want = version.map(str::trim).filter(|v| !v.is_empty());
         match want {
@@ -102,8 +129,12 @@ impl RegistryPlugin {
                 )
             }
             None => {
-                // 有 versions 时取第一条（索引约定按发布顺序倒序），否则用顶层快捷字段。
-                match self.versions.first() {
+                // R503：有 versions 时按版本号实际比较取最大，不信任数组顺序。
+                match self
+                    .versions
+                    .iter()
+                    .max_by(|a, b| cmp_version(&a.version, &b.version))
+                {
                     Some(pv) => (
                         pv.version.clone(),
                         pv.url.clone(),
@@ -234,4 +265,61 @@ pub struct RegistryConfig {
     /// 社区索引 URL（必须 https；空 = 未配置索引）。
     #[serde(default)]
     pub registry_url: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cmp::Ordering;
+
+    #[test]
+    fn cmp_version_orders_semver() {
+        assert_eq!(cmp_version("2.0.0", "1.9.9"), Ordering::Greater);
+        assert_eq!(cmp_version("1.0.0", "1.0.0"), Ordering::Equal);
+        assert_eq!(
+            cmp_version("1.0.0-beta", "1.0.0"),
+            Ordering::Less,
+            "正式版大于预发布"
+        );
+        assert_eq!(
+            cmp_version("1.0.10", "1.0.9"),
+            Ordering::Greater,
+            "数字比较非字典序"
+        );
+        assert_eq!(
+            cmp_version("1.2", "1.2.0"),
+            Ordering::Equal,
+            "缺段按 0 处理"
+        );
+    }
+
+    #[test]
+    fn resolve_picks_max_version_regardless_of_order() {
+        // R503：versions 乱序时也必须选出版本号最大的，而不是第一条。
+        let p = RegistryPlugin {
+            id: "x".into(),
+            name: "X".into(),
+            versions: vec![
+                PluginVersion {
+                    version: "1.0.0".into(),
+                    url: "https://e.com/1.zip".into(),
+                    ..Default::default()
+                },
+                PluginVersion {
+                    version: "2.1.0".into(),
+                    url: "https://e.com/2.zip".into(),
+                    ..Default::default()
+                },
+                PluginVersion {
+                    version: "2.0.9".into(),
+                    url: "https://e.com/209.zip".into(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let (ver, url, ..) = p.resolve(None);
+        assert_eq!(ver, "2.1.0");
+        assert_eq!(url, "https://e.com/2.zip");
+    }
 }
