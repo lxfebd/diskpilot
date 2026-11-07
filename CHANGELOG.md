@@ -7,6 +7,19 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R505: 深度安全审查修复——签名契约收紧、zip 炸弹上限、路径穿越加强、SSRF 加 DNS 二次校验、MCP 前缀权限失配、写操作确认门补洞
+
+- **签名契约收紧（2 个 critical）**：`plugin_zip_has_ed25519` 改为严格口径（verify 必须显式 `ed25519` 且 signature+signer 俱全，堵 `verify="sha256"`+伪造字段绕过远程签名门槛）；`install_plugin_zip` 的 require 分支新增 signature 非空断言（此前空签名静默 Ok = 零校验安装）。
+- **zip 炸弹上限**：条目数 4096 / 单条 512MB / 总解压 2GB 三道上限，签名阶段改 `Take` 流式读不再信 size()；解压段拒绝尾空格/点穿越段（`".. "` 经 Windows 规范化成 `..`）、含 `:` 的 ADS 段与保留设备名（CON/PRN/…）。
+- **路径穿越加强**：`safe_join`（台账 dir_rel/blob）同样按段 trim 尾点空格后判 `..`/空段/盘符段；`toolbelt_launch` / `toolbelt_recycle` 的 exe/目录经 `ensure_path_under`（canonicalize 后 starts_with Tools 根，fail-closed）；插件 entry 校验（`validate_plugin_entry`）拒绝穿越/绝对/保留名，且解压后二次校验 entry 存在且在插件目录内。
+- **rollback 修复**：成功分支此前 `rename(tmp→dir)` 必败被吞后误删刚装好的版本——改为删 `tmp_dir`；失败分支去掉危险的 `remove_dir_all(&dir)`；备份 blob 装前强制比对 `blob_hash`（不符回退重下载）；`sweep_orphaned_tmp_dirs` 改递归两层（tmp 目录实际落在分类层）+ 跳过 symlink。
+- **SSRF 加 DNS 二次校验**：新增 `ssrf_block_reason`（字面量 + 域名解析全部 A/AAAA 记录须为公网，fail-closed；拒 `localhost.` 尾点、zone-id IPv6），ai_proxy 首跳与每跳重定向、`ssrf_safe_get`、插件/脚手架索引 URL、MCP HTTP 端点（`validate_http_url` 改 async 且每次 connect 重验）统一走总闸；出站走 spawn_blocking 不卡 executor。
+- **MCP 前缀权限失配**：`mcp_call_tool` 调用侧改用剥前缀后的原始名查 `permission_map`（此前带前缀名必然落空、L3 永禁被回退 L0 放行），转发给服务器也改传原始名；`writable=true` 服务器即使映射 L0 也升级至少 L1 要确认；审计新增 `raw_tool` 字段。
+- **写操作确认门补洞**：`undo` 命令新增 `confirmed==Some(true)` 门 + 前端 UndoPanel/HistoryPage 改走 ConfirmDialog；`restore_quarantined` 对 source 跑 protected_path 校验（防篡改台账把隔离文件植回系统目录）；`install_scaffold`/`uninstall_scaffold` 新增 confirmed + `scaffold.manage` 双门；`execute_scope`/`recycle_paths` 真实执行新增后端 `cleanup.execute` 权限门 + 执行期红线复验（与 CI lint 同锚定空间）；Quarantine 分支加 TOCTOU 复检 + 隔离文件名加纳秒后缀防撞车；`protected_path` 新增 UNC 拒绝。
+- **其他加固**：插件入口（第三方 zip）遇 ERROR_ELEVATION_REQUIRED 一律拒绝 runas（防自带 requireAdministrator 的 exe 骗 UAC）；远程下载改 tmp+rename 原子落盘，索引无 sha256 时缓存命中要求非空文件；`sync_perms` 权限变更全部写审计日志（granted/revoked 明细）。
+- **新增回归测试**：尾空格/ADS zip 段拒绝、空 signature 拒绝、safe_join 尾空格段、MCP 前缀剥离后 L3 命中、SSRF DNS 二次校验（localhost./zone-id/元数据）、MCP HTTP 端点拒内网、restore 拒受保护 source、UNC 拒绝——共 10+ 例。
+- **验证**：fmt clean、clippy workspace `-D warnings` 0、`cargo test --workspace` 全绿、vitest/tsc/eslint 全过、check-changelog/check-docs-links 通过（见下）。
+
 ### R504: 插件市场首批官方内容上线——新建官方索引仓库 + 3 个只读诊断插件（全部 Ed25519 双签），客户端默认拉官方索引
 
 - **官方索引仓库** `lxfebd/diskpilot-plugin-index`（新建，public）：`index.json` 信封带 Ed25519 签名 + CI 门禁（schema=1 / https / sha256 必填 / id kebab / 条目 signer 与信封一致）；插件 zip 上传在仓库 Releases `v1.0.0`。

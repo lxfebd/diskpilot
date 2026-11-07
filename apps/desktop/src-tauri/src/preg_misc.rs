@@ -24,6 +24,16 @@ pub(crate) fn safe_join(base: &std::path::Path, rel: &str) -> Result<std::path::
     if p.is_absolute() {
         return Err(format!("台账路径不允许绝对路径：{rel}"));
     }
+    // R505：Windows 会把段尾的空格/点规范化掉（".. " → ".."），所以不能只靠
+    // components() 认字面量 ".."——逐段 trim_end_matches(['.', ' ']) 后再判。
+    for seg in rel.split(['/', '\\']) {
+        let t = seg.trim_end_matches(['.', ' ']);
+        // 单个 "."（CurDir）合法放行；".."、".. "、"... " 这类尾点尾空格段，
+        // 以及空段/含 ':' 段一律拒绝（Windows 会把 ".. " 规范化成 ".."）。
+        if t == ".." || t.contains(':') || (t.is_empty() && seg != ".") {
+            return Err(format!("台账路径不允许包含 .. / 空段 / 盘符段：{rel}"));
+        }
+    }
     for comp in p.components() {
         match comp {
             std::path::Component::Normal(_) | std::path::Component::CurDir => {}
@@ -42,20 +52,39 @@ pub(crate) fn sweep_orphaned_tmp_dirs(app: &AppHandle) {
     let Ok(root) = resolve_tools_root(app) else {
         return;
     };
-    let Ok(entries) = std::fs::read_dir(&root) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let is_tmp = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .map(|e| e == "dp-old-tmp")
-            .unwrap_or(false);
-        if is_tmp && path.is_dir() {
-            let _ = std::fs::remove_dir_all(&path);
+    // R505：tmp 目录实际落在「分类层」（<分类>/<id>.dp-old-tmp），根一层扫不到，
+    // 改为递归两层（根 + 分类目录），跳过符号链接，限深度防滥用。
+    fn sweep_dir(dir: &std::path::Path, depth: u8) {
+        if depth > 2 {
+            return;
+        }
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            // symlink_metadata：不跟随链接，避免清扫动作触碰根外目标。
+            let Ok(md) = std::fs::symlink_metadata(&path) else {
+                continue;
+            };
+            if md.file_type().is_symlink() {
+                continue;
+            }
+            if md.is_dir() {
+                let is_tmp = path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e == "dp-old-tmp")
+                    .unwrap_or(false);
+                if is_tmp {
+                    let _ = std::fs::remove_dir_all(&path);
+                } else {
+                    sweep_dir(&path, depth + 1);
+                }
+            }
         }
     }
+    sweep_dir(&root, 0);
 }
 
 #[cfg(test)]

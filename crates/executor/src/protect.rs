@@ -30,6 +30,18 @@ pub fn protected_path(p: &Path) -> Option<&'static str> {
 /// 盘根 / 系统目录 / 用户主目录根。canonicalize 失败时的 fail-closed 兜底。
 fn protected_path_folded(p: &Path) -> Option<&'static str> {
     let raw = p.to_string_lossy();
+    // R505：UNC 路径（`\\nas\c$\Windows`、`\\?\UNC\nas\...`）一律拒绝——
+    // 网络共享上的「系统目录」无法靠盘符后首段命中 BLOCKED，
+    // 且清理动作不该触碰任何网络路径。先判前缀再剥扩展路径前缀，
+    // 否则 `\\?\UNC\` 被剥成盘符形态后漏判。
+    let low = raw.to_ascii_lowercase();
+    // 裸 `\\server\share` 是 UNC；`\\?\UNC\server\share` 也是 UNC；
+    // 但 `\\?\C:\` 是本地盘的扩展路径，不算 UNC。
+    let is_unc =
+        (low.starts_with(r"\\") && !low.starts_with(r"\\?\")) || low.starts_with(r"\\?\unc\");
+    if is_unc {
+        return Some("a UNC/network share");
+    }
     // Windows 扩展路径前缀 `\\?\` 与盘符一样不做区分，先剥掉。
     let s = raw.trim_start_matches(r"\\?\").replace('\\', "/");
     let mut parts: Vec<&str> = s.split('/').collect();

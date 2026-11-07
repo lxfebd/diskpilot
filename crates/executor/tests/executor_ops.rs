@@ -454,6 +454,10 @@ fn protected_path_blocks_drive_roots_but_not_nested_paths() {
     assert!(protected_path(Path::new(r"C:\Users\alice\Documents\..")).is_some());
     // 折叠后只是 C:\Users 本身（非任何人的 home），不属红线
     assert!(protected_path(Path::new(r"C:\Users\alice\AppData\..\..")).is_none());
+    // R505：UNC 网络共享一律拒绝（盘符后首段规则命不中 \\nas\c$\Windows）
+    assert!(protected_path(Path::new(r"\\nas\c$\Windows")).is_some());
+    assert!(protected_path(Path::new(r"\\nas\share\tmp")).is_some());
+    assert!(protected_path(Path::new(r"\\?\UNC\nas\c$")).is_some());
 }
 
 // ============================================================================
@@ -797,4 +801,42 @@ fn execute_trims_oversized_ledger_to_the_cap() {
             .all(|e| e.source != PathBuf::from("C:/seed/0.dat")),
         "最早的那条被裁掉"
     );
+}
+
+// ============================================================================
+// R505：restore_quarantined 的 source 侧受保护路径校验
+// ============================================================================
+
+/// R505：undo 台账被篡改（source 指向系统目录/盘根）时，restore 必须拒绝，
+/// 绝不能把隔离区文件植入受保护位置。
+#[test]
+fn r505_restore_refuses_protected_source() {
+    use diskpilot_executor::{restore_quarantined, Action, UndoEntry};
+
+    let tmp = tempfile::tempdir().unwrap();
+    let qroot = tmp.path().join("quarantine");
+    std::fs::create_dir_all(&qroot).unwrap();
+    let item = qroot.join("111-0-x.dat");
+    std::fs::write(&item, b"payload").unwrap();
+
+    for bad_src in [
+        PathBuf::from(r"C:\Windows"),
+        PathBuf::from(r"C:\"),
+        PathBuf::from(r"\\nas\c$\Windows\evil.dat"),
+    ] {
+        let entry = UndoEntry {
+            timestamp: "2026-11-07T00:00:00Z".into(),
+            action: Action::Quarantine,
+            source: bad_src.clone(),
+            destination: Some(item.clone()),
+            reason: "test".into(),
+            bytes_freed: Some(7),
+        };
+        let err = restore_quarantined(&entry, &qroot).unwrap_err();
+        assert!(
+            err.to_string().contains("protected"),
+            "source={bad_src:?} 应被保护路径拦截: {err}"
+        );
+        assert!(item.exists(), "拒绝后隔离区文件必须原样留存");
+    }
 }

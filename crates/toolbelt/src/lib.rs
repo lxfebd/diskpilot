@@ -47,7 +47,10 @@ pub use catalog::{
     catalog, find, usage, CliTool, ResolvedCommand, RunOutcome, ToolOverride, ToolPluginMeta,
     ToolPluginWeb, ToolbeltError,
 };
-pub use plugin::{export_plugin_zip, install_plugin_zip, plugin_id_from_name};
+pub use plugin::{
+    ensure_path_under, export_plugin_zip, install_plugin_zip, plugin_id_from_name,
+    validate_plugin_entry,
+};
 pub use risk::{Risk, MAX_TIMEOUT_SECS, MIN_TIMEOUT_SECS};
 pub use root::find_tools_root;
 pub use run::{

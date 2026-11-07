@@ -14,18 +14,20 @@ export const cleanApi = {
   listScaffolds: () =>
     isTauri ? invoke<Scaffold[]>('list_scaffolds') : Promise.resolve(mocks.SCAFFOLDS),
 
-  /** 一键安装社区 scaffold：后端校验 toml → 写入用户目录 → 热重载。返回脚本 id。 */
-  installScaffold: (toml: string): Promise<string> =>
-    isTauri ? invoke<string>('install_scaffold', { toml }) : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'install_scaffold' }))),
+  /** 一键安装社区 scaffold：后端校验 toml → 写入用户目录 → 热重载。返回脚本 id。
+   * R505：必须显式传 confirmed=true（按钮点击即确认），后端拒绝未确认调用。 */
+  installScaffold: (toml: string, confirmed = false): Promise<string> =>
+    isTauri ? invoke<string>('install_scaffold', { toml, confirmed }) : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'install_scaffold' }))),
 
   /** 把 AI 权限快照同步到后端（权限中心改动/应用启动时调用）。后端写命令
    * （execute_ai_plan / toolbelt_run / plugin_*）据此做纵深校验。 */
   syncPerms: (enabled: string[]): Promise<void> =>
     isTauri ? invoke<void>('sync_perms', { enabled }) : Promise.resolve(),
 
-  /** 卸载用户安装的 scaffold（内嵌脚本不可卸载，后端拒绝）。 */
-  uninstallScaffold: (id: string): Promise<void> =>
-    isTauri ? invoke<void>('uninstall_scaffold', { id }) : Promise.resolve(),
+  /** 卸载用户安装的 scaffold（内嵌脚本不可卸载，后端拒绝）。
+   * R505：必须显式传 confirmed=true，后端拒绝未确认调用。 */
+  uninstallScaffold: (id: string, confirmed = false): Promise<void> =>
+    isTauri ? invoke<void>('uninstall_scaffold', { id, confirmed }) : Promise.resolve(),
 
   /** 查询脚本来源：'embedded' | 'user'。 */
   scaffoldSource: (id: string): Promise<string> =>
@@ -158,8 +160,11 @@ export const cleanApi = {
 
   // index 是展示列表位置；source 是与后端对齐的条目路径（防列表在两次
   // 刷新之间变化导致 index 漂移、恢复错条目——后端会双重校验）。
-  undo: (index: number, source: string) =>
-    isTauri ? invoke<UndoEntry | null>('undo', { index, source }) : mocks.undo(index, source),
+  // R505：还原是写操作，后端强制 confirmed=true（调用方须先弹确认窗）。
+  undo: (index: number, source: string, confirmed = false) =>
+    isTauri
+      ? invoke<UndoEntry | null>('undo', { index, source, confirmed })
+      : mocks.undo(index, source),
 
   /** 打开系统回收站（只开窗口，不代还原）——「回收」类条目的还原出口。 */
   openRecycleBin: () =>

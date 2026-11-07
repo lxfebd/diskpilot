@@ -11,7 +11,7 @@ use crate::net_http::http_no_redirect;
 #[path = "ai_ssrf.rs"]
 pub(crate) mod ai_ssrf;
 
-pub(crate) use ai_ssrf::blocked_private_target;
+pub(crate) use ai_ssrf::ssrf_block_reason_async;
 
 // ── AI 请求代理 ─────────────────────────────────────────────────────────
 // 生产模式页面 origin 是 tauri.localhost，前端直接 fetch 外部 AI API 会被
@@ -43,7 +43,8 @@ pub(crate) async fn ai_proxy(
     // SSRF 防护：只允许公网 HTTP(S) 目标。环回/私网/链路本地地址（内网
     // 管理口、云元数据 169.254.169.254 等）一律拒绝，防止前端被 XSS 后
     // 借本进程向内网发起请求。
-    if let Some(blocked) = blocked_private_target(&url) {
+    // R505：字面量 + DNS 二次校验（域名解析到私网也拒，防 DNS 重绑定）。
+    if let Some(blocked) = ssrf_block_reason_async(&url).await {
         return Err(format!("代理目标不可用（{blocked}）：{url}"));
     }
     // 共享 client 默认 12s 超时对 AI 生成不够，用请求级 timeout 覆盖；
@@ -129,7 +130,8 @@ pub(crate) async fn ai_proxy(
             .url()
             .join(&loc)
             .map_err(|e| format!("重定向目标不合法: {e}"))?;
-        if let Some(blocked) = blocked_private_target(next.as_str()) {
+        // R505：重定向每跳同样走 DNS 二次校验。
+        if let Some(blocked) = ssrf_block_reason_async(next.as_str()).await {
             return Err(format!("AI 重定向目标不可用（{blocked}）：{}", next));
         }
         let hop_status = resp.status().as_u16();

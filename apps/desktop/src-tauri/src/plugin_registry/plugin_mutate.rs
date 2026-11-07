@@ -97,10 +97,19 @@ async fn fetch_to_cache(
         .unwrap_or_else(|_| cache.to_string_lossy().into_owned());
     if cache.is_file() {
         let got = hash_of(&cache)?;
-        if want_sha256.trim().is_empty() || got.eq_ignore_ascii_case(want_sha256.trim()) {
+        let expect_ok = if want_sha256.trim().is_empty() {
+            // R505：索引没给 sha256 时不能盲信半截缓存——至少要求非空 zip，
+            // 签名门槛由上层 require_registry_signed 兜底。
+            std::fs::metadata(&cache)
+                .map(|m| m.len() > 0)
+                .unwrap_or(false)
+        } else {
+            got.eq_ignore_ascii_case(want_sha256.trim())
+        };
+        if expect_ok {
             return Ok((blob_rel, got, true));
         }
-        let _ = std::fs::remove_file(&cache); // hash 不符 → 缓存作废
+        let _ = std::fs::remove_file(&cache); // hash 不符/空文件 → 缓存作废
     }
 
     // 缓存未命中 → 下载。
@@ -383,7 +392,9 @@ pub(crate) async fn plugin_registry_rollback(
     if let Some(data) = data_dir(&app) {
         if !target.blob.trim().is_empty() {
             let backup = safe_join(&data, &target.blob)?;
-            if backup.is_file() {
+            // R505：备份包也要验 blob_hash——台账被本地篡改（改包内容 +
+            // 改清单 verify="none"）时，哈希不匹配就拒绝用备份，回退重下载。
+            if backup.is_file() && blob_hash_matches(&backup, &target.blob_hash) {
                 blob_zip = Some(backup);
             }
         }
@@ -413,8 +424,10 @@ pub(crate) async fn plugin_registry_rollback(
     let res = install_zip_bytes(&blob_zip, &root).await;
     match res {
         Ok(new_rel) => {
-            let _ = std::fs::rename(&tmp_dir, &dir);
-            let _ = std::fs::remove_dir_all(&dir);
+            // R505 修复：成功分支应删「被回滚掉的当前版」(tmp_dir)，而不是
+            // rename 回 dir 再删 dir（Windows rename 到已存在目标必败被吞，
+            // 导致实际删掉刚装好的回滚版本、旧版滞留 .dp-old-tmp 丢失）。
+            let _ = std::fs::remove_dir_all(&tmp_dir);
             let _ = append_ledger(
                 &app,
                 LedgerEntry {
@@ -439,10 +452,23 @@ pub(crate) async fn plugin_registry_rollback(
             }))
         }
         Err(e) => {
-            let _ = std::fs::remove_dir_all(&dir);
+            // 失败分支：dir 已被移到 tmp_dir，直接移回来恢复当前版。
             let _ = std::fs::rename(&tmp_dir, &dir);
             Err(format!("回滚失败，已恢复当前版：{e}"))
         }
+    }
+}
+
+/// R505：台账 blob 备份包的 sha256 与台账声明的 blob_hash 比对；
+/// 声明为空时视为不可验（返回 false，调用方会回退到重新下载）。
+fn blob_hash_matches(zip: &std::path::Path, expect: &str) -> bool {
+    let expect = expect.trim();
+    if expect.is_empty() {
+        return false;
+    }
+    match diskpilot_toolbelt::signature::sha256_file(zip) {
+        Ok(actual) => actual.eq_ignore_ascii_case(expect),
+        Err(_) => false,
     }
 }
 

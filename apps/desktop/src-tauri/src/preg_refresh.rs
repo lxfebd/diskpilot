@@ -78,7 +78,8 @@ pub(crate) async fn plugin_registry_refresh(
     if url.trim().is_empty() {
         return Err("尚未配置社区索引 URL（设置 → 插件市场 → 索引地址）。".into());
     }
-    if let Some(blocked) = crate::ai::blocked_private_target(url.trim()) {
+    // R505：字面量 + DNS 二次校验。
+    if let Some(blocked) = crate::ai::ssrf_block_reason_async(url.trim()).await {
         return Err(format!("社区索引 URL 不可用（{blocked}）：{url}"));
     }
 

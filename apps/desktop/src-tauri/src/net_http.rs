@@ -72,7 +72,8 @@ pub(crate) async fn ssrf_safe_get(
             parsed.scheme()
         ));
     }
-    if let Some(blocked) = crate::ai::blocked_private_target(parsed.as_str()) {
+    // R505：字面量 + DNS 二次校验（域名解析到私网同样拒绝）。
+    if let Some(blocked) = crate::ai::ssrf_block_reason_async(parsed.as_str()).await {
         return Err(format!("下载目标不可用（{blocked}）：{parsed}"));
     }
     let client = http_no_redirect();
@@ -100,7 +101,8 @@ pub(crate) async fn ssrf_safe_get(
             if hops > 5 {
                 return Err("下载重定向次数过多（超过 5 跳）".to_string());
             }
-            if let Some(blocked) = crate::ai::blocked_private_target(next.as_str()) {
+            // R505：重定向每跳同样走 DNS 二次校验。
+            if let Some(blocked) = crate::ai::ssrf_block_reason_async(next.as_str()).await {
                 return Err(format!("下载重定向目标不可用（{blocked}）：{next}"));
             }
             url = next.to_string();

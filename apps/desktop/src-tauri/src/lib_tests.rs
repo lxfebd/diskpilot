@@ -434,11 +434,11 @@ async fn ssrf_http_scheme_is_rejected() {
 #[test]
 fn ssrf_public_host_literal_passes() {
     assert_eq!(
-        crate::ai::blocked_private_target("https://example.com/a"),
+        crate::ai::ai_ssrf::blocked_private_target("https://example.com/a"),
         None
     );
     assert_eq!(
-        crate::ai::blocked_private_target("https://plugins.example.org/pack.zip"),
+        crate::ai::ai_ssrf::blocked_private_target("https://plugins.example.org/pack.zip"),
         None
     );
 }

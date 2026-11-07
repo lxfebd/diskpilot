@@ -241,3 +241,104 @@ pub(crate) fn parse_ip_part(part: &str) -> Option<u64> {
     }
     part.parse::<u64>().ok()
 }
+
+/// 从 URL 提取 host 名（去端口/方括号/userinfo），供 DNS 二次校验用。
+pub(crate) fn url_host(url: &str) -> String {
+    let host = url
+        .split("://")
+        .nth(1)
+        .and_then(|rest| rest.find('/').map(|i| &rest[..i]).or(Some(rest)))
+        .unwrap_or("");
+    let host = host.rsplit('@').next().unwrap_or("").trim();
+    let hostname = if host.starts_with('[') {
+        host.find(']').map(|i| &host[..=i]).unwrap_or(host)
+    } else {
+        host.split(':').next().unwrap_or("")
+    };
+    hostname
+        .trim_start_matches('[')
+        .trim_end_matches(']')
+        .to_lowercase()
+}
+
+/// R505：DNS 二次校验——域名解析出的**全部** A/AAAA 记录都必须是公网 IP，
+/// 任一记录落在私网/环回/链路本地即拒绝（防 nip.io / localtest.me /
+/// 攻击者控权 DNS 重绑定到 169.254.169.254、127.0.0.1 等）。
+/// 解析失败一律拒绝（fail-closed）。`localhost.` 尾点域名与 IPv6 zone-id
+/// （`fe80::1%25eth0`，解析会失败或语义不明）直接拒绝。
+pub(crate) fn dns_resolve_blocked(host: &str) -> Option<String> {
+    let h = host.trim().trim_end_matches('.');
+    if h.is_empty() {
+        return Some("empty host".into());
+    }
+    if h == "localhost" || h.ends_with(".localhost") {
+        return Some("localhost".into());
+    }
+    // zone-id 形式（fe80::1%eth0）拒绝——含 % 的都不是合法全局单播域名。
+    if h.contains('%') {
+        return Some("zone-id/IPv6 scope 拒绝".into());
+    }
+    // 已是 IP 字面量：交给字面量判定（blocked_private_target 已覆盖）。
+    if h.contains(':') {
+        if let Some(ip) = parse_ipv6(h) {
+            return if ipv6_is_private(&ip) {
+                Some("private/loopback address (DNS)".into())
+            } else {
+                None
+            };
+        }
+        return Some("非法 IPv6 字面量".into());
+    }
+    if parse_ipv4(h).is_some() {
+        return None; // 字面量 IPv4 由 blocked_private_target 统一判
+    }
+    // 域名 → 解析全部地址
+    use std::net::ToSocketAddrs;
+    match (h, 80u16).to_socket_addrs() {
+        Ok(addrs) => {
+            let mut any = false;
+            for a in addrs {
+                any = true;
+                match a.ip() {
+                    std::net::IpAddr::V4(v4) => {
+                        let [a, b, c, d] = v4.octets();
+                        if ipv4_is_private(a, b, c, d) {
+                            return Some(format!("域名 {h} 解析到私网/环回地址 {v4}"));
+                        }
+                    }
+                    std::net::IpAddr::V6(v6) => {
+                        let ip = v6.octets();
+                        if ipv6_is_private(&ip) {
+                            return Some(format!("域名 {h} 解析到私网/环回地址 {v6}"));
+                        }
+                    }
+                }
+            }
+            if any {
+                None
+            } else {
+                Some(format!("域名 {h} 解析不到任何地址"))
+            }
+        }
+        Err(_) => Some(format!("域名 {h} 无法解析（fail-closed 拒绝出站）")),
+    }
+}
+
+/// R505：出站 SSRF 总闸 = 字面量判定 + DNS 二次校验。
+/// 所有出网路径（ai_proxy / ssrf_safe_get / MCP bridge / 注册表 URL）统一走这里。
+pub(crate) fn ssrf_block_reason(url: &str) -> Option<String> {
+    if let Some(r) = blocked_private_target(url) {
+        return Some(r.to_string());
+    }
+    let host = url_host(url);
+    dns_resolve_blocked(&host)
+}
+
+/// 异步版总闸：DNS 解析丢到 blocking 线程池，避免卡住 async executor。
+pub(crate) async fn ssrf_block_reason_async(url: &str) -> Option<String> {
+    let u = url.to_string();
+    tokio::task::spawn_blocking(move || ssrf_block_reason(&u))
+        .await
+        .ok()
+        .flatten()
+}

@@ -231,12 +231,12 @@ pub(crate) fn toolbelt_launch(
     let root =
         diskpilot_toolbelt::find_tools_root(explicit.as_deref()).map_err(|e| e.to_string())?;
 
-    // 1) CLI 文档白名单命中（零全目录 IO）
-    let exe = (|| -> Option<PathBuf> {
+    // 1) CLI 文档白名单命中（零全目录 IO）——返回 (exe, 是否插件入口)
+    let exe = (|| -> Option<(PathBuf, bool)> {
         let entry = diskpilot_toolbelt::find(&tool)?;
         let rel = entry.exe_rel.as_deref()?;
         let p = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
-        p.is_file().then_some(p)
+        p.is_file().then_some((p, false))
     })();
 
     // 2) 全目录工具墙兜底（图形工具大多不在 CLI 白名单）。入口解析顺序：
@@ -253,27 +253,33 @@ pub(crate) fn toolbelt_launch(
         if let Some(lt) = item.launch_target.as_deref() {
             let cand = root.join(lt.replace('/', std::path::MAIN_SEPARATOR_STR));
             if cand.is_file() {
-                return Some(cand);
+                return Some((cand, false));
             }
         }
         if let Some(plugin) = item.plugin.as_ref() {
             let base = root.join(item.dir_rel.replace('/', std::path::MAIN_SEPARATOR_STR));
             let cand = base.join(plugin.entry.replace('/', std::path::MAIN_SEPARATOR_STR));
             if cand.is_file() {
-                return Some(cand);
+                // R505：标记为插件入口——插件包可来自 verify=none 的本地 zip，
+                // 其 exe 自带 requireAdministrator 会骗 UAC，插件一律禁 runas。
+                return Some((cand, true));
             }
         }
         let rel = item.exe_rel.as_deref()?;
         let p = root.join(rel.replace('/', std::path::MAIN_SEPARATOR_STR));
-        p.is_file().then_some(p)
+        p.is_file().then_some((p, false))
     });
-    let Some(exe) = exe else {
+    let Some((exe, is_plugin)) = exe else {
         // 用目录名再试一次：用户看到的往往是「工具墙卡片名」（= 主文件 stem），
         // catalog 匹配已覆盖；到这里说明工具不存在或目录里没有可执行主文件。
         return Err(format!(
             "未找到可启动的工具「{tool}」（或该工具目录缺少主程序）"
         ));
     };
+    // R505 纵深防御：不管 entry / launchTarget / exe_rel 元数据怎么写，最终要启动的
+    // exe 经 canonicalize 后必须仍位于 Tools 根内——插件 entry 写 `..\..\x.exe`
+    // 这种穿越在这里被一刀拦住（fail-closed，解析失败也拒绝）。
+    let exe = diskpilot_toolbelt::ensure_path_under(&root, &exe).map_err(|e| e.to_string())?;
     let cwd = exe.parent().unwrap_or(&root).to_path_buf();
     // 工具若带控制台（urwtest 等）会闪黑框；加 CREATE_NO_WINDOW 隐藏。
     // 备注：GUI 工具的创建设置在子进程里仍有效——正在运行的窗口保留，缺省终端不创建。
@@ -291,6 +297,13 @@ pub(crate) fn toolbelt_launch(
             // ERROR_ELEVATION_REQUIRED：工具的 manifest 声明必须管理员运行
             //（磁盘类工具很常见）。普通 CreateProcess 直接被拒，改用
             // ShellExecute `runas` 拉起 UAC，用户确认后以管理员身份启动。
+            // R505：插件入口（第三方 zip）一律不给 runas——插件可自带
+            // requireAdministrator 的 exe 骗用户点 UAC 确认。
+            if is_plugin {
+                return Err(format!(
+                    "插件「{tool}」声明需要管理员权限，但第三方插件不允许 UAC 提权；请卸载该插件或以管理员身份手动运行其程序。"
+                ));
+            }
             #[cfg(windows)]
             match launch_with_runas(&exe, &cwd) {
                 Ok(()) => Ok(()),
@@ -353,6 +366,9 @@ pub(crate) async fn toolbelt_recycle(
     if !dir.is_dir() {
         return Err(format!("工具目录不存在：{}", dir.display()));
     }
+    // R505 纵深：回收前确认目录 canonicalize 后仍在 Tools 根内（防目录被替换为
+    // 指向根外的 symlink/junction——穿越段已在上方拒绝，这里兜底解析后的真实落点）。
+    let dir = diskpilot_toolbelt::ensure_path_under(&root, &dir).map_err(|e| e.to_string())?;
 
     let undo_log = state.undo_log.clone();
     let quarantine_root = state.quarantine_root.clone();

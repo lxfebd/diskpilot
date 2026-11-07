@@ -32,14 +32,17 @@ pub(crate) async fn plugin_download_to_path(
         let url = url.clone();
         crate::net_http::ssrf_safe_get(&url, crate::net_http::SSRF_MAX_BODY, None).await?
     };
-    // 写盘 + 进度上报（256KB 阈值，与之前一致）。
-    let mut f = std::fs::File::create(out).map_err(|e| format!("创建缓存文件失败: {e}"))?;
+    // R505 写盘：先写临时文件再 rename 到最终缓存路径——避免下载中断/崩溃
+    // 留下半截文件被后续缓存命中当成完整包（临时名带随机后缀防竞态）。
+    let tmp = out.with_extension(format!("part{}", std::process::id()));
+    let mut f = std::fs::File::create(&tmp).map_err(|e| format!("创建缓存文件失败: {e}"))?;
     let total = body.len() as u64;
     let mut downloaded: u64 = 0;
     let mut last_emit: u64 = 0;
     for chunk in body.chunks(64 * 1024) {
         if f.write_all(chunk).is_err() {
-            let _ = std::fs::remove_file(out);
+            drop(f);
+            let _ = std::fs::remove_file(&tmp);
             return Err("写入缓存文件失败".into());
         }
         downloaded = downloaded.saturating_add(chunk.len() as u64);
@@ -57,6 +60,11 @@ pub(crate) async fn plugin_download_to_path(
         }
     }
     drop(f);
+    // 原子落盘：rename 覆盖目标（同卷上是原子替换）。
+    if let Err(e) = std::fs::rename(&tmp, out) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(format!("缓存文件落盘失败: {e}"));
+    }
     Ok(())
 }
 

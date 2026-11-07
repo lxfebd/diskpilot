@@ -329,7 +329,8 @@ function InstallScaffoldModal({
     setBusy(true);
     setErr(null);
     try {
-      const id = await api.installScaffold(toml);
+      // R505：按钮点击即用户确认，显式传 confirmed=true。
+      const id = await api.installScaffold(toml, true);
       onInstalled(id);
     } catch (e) {
       setErr(String(e));
@@ -463,7 +464,8 @@ function Winapp2ImportPanel({
     setErr(null);
     try {
       for (const item of chosen) {
-        const id = await api.installScaffold(item.toml!);
+        // R505：已勾选并确认安装，显式传 confirmed=true。
+        const id = await api.installScaffold(item.toml!, true);
         toast(t('studio.winapp2Installed', { id }), 'ok');
         onInstalled(id);
       }
@@ -797,7 +799,8 @@ function UninstallButton({ id, onRemoved }: { id: string; onRemoved: () => void 
     setAsk(false);
     setBusy(true);
     try {
-      await api.uninstallScaffold(id);
+      // R505：确认窗已过（setAsk），显式传 confirmed=true。
+      await api.uninstallScaffold(id, true);
       toast(t('studio.uninstalled', { id }), 'ok');
       onRemoved();
     } catch (e) {

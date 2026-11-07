@@ -820,6 +820,9 @@ fn install_plugin_zip_sanitizes_id_and_category() {
             .as_bytes(),
         )
         .unwrap();
+        // R505：entry 文件必须真实存在于包内
+        zw.start_file("demo.exe", opts).unwrap();
+        zw.write_all(b"MZ").unwrap();
         zw.finish().unwrap();
     };
 
@@ -863,6 +866,117 @@ fn install_plugin_zip_sanitizes_id_and_category() {
         assert!(err.to_string().contains("分类"), "报错应指向分类: {err}");
     }
     assert!(!td.join("outside").exists(), "分类穿越不得写到 Tools 根外");
+
+    // R505 恶意 entry：穿越/绝对路径/保留名拒绝，且不得写出 Tools 根
+    let make_zip_entry = |entry: &str, out: &Path| {
+        let f = fs::File::create(out).unwrap();
+        let mut zw = zip::ZipWriter::new(f);
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zw.start_file("tool.plugin.json", opts).unwrap();
+        // 用 serde_json 构造，避免手拼 JSON 时反斜杠转义出错。
+        let manifest = serde_json::json!({
+            "schema": 1,
+            "id": "entry-tool",
+            "name": "Demo",
+            "version": "1.0",
+            "entry": entry,
+            "category": "处理器工具",
+            "risk": "low",
+        });
+        zw.write_all(manifest.to_string().as_bytes()).unwrap();
+        zw.start_file("demo.exe", opts).unwrap();
+        zw.write_all(b"MZ").unwrap();
+        zw.finish().unwrap();
+    };
+    for (bad_entry, hint) in [
+        ("../../evil.exe", "穿越"),
+        ("..\\evil.exe", "反斜杠穿越"),
+        ("C:/Windows/system32/cmd.exe", "绝对路径"),
+        ("con.exe", "保留名"),
+    ] {
+        let zip_path = td.join(format!("badentry-{}.zip", hint));
+        make_zip_entry(bad_entry, &zip_path);
+        let err = diskpilot_toolbelt::install_plugin_zip(&zip_path, &root)
+            .expect_err(&format!("entry {bad_entry:?} 应拒绝（{hint}）"));
+        assert!(err.to_string().contains("entry"), "报错应指向 entry: {err}");
+    }
+    // entry 声明的文件在包内不存在 → 拒绝且不留残目录
+    {
+        let zip_path = td.join("noentry.zip");
+        let f = fs::File::create(&zip_path).unwrap();
+        let mut zw = zip::ZipWriter::new(f);
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zw.start_file("tool.plugin.json", opts).unwrap();
+        zw.write_all("{\"schema\":1,\"id\":\"noentry-tool\",\"name\":\"Demo\",\"version\":\"1.0\",\"entry\":\"ghost.exe\",\"category\":\"处理器工具\"}".as_bytes())
+            .unwrap();
+        zw.finish().unwrap();
+        let err = diskpilot_toolbelt::install_plugin_zip(&zip_path, &root).unwrap_err();
+        assert!(err.to_string().contains("entry"), "报错应指向 entry: {err}");
+        assert!(
+            !root.join("处理器工具/noentry-tool").exists(),
+            "失败应整体回滚"
+        );
+    }
+
+    // R505 zip 条目段尾空格/点穿越（Windows 规范化 ".. " → ".."）：条目被跳过，
+    // 绝不得在 Tools 根外写出文件。
+    {
+        let zip_path = td.join("trails.zip");
+        let f = fs::File::create(&zip_path).unwrap();
+        let mut zw = zip::ZipWriter::new(f);
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zw.start_file("tool.plugin.json", opts).unwrap();
+        zw.write_all(
+            "{\"schema\":1,\"id\":\"trail-tool\",\"name\":\"Demo\",\"version\":\"1.0\",\"entry\":\"demo.exe\",\"category\":\"处理器工具\"}"
+                .as_bytes(),
+        )
+        .unwrap();
+        zw.start_file("demo.exe", opts).unwrap();
+        zw.write_all(b"MZ").unwrap();
+        zw.start_file("pkg/.. /evil.exe", opts).unwrap(); // 段 ".. " 尾空格
+        zw.write_all(b"EVIL").unwrap();
+        zw.start_file("pkg/../evil2.exe", opts).unwrap(); // 经典穿越
+        zw.write_all(b"EVIL").unwrap();
+        zw.start_file("ads.exe:stream", opts).unwrap(); // ADS 含冒号段
+        zw.write_all(b"EVIL").unwrap();
+        zw.finish().unwrap();
+        let _ = diskpilot_toolbelt::install_plugin_zip(&zip_path, &root).unwrap();
+        let pdir = root.join("处理器工具/trail-tool");
+        assert!(pdir.join("demo.exe").is_file());
+        assert!(!pdir.join("evil.exe").exists(), "尾空格穿越段不得落盘");
+        assert!(!root.join("evil.exe").exists() && !root.join("evil2.exe").exists());
+        assert!(
+            !pdir.join("ads.exe:stream").exists(),
+            "含 ':' 的 ADS 段不得落盘"
+        );
+    }
+
+    // R505 verify="ed25519" 但 signature 为空 → 必须拒绝（此前静默放行）。
+    {
+        let zip_path = td.join("emptysig.zip");
+        let f = fs::File::create(&zip_path).unwrap();
+        let mut zw = zip::ZipWriter::new(f);
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zw.start_file("tool.plugin.json", opts).unwrap();
+        zw.write_all(
+            "{\"schema\":1,\"id\":\"emptysig-tool\",\"name\":\"Demo\",\"version\":\"1.0\",\"entry\":\"demo.exe\",\"category\":\"处理器工具\",\"verify\":\"ed25519\",\"signer\":\"ab\",\"signature\":\"\"}"
+                .as_bytes(),
+        )
+        .unwrap();
+        zw.start_file("demo.exe", opts).unwrap();
+        zw.write_all(b"MZ").unwrap();
+        zw.finish().unwrap();
+        let err = diskpilot_toolbelt::install_plugin_zip(&zip_path, &root).unwrap_err();
+        assert!(
+            err.to_string().contains("signature"),
+            "空 signature 应拒绝: {err}"
+        );
+        assert!(!root.join("处理器工具/emptysig-tool").exists());
+    }
 
     // 合法安装照常成功
     let good = td.join("good.zip");

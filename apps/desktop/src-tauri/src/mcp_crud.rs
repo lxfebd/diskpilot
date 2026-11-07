@@ -34,7 +34,7 @@ pub(crate) async fn mcp_add_server(
                 return Err("本地命令不能为空".into());
             }
         }
-        McpTransport::Http { url, .. } => validate_http_url(url)?,
+        McpTransport::Http { url, .. } => validate_http_url(url).await?,
     }
 
     let mut servers = load_servers(&app);
@@ -92,7 +92,7 @@ pub(crate) async fn mcp_update_server(
                 return Err("本地命令不能为空".into());
             }
         }
-        McpTransport::Http { url, .. } => validate_http_url(url)?,
+        McpTransport::Http { url, .. } => validate_http_url(url).await?,
     }
 
     let mut servers = load_servers(&app);

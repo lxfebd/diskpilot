@@ -116,6 +116,18 @@ pub(crate) async fn recycle_paths(
 ) -> Result<Vec<UndoEntry>, String> {
     // 这个命令没有预览分支，永远真实落盘 → dry_run 传 false。
     confirm_gate(false, confirmed).map_err(|e| format!("recycle:confirm: {e}"))?;
+    // R505：真实回收同样要求后端权限 cleanup.execute（与 execute_scope 同口径）。
+    if !state
+        .perm_grants
+        .lock()
+        .unwrap()
+        .contains("cleanup.execute")
+    {
+        return Err(
+            "recycle:denied: 未开启「执行清理」权限（cleanup.execute）。请先在权限中心开启后重试。"
+                .into(),
+        );
+    }
     if paths.is_empty() {
         return Err("recycle: 路径清单为空，拒绝执行。".into());
     }

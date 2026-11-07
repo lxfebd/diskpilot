@@ -109,12 +109,22 @@ pub fn execute(
             std::fs::create_dir_all(quarantine_root)?;
             let batch_stamp = chrono::Utc::now().timestamp_millis();
             for (i, src) in plan.paths.iter().enumerate() {
+                // R505：与 Delete 分支同口径做 TOCTOU 复检——计划通过后源路径
+                // 可能被换成指向受保护目录的 symlink，rename 进隔离区前再验一次。
+                if let Some(what) = protected_path(src) {
+                    anyhow::bail!(
+                        "refusing to quarantine {what} (TOCTOU recheck): {}",
+                        src.display()
+                    );
+                }
                 let leaf = src
                     .file_name()
                     .map(|s| s.to_string_lossy().to_string())
                     .unwrap_or_else(|| "item".into());
-                // 同一批次内毫秒时间戳会撞车（同名 leaf 各自成槽），加序号保证唯一。
-                let dst = quarantine_root.join(format!("{batch_stamp}-{i}-{leaf}"));
+                // R505：同一批次内毫秒时间戳会撞车，除序号外再加纳秒后缀，
+                // 防止两次批次恰好同毫秒时 `{stamp}-{i}-{leaf}` 重名互相覆盖。
+                let nanos = chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0);
+                let dst = quarantine_root.join(format!("{batch_stamp}-{i}-{nanos:x}-{leaf}"));
                 let bytes = path_bytes_before(src);
                 if let Err(e) = std::fs::rename(src, &dst) {
                     tracing::warn!("rename failed ({}); falling back to copy+remove", e);
@@ -261,6 +271,17 @@ pub fn restore_quarantined(entry: &UndoEntry, quarantine_root: &Path) -> anyhow:
         anyhow::bail!("quarantined item no longer exists: {}", dst.display());
     }
     let src = &entry.source;
+    // R505：source 侧也要跑受保护路径校验——undo.jsonl 是本地普通文件，
+    // 被篡改（伪造 source=启动项/系统目录）后一次 undo 即可把隔离区文件
+    // 植入受保护位置。fail-closed：canonicalize 失败时 protected_path 走
+    // 词法折叠兜底，同样能拦。
+    if let Some(what) = protected_path(src) {
+        anyhow::bail!(
+            "refusing to restore into protected path ({}): {}",
+            what,
+            src.display()
+        );
+    }
     if src.exists() {
         anyhow::bail!("original path already exists: {}", src.display());
     }

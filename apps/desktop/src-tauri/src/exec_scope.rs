@@ -30,6 +30,20 @@ pub(crate) async fn execute_scope(
 ) -> Result<Vec<UndoEntry>, String> {
     // 绕过前端确认窗直接 invoke 也要被拦下（铁律：清理先出清单 + 用户确认）。
     confirm_gate(dry_run, confirmed).map_err(|e| format!("execute:confirm: {e}"))?;
+    // R505：真实执行（非 dry_run）同时要求后端权限 cleanup.execute——
+    // 与 execute_ai_plan 同口径，防止只靠客户端 confirmed 被绕过。
+    if !dry_run
+        && !state
+            .perm_grants
+            .lock()
+            .unwrap()
+            .contains("cleanup.execute")
+    {
+        return Err(
+            "execute:denied: 未开启「执行清理」权限（cleanup.execute）。请先在权限中心开启后重试。"
+                .into(),
+        );
+    }
     let (scaffold, scope) = {
         let scaffolds = state.scaffolds.lock().unwrap();
         let sc = scaffolds
@@ -45,6 +59,13 @@ pub(crate) async fn execute_scope(
             .ok_or_else(|| format!("scope not found: {scaffold_id}/{scope_id}"))?;
         (sc, scope)
     };
+    // R505：执行期复验红线——scaffolds/*.toml 落盘后可能被改动，
+    // 安装期的红线校验不能当作运行期唯一防线（与 CI lint 共用同一锚定空间）。
+    if !dry_run {
+        if let Some(reason) = crate::scaffold_cmds::scaffold_red_line_reject(&scaffold) {
+            return Err(format!("execute:red-line: {reason}"));
+        }
+    }
 
     let requested_root = PathBuf::from(&root_path);
     // 展开 %TEMP% 等环境变量后路径分隔符是 Windows 反斜杠，而 glob 匹配目标

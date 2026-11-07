@@ -8,6 +8,7 @@ import { useStore } from '../../store';
 import { useT } from '../../i18n';
 import { formatBytes, formatTime } from '../../format';
 import type { UndoEntry } from '../../types';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { WeeklyHealthCard } from './WeeklyHealthCard';
 import { clearSearchOnClick, clearSearchOnEscape } from '../../a11y';
 import {
@@ -81,6 +82,8 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   const [err, setErr] = useState<string | null>(null);
   // R441：刷新进行中——防连点并发重复请求，按钮给出进行中反馈。
   const [refreshing, setRefreshing] = useState(false);
+  // R505：还原是写操作（后端强制 confirmed）——先弹确认窗再真正调用。
+  const [ask, setAsk] = useState<{ index: number; source: string } | null>(null);
   // R455：闸门带「一次补跑」——在途期间把上限放宽（「查看全部」）时，收尾用
   // 最新闭包补拉一次；否则 limit 变了列表却还是旧的，截断横幅还会因
   // entries.length < limit 整个消失，用户以为已经看全。
@@ -126,7 +129,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
     setMsg(null);
     setErr(null);
     try {
-      const restored = await api.undo(index, source);
+      const restored = await api.undo(index, source, true);
       if (restored) {
         // R242：还原成功 → 刷新磁盘卡/趋势（scanSeq 驱动 listDrives 重拉）；
         // 与 UndoPanel 同一语义，真实后端隔离还原后空间回涨由 reclaimedBytes 覆盖。
@@ -274,7 +277,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
                         type="button"
                         className="ghost undo-restore"
                         disabled={busy === idx}
-                        onClick={() => { void restore(idx, e.source); }}
+                        onClick={() => setAsk({ index: idx, source: e.source })}
                       >
                         {busy === idx
                           ? <><Loader2 size={11} className="spin" /> {t('cleanup.restoring')}</>
@@ -309,6 +312,19 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
 
       {msg && <div className="ok hp-msg" role="status">{msg}</div>}
       {err && <div className="error hp-msg" role="alert">{err}</div>}
+      {ask && (
+        <ConfirmDialog
+          title={t('cleanup.restoreConfirmTitle')}
+          body={t('cleanup.restoreConfirmBody', { path: ask.source })}
+          confirmLabel={t('cleanup.restore')}
+          onConfirm={() => {
+            const a = ask;
+            setAsk(null);
+            void restore(a.index, a.source);
+          }}
+          onCancel={() => setAsk(null)}
+        />
+      )}
     </div>
   );
 }

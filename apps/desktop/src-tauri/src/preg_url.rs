@@ -9,7 +9,7 @@ use crate::plugin_registry_types::RegistryConfig;
 
 /// 设置社区索引 URL（写操作：confirmed + plugin.manage 双校验；强制 https）。
 #[tauri::command]
-pub(crate) fn plugin_set_registry_url(
+pub(crate) async fn plugin_set_registry_url(
     app: AppHandle,
     state: State<'_, crate::AppState>,
     url: String,
@@ -34,7 +34,8 @@ pub(crate) fn plugin_set_registry_url(
             parsed.scheme()
         ));
     }
-    if let Some(blocked) = crate::ai::blocked_private_target(parsed.as_str()) {
+    // R505：字面量 + DNS 二次校验。
+    if let Some(blocked) = crate::ai::ssrf_block_reason_async(parsed.as_str()).await {
         return Err(format!("社区索引 URL 不可用（{blocked}）：{url}"));
     }
     let Some(p) = config_path(&app) else {

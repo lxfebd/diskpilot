@@ -14,7 +14,8 @@ use crate::mcp::{McpServerConfig, McpTransport};
 /// 统一的服务句柄（rmcp 客户端运行态）。
 type McpService = rmcp::service::RunningService<rmcp::service::RoleClient, ()>;
 
-pub(crate) fn validate_http_url(url: &str) -> Result<(), String> {
+/// 纯 scheme/格式校验（同步，测试可用）。
+pub(crate) fn validate_http_url_scheme(url: &str) -> Result<(), String> {
     let parsed = url::Url::parse(url.trim())
         .map_err(|_| format!("URL 无法解析：{url}。请填写完整的 https:// 地址。"))?;
     if parsed.scheme() != "https" {
@@ -22,6 +23,16 @@ pub(crate) fn validate_http_url(url: &str) -> Result<(), String> {
             "MCP 服务器地址必须使用 https（当前协议：{}）。http 与自定义协议一律拒绝。",
             parsed.scheme()
         ));
+    }
+    Ok(())
+}
+
+/// R505 完整校验 = scheme + SSRF 总闸（字面量 + DNS 二次校验）。
+/// 配置落盘后每次 connect 也要走这里，不能只在 mcp_add_server 时验一次。
+pub(crate) async fn validate_http_url(url: &str) -> Result<(), String> {
+    validate_http_url_scheme(url)?;
+    if let Some(blocked) = crate::ai::ssrf_block_reason_async(url.trim()).await {
+        return Err(format!("MCP 服务器地址不可用（{blocked}）：{url}"));
     }
     Ok(())
 }
@@ -118,7 +129,8 @@ async fn connect_http(cfg: &McpServerConfig) -> Result<McpService, String> {
     else {
         unreachable!("connect_http 只处理 Http")
     };
-    validate_http_url(url)?;
+    // R505：每次 connect 都重新做 SSRF 校验（配置落盘后不能只信一次）。
+    validate_http_url(url).await?;
 
     // reqwest Client 构建器：timeout / header 都挂在 builder 上（不是在 Client 上）。
     let mut builder = reqwest::Client::builder();
@@ -245,10 +257,22 @@ mod tests {
 
     #[test]
     fn https_only_rejects_http() {
-        assert!(validate_http_url("https://example.com/mcp").is_ok());
-        let err = validate_http_url("http://example.com/mcp").unwrap_err();
+        assert!(validate_http_url_scheme("https://example.com/mcp").is_ok());
+        let err = validate_http_url_scheme("http://example.com/mcp").unwrap_err();
         assert!(err.contains("https"), "必须提示 https，got: {err}");
-        assert!(validate_http_url("ftp://x.com").is_err());
-        assert!(validate_http_url("not a url").is_err());
+        assert!(validate_http_url_scheme("ftp://x.com").is_err());
+        assert!(validate_http_url_scheme("not a url").is_err());
+    }
+
+    #[tokio::test]
+    async fn ssrf_blocks_loopback_and_metadata() {
+        // R505：内网/元数据地址即使 https 也拒绝（含 DNS 二次校验路径）。
+        assert!(validate_http_url("https://127.0.0.1/mcp").await.is_err());
+        assert!(validate_http_url("https://169.254.169.254/latest")
+            .await
+            .is_err());
+        assert!(validate_http_url("https://localhost:9000/mcp")
+            .await
+            .is_err());
     }
 }

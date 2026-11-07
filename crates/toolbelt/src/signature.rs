@@ -252,14 +252,16 @@ fn read_plugin_meta(zip_path: &std::path::Path) -> Result<Option<crate::ToolPlug
     Ok(None)
 }
 
-/// 预检 zip 内 `tool.plugin.json` 是否带完整 Ed25519 签名（signature + signer 齐备，
-/// 且 verify 字段不是 "none"）。只读解压清单，不解压内容。URL 安装强制要求
-/// 签名（本地 zip 直装才允许无签名）。
+/// 预检 zip 内 `tool.plugin.json` 是否带**完整可验的** Ed25519 签名。
+/// R505 严格口径：verify 必须显式声明为 `ed25519`，且 signature + signer
+/// 俱非空——只看"字段存在"会被 `verify="sha256"`+伪造字段绕过（远程安装
+/// 路径据此放行篡改包）。只读解压清单，不解压内容。URL 安装强制要求签名
+/// （本地 zip 直装才允许无签名）。
 pub fn plugin_zip_has_ed25519(zip_path: &std::path::Path) -> Result<bool, String> {
     let Some(meta) = read_plugin_meta(zip_path)? else {
         return Ok(false);
     };
-    if meta.verify.trim().eq_ignore_ascii_case("none") {
+    if !meta.verify.trim().eq_ignore_ascii_case("ed25519") {
         return Ok(false);
     }
     Ok(!meta.signature.trim().is_empty() && !meta.signer.trim().is_empty())

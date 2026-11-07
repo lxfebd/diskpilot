@@ -244,3 +244,28 @@ fn parse_ipv6_and_private_detection() {
     assert_eq!(parse_ipv6("g::1"), None);
     assert_eq!(parse_ipv6("::1:2:3:4:5:6:7:8"), None); // 超 8 段
 }
+
+/// R505：DNS 二次校验——localhost 变体 / zone-id / IP 字面量都要被挡；
+/// 公网字面量放行。域名解析走真实 DNS，测试只覆盖确定性强的字面量分支。
+#[test]
+fn r505_dns_secondary_check_blocks_loopback_variants() {
+    use super::ai_ssrf::{dns_resolve_blocked, ssrf_block_reason, url_host};
+    // localhost 及尾点变体
+    assert!(dns_resolve_blocked("localhost").is_some());
+    assert!(dns_resolve_blocked("localhost.").is_some());
+    assert!(dns_resolve_blocked("foo.localhost").is_some());
+    // IPv6 zone-id（fe80::1%25eth0）拒绝
+    assert!(dns_resolve_blocked("fe80::1%25eth0").is_some());
+    assert!(dns_resolve_blocked("fe80::1%eth0").is_some());
+    // 私网 IP 字面量经总闸被挡
+    assert!(ssrf_block_reason("https://169.254.169.254/latest/meta-data").is_some());
+    assert!(ssrf_block_reason("https://127.0.0.1:8080/x").is_some());
+    assert!(ssrf_block_reason("http://[::1]/x").is_some());
+    assert!(ssrf_block_reason("https://[fe80::1%25eth0]/x").is_some());
+    // 公网 IP 字面量放行（不触网）
+    assert!(ssrf_block_reason("https://8.8.8.8/dns-query").is_none());
+    assert!(ssrf_block_reason("https://[2606:4700:4700::1111]/x").is_none());
+    // host 提取：带端口/路径/userinfo/方括号
+    assert_eq!(url_host("https://User@Example.COM:8443/a/b"), "example.com");
+    assert_eq!(url_host("http://[::1]:8080/x"), "::1");
+}

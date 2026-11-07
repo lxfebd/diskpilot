@@ -69,7 +69,15 @@ pub(crate) async fn mcp_call_tool(
         .iter()
         .find(|s| s.id == server_id)
         .ok_or_else(|| format!("未找到 MCP 服务器：{server_id}"))?;
-    let (perm, perm_id) = cfg.resolve_perm(&name);
+    // R505：调用侧必须用「原始名」（剥掉 tool_prefix）查 permission_map——
+    // 前端拿到的是带前缀的注册名又原样传回，直接查映射必然落空、回退到
+    // writable 推断，L3 永禁会被降级成 L0 放行。
+    let raw_name = cfg.strip_tool_prefix(&name).to_string();
+    let (mut perm, perm_id) = cfg.resolve_perm(&raw_name);
+    // R505 不变式：服务器整体 writable=true 时，即使映射成 L0 也至少要求确认（L1）。
+    if cfg.writable && perm == "L0" {
+        perm = "L1".to_string();
+    }
     let required_perm = perm_id.as_deref().unwrap_or("mcp.manage");
     let mut denied_reason: Option<String> = None;
     match perm.as_str() {
@@ -107,6 +115,7 @@ pub(crate) async fn mcp_call_tool(
                 "op": "call_tool",
                 "server_id": server_id,
                 "tool": name,
+                "raw_tool": raw_name,
                 "perm": perm,
                 "granted": false,
                 "args": audit_args_snapshot(&arguments),
@@ -133,7 +142,9 @@ pub(crate) async fn mcp_call_tool(
         let service = connect_server(&cfg)
             .await
             .map_err(|e| format!("连接 MCP 服务器失败：{e}"))?;
-        let mut params = CallToolRequestParams::new(name.clone());
+        // R505：服务器只认识原始工具名，必须传 raw_name（此前传带前缀名，
+        // 配置了 tool_prefix 的服务器上调用必然失败或调错工具）。
+        let mut params = CallToolRequestParams::new(raw_name.clone());
         if let Some(args) = &args_obj {
             params = params.with_arguments(args.clone());
         }
@@ -161,6 +172,7 @@ pub(crate) async fn mcp_call_tool(
                     "op": "call_tool",
                     "server_id": server_id,
                     "tool": name,
+                    "raw_tool": raw_name,
                     "perm": perm,
                     "granted": true,
                     "args": args_snapshot,
@@ -189,6 +201,7 @@ pub(crate) async fn mcp_call_tool(
             "op": "call_tool",
             "server_id": server_id,
             "tool": name,
+            "raw_tool": raw_name,
             "perm": perm,
             "granted": true,
             "args": args_snapshot,

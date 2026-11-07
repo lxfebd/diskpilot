@@ -48,11 +48,30 @@ pub(crate) fn is_controlled_perm(id: &str) -> bool {
 /// 前端把 AI 权限快照同步到后端（权限中心改动/应用启动时调用）。
 /// 后端写命令（execute_ai_plan / toolbelt_run / plugin_*）据此做纵深校验：
 /// 即使被绕过前端直接 invoke，未授权的 L2 写操作也会被后端拒绝。
+/// R505：权限变更全部落审计日志——webview 侧（XSS/提示注入）也能 invoke 本命令，
+/// 审计是事后追溯「谁在什么时候把哪些高权限打开了」的唯一依据。
 #[tauri::command]
-pub(crate) fn sync_perms(state: State<'_, AppState>, enabled: Vec<String>) {
+pub(crate) fn sync_perms(app: tauri::AppHandle, state: State<'_, AppState>, enabled: Vec<String>) {
+    let before: Vec<String> = state.perm_grants.lock().unwrap().iter().cloned().collect();
     let mut grants = state.perm_grants.lock().unwrap();
     grants.clear();
-    grants.extend(enabled.into_iter().filter(|s| is_controlled_perm(s)));
+    grants.extend(enabled.iter().filter(|s| is_controlled_perm(s)).cloned());
+    let after: Vec<String> = grants.iter().cloned().collect();
+    drop(grants);
+    let granted: Vec<&String> = after.iter().filter(|p| !before.contains(p)).collect();
+    let revoked: Vec<&String> = before.iter().filter(|p| !after.contains(p)).collect();
+    if !granted.is_empty() || !revoked.is_empty() {
+        crate::mcp::mcp_audit::append_audit(
+            &app,
+            serde_json::json!({
+                "ts": crate::mcp::mcp_audit::audit_ts(),
+                "op": "sync_perms",
+                "granted": granted,
+                "revoked": revoked,
+                "after": after,
+            }),
+        );
+    }
 }
 
 #[tauri::command]
@@ -82,7 +101,27 @@ pub(crate) fn install_scaffold(
     app: AppHandle,
     state: State<'_, AppState>,
     toml: String,
+    confirmed: Option<bool>,
 ) -> Result<String, String> {
+    // R505：安装清理脚本是写操作（写盘 + 热重载为可执行的清理目标来源），
+    // 与 scaffold_registry_install 同口径：confirmed + scaffold.manage 双门。
+    if confirmed != Some(true) {
+        return Err(
+            "scaffold:confirm: 安装清理脚本会写入用户脚本目录并使其可用于清理，必须由用户明确确认（confirmed=true）。"
+                .into(),
+        );
+    }
+    if !state
+        .perm_grants
+        .lock()
+        .unwrap()
+        .contains("scaffold.manage")
+    {
+        return Err(
+            "scaffold:denied: 未开启「管理社区清理脚本」权限（scaffold.manage）。请先在权限中心开启后重试。"
+                .into(),
+        );
+    }
     install_scaffold_inner(&app, &state, toml)
 }
 
@@ -205,7 +244,26 @@ pub(crate) fn uninstall_scaffold(
     app: AppHandle,
     state: State<'_, AppState>,
     id: String,
+    confirmed: Option<bool>,
 ) -> Result<(), String> {
+    // R505：卸载同样是写操作（删盘），confirmed + scaffold.manage 双门。
+    if confirmed != Some(true) {
+        return Err(
+            "scaffold:confirm: 卸载清理脚本会删除用户脚本目录中的文件，必须由用户明确确认（confirmed=true）。"
+                .into(),
+        );
+    }
+    if !state
+        .perm_grants
+        .lock()
+        .unwrap()
+        .contains("scaffold.manage")
+    {
+        return Err(
+            "scaffold:denied: 未开启「管理社区清理脚本」权限（scaffold.manage）。请先在权限中心开启后重试。"
+                .into(),
+        );
+    }
     if !is_valid_scaffold_id(&id) {
         return Err("脚本 id 非法".into());
     }

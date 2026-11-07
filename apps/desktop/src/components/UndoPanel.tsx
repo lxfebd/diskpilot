@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw, History, Loader2 } from 'lucide-react';
 import { api } from '../api';
+import { ConfirmDialog } from './ConfirmDialog';
 import { restoreKind } from '../history/model';
 import { historyTruncated } from './history/HistoryPage';
 import { useStore } from '../store';
@@ -60,6 +61,8 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
   // R441：重试进行中——防连点并发重复请求，按钮给出进行中反馈。
   const [refreshing, setRefreshing] = useState(false);
   const refreshingRef = useRef(false);
+  // R505：还原是写操作（后端强制 confirmed）——先弹确认窗，确认后才真正调用。
+  const [ask, setAsk] = useState<{ index: number; source: string } | null>(null);
 
   const refresh = useCallback(() => {
     setLoadErr(null);
@@ -84,7 +87,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
     setMsg(null);
     setErr(null);
     try {
-      const restored = await api.undo(index, source);
+      const restored = await api.undo(index, source, true);
       if (restored) {
         // R242：还原成功 → 刷新磁盘卡/趋势（scanSeq 驱动 listDrives 重拉）。
         // 真实后端隔离还原后空间回涨，reclaimedBytes 订阅已覆盖；即便种子
@@ -177,7 +180,7 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
                 type="button"
                 className="ghost undo-restore"
                 disabled={busy === i}
-                onClick={() => restore(i, e.source)}
+                onClick={() => setAsk({ index: i, source: e.source })}
               >
                 {busy === i
                   ? <><Loader2 size={11} className="spin" /> {t('cleanup.restoring')}</>
@@ -207,6 +210,19 @@ export function UndoPanel({ onOpenHistory }: { onOpenHistory?: () => void }) {
       </ul>
       {msg && <div className="ok undo-msg" role="status">{msg}</div>}
       {err && <div className="error undo-msg" role="alert">{err}</div>}
+      {ask && (
+        <ConfirmDialog
+          title={t('cleanup.restoreConfirmTitle')}
+          body={t('cleanup.restoreConfirmBody', { path: ask.source })}
+          confirmLabel={t('cleanup.restore')}
+          onConfirm={() => {
+            const a = ask;
+            setAsk(null);
+            void restore(a.index, a.source);
+          }}
+          onCancel={() => setAsk(null)}
+        />
+      )}
     </div>
   );
 }

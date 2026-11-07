@@ -281,7 +281,8 @@ pub(crate) async fn scaffold_registry_refresh(
             parsed.scheme()
         ));
     }
-    if let Some(blocked) = crate::ai::blocked_private_target(parsed.as_str()) {
+    // R505：字面量 + DNS 二次校验。
+    if let Some(blocked) = crate::ai::ssrf_block_reason_async(parsed.as_str()).await {
         return Err(format!("社区索引 URL 不可用（{blocked}）：{url}"));
     }
 

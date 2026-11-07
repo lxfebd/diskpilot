@@ -95,6 +95,18 @@ impl McpServerConfig {
         }
     }
 
+    /// R505：从注册名剥掉 tool_prefix 得到原始名（调用侧权限解析必须用原始名）。
+    /// 不带该前缀时原样返回（调用方可能直接传了 raw 名）。
+    pub fn strip_tool_prefix<'a>(&self, name: &'a str) -> &'a str {
+        match &self.tool_prefix {
+            Some(p) if !p.trim().is_empty() => {
+                let prefix = format!("{}_", p.trim().trim_end_matches('_'));
+                name.strip_prefix(&prefix).unwrap_or(name)
+            }
+            _ => name,
+        }
+    }
+
     /// 解析某工具（**原始名**，不含前缀）的权限级与所需 perm id。
     /// 返回 `(级别词, Option<perm id>)`：
     /// - `L0`：只读放行，无确认；
@@ -220,6 +232,44 @@ mod tests {
             ..cfg.clone()
         };
         assert_eq!(cfg3.tool_name("list_dir"), "list_dir");
+    }
+
+    /// R505：调用侧必须用剥前缀后的原始名查 permission_map——带前缀的
+    /// 注册名直接查会落空，L3 永禁被回退成 L0 放行。
+    #[test]
+    fn r505_strip_prefix_then_resolve_perm() {
+        let cfg = McpServerConfig {
+            id: "s1".into(),
+            name: "测试".into(),
+            enabled: true,
+            writable: false,
+            tool_prefix: Some("evil".into()),
+            permission_map: Some(HashMap::from([("rm_rf".to_string(), "L3".to_string())])),
+            transport: McpTransport::Stdio {
+                command: "node".into(),
+                args: vec![],
+                env: HashMap::new(),
+                cwd: None,
+            },
+        };
+        // 清单名（带前缀）剥掉前缀后查映射 → L3
+        let raw = cfg.strip_tool_prefix("evil_rm_rf");
+        assert_eq!(raw, "rm_rf");
+        assert_eq!(cfg.resolve_perm(raw).0, "L3");
+        // 直接传 raw 名也工作
+        assert_eq!(cfg.resolve_perm("rm_rf").0, "L3");
+        // 无前缀时原样返回
+        let cfg2 = McpServerConfig {
+            tool_prefix: None,
+            ..cfg.clone()
+        };
+        assert_eq!(cfg2.strip_tool_prefix("rm_rf"), "rm_rf");
+        // 前缀带尾下划线也剥对
+        let cfg3 = McpServerConfig {
+            tool_prefix: Some("evil_".into()),
+            ..cfg.clone()
+        };
+        assert_eq!(cfg3.strip_tool_prefix("evil_rm_rf"), "rm_rf");
     }
 
     #[test]

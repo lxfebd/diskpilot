@@ -20,7 +20,17 @@ pub(crate) fn undo(
     state: State<'_, AppState>,
     index: usize,
     source: String,
+    confirmed: Option<bool>,
 ) -> Result<Option<UndoEntry>, String> {
+    // R505：还原是写操作（rename 回原路径 + create_dir_all），必须用户明确确认；
+    // 绕过前端确认窗直接 invoke 一律拒绝。restore_quarantined 内部另有
+    // destination 落隔离区校验 + source 受保护路径校验（防伪造 undo.jsonl 植入）。
+    if confirmed != Some(true) {
+        return Err(
+            "undo:confirm: 还原会把隔离区文件移回原路径，必须由用户明确确认（confirmed=true）。"
+                .into(),
+        );
+    }
     undo_core(&state.undo_log, &state.quarantine_root, index, source)
 }
 
