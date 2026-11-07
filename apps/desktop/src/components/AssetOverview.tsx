@@ -7,6 +7,8 @@ import { ensureHwDiskQuick } from '../hwCache';
 import { pathDriveLetter, riskyDrives, summarizeDiskHealth } from '../diskHealth';
 import { useStore, type CleanupProposalItem } from '../store';
 import { isPermEnabled } from '../permissions';
+import { ConfirmDialog } from './ConfirmDialog';
+import type { InstalledPlugin } from '../api/system-ext';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, type DriveEntry } from '../drives';
 import { TEMP_WARN_C, SCAN_STALE_WARN_DAYS } from '../thresholds';
 import { scrollBehavior } from '../motion';
@@ -423,6 +425,11 @@ export function scaffoldMainPaths(root: Node | null): Map<string, string> {
 // ── 今日体检（health-butler P0）：把散点的健康信号汇总成一页横幅 ──
 // 全只读：红盘/可回收来自 drives 与建议清单缓存，温度/启动项来自后端一次查询，
 // 不为展示新造任何磁盘扫描。纯函数便于单测，组件只负责装配与跳转。
+
+/** R520：官方诊断插件判定——安装台账 source 指向官方索引仓库即算官方（可单测）。 */
+export function isOfficialPlugin(source: string): boolean {
+  return source.includes('diskpilot-plugin-index');
+}
 
 /** 温度档位判定：是否达到「偏高」阈值（健康管家口径，可单测）。 */
 export function isTempHigh(tempC: number | null | undefined, warnC = TEMP_WARN_C): boolean {
@@ -1100,6 +1107,36 @@ function HealthCheckupCard({
   // 阈值与提醒设置同源：用户在设置里改「多久没扫」天数，体检格跟着改；
   // 设为 0（关闭提醒）时整格不渲染——与后端 collect_scan_stale 的 off 语义一致。
   const [scanStaleDays, setScanStaleDays] = useState<number>(SCAN_STALE_WARN_DAYS);
+  // R520 插件体检：已安装的官方诊断插件（source 指向官方索引仓库）。
+  // 只读清单查询，不运行插件；运行由用户点按钮后逐个走 toolbelt_run 确认链。
+  const [diagPlugins, setDiagPlugins] = useState<InstalledPlugin[] | null>(null);
+  const [pluginRun, setPluginRun] = useState<'idle' | 'ask' | 'running' | 'done'>('idle');
+  const [pluginResults, setPluginResults] = useState<{ id: string; ok: boolean; tail: string }[] | null>(null);
+  const runDiagPlugins = useCallback(async () => {
+    if (!diagPlugins || diagPlugins.length === 0) return;
+    setPluginRun('running');
+    setPluginResults(null);
+    const results: { id: string; ok: boolean; tail: string }[] = [];
+    for (const p of diagPlugins) {
+      try {
+        // 官方诊断插件只读，但 toolbelt_run 仍是写命令——确认 + nonce 闸照走不误。
+        const rep = await api.toolbeltRun(p.id, [], 120, true);
+        const out = (rep.outcome.stdout || rep.outcome.stderr || '').trim().split('\n');
+        results.push({ id: p.id, ok: rep.outcome.exit_code === 0 && !rep.outcome.timed_out, tail: (out[out.length - 1] || '').slice(0, 80) });
+      } catch (e) {
+        results.push({ id: p.id, ok: false, tail: String(e instanceof Error ? e.message : e).slice(0, 80) });
+      }
+    }
+    setPluginResults(results);
+    setPluginRun('done');
+    const okN = results.filter((r) => r.ok).length;
+    useStore.getState().toast(
+      t('overview.checkup.pluginRunDone', { ok: okN, total: results.length }),
+      okN === results.length ? 'ok' : 'err',
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagPlugins, t]);
+
   // 体检卡只在挂载时拉一次，drives 后续变化不回拉（与温度/启动项同策略）；
   // 刻意不把 drives 放进依赖——进总览就拉，drives 是展示输入不是查询输入。
   useEffect(() => {
@@ -1110,6 +1147,10 @@ function HealthCheckupCard({
     ensureHwDiskQuick().then((h) => { if (alive) setDiskHealth(h); }).catch(() => {});
     Promise.allSettled(physicalDrives(drives).map((d) => api.scanStaleness(d.path).then((s) => ({ root: d.path, staleness: s }))))
       .then((results) => { if (alive) setScanAgeRows(settleScanAge(results)); });
+    // R520：官方诊断插件清单（只读台账查询，零运行）。
+    api.pluginListInstalled()
+      .then((r) => { if (alive) setDiagPlugins((r.installed || []).filter((p) => isOfficialPlugin(p.source))); })
+      .catch(() => { if (alive) setDiagPlugins([]); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 刻意不把 drives 放进依赖（见上方注释）
   }, []);
@@ -1287,7 +1328,36 @@ function HealthCheckupCard({
                     : t('overview.checkup.diskAllGood', { n: hwSummary.total })}
           </span>
         </button>
+        {/* R520 插件体检：官方诊断插件一键运行（确认 + nonce 闸照走），结果摘要进 toast，
+            完整输出去工具墙看。未安装官方插件时整格隐藏——不拿空格子占位。 */}
+        {diagPlugins && diagPlugins.length > 0 && (
+          <button
+            className={'ao-checkup-item' + (pluginRun === 'done' && pluginResults?.some((r) => !r.ok) ? ' caution' : '')}
+            onClick={() => setPluginRun('ask')}
+            disabled={pluginRun === 'running'}
+            title={t('overview.checkup.goPlugins')}
+          >
+            <Package size={14} />
+            <span>
+              {pluginRun === 'running'
+                ? t('overview.checkup.pluginRunning')
+                : pluginRun === 'done' && pluginResults
+                  ? t('overview.checkup.pluginDone', { ok: pluginResults.filter((r) => r.ok).length, total: pluginResults.length })
+                  : t('overview.checkup.plugins', { n: diagPlugins.length })}
+            </span>
+          </button>
+        )}
       </div>
+      {pluginRun === 'ask' && (
+        <ConfirmDialog
+          title={t('overview.checkup.pluginAskTitle')}
+          body={t('overview.checkup.pluginAskBody', { n: diagPlugins?.length ?? 0 })}
+          confirmLabel={t('overview.checkup.pluginAskConfirm')}
+          cancelLabel={t('common.confirm.cancel')}
+          onConfirm={() => { setPluginRun('running'); void runDiagPlugins(); }}
+          onCancel={() => setPluginRun('idle')}
+        />
+      )}
     </section>
   );
 }

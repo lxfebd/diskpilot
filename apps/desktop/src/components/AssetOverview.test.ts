@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -132,6 +132,16 @@ describe('forecastFullDays（空间耗尽预测）', () => {
       pt('C:\\', 400, 1_700_000_000, 1000),
       pt('C:\\', 500, 1_700_000_000, 1000), // 同一时刻
     ])).toBeNull();
+  });
+});
+
+// R520 官方诊断插件判定（体检格只列官方索引来源的插件）
+describe('isOfficialPlugin（R520 插件体检）', () => {
+  it('官方索引来源 → true，第三方/本地来源 → false', () => {
+    expect(isOfficialPlugin('https://github.com/lxfebd/diskpilot-plugin-index/releases/...')).toBe(true);
+    expect(isOfficialPlugin('https://evil.example/plugin.zip')).toBe(false);
+    expect(isOfficialPlugin('local')).toBe(false);
+    expect(isOfficialPlugin('')).toBe(false);
   });
 });
 

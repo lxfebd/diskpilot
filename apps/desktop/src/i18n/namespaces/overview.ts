@@ -56,6 +56,16 @@ export const overview = {
     'overview.trend.fullOnRough': '样本少/波动大，粗估 {date} 前后填满（约 {n} 天）',
     'overview.trend.fullNow': '已满',
 
+    // R520 插件体检格
+    'overview.checkup.plugins': '诊断插件 {n} 个',
+    'overview.checkup.pluginRunning': '诊断运行中…',
+    'overview.checkup.pluginDone': '诊断完成 {ok}/{total}',
+    'overview.checkup.pluginRunDone': '诊断插件运行完成：{ok}/{total} 成功',
+    'overview.checkup.goPlugins': '运行全部官方诊断插件（只读，走确认链）',
+    'overview.checkup.pluginAskTitle': '运行官方诊断插件？',
+    'overview.checkup.pluginAskBody': '将依次运行已安装的 {n} 个官方诊断插件（全部只读不删文件），每个都走确认 + 一次性口令。完整输出可在工具墙查看。',
+    'overview.checkup.pluginAskConfirm': '运行诊断',
+
     // 快速操作
     'overview.quick.title': '快速操作',
     'overview.quick.ai': '一键智能清理',
@@ -299,6 +309,16 @@ export const overview = {
     'overview.trend.fullOn': 'projected full on {date} (≈ {n:day|days})',
     'overview.trend.fullOnRough': 'sparse/noisy — roughly full around {date} (≈ {n:day|days})',
     'overview.trend.fullNow': 'Full',
+
+    // R520 plugin checkup cell
+    'overview.checkup.plugins': '{n:plugin|plugins} diagnostic',
+    'overview.checkup.pluginRunning': 'Running diagnostics…',
+    'overview.checkup.pluginDone': 'Diagnostics done {ok}/{total}',
+    'overview.checkup.pluginRunDone': 'Diagnostic plugins finished: {ok}/{total} ok',
+    'overview.checkup.goPlugins': 'Run all official diagnostic plugins (read-only, confirmation gated)',
+    'overview.checkup.pluginAskTitle': 'Run official diagnostic plugins?',
+    'overview.checkup.pluginAskBody': 'This runs the {n} installed official diagnostic plugins one by one (all read-only, delete nothing); each goes through confirmation + one-time nonce. Full output is on the Tools wall.',
+    'overview.checkup.pluginAskConfirm': 'Run diagnostics',
 
     // Quick actions
     'overview.quick.title': 'Quick actions',

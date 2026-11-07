@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R520: 健康管家 P2 收官——今日体检新增「插件体检」格，一键运行官方诊断插件
+
+- **体检格**：`HealthCheckupCard` 新增插件体检格，挂载时 `plugin_list_installed` 只读台账按 `isOfficialPlugin`（source 含官方索引仓库标识，纯函数+单测）筛出官方诊断插件计数；未安装时整格隐藏不占位。
+- **运行链路**：点格子 → ConfirmDialog 说明 → 逐个 `toolbeltRun(id, [], 120, confirmed=true)`（确认 + 一次性 nonce 闸照走——官方插件只读，但命令层不特殊化，红线不变）→ 每个插件取输出尾行，摘要 ✓N/M 进 toast 并显示在格子上，完整输出去工具墙。
+- **P0 门禁守住**：清单查询零运行、零磁盘扫描；运行必经用户主动确认。
+- **验证**：vitest 1310/1310 绿（新增 isOfficialPlugin 4 例断言），tsc/eslint/i18n 覆盖全过；health-butler.md P2 该条标记已落地。
+
 ### R519: 空间趋势预测升级——最小二乘回归 + 「预计填满日期」+ R² 置信度
 
 - **算法升级**：R98 的首尾两点外推噪声敏感，R519 新增 `linearFit()` 对全部采样点做最小二乘回归（斜率 + 决定系数 R²），`forecastFullDays` 改用回归斜率（线性数据结果不变，旧单测全部照过）。
