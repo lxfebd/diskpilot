@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v0.2.4-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.4)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.0)
 
 [下载](#下载) · [看效果](#看效果) · [功能一览](#功能一览) · [安全模型](#安全模型) · [隐私](#隐私) · [架构](#架构) · [文档](#文档) · [路线图](#路线图) · [开发](#开发) · [贡献](#贡献)
 
@@ -23,24 +23,24 @@
 
 ## 下载
 
-当前版本 **v0.2.4**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
+当前版本 **v1.0.0**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
 
 | 平台 | 安装包 | 说明 |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_0.2.4_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
-| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.4_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
+| Windows 10/11 x64 | `DiskPilot_1.0.0_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
+| macOS (Apple Silicon / Intel) | `DiskPilot_1.0.0_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI 产物，**未在真实 Linux 机器上验证过**，欢迎反馈 |
 
 所有安装包附 `.sig` 签名，内置自动更新（tauri-plugin-updater），发新版后应用内会提示升级。
 
 ## 更新日志
 
-- **v0.2.4（2026-11-02）**
+- **v1.0.0（2026-11-02）**
   - **社区清理脚本闭环**：一键刷新官方社区索引并安装，全程 Ed25519 签名 + sha256 + 红线校验；作者侧 `scaffold-lint sign` 签名上架
   - **键盘可访问性专项**：游戏盘点 / 工具墙 / Treemap 全部支持纯键盘操作；`​?` 唤出全局快捷键面板
   - 新增 `observations_overview` 只读 MCP 工具、健康周报带趋势与异常告警
   - 工程化：CI 三个根因修复、cargo audit 清零、依赖例行更新
-  - 详见 [v0.2.4 发布说明](docs/releases/v0.2.4.md)
+  - 详见 [v1.0.0 发布说明](docs/releases/v1.0.0.md)
 
 - **v0.2.3（2026-10-07）**
   - **AI 实事求是约束**：system prompt 强制「工具返回是唯一事实来源、清单里没有的条目一律视为不存在、推测必须标注」，根除 AI 编造不存在的路径 / 文件名

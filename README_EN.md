@@ -10,7 +10,7 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v0.2.4-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v0.2.4)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.0)
 
 [Download](#download) · [Demo](#demo) · [Features](#features) · [Security model](#security-model) · [Privacy](#privacy) · [Architecture](#architecture) · [Docs](#docs) · [Roadmap](#roadmap) · [Development](#development) · [Contributing](#contributing)
 
@@ -24,24 +24,24 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 
 ## Download
 
-Current version **v0.2.4**, download directly from [GitHub Releases](https://github.com/lxfebd/diskpilot/releases):
+Current version **v1.0.0**, download directly from [GitHub Releases](https://github.com/lxfebd/diskpilot/releases):
 
 | Platform | Installer | Notes |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_0.2.4_x64-setup.exe` | NTFS MFT direct read needs admin; the app auto-elevates via UAC |
-| macOS (Apple Silicon / Intel) | `DiskPilot_0.2.4_aarch64.dmg` / `_x64.dmg` | **Unsigned / not notarized** — first open: right-click → Open; not yet validated on real hardware |
+| Windows 10/11 x64 | `DiskPilot_1.0.0_x64-setup.exe` | NTFS MFT direct read needs admin; the app auto-elevates via UAC |
+| macOS (Apple Silicon / Intel) | `DiskPilot_1.0.0_aarch64.dmg` / `_x64.dmg` | **Unsigned / not notarized** — first open: right-click → Open; not yet validated on real hardware |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI artifacts, **not yet validated on real Linux machines** — feedback welcome |
 
 Every installer ships with a `.sig` signature; built-in auto-updater (tauri-plugin-updater) prompts in-app when a new version is out.
 
 ## Changelog
 
-- **v0.2.4 (2026-11-02)**
+- **v1.0.0 (2026-11-02)**
   - **Community cleanup-scaffold loop**: one-click refresh of the official community index + install, end-to-end Ed25519 signature + sha256 + red-line validation; author side `scaffold-lint sign` to publish signed
   - **Keyboard accessibility专项**: game inventory / tool wall / treemap fully keyboard-operable; `?` opens the global shortcut panel
   - New `observations_overview` read-only MCP tool; health weekly report with trends and anomaly alerts
   - Engineering: three CI root-cause fixes, `cargo audit` clean, routine dependency updates
-  - See [v0.2.4 release notes](docs/releases/v0.2.4.md)
+  - See [v1.0.0 release notes](docs/releases/v1.0.0.md)
 
 - **v0.2.3 (2026-10-07)**
   - **AI "facts-only" constraint**: system prompt forces "tool output is the only source of truth, anything not in the list is treated as non-existent, guesses must be labeled" — eliminates AI hallucinating paths / filenames

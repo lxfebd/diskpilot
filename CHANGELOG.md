@@ -7,6 +7,10 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+## [1.0.0] - 2026-11-08
+
+首个正式版：安全确认链（一次性 nonce 闸 + 写工具门禁）、9 个 Ed25519 签名官方诊断插件与社区索引门禁、扫描报告导出（md/csv/json）、空间趋势回归预测「预计填满日期」、健康管家 P0–P2 全闭环、三平台 CI + --self-test 冒烟 + 发布前 19 项门禁。
+
 ### R521: 官方插件第六批——schtask-hunter（计划任务审计器），索引仓库发 v1.5.0，线上 9 个插件全量验签通过
 
 - **`plugins/schtask-hunter/`**（独立 workspace）：解析 `schtasks /Query /FO CSV /V` 全部计划任务，摘要（总数/启用/上次真失败）+ 可疑 Top N；纯函数 `suspicious_reasons` 判定——上次失败（排除 267009/267011 中性码）、启用+登录/开机触发+命令在临时目录（高危）/非系统目录；3 例单测（CSV 引号解析/中英文列头/可疑判定）。
