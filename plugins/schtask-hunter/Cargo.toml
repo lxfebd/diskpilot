@@ -1,0 +1,15 @@
+[package]
+name = "schtask-hunter"
+version = "1.0.0"
+edition = "2021"
+description = "DiskPilot 官方插件：计划任务只读审计器（schtasks /Query /V），高亮可疑开机/登录触发任务"
+license = "MIT"
+
+# 独立 workspace（与主仓库隔离，发布时用独立 target dir）
+[workspace]
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1

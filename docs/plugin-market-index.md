@@ -91,7 +91,7 @@ diskpilot-plugin-index/
 └── .github/workflows/validate-index.yml  # CI 门禁（schema/https/sha256/id kebab）
 ```
 
-- 插件 zip 上传到该仓库的 **Releases**（`v1.0.0` 首批 3 个，`v1.1.0` 第二批 2 个，`v1.2.0` 第三批 1 个，`v1.3.0` 第四批 1 个，`v1.4.0` 第五批 1 个），直链填入 `plugins[].url`。
+- 插件 zip 上传到该仓库的 **Releases**（`v1.0.0` 首批 3 个，`v1.1.0` 第二批 2 个，`v1.2.0` 第三批 1 个，`v1.3.0` 第四批 1 个，`v1.4.0` 第五批 1 个，`v1.5.0` 第六批 1 个），直链填入 `plugins[].url`。
 - 官方插件（源码在主仓库 `plugins/`，均为只读诊断工具，risk=low）：
   - `bigfile-finder` 大文件扫描器（硬盘工具）
   - `dup-finder` 重复文件查找（硬盘工具，输出标注「疑似」）
@@ -101,6 +101,7 @@ diskpilot-plugin-index/
   - `port-hunter` 端口占用审计器（硬盘工具，R510：netstat -ano + tasklist 批量映射 PID→进程名，按本地端口排序 TopN，--proto/--listen 过滤，只读不杀进程）
   - `drive-health` 磁盘健康审计器（硬盘工具，R512：Get-PhysicalDisk/Get-Disk 健康表，非 Healthy 标红，--smart 追加 SATA SMART 属性，NVMe/非管理员下明确标注不可用，只读不写盘）
   - `browser-cache-hunter` 浏览器缓存审计器（综合检测，R517：枚举 Chrome/Edge/Brave/Opera/Vivaldi/Firefox 全部 profile，只读统计 Cache/Code Cache/GPUCache/CacheStorage 等子目录体积 + Top N，深度/条目上限防卡死，不删文件不杀进程）
+  - `schtask-hunter` 计划任务审计器（综合检测，R521：`schtasks /Query /V` 只读全景，自动适配中英文列头与分页重复标题，可疑 Top N——上次失败、启用+登录/开机触发+命令在临时或非系统目录，不禁用任务不改配置）
 - 官方发布签名密钥：Ed25519 私钥只在本机保管（`~/.diskpilot/release-signing/secret.hex`，权限收紧，绝不入库），公钥写入信封 `signer` 与每个条目的 `signer`；客户端 R502 起强制锚定（包内 signer 必须等于索引声明）。
 
 **建议 CI 门禁**（照 .github/workflows/ci.yml 风格）：

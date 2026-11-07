@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R521: 官方插件第六批——schtask-hunter（计划任务审计器），索引仓库发 v1.5.0，线上 9 个插件全量验签通过
+
+- **`plugins/schtask-hunter/`**（独立 workspace）：解析 `schtasks /Query /FO CSV /V` 全部计划任务，摘要（总数/启用/上次真失败）+ 可疑 Top N；纯函数 `suspicious_reasons` 判定——上次失败（排除 267009/267011 中性码）、启用+登录/开机触发+命令在临时目录（高危）/非系统目录；3 例单测（CSV 引号解析/中英文列头/可疑判定）。
+- **实机踩坑修复**：① 中文系统 schtasks 输出 GBK，`from_utf8_lossy` 毁列名 → 统一 `chcp 65001` 切 UTF-8 再跑；② 中文列头是「计划任务状态」「已启用」非英文 → 双语别名 + `is_enabled`；③ `/V` 分页重复打印列头行 → 按 TaskName/上次结果 过滤；④ 267009/267011 不算失败；⑤ 系统目录（Windows/Program Files/COM handler）不计入路径可疑，避免微软自带任务刷屏。冒烟：283 任务 / 237 启用 / 18 真失败 / 可疑 Top 合理（如 FanControl 登录触发+非系统目录）。
+- **发布**：pub521 打包 sha256=`4bde043f…`（121993 B）→ release **v1.5.0**（id 437902393）→ index 第 9 条（commit `480ccd6f`）→ 本地验签安装通过 → **线上 verify_online 9 插件全部通过** → CI run 42423811128 success。
+- **文档**：README/README_EN 8→9 插件，plugin-market-index.md 增 schtask-hunter 条目 + v1.5.0。
+
 ### R520: 健康管家 P2 收官——今日体检新增「插件体检」格，一键运行官方诊断插件
 
 - **体检格**：`HealthCheckupCard` 新增插件体检格，挂载时 `plugin_list_installed` 只读台账按 `isOfficialPlugin`（source 含官方索引仓库标识，纯函数+单测）筛出官方诊断插件计数；未安装时整格隐藏不占位。
