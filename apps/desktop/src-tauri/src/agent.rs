@@ -426,7 +426,31 @@ pub async fn agent_call_tool(
     name: String,
     arguments: serde_json::Value,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<AgentToolCall, String> {
+    // R515：写工具（WRITE_TOOLS 名单）在命令层先过 nonce 闸——
+    // 来源校验 + 一次性 nonce + 频率限制，与 R508/R509 的清理/插件链同口径。
+    // 只读工具不受影响。inner 层的 confirmed 硬校验保留作纵深防御。
+    if WRITE_TOOLS.contains(&name.as_str()) {
+        crate::confirm_nonce::require_main_window(&window)?;
+        crate::confirm_nonce::write_gate(
+            &state.confirm_guard,
+            "agent_write",
+            false,
+            confirmed,
+            confirm_nonce.as_deref(),
+        )
+        .map_err(|e| format!("agent:confirm: 写工具 {name} 被 nonce 闸拒绝: {e}"))?;
+        crate::mcp::mcp_audit::append_audit(
+            &app,
+            serde_json::json!({
+                "ts": crate::mcp::mcp_audit::audit_ts(),
+                "op": "agent_write",
+                "tool": name.clone(),
+            }),
+        );
+    }
     let progress: Arc<dyn Fn(u64, String) + Send + Sync + 'static> =
         Arc::new(move |pct: u64, message: String| {
             let _ = app.emit(

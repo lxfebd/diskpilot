@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R515: MCP 写工具纳入 nonce 闸——agent_call_tool 的 11 个写工具封死 webview 伪造 confirmed 路径
+
+- **审计结论**：R508/R509 覆盖了清理链 + 插件链 + execute_ai_plan，但 agent-server MCP 桥接（agent_call_tool）是另一条 IPC 路径，11 个写工具（process_kill / service_control / fan_selfheal_fix / fan_control / file_recycle / process_start / scheduled_task_manage / uninstall_app / toolbelt_run / stress_test / stress_test_gpu）此前只有 confirmed==Some(true) 硬校验，webview 内脚本可伪造 confirmed 直接调。
+- **改造**：NONCE_OPS 新增 `agent_write`；`agent_call_tool` 命令注入 `window` + `confirm_nonce` 参数，写工具分支在命令层先过 `require_main_window` + `write_gate`（一次性 nonce + 频率限制），通过后把工具名写入审计日志（op=agent_write）；inner 层原 confirmed 硬校验保留作纵深防御；只读工具零影响。
+- **前端**：agent.ts 的 callTool 在 confirmed===true 时经 `withConfirmNonce('agent_write')` 申请 nonce 后提交。
+- **回归**：`all_whitelisted_ops_can_issue` 自动覆盖新 op；cargo check/tsc 零错误。
+- **效果**：现在主窗口发出的**所有**写操作（清理/插件/AI 计划/MCP 工具）都要求一次性 nonce + 来源校验 + 频率限制，webview 伪造 confirmed 的攻击面清零。
+
 ### R514: 发布前验收清单固化——scripts/pre-release-check.mjs 一键跑完 14 项门禁（pnpm check:release）
 
 - **新增 `scripts/pre-release-check.mjs`**：按 CI 同口径顺序跑 8 大类门禁——cargo fmt --check → clippy -D warnings → cargo audit（白名单 RUSTSEC-2024-0370/0429，白名单外即红）→ cargo test --workspace → plugins/ 下 7 个插件各自 test+build --release（独立 target dir，不污染主构建）→ 前端 tsc+eslint+vitest → check-changelog + check-docs-links → `diskpilot-desktop --self-test` 无头冒烟。逐项 ✅/❌ + 末尾汇总，任一失败 exit 1。

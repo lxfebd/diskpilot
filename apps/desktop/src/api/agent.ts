@@ -5,6 +5,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from '../env';
 import { t } from '../i18n';
+import { withConfirmNonce } from './confirm';
 
 export interface AgentToolMeta {
   name: string;
@@ -24,10 +25,15 @@ export const agentApi = {
   listTools: () =>
     isTauri ? invoke<AgentToolMeta[]>('agent_list_tools') : Promise.resolve([]),
   /** 调用单个 MCP 工具，返回文本结果（isError 时文本含拒绝/错误原因）。
-   *  confirmed=true 用于写工具（process_kill / service_control）——后端会硬校验。 */
+   *  confirmed=true 用于写工具（process_kill / service_control）——后端硬校验；
+   *  R515 起写调用还会先申请一次性 nonce 走 agent_write 闸（防 webview 伪造 confirmed）。 */
   callTool: (name: string, args: Record<string, unknown>, confirmed?: boolean) =>
     isTauri
-      ? invoke<AgentToolCall>('agent_call_tool', { name, arguments: args, confirmed })
+      ? confirmed === true
+        ? withConfirmNonce('agent_write', (confirmNonce) =>
+            invoke<AgentToolCall>('agent_call_tool', { name, arguments: args, confirmed, confirmNonce }),
+          )
+        : invoke<AgentToolCall>('agent_call_tool', { name, arguments: args, confirmed })
       : Promise.reject(new Error(t('errors.agentDesktopOnly'))),
   /** 掐断当前所有在飞工具调用（用户点「停止」）。后端 agent_call_tool 的
    *  select 分支收到取消信号立即返回错误，AI 回路随之收尾——此前停止按钮

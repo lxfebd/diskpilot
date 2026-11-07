@@ -45,6 +45,9 @@ pub(crate) const NONCE_OPS: &[&str] = &[
     "plugin_registry_rollback",
     "plugin_set_registry_url",
     "plugin_registry_refresh",
+    // R515：MCP 写工具统一走 agent_write 闸（11 个写工具共用一个 op，
+    // 工具名记在审计日志里区分——见 agent.rs 的 agent_call_tool）。
+    "agent_write",
 ];
 
 pub(crate) struct NonceEntry {
