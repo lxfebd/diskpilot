@@ -212,7 +212,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<{ id: string; name: string; dir_rel: string; recycled: string[] }>('plugin_uninstall', { id, confirmed })
+          ? withConfirmNonce('plugin_uninstall', (confirmNonce) => invoke<{ id: string; name: string; dir_rel: string; recycled: string[] }>('plugin_uninstall', {  id, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_uninstall' }))),
       ),
     ),
@@ -221,7 +221,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<string>('plugin_install', { zipPath, confirmed })
+          ? withConfirmNonce('plugin_install', (confirmNonce) => invoke<string>('plugin_install', {  zipPath, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_install' }))),
       ),
     ),
@@ -233,7 +233,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<string>('plugin_install_url', { url, confirmed })
+          ? withConfirmNonce('plugin_install_url', (confirmNonce) => invoke<string>('plugin_install_url', {  url, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_install_url' }))),
       ),
     ),
@@ -252,7 +252,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<string>('plugin_registry_install', { id, confirmed })
+          ? withConfirmNonce('plugin_registry_install', (confirmNonce) => invoke<string>('plugin_registry_install', {  id, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_registry_install' }))),
       ),
     ),
@@ -268,7 +268,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<{ registry_url: string }>('plugin_set_registry_url', { url, confirmed })
+          ? withConfirmNonce('plugin_set_registry_url', (confirmNonce) => invoke<{ registry_url: string }>('plugin_set_registry_url', {  url, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_set_registry_url' }))),
       ),
     ),
@@ -276,7 +276,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<RegistryRefreshOut>('plugin_registry_refresh', { confirmed })
+          ? withConfirmNonce('plugin_registry_refresh', (confirmNonce) => invoke<RegistryRefreshOut>('plugin_registry_refresh', {  confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_registry_refresh' }))),
       ),
     ),
@@ -292,7 +292,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<RegistryInstallOut>('plugin_registry_update', { id, version: version ?? null, confirmed })
+          ? withConfirmNonce('plugin_registry_update', (confirmNonce) => invoke<RegistryInstallOut>('plugin_registry_update', {  id, version: version ?? null, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_registry_update' }))),
       ),
     ),
@@ -300,7 +300,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<RegistryInstallOut>('plugin_registry_rollback', { id, version: version ?? null, confirmed })
+          ? withConfirmNonce('plugin_registry_rollback', (confirmNonce) => invoke<RegistryInstallOut>('plugin_registry_rollback', {  id, version: version ?? null, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_registry_rollback' }))),
       ),
     ),
@@ -314,7 +314,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<string>('plugin_activate', { tool, confirmed })
+          ? withConfirmNonce('plugin_activate', (confirmNonce) => invoke<string>('plugin_activate', {  tool, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_activate' }))),
       ),
     ),
@@ -322,7 +322,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<string>('plugin_deactivate', { tool, confirmed })
+          ? withConfirmNonce('plugin_deactivate', (confirmNonce) => invoke<string>('plugin_deactivate', {  tool, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_deactivate' }))),
       ),
     ),
@@ -334,7 +334,7 @@ export const systemExtApi = {
     requirePluginManage(() =>
       requireConfirmed(confirmed).then(() =>
         isTauri
-          ? invoke<{ id: string; name: string; dir_rel: string; zip: string }>('plugin_export', { id, outZip, confirmed })
+          ? withConfirmNonce('plugin_export', (confirmNonce) => invoke<{ id: string; name: string; dir_rel: string; zip: string }>('plugin_export', {  id, outZip, confirmed, confirmNonce }))
           : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'plugin_export' }))),
       ),
     ),

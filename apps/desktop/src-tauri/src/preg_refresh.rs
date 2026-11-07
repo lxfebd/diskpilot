@@ -61,13 +61,18 @@ pub(crate) async fn plugin_registry_refresh(
     app: AppHandle,
     state: State<'_, crate::AppState>,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 刷新索引会从网络拉取插件目录，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_registry_refresh",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_registry_refresh:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"

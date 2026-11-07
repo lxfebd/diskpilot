@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R509: nonce 闸补齐——插件 10 个写命令 + execute_ai_plan 全部纳入（R508 留白清零），写命令覆盖率 100%
+
+- **NONCE_OPS 白名单扩容 12 个**：execute_ai_plan / plugin_uninstall / plugin_install / plugin_install_url / plugin_activate / plugin_deactivate / plugin_export / plugin_registry_install / plugin_registry_update / plugin_registry_rollback / plugin_set_registry_url / plugin_registry_refresh。
+- **后端**：上述 11 个命令全部注入 `window: tauri::Window`（来源校验 label==main）+ `confirm_nonce` 参数，原 `confirmed` 门统一替换为 `write_gate`（confirmed + 一次性 nonce + 频率限制三件套），各自的 plugin.manage / cleanup.execute 权限门保持不变。execute_ai_plan 的 dry_run 预演仍纯只读放行，真执行走完整闸门。
+- **前端**：system-ext.ts 10 个插件写 api 全部经 `withConfirmNonce(op)` 申请 nonce 后提交；clean.ts 的 executeAiPlan（真执行分支）同口径，executeAiPlanDryRun 预演不申请 nonce。
+- **回归测试**：新增 `all_whitelisted_ops_can_issue`——白名单内每个 op 签发+消费全绿，防止后续新增 op 忘记登记。
+- **效果**：R508 之后遗留的「webview 可伪造 confirmed 调插件写命令 / AI 计划」两条路径全部封死——现在所有 19 个写命令（7 清理链 + 12 插件/AI）都要求一次性 nonce + 主窗口来源 + 频率限制。
+- **验证**：cargo check/clippy 零错误、cargo test --workspace 全绿、前端 tsc + vitest + eslint 全绿。
+
 ### R508: 写操作确认闸门完整方案——一次性 nonce（防重放）+ 主窗口来源校验 + 频率限制 + 全量审计，覆盖 7 个写命令
 
 - **新模块 `confirm_nonce.rs`**：后端内存签发一次性确认 nonce（getrandom 32 字节、60s 有效期、绑定 op、消费即失效、表上限 256 自动清旧），白名单 op = execute_scope / recycle_paths / undo / install_scaffold / uninstall_scaffold / toolbelt_recycle / toolbelt_run；频率限制 = 同 op 1 秒 ≤1 次、60 秒窗口 ≤10 次；签发写审计日志。

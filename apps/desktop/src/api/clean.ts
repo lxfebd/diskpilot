@@ -148,7 +148,9 @@ export const cleanApi = {
       return Promise.resolve([] as UndoEntry[]);
     }
     return isTauri
-      ? invoke<UndoEntry[]>('execute_ai_plan', { paths: selectedPaths, userConfirmed, dryRun })
+      ? withConfirmNonce('execute_ai_plan', (confirmNonce) =>
+          invoke<UndoEntry[]>('execute_ai_plan', { paths: selectedPaths, userConfirmed, dryRun, confirmNonce }),
+        )
       : mocks.executeAiPlan(selectedPaths, userConfirmed, dryRun);
   },
 

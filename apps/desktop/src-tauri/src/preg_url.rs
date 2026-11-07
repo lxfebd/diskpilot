@@ -14,12 +14,18 @@ pub(crate) async fn plugin_set_registry_url(
     state: State<'_, crate::AppState>,
     url: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 配置社区索引 URL 会改变插件来源，必须由用户明确确认（confirmed=true）。".into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_set_registry_url",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_set_registry_url:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"

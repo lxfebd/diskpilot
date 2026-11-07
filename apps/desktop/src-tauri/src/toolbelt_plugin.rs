@@ -16,12 +16,18 @@ pub(crate) async fn plugin_uninstall(
     state: tauri::State<'_, crate::AppState>,
     id: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 卸载插件会把工具目录移入回收站，必须由用户明确确认（confirmed=true）。".into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_uninstall",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_uninstall:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"
@@ -89,13 +95,18 @@ pub(crate) async fn plugin_install(
     state: tauri::State<'_, crate::AppState>,
     zip_path: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<String, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 安装插件会把 zip 包内容解压写入 Tools 目录，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_install",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_install:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"
@@ -163,13 +174,18 @@ pub(crate) fn plugin_activate(
     state: tauri::State<'_, crate::AppState>,
     tool: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<String, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 插件化会在工具目录写入 tool.plugin.json，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_activate",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_activate:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"
@@ -225,13 +241,18 @@ pub(crate) fn plugin_deactivate(
     state: tauri::State<'_, crate::AppState>,
     tool: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<String, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 卸载插件身份会移除该工具的 tool.plugin.json，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_deactivate",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_deactivate:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"
@@ -272,13 +293,18 @@ pub(crate) async fn plugin_export(
     id: String,
     out_zip: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 导出插件会把目录打包成 zip 写入磁盘，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_export",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_export:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"

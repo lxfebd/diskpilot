@@ -27,7 +27,18 @@ pub(crate) async fn execute_ai_plan(
     paths: Vec<String>,
     user_confirmed: bool,
     dry_run: bool,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<Vec<UndoEntry>, String> {
+    // R509：来源校验 + 真执行走完整 nonce 闸门（预演 dry_run 是纯只读，放行）。
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "execute_ai_plan",
+        dry_run,
+        if user_confirmed { Some(true) } else { None },
+        confirm_nonce.as_deref(),
+    )?;
     // 放行条件按 dry_run 分两种口径：
     // - 预演（dry_run）：纯只读实测，AI 自己发起，不要求确认（下方 execute 的
     //   dry-run 分支只测字节、不回收、不写 undo 台账）；

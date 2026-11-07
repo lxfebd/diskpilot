@@ -145,13 +145,18 @@ pub(crate) async fn plugin_registry_install(
     id: String,
     version: Option<String>,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 从社区注册表安装插件会下载并解压到 Tools 目录，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_registry_install",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_registry_install:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"
@@ -216,12 +221,18 @@ pub(crate) async fn plugin_registry_update(
     id: String,
     version: Option<String>,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 更新插件会替换 Tools 目录里的插件文件，必须由用户明确确认（confirmed=true）。".into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_registry_update",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_registry_update:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"
@@ -339,12 +350,18 @@ pub(crate) async fn plugin_registry_rollback(
     id: String,
     version: Option<String>,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "plugin:confirm: 回滚插件会替换 Tools 目录里的插件文件，必须由用户明确确认（confirmed=true）。".into(),
-        );
-    }
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "plugin_registry_rollback",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("plugin_registry_rollback:confirm: {e}"))?;
     if !state.perm_grants.lock().unwrap().contains("plugin.manage") {
         return Err(
             "plugin:denied: 未开启「管理插件」权限（plugin.manage）。请先在权限中心开启后重试。"

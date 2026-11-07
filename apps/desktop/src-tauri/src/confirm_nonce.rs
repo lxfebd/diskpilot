@@ -32,6 +32,19 @@ pub(crate) const NONCE_OPS: &[&str] = &[
     "uninstall_scaffold",
     "toolbelt_recycle",
     "toolbelt_run",
+    // R509：插件写命令 + AI 清理计划全部纳入 nonce 闸
+    "execute_ai_plan",
+    "plugin_uninstall",
+    "plugin_install",
+    "plugin_install_url",
+    "plugin_activate",
+    "plugin_deactivate",
+    "plugin_export",
+    "plugin_registry_install",
+    "plugin_registry_update",
+    "plugin_registry_rollback",
+    "plugin_set_registry_url",
+    "plugin_registry_refresh",
 ];
 
 pub(crate) struct NonceEntry {
@@ -212,6 +225,16 @@ mod tests {
         assert!(g.consume("execute_scope", &n).is_err());
         // 消费失败不吞 nonce：原 op 仍可消费
         assert!(g.consume("undo", &n).is_ok());
+    }
+
+    #[test]
+    fn all_whitelisted_ops_can_issue() {
+        // 白名单里每个 op 都必须能签发并消费（R509 加满插件写命令后回归保护）。
+        let g = ConfirmGuard::new();
+        for op in NONCE_OPS {
+            let n = g.issue(op).unwrap();
+            assert!(g.consume(op, &n).is_ok(), "op {op} 应可消费");
+        }
     }
 
     #[test]
