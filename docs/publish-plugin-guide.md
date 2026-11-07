@@ -96,6 +96,18 @@ cargo run -p diskpilot-toolbelt --example export_plugin
 - [ ] `sha256` 与 zip 实际哈希一致
 - [ ] （可选）Ed25519 签名：`signer` 公钥 hex 与包内一致 → 市场显示"已验签"
 
+## 社区 PR 的自动门禁（R518 实测）
+
+索引仓库 `lxfebd/diskpilot-plugin-index` 的 `.github/workflows/validate-index.yml` 在每次 PR 时跑结构校验。R518 用两个真实 PR 演练过拒绝/放行边界（均已关闭不合并）：
+
+**CI 会拒绝的（run 失败）**：schema ≠ 1、必需字段缺失（id/name/version/url/sha256）、id 非 kebab-case 或重复、url 非 https、sha256 非 64 位 hex、条目 `signer` 与信封 `signer` 不一致。实测 PR#1（schema=2）→ run 42420520596 **failure**。
+
+**CI 不验的（刻意留给客户端）**：信封 Ed25519 签名真伪、zip 是否真的匹配 sha256。实测 PR#2（追加结构合法条目但不动信封签名）→ run 42420524693 **success**，但客户端 `install_plugin_zip` 验签直接拒绝（"Verification equation was not satisfied"）。
+
+结论：**CI 管结构完整性，签名与哈希的真实性在安装端强制验签时才拦截**——第三方即使骗过 CI，用户装不上。
+
+本地复刻校验逻辑快速自查（8 例样例全部符合预期）：对 `index.json` 改坏后跑和 CI 同一段 node 校验脚本即可，不必开 PR。
+
 ## 常见问题
 
 - **没有 Rust 工具链怎么打包？** 用方式 A（应用内导出），不需要本地 Rust。

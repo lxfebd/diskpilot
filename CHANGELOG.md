@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R518: 社区索引 PR 演练——validate-index 拒绝路径实测归档（CI 管结构、客户端管签名）
+
+- **本地演练**：复刻 validate-index.yml 校验逻辑对 8 例样例跑通（正常 live 8 插件过；schema=2 / 缺 sha256 / 重复 id / http url / 非 hex sha / signer 不一致 / 大写 id 共 7 例全被拒），预期符合率 100%。
+- **真实 PR 演练**（索引仓库，均已关闭+删分支不合并）：PR#1 把 schema 改成 2 → validate-index run 42420520596 **failure**（CI 拒绝坏结构）；PR#2 追加结构合法但信封签名未重签的条目 → run 42420524693 **success**（CI 只验结构）→ 喂给客户端验签器 → **ed25519 拒绝**（"Verification equation was not satisfied"）。
+- **结论落档**：docs/publish-plugin-guide.md 新增「社区 PR 的自动门禁」章节——CI 拦结构（schema/字段/id 规范/https/sha256 格式/signer 一致性），Ed25519 信封签名与 sha256 真实性在安装端验签时拦截；第三方骗过 CI 也装不上用户机器。
+
 ### R517: 官方插件第五批——browser-cache-hunter（浏览器缓存审计器），索引仓库发 v1.4.0，线上 8 个插件全量验签通过
 
 - **`plugins/browser-cache-hunter/`**（独立 workspace）：枚举 Chrome/Edge/Brave/Opera/Vivaldi（%LOCALAPPDATA% User Data 下 Default + Profile * 全部 profile）与 Firefox（Profiles/* 的 cache2/startupCache），只读递归统计 Cache、Code Cache、GPUCache、Media Cache、Service Worker/CacheStorage 等子目录字节数，输出每 profile 总量 + Top N 子目录；深度上限 20 + 单目录 200 万条目预算防卡死，符号链接不跟随；3 例单测绿（求和/预算截断/单位格式化）；exe 97KB。
