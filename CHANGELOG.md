@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R506: 文档轮——README_EN 全量同步到 v0.2.4 最新结构 + 新增 docs/security-model.md 威胁模型文档
+
+- `README_EN.md` 重写对齐中文主 README：Release v0.2.4 徽章、下载表（Win/mac/Linux + .sig + 自动更新）、v0.2.4–v0.2.2 更新日志、三张 Demo 截图、7 大功能块（含 76 个 MCP 工具、硬件中心、插件市场官方索引已上线）、6 层安全模型（含 R505 纵深复验）、隐私、架构、路线图、开发/贡献（此前仍停留在"尚未发布安装包"的旧口径）。
+- 中文 `README.md` 同步修正两处过期表述：插件市场段改为官方索引仓库已上线（`lxfebd/diskpilot-plugin-index`、首批 3 个只读诊断插件、完整签名链描述）；安全模型新增第 6 层"后端纵深复验（R505）"。
+- 新增 [docs/security-model.md](docs/security-model.md)：8 类威胁（T1–T8）× 主防线对照表 + L1–L6 各层防线代码定位（protect.rs / scaffold 红线 / 确认门 / 插件签名链 / SSRF 总闸 / MCP 权限）+ 审计追溯 + 已知边界（本地篡改防不住但危险动作仍被拒、macOS/Linux 未真机验证、sync_perms nonce 方案待设计）；挂入 docs/README.md 索引与中英文主 README 文档段。
+- 验证：check-docs-links 全部命中、check-changelog 通过、前端 vitest/tsc/eslint 全绿（纯文档改动，Rust 侧不受影响）。
+
 ### R505: 深度安全审查修复——签名契约收紧、zip 炸弹上限、路径穿越加强、SSRF 加 DNS 二次校验、MCP 前缀权限失配、写操作确认门补洞
 
 - **签名契约收紧（2 个 critical）**：`plugin_zip_has_ed25519` 改为严格口径（verify 必须显式 `ed25519` 且 signature+signer 俱全，堵 `verify="sha256"`+伪造字段绕过远程签名门槛）；`install_plugin_zip` 的 require 分支新增 signature 非空断言（此前空签名静默 Ok = 零校验安装）。
