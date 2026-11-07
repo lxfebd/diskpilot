@@ -85,6 +85,29 @@ jobs:
       - run: cargo build -p agent-server
       - run: cargo test --workspace --no-fail-fast
 
+  # R513: 无头 self-test 三平台冒烟——`--self-test` 不建窗口，验证扫描核心 /
+  # Ed25519 签名验签+篡改拒绝 / nonce 一次性+频率限制+write_gate 后 exit 0。
+  # 清掉 security-model 里「桌面运行时未在 CI 自动化验证」的已知边界。
+  self-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.os == 'ubuntu-latest'
+        name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libgtk-3-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # desktop 的 build.rs 校验 sidecar binaries/agent-server-<triple> 必须存在
+      - run: cargo build -p agent-server
+      - run: cargo run -p diskpilot-desktop -- --self-test
+
   # Windows-only：scaffold-lint 走 bash glob，只有 shell 会展开
   # scaffolds/*.toml（cmd/PowerShell 会把字面模式原样传给程序）。
   scaffold-lint:

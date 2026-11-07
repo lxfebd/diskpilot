@@ -65,7 +65,7 @@
 ## 已知边界（坦诚说明）
 
 - 本机同用户进程可篡改本地文件（undo.jsonl / 台账 / 缓存）——防线是"篡改后仍不放行危险动作"（L1/L3/L7 校验），不是防篡改本身。
-- macOS / Linux 构建未在真机验证；签名/公证未做。
+- **R513 起**：CI 三平台（ubuntu/macos/windows）跑 `diskpilot-desktop --self-test` 无头冒烟——扫描核心、Ed25519 验签+篡改拒绝、nonce 一次性/频率限制/write_gate 五项断言，任一失败 CI 红。仍未自动化的是**纯 GUI 交互**（窗口/托盘点击路径），且 macOS 签名/公证未做。
 - R508/R509 的 nonce 防**重放**不防实时 XSS：同源 webview 内被注入的脚本仍可自行申请 nonce（Tauri IPC 区分不了脚本与真实点击）——纵深防线是 capability 白名单 + 来源校验 + 频率限制 + 审计追溯，不是 nonce 本身。
 - **R509 起写命令 nonce 覆盖率 100%**：19 个写命令（7 清理链 + 10 插件管理 + execute_ai_plan 真执行 + toolbelt_run 的 medium+ 分支）全部要求一次性 nonce + 主窗口来源校验 + 频率限制；execute_ai_plan 的 dry_run 预演除外（纯只读）。
 - `sync_perms` 只做审计加固（R505），权限快照本身仍可被 webview 伪造——缓解手段是写命令同时要求 nonce + 来源校验（R508/R509）。

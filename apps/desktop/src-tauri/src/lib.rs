@@ -31,6 +31,7 @@ mod scaffold_registry;
 mod scan;
 mod scan_stamp;
 mod scan_summary;
+pub mod self_test;
 mod space_history;
 pub(crate) mod startup;
 mod startup_history;

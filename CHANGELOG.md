@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R513: 无头 self-test 三平台 CI 冒烟——清掉「桌面运行时未验证」已知边界
+
+- **`diskpilot-desktop --self-test`**（R513 新增，main.rs 拦截参数后直接跑 `self_test::run()` 退出，不建窗口）：5 项断言——① scanner 扫描临时目录 files_seen==3；② Ed25519 生成密钥对→签名→验签通过 + 篡改 payload 被拒；③ nonce 签发/一次性消费/重复拒绝/op 不匹配不吞 nonce；④ 频率限制（1s 窗口内连发只放行 1 次）；⑤ write_gate dry_run 放行 + 无确认真写被拒。全部 PASS exit 0，任一 FAIL exit 1。
+- **本机验证**：`--self-test` 输出 5×PASS，exit=0（过程中修复两处自身 bug：generate_keypair 返回序是 (公钥,私钥)、rate_limit 断言口径）。
+- **CI**：ci.yml 新增 `self-test` job，ubuntu/macos/windows 三平台矩阵，装完 webkit 依赖后 `cargo run -p diskpilot-desktop -- --self-test`。
+- **security-model.md 已知边界更新**：macOS/Linux 真机运行时改为「CI 三平台 self-test 覆盖核心安全路径，仅纯 GUI 交互（窗口/托盘点击）未自动化；macOS 签名/公证仍未做」。
+
 ### R512: 官方插件第四批——drive-health（磁盘健康审计器），索引仓库发 v1.3.0，CI 绿，线上 7 个插件全量验签通过
 
 - **`plugins/drive-health/`**（独立 workspace，与前三批同款发布配置）：PowerShell 存储模块只读审计——Get-PhysicalDisk 物理盘表（型号/介质/总线/HealthStatus/OperationalStatus/容量，非 Healthy 标红警告）+ Get-Disk 逻辑盘表 + `--smart` 追加 SATA 盘 SMART 高级属性（NVMe 或非管理员下该 cmdlet 不可用，明确标注而非静默跳过）；手写 CSV 解析器（引号/逗号转义）零依赖；4 例单测绿；exe 247KB。
