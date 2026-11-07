@@ -151,7 +151,7 @@ CPU / RAM / disk / GPU benchmarks, CPU / GPU stress tests (temperature-fuse guar
 
 ### 7. Plugin market: built-in tools can be pluginized, community registry extends online
 
-CLI tools in the tool wall can be "pluginized" in one click (writes `tool.plugin.json`, removable anytime) — the same security model keeps applying. The plugin market pulls the **official index** `lxfebd/diskpilot-plugin-index` by default (live, 5 read-only diagnostic plugins: bigfile-finder / dup-finder / startup-audit / temp-hunter / log-hunter); a custom community index URL can be configured: envelope Ed25519 signature enforced, download sha256 enforced, in-package Ed25519 signature + signer anchored to the index entry, zip entries protected against traversal / zip bombs — one-click download / update / rollback / uninstall (uninstall goes to the Recycle Bin, recoverable).
+CLI tools in the tool wall can be "pluginized" in one click (writes `tool.plugin.json`, removable anytime) — the same security model keeps applying. The plugin market pulls the **official index** `lxfebd/diskpilot-plugin-index` by default (live, 6 read-only diagnostic plugins: bigfile-finder / dup-finder / startup-audit / temp-hunter / log-hunter / port-hunter); a custom community index URL can be configured: envelope Ed25519 signature enforced, download sha256 enforced, in-package Ed25519 signature + signer anchored to the index entry, zip entries protected against traversal / zip bombs — one-click download / update / rollback / uninstall (uninstall goes to the Recycle Bin, recoverable).
 
 ---
 

@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R510: 官方插件第三批——port-hunter（端口占用审计器），索引仓库发 v1.2.0，CI 绿，线上全量验签通过
+
+- **`plugins/port-hunter/`**（独立 workspace，与前两批同款发布配置）：解析 `netstat -ano` 拿 (协议/本地地址/外端/状态/PID)，`tasklist /FO CSV /NH` 批量映射 PID→进程名；按本地端口排序输出 TopN 占用表 + 摘要（TCP/UDP 计数、LISTENING 数、涉及进程数）；参数 `[TopN] [--proto tcp|udp|all] [--listen]`；GBK 输出 lossy 兜底；3 例解析单元测试绿；exe 134KB（opt-level=z+lto）。
+- **只读铁律**：不杀进程、不改配置，报告末尾提示走主程序确认链路。Windows 专属（netstat/tasklist）。
+- **实机冒烟**：`port-hunter.exe 8 --listen` 0.41s 出 67 条 LISTENING 记录、34 个进程，端口/PID/进程名准确（135→svchost、139/445→System）。
+- **发布**：pub510 打包签名 zip（sha256=`ffe7d6d4f1124856518c8e85467174c0559c51cc38f7e3d7331d61132c767737`，134434 B）→ 上传 index 仓库 release **v1.2.0**（id 437805149）→ index.json 追加第 6 条并重签信封（签名 `ed60444cd74cb9a1…`，commit `4de01bfa`）→ `install_plugin_zip` 自验装进临时 Tools 根通过。
+- **线上验证**：verify_online 拉 live index（6 条）+ 全部 zip——信封 Ed25519 验签通过，每个插件 sha256 一致 + 包内 ed25519 有效 + signer 锚定官方公钥。CI validate-index run 42408413282 = success。
+- **文档**：README.md / README_EN.md 官方插件数 5→6，docs/plugin-market-index.md §4 增 port-hunter 条目 + v1.2.0 发布说明。
+
 ### R509: nonce 闸补齐——插件 10 个写命令 + execute_ai_plan 全部纳入（R508 留白清零），写命令覆盖率 100%
 
 - **NONCE_OPS 白名单扩容 12 个**：execute_ai_plan / plugin_uninstall / plugin_install / plugin_install_url / plugin_activate / plugin_deactivate / plugin_export / plugin_registry_install / plugin_registry_update / plugin_registry_rollback / plugin_set_registry_url / plugin_registry_refresh。

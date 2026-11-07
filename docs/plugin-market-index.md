@@ -91,13 +91,14 @@ diskpilot-plugin-index/
 └── .github/workflows/validate-index.yml  # CI 门禁（schema/https/sha256/id kebab）
 ```
 
-- 插件 zip 上传到该仓库的 **Releases**（`v1.0.0` 首批 3 个，`v1.1.0` 第二批 2 个），直链填入 `plugins[].url`。
+- 插件 zip 上传到该仓库的 **Releases**（`v1.0.0` 首批 3 个，`v1.1.0` 第二批 2 个，`v1.2.0` 第三批 1 个），直链填入 `plugins[].url`。
 - 官方插件（源码在主仓库 `plugins/`，均为只读诊断工具，risk=low）：
   - `bigfile-finder` 大文件扫描器（硬盘工具）
   - `dup-finder` 重复文件查找（硬盘工具，输出标注「疑似」）
   - `startup-audit` 启动项审计（综合检测）
   - `temp-hunter` 临时目录扫描器（硬盘工具，R507：%TEMP% + 系统 Temp 按年龄分桶，深度/文件数上限防卡死）
   - `log-hunter` 大日志文件扫描器（硬盘工具，R507：.log/.dmp/.wer/.etl 含轮转压缩形态，TopN 大日志）
+  - `port-hunter` 端口占用审计器（硬盘工具，R510：netstat -ano + tasklist 批量映射 PID→进程名，按本地端口排序 TopN，--proto/--listen 过滤，只读不杀进程）
 - 官方发布签名密钥：Ed25519 私钥只在本机保管（`~/.diskpilot/release-signing/secret.hex`，权限收紧，绝不入库），公钥写入信封 `signer` 与每个条目的 `signer`；客户端 R502 起强制锚定（包内 signer 必须等于索引声明）。
 
 **建议 CI 门禁**（照 .github/workflows/ci.yml 风格）：
