@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R517: 官方插件第五批——browser-cache-hunter（浏览器缓存审计器），索引仓库发 v1.4.0，线上 8 个插件全量验签通过
+
+- **`plugins/browser-cache-hunter/`**（独立 workspace）：枚举 Chrome/Edge/Brave/Opera/Vivaldi（%LOCALAPPDATA% User Data 下 Default + Profile * 全部 profile）与 Firefox（Profiles/* 的 cache2/startupCache），只读递归统计 Cache、Code Cache、GPUCache、Media Cache、Service Worker/CacheStorage 等子目录字节数，输出每 profile 总量 + Top N 子目录；深度上限 20 + 单目录 200 万条目预算防卡死，符号链接不跟随；3 例单测绿（求和/预算截断/单位格式化）；exe 97KB。
+- **实机冒烟**：检出 Chrome Default 4.4MB + Edge Default 422.2MB（Code Cache 313.9MB 最大），统计 0.01s，全部只读不删文件。
+- **发布**：分类先踩坑「浏览器」不存在 → 落到已有内置分类「综合检测」（startup-audit 同款，避免真实安装时分类目录缺失）；pub517 打包 zip sha256=`db14f2fc183c970b…`（97919 B）→ release **v1.4.0**（id 437877243）→ index 第 8 条 + 重签信封（commit `482a05de`）→ 本地验签安装通过。**踩坑记录**：首次上传了改分类前的旧 zip 导致 sha 不一致，已用 gh17 删除旧 asset 重传当前 zip 修复 → **线上 verify_online：8 个插件全部 信封验签+sha256+包内 ed25519+signer 锚定 通过** → CI validate-index run 42419679511 success。
+- **文档**：README.md / README_EN.md 官方插件数 7→8，docs/plugin-market-index.md §4 增 browser-cache-hunter 条目 + v1.4.0 发布说明。
+
 ### R516: 扫描报告导出——md/csv/json 三格式，内存渲染零 IO，结果页一键导出
 
 - **scanner 新模块 `report.rs`**：`render(root, stats, fmt, top_n)` 纯内存渲染三种格式——Markdown（报告头 + Top N 目录表 + Top N 扩展名表，人类可读）、CSV（扁平目录表 path/size_bytes/size_human/file_count，带引号/逗号转义，Excel 可直接开）、JSON（完整树 + stats 结构化 dump）。5 例单测绿（排序/CSV 转义/JSON 形状/格式解析/时间戳格式）。

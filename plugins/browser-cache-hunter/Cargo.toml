@@ -1,0 +1,15 @@
+[package]
+name = "browser-cache-hunter"
+version = "1.0.0"
+edition = "2021"
+description = "DiskPilot 官方插件：浏览器缓存审计器（只读）"
+license = "MIT"
+
+# 独立于主 workspace（主仓库 workspace 只含 crates/*），避免被全量门禁扫到。
+[workspace]
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
