@@ -186,12 +186,14 @@ export function spaceTrendSamples(pts: readonly { at: number }[]): 'rich' | 'spa
   return n >= 5 ? 'rich' : 'sparse';
 }
 
-/** R148：耗尽预测的可信度——外推建立在首末两点上，样本少时「约 N 天满」
- *  本身就不可靠。纯函数：样本 none → none（不出预测）；sparse → low（要
- *  标注「样本少」）；rich → high（照常显示）。 */
-export function forecastConfidence(samples: 'rich' | 'sparse' | 'none'): 'high' | 'low' | 'none' {
+/** R148/R519：耗尽预测的可信度。样本 none → none（不出预测）；
+ *  R519 起再叠加拟合优度 r2：sparse（<5 点）或 r2 < 0.7 → low（标注「样本少/波动大」），
+ *  其余 → high。r2 省略时保持 R148 旧行为。 */
+export function forecastConfidence(samples: 'rich' | 'sparse' | 'none', r2?: number): 'high' | 'low' | 'none' {
   if (samples === 'none') return 'none';
-  return samples === 'sparse' ? 'low' : 'high';
+  if (samples === 'sparse') return 'low';
+  if (r2 !== undefined && r2 < 0.7) return 'low';
+  return 'high';
 }
 
 /** 近期增量：首尾已用差 + 跨度天数文案（不足 2 条返回「记录不足」）。 */
@@ -204,22 +206,63 @@ export function spaceWeekDelta(pts: SpacePoint[]): { delta: number; days: string
   return { delta, days: spanDays < 1 ? t('overview.trend.today') : t('overview.trend.daysSpan', { n: Math.round(spanDays) }) };
 }
 
-/** R98 空间耗尽预测：按首尾采样的平均增速线性外推「多少天后用满」。
+/** R519 最小二乘线性回归：对全部采样点拟合 used_bytes = a + b·at。
+ *  返回 { slopePerSec, r2 }；点数 <2 或时间全相同 → null。
+ *  r2 = 决定系数（1 = 完美线性，越低噪声越大），供置信度分级。 */
+export function linearFit(pts: readonly SpacePoint[]): { slopePerSec: number; r2: number } | null {
+  const n = pts.length;
+  if (n < 2) return null;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (const p of pts) {
+    sx += p.at;
+    sy += p.used_bytes;
+    sxx += p.at * p.at;
+    sxy += p.at * p.used_bytes;
+  }
+  const denom = n * sxx - sx * sx;
+  if (denom === 0) return null; // 所有点同一时刻
+  const slope = (n * sxy - sx * sy) / denom; // 字节/秒
+  const intercept = (sy - slope * sx) / n;
+  // R²：1 - SSres/SStot
+  let ssRes = 0, ssTot = 0;
+  const yMean = sy / n;
+  for (const p of pts) {
+    const pred = intercept + slope * p.at;
+    ssRes += (p.used_bytes - pred) ** 2;
+    ssTot += (p.used_bytes - yMean) ** 2;
+  }
+  const r2 = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
+  return { slopePerSec: slope, r2: Math.max(0, Math.min(1, r2)) };
+}
+
+/** R519 预测结果：天数 + 预计填满日期（epoch 毫秒）+ 拟合优度 + 样本档。 */
+export interface ForecastFullInfo {
+  days: number; // 0 = 已满
+  dateMs: number; // 预计填满时刻（days=0 时为当前时刻）
+  r2: number;
+  samples: 'rich' | 'sparse' | 'none';
+}
+
+/** R98/R519 空间耗尽预测：用全样本最小二乘斜率外推「多少天后用满」（R519 前是首尾两点，噪声敏感）。
  *  返回 null = 不该预测：不足 2 点、时间跨度为 0、增速 ≤0（持平或在
  *  释放空间——释放不是「快满了」，硬算会把健康盘唱成满盘）。
  *  已满（剩余 ≤0）返回 0，调用方用「已满」文案区分于天数。 */
 export function forecastFullDays(pts: SpacePoint[]): number | null {
-  if (pts.length < 2) return null;
-  const first = pts[0];
+  const info = forecastFullInfo(pts, Date.now());
+  return info ? info.days : null;
+}
+
+/** R519 预测入口：回归斜率 >0 且剩余 >0 时给出 {days, dateMs, r2, samples}，否则 null。 */
+export function forecastFullInfo(pts: SpacePoint[], nowMs: number): ForecastFullInfo | null {
+  const fit = linearFit(pts);
+  if (!fit || fit.slopePerSec <= 0) return null;
   const last = pts[pts.length - 1];
-  const spanSecs = last.at - first.at;
-  if (spanSecs <= 0) return null;
-  const slope = (last.used_bytes - first.used_bytes) / spanSecs; // 字节/秒
-  if (slope <= 0) return null;
   const remaining = last.total_bytes - last.used_bytes;
-  if (remaining <= 0) return 0;
-  const days = remaining / (slope * 86400);
-  return Number.isFinite(days) && days > 0 ? days : null;
+  const samples = spaceTrendSamples(pts);
+  if (remaining <= 0) return { days: 0, dateMs: nowMs, r2: fit.r2, samples };
+  const days = remaining / (fit.slopePerSec * 86400);
+  if (!Number.isFinite(days) || days <= 0) return null;
+  return { days, dateMs: nowMs + days * 86400 * 1000, r2: fit.r2, samples };
 }
 
 /** R119 耗尽风险分级（纯函数，可单测）：把 forecastFullDays 的天数映射成
@@ -674,17 +717,22 @@ function SpaceTrendCard({ selPath, drives, onGoWorkspace }: { selPath: string | 
           const last = points[points.length - 1];
           const usage = last.total_bytes > 0 ? (last.used_bytes / last.total_bytes) * 100 : 0;
           const isShrinking = delta < 0; // 负增量 = 空间释放
-          // R98 空间耗尽预测：按首尾增速外推「多少天后用满」；0 = 已满。
+          // R98/R519 空间耗尽预测：全样本最小二乘外推「多少天后用满」，并给出预计日期；0 = 已满。
           const samples = spaceTrendSamples(points);
-          const confidence = forecastConfidence(samples);
-          const fullDays = forecastFullDays(points);
+          const forecast = forecastFullInfo(points, Date.now());
+          const confidence = forecastConfidence(samples, forecast?.r2);
+          const fullDays = forecast?.days ?? null;
+          // R329：日期不用 toLocaleDateString（跟随系统地区），统一走 formatDateKey 的 M-D 口径
+          const fullDate = forecast && forecast.days > 0
+            ? (() => { const d = new Date(forecast.dateMs); return `${d.getMonth() + 1}/${d.getDate()}`; })()
+            : null;
           const forecastLabel =
             fullDays === null ? null
             : fullDays === 0 ? t('overview.trend.fullNow')
-            // R148：样本少（2–4 点）时外推不可靠，加「?」提示别当准数
+            // R148/R519：样本少（2–4 点）或拟合差（r2<0.7）时外推不可靠，标「约」提示别当准数
             : confidence === 'low'
-              ? t('overview.trend.fullInRough', { n: Math.ceil(fullDays) })
-              : t('overview.trend.fullIn', { n: Math.ceil(fullDays) });
+              ? t('overview.trend.fullOnRough', { date: fullDate ?? '', n: Math.ceil(fullDays) })
+              : t('overview.trend.fullOn', { date: fullDate ?? '', n: Math.ceil(fullDays) });
           return (
             <button
               key={drive}

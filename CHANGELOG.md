@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R519: 空间趋势预测升级——最小二乘回归 + 「预计填满日期」+ R² 置信度
+
+- **算法升级**：R98 的首尾两点外推噪声敏感，R519 新增 `linearFit()` 对全部采样点做最小二乘回归（斜率 + 决定系数 R²），`forecastFullDays` 改用回归斜率（线性数据结果不变，旧单测全部照过）。
+- **预计填满日期**：新增 `forecastFullInfo(pts, nowMs)` 返回 {天数, 预计填满时刻, R², 样本档}，总览趋势卡片显示「预计 M/D 填满（约 N 天）」，日期走项目统一的地区中立格式（R329 禁 toLocaleDateString）。
+- **置信度升级**：`forecastConfidence(samples, r2?)` 在 R148 样本量分级基础上叠加 R²——rich 但 R²<0.7 视为波动大，标「粗估」；兼容旧调用。
+- **单测**：新增 4 例（完美线性 R²=1 / 噪声 R²<1 / 预计日期 = now+days / 置信度叠加），vitest 1309/1309 全绿，tsc/eslint 过。
+
 ### R518: 社区索引 PR 演练——validate-index 拒绝路径实测归档（CI 管结构、客户端管签名）
 
 - **本地演练**：复刻 validate-index.yml 校验逻辑对 8 例样例跑通（正常 live 8 插件过；schema=2 / 缺 sha256 / 重复 id / http url / 非 hex sha / signer 不一致 / 大写 id 共 7 例全被拒），预期符合率 100%。

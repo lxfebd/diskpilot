@@ -51,6 +51,9 @@ export const overview = {
     // R98 空间耗尽预测：按趋势增速外推「多少天后用满」（0=已满；增速≤0 不显示）
     'overview.trend.fullIn': '约 {n} 天满',
     'overview.trend.fullInRough': '样本少，粗估 {n} 天满',
+    // R519：带预计填满日期的新文案
+    'overview.trend.fullOn': '预计 {date} 填满（约 {n} 天）',
+    'overview.trend.fullOnRough': '样本少/波动大，粗估 {date} 前后填满（约 {n} 天）',
     'overview.trend.fullNow': '已满',
 
     // 快速操作
@@ -292,6 +295,9 @@ export const overview = {
     // R98 days-to-full forecast: extrapolated from the trend slope (0 = already full; hidden when not growing)
     'overview.trend.fullIn': '≈ full in {n:day|days}',
     'overview.trend.fullInRough': 'few samples — rough: full in ≈ {n:day|days}',
+    // R519: with projected full date
+    'overview.trend.fullOn': 'projected full on {date} (≈ {n:day|days})',
+    'overview.trend.fullOnRough': 'sparse/noisy — roughly full around {date} (≈ {n:day|days})',
     'overview.trend.fullNow': 'Full',
 
     // Quick actions

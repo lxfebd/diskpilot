@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -132,6 +132,56 @@ describe('forecastFullDays（空间耗尽预测）', () => {
       pt('C:\\', 400, 1_700_000_000, 1000),
       pt('C:\\', 500, 1_700_000_000, 1000), // 同一时刻
     ])).toBeNull();
+  });
+});
+
+// R519 最小二乘回归 + 预计填满日期 + r2 置信度
+describe('linearFit / forecastFullInfo（R519 回归预测）', () => {
+  it('完美线性数据 r2=1、斜率正确', () => {
+    const pts = [
+      pt('C:\\', 100, 1000),
+      pt('C:\\', 200, 1000 + 86400),
+      pt('C:\\', 300, 1000 + 2 * 86400),
+    ];
+    const fit = linearFit(pts);
+    expect(fit).not.toBeNull();
+    expect(fit!.slopePerSec).toBeCloseTo(100 / 86400, 10);
+    expect(fit!.r2).toBeCloseTo(1, 10);
+  });
+
+  it('噪声数据 r2 < 1，但斜率仍朝正', () => {
+    const pts = [
+      pt('C:\\', 100, 1000),
+      pt('C:\\', 190, 1000 + 86400), // 偏离直线
+      pt('C:\\', 300, 1000 + 2 * 86400),
+    ];
+    const fit = linearFit(pts);
+    expect(fit!.r2).toBeLessThan(1);
+    expect(fit!.r2).toBeGreaterThan(0.8);
+    expect(fit!.slopePerSec).toBeGreaterThan(0);
+  });
+
+  it('forecastFullInfo 给出预计填满日期（now + days）', () => {
+    // total 1000，每天 +100 字节 → 剩 500 需要 5 天
+    const nowMs = 1_700_000_000_000;
+    const pts = [
+      pt('C:\\', 400, 1_700_000_000, 1000),
+      pt('C:\\', 500, 1_700_000_000 + 86400, 1000),
+    ];
+    const info = forecastFullInfo(pts, nowMs);
+    expect(info).not.toBeNull();
+    expect(info!.days).toBeCloseTo(5, 6);
+    expect(info!.dateMs).toBeCloseTo(nowMs + 5 * 86400 * 1000, -3);
+    expect(info!.r2).toBeCloseTo(1, 10);
+  });
+
+  it('forecastConfidence 叠加 r2：rich 但 r2<0.7 → low', () => {
+    expect(forecastConfidence('rich', 0.9)).toBe('high');
+    expect(forecastConfidence('rich', 0.5)).toBe('low');
+    expect(forecastConfidence('sparse', 0.99)).toBe('low');
+    expect(forecastConfidence('none', 0.99)).toBe('none');
+    // 兼容旧调用（不传 r2）
+    expect(forecastConfidence('rich')).toBe('high');
   });
 });
 
