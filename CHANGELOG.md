@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R514: 发布前验收清单固化——scripts/pre-release-check.mjs 一键跑完 14 项门禁（pnpm check:release）
+
+- **新增 `scripts/pre-release-check.mjs`**：按 CI 同口径顺序跑 8 大类门禁——cargo fmt --check → clippy -D warnings → cargo audit（白名单 RUSTSEC-2024-0370/0429，白名单外即红）→ cargo test --workspace → plugins/ 下 7 个插件各自 test+build --release（独立 target dir，不污染主构建）→ 前端 tsc+eslint+vitest → check-changelog + check-docs-links → `diskpilot-desktop --self-test` 无头冒烟。逐项 ✅/❌ + 末尾汇总，任一失败 exit 1。
+- **模式**：默认完整跑；`--quick` 跳过 audit/test/self-test（约 30s）；`--skip-plugins` 跳过插件构建。配了 `pnpm check:release` / `check:release:quick` 两个 npm 脚本。
+- **修复本机坑**：Windows 下 pnpm 是 pnpm.cmd，spawnSync 无 shell 找不到——前端三项在 win32 下自动走 shell:true（记入脚本注释）。
+- **验证**：`--quick` 全模式 14 项全绿（含 7 插件），本机逐门禁与手工跑命令结果一致。
+- **docs/README.md** 索引收录该脚本，发布者一眼能找到。
+
 ### R513: 无头 self-test 三平台 CI 冒烟——清掉「桌面运行时未验证」已知边界
 
 - **`diskpilot-desktop --self-test`**（R513 新增，main.rs 拦截参数后直接跑 `self_test::run()` 退出，不建窗口）：5 项断言——① scanner 扫描临时目录 files_seen==3；② Ed25519 生成密钥对→签名→验签通过 + 篡改 payload 被拒；③ nonce 签发/一次性消费/重复拒绝/op 不匹配不吞 nonce；④ 频率限制（1s 窗口内连发只放行 1 次）；⑤ write_gate dry_run 放行 + 无确认真写被拒。全部 PASS exit 0，任一 FAIL exit 1。

@@ -12,6 +12,7 @@
 | [publish-plugin-guide.md](publish-plugin-guide.md) | 插件作者 | 三步发布自己的清理插件（导出 zip → 填 index.json → 提 PR） |
 | [security-model.md](security-model.md) | 安全审查者/作者 | 威胁模型 + 各层防线代码定位（含 R505 加固点与已知边界） |
 | [performance-baseline.md](performance-baseline.md) | 开发者 | 扫描性能基线与压测入口（walk 子命令、SSD/HDD 实测吞吐、回归对比口径） |
+| `scripts/pre-release-check.mjs`（`pnpm check:release` / `--quick`） | 发布者 | 发布前完整验收清单：fmt+clippy+audit+test+7 插件构建+前端三件套+docs 守卫+--self-test，一键汇总 exit 码 |
 | [changelog/README.md](changelog/README.md) | 开发者/维护者 | 逐轮开发记录归档：R1–R380 的 273 条明细按日期分卷存放 |
 
 其他文档入口：

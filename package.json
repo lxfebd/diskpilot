@@ -9,7 +9,9 @@
     "lint": "pnpm -C apps/desktop lint",
     "test": "cargo test --workspace",
     "check:docs": "node scripts/check-docs-links.mjs && node scripts/check-changelog.mjs",
-    "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings"
+    "check:rust": "cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "check:release": "node scripts/pre-release-check.mjs",
+    "check:release:quick": "node scripts/pre-release-check.mjs --quick"
   },
   "packageManager": "pnpm@9.12.0"
 }
