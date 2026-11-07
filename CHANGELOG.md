@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R512: 官方插件第四批——drive-health（磁盘健康审计器），索引仓库发 v1.3.0，CI 绿，线上 7 个插件全量验签通过
+
+- **`plugins/drive-health/`**（独立 workspace，与前三批同款发布配置）：PowerShell 存储模块只读审计——Get-PhysicalDisk 物理盘表（型号/介质/总线/HealthStatus/OperationalStatus/容量，非 Healthy 标红警告）+ Get-Disk 逻辑盘表 + `--smart` 追加 SATA 盘 SMART 高级属性（NVMe 或非管理员下该 cmdlet 不可用，明确标注而非静默跳过）；手写 CSV 解析器（引号/逗号转义）零依赖；4 例单测绿；exe 247KB。
+- **只读铁律**：不写盘、不改电源计划、不跑 chkdsk，报告末尾提示走主程序确认链路。
+- **实机冒烟**：5 块盘（3 NVMe SSD + 2 SATA HDD）健康表输出正确，全部 Healthy，耗时 1.7s；--smart 模式对 2 块 SATA 盘正确标注「需管理员+ATA/SCSI 驱动支持」。
+- **发布**：pub512 打包签名 zip（sha256=`d1080efc6baf348bba6fa9b57c587352eaad5f88f9d9ebfa1540f7d11b9144cc`，126552 B）→ release **v1.3.0**（id 437846765）→ index.json 第 7 条 + 重签信封（签名 `83f2efe27c31cd97…`，commit `5ab23e1a`）→ 本地验签安装通过 → **线上 verify_online：7 个插件全部 信封验签+sha256+包内 ed25519+signer 锚定 通过** → CI validate-index run 42414740264 success。
+- **文档**：README.md / README_EN.md 官方插件数 6→7，docs/plugin-market-index.md §4 增 drive-health 条目 + v1.3.0 发布说明。
+
 ### R511: 扫描性能专项——walk 压测子命令 + 实机基线建档 + 修复 bench feature 编译断裂
 
 - **`diskpilot-scanner walk <目录> [重复次数]`**（跨平台，bench feature）：每次 run 输出 wall/files/s/GB/s + phase 分解（walk/build_tree/total），末行 BEST/AVG；默认 3 次取最佳，供优化前后回归对比。
