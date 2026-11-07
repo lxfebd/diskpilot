@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R516: 扫描报告导出——md/csv/json 三格式，内存渲染零 IO，结果页一键导出
+
+- **scanner 新模块 `report.rs`**：`render(root, stats, fmt, top_n)` 纯内存渲染三种格式——Markdown（报告头 + Top N 目录表 + Top N 扩展名表，人类可读）、CSV（扁平目录表 path/size_bytes/size_human/file_count，带引号/逗号转义，Excel 可直接开）、JSON（完整树 + stats 结构化 dump）。5 例单测绿（排序/CSV 转义/JSON 形状/格式解析/时间戳格式）。
+- **后端**：AppState 新增 `scan_stats` 缓存（与 scan_tree 同 key 同生命周期）；`export_scan_report(path, format, top_n)` 命令从内存缓存树渲染返回文本——**只读，不触盘，不进 nonce 闸**（与浏览器下载同级）；未扫描过的路径诚实报错提示先扫描。
+- **前端**：工作区头部「导出报告」按钮（有扫描结果时可用）——save 对话框三档过滤器（Markdown/CSV/JSON）一次完成选格式+选位置，`writeTextFile` 落盘，成功/失败 toast。文案走 i18n 中英双份（coverage 测试强制）。
+- **回归**：cargo clippy/fmt 0 错误、workspace tests 全绿、scanner 31 例绿、vitest 1305/1305、tsc/eslint 过、docs 守卫通过。
+
 ### R515: MCP 写工具纳入 nonce 闸——agent_call_tool 的 11 个写工具封死 webview 伪造 confirmed 路径
 
 - **审计结论**：R508/R509 覆盖了清理链 + 插件链 + execute_ai_plan，但 agent-server MCP 桥接（agent_call_tool）是另一条 IPC 路径，11 个写工具（process_kill / service_control / fan_selfheal_fix / fan_control / file_recycle / process_start / scheduled_task_manage / uninstall_app / toolbelt_run / stress_test / stress_test_gpu）此前只有 confirmed==Some(true) 硬校验，webview 内脚本可伪造 confirmed 直接调。

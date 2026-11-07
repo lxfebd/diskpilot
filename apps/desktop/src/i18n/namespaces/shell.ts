@@ -62,6 +62,11 @@ export const shell = {
     'shell.scan.browserPrompt': '浏览器预览模式：输入一个路径（任意值都可以）',
     'shell.scan.adminHint': '以管理员身份启动 DiskPilot 可走 MFT 快速通道，大幅缩短扫描时间。',
     'shell.scan.busy': '扫描正在进行中，等这一轮扫完再试',
+    // R516：扫描报告导出
+    'shell.scan.export': '导出报告',
+    'shell.scan.exportTitle': '导出扫描报告（选择格式与保存位置）',
+    'shell.scan.exportOk': '报告已导出',
+    'shell.scan.exportFail': '导出失败：{err}',
     'shell.scanbar.preparing': '准备扫描…',
     'shell.scanbar.aria': '扫描进度',
     'shell.skipToMain': '跳到主内容',
@@ -275,6 +280,11 @@ export const shell = {
     'shell.scan.browserPrompt': 'Browser preview mode: type any path to scan',
     'shell.scan.adminHint': 'Start DiskPilot as administrator to use the fast MFT path and cut scan time dramatically.',
     'shell.scan.busy': 'A scan is already running — wait for it to finish',
+    // R516: scan report export
+    'shell.scan.export': 'Export report',
+    'shell.scan.exportTitle': 'Export scan report (pick a format and location)',
+    'shell.scan.exportOk': 'Report exported',
+    'shell.scan.exportFail': 'Export failed: {err}',
     'shell.scanbar.preparing': 'Preparing scan…',
     'shell.scanbar.aria': 'Scan progress',
     'shell.skipToMain': 'Skip to main content',

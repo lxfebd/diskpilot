@@ -383,6 +383,10 @@ async fn commit_scan(
     if let Ok(mut trees) = state.scan_tree.lock() {
         trees.insert(key.to_string(), outcome.node_full);
     }
+    // R516：统计与树同槽存活，导出报告时能拿到 walk/tree 耗时与 mode。
+    if let Ok(mut stats_map) = state.scan_stats.lock() {
+        stats_map.insert(key.to_string(), outcome.stats.clone());
+    }
     // 游标与树生命周期一致：树被覆盖时同步更新，保证增量始终有有效起点。
     if let Some(c) = new_cursor {
         if let Ok(mut cursors) = state.usn_cursors.lock() {
@@ -446,6 +450,36 @@ fn find_subtree(root: &Node, path: &str) -> Option<Node> {
         }
     }
     None
+}
+
+/// R516 导出扫描报告（只读：从内存缓存树渲染，不触盘、不进 nonce 闸）。
+/// `path` 是扫描根（与 scan_path 同路径）；`format` = md|csv|json；
+/// 找不到缓存树时返回 Err，前端提示「请先扫描该路径」。
+#[tauri::command]
+pub fn export_scan_report(
+    state: State<'_, crate::AppState>,
+    path: String,
+    format: String,
+    top_n: Option<usize>,
+) -> Result<String, String> {
+    let Some(fmt) = diskpilot_scanner::ReportFormat::parse(&format) else {
+        return Err(format!("不支持的报告格式: {format}（可选 md/csv/json）"));
+    };
+    let key = crate::cleanup_logic::norm_path_key(std::path::Path::new(&path));
+    let tree = state
+        .scan_tree
+        .lock()
+        .unwrap()
+        .get(&key)
+        .cloned()
+        .ok_or_else(|| format!("没有该路径的扫描缓存: {path}（请先扫描）"))?;
+    let stats = state.scan_stats.lock().unwrap().get(&key).cloned();
+    Ok(diskpilot_scanner::render(
+        &tree,
+        stats.as_ref(),
+        fmt,
+        top_n.unwrap_or(50).max(5),
+    ))
 }
 
 #[cfg(test)]

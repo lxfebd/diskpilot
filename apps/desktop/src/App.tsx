@@ -1,6 +1,7 @@
 import { forwardRef, lazy, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Folder, ScanLine, ListTree, MessageSquare, X, Trash2 as TrashIcon } from 'lucide-react';
-import { open } from '@tauri-apps/plugin-dialog';
+import { Folder, ScanLine, ListTree, MessageSquare, X, Trash2 as TrashIcon, FileDown } from 'lucide-react';
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { listen } from '@tauri-apps/api/event';
 import { api } from './api';
 import { isTauri } from './env';
@@ -506,6 +507,30 @@ export default function App() {
     if (typeof picked === 'string') setPickedPath(picked);
   };
 
+  // R516：导出当前扫描结果为报告文件。只读操作（后端从内存树渲染），
+  // 用户主动选保存位置，不走 nonce 闸（与浏览器下载同级）。
+  const exportReport = async () => {
+    if (!pickedPath || !root || scanning) return;
+    const picked = await save({
+      defaultPath: `diskpilot-scan-report-${pickedPath.replace(/[^A-Za-z0-9]+/g, '_')}.md`,
+      filters: [
+        { name: 'Markdown', extensions: ['md'] },
+        { name: 'CSV', extensions: ['csv'] },
+        { name: 'JSON', extensions: ['json'] },
+      ],
+    });
+    if (!picked) return; // 用户取消
+    const ext = picked.split('.').pop()?.toLowerCase() ?? 'md';
+    const format = ext === 'csv' ? 'csv' : ext === 'json' ? 'json' : 'md';
+    try {
+      const content = await api.exportScanReport(pickedPath, format);
+      await writeTextFile(picked, content);
+      useStore.getState().toast(t('shell.scan.exportOk'), 'ok');
+    } catch (e) {
+      useStore.getState().toast(t('shell.scan.exportFail', { err: String(e) }), 'err');
+    }
+  };
+
   const scan = async (paths?: string[], opts?: { force?: boolean }) => {
     const targets = paths && paths.length > 0 ? paths : [pickedPath];
     if (!targets[0]) return;
@@ -715,6 +740,15 @@ export default function App() {
                   disabled={!pickedPath}
                 >
                   <ScanLine size={14} /> {scanning ? t('shell.scan.cancel') : t('shell.scan.start')}
+                </button>
+                {/* R516：扫描报告导出（md/csv/json，后端内存渲染，只读） */}
+                <button
+                  className="ghost icon"
+                  onClick={() => void exportReport()}
+                  disabled={!root || scanning || !pickedPath}
+                  title={t('shell.scan.exportTitle')}
+                >
+                  <FileDown size={14} /> {t('shell.scan.export')}
                 </button>
               </>
             )}

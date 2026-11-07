@@ -222,6 +222,10 @@ pub struct ScanStats {
 pub use scan_core::*;
 mod scan_core;
 
+// R516 扫描报告导出（markdown/csv/json 渲染，纯内存零 IO）。
+mod report;
+pub use report::*;
+
 #[cfg(test)]
 #[path = "lib_tests.rs"]
 mod tests;

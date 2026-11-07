@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import type { Node } from '../types';
 import { isTauri } from '../env';
 import * as mocks from '../mocks';
+import { t } from '../i18n';
 
 /**
  * 扫描域：扫描 / 取消 / 按需取子树 / 磁盘信息。
@@ -51,4 +52,13 @@ export const scanApi = {
 
   estimateSize: (path: string) =>
     isTauri ? invoke<number>('estimate_size', { path }) : mocks.estimateSize(path),
+
+  /**
+   * R516 导出扫描报告：后端从内存缓存树渲染 md/csv/json 文本（只读，不触盘）。
+   * `path` 必须是已扫描过的路径（后端 scan_tree 有缓存），否则报错提示先扫描。
+   */
+  exportScanReport: (path: string, format: 'md' | 'csv' | 'json', topN = 50): Promise<string> =>
+    isTauri
+      ? invoke<string>('export_scan_report', { path, format, topN })
+      : Promise.reject(new Error(t('errors.agentDesktopOnly'))),
 };

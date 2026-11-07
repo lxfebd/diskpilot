@@ -75,6 +75,9 @@ struct AppState {
     /// 避免前端把整棵树序列化回来、或每次切盘都要重新全盘遍历。
     /// key = 归一化后的盘根路径（如 `C:\` → `c:\`），与 cleanup_cache / usn_cursors 同 key。
     scan_tree: Mutex<HashMap<String, Node>>,
+    /// R516：每盘最近一次扫描的 ScanStats（与 scan_tree 同 key 同生命周期），
+    /// 供 export_scan_report 渲染报告头部的扫描统计段。
+    scan_stats: Mutex<HashMap<String, diskpilot_scanner::ScanStats>>,
     /// 每盘（归一化盘根 key）最近一次扫描后的 USN Journal 游标。`scan_path_usn`
     /// 用它在增量可用时只回放变更日志并 merge 进 `scan_tree` 缓存树，把重扫
     /// 从分钟级降到亚秒级。游标与 scan_tree 生命周期一致：树被覆盖时同步更新。
@@ -200,6 +203,7 @@ pub fn run() {
                 scan_cancel: Arc::new(AtomicBool::new(false)),
                 cleanup_cache: Mutex::new(HashMap::new()),
                 scan_tree: Mutex::new(HashMap::new()),
+                scan_stats: Mutex::new(HashMap::new()),
                 usn_cursors: Mutex::new(usn_cursors),
                 hw_stops: Mutex::new(Vec::new()),
                 perm_grants: Mutex::new(std::collections::HashSet::new()),
@@ -233,6 +237,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             webview::webview_heartbeat,
             scan::scan_path,
+            scan::export_scan_report,
             scan::cancel_scan,
             scan::tree_subtree,
             #[cfg(windows)]
