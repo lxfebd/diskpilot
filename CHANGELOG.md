@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R511: 扫描性能专项——walk 压测子命令 + 实机基线建档 + 修复 bench feature 编译断裂
+
+- **`diskpilot-scanner walk <目录> [重复次数]`**（跨平台，bench feature）：每次 run 输出 wall/files/s/GB/s + phase 分解（walk/build_tree/total），末行 BEST/AVG；默认 3 次取最佳，供优化前后回归对比。
+- **修复既存断裂**：`--features bench` 构建失败（mft.rs 的 bench 模块漏引 `crate::mft_parse::{fixup_all, parse_record}`），补 use 后 bench/mem/walk 全部可构建。
+- **实机基线（24 核 Win11）**：C:\Windows 73k 文件/19.6GB 最佳 0.86s（84.7k files/s，22.6 GB/s）；C:\Program Files 76k/31.9GB 0.83s（90.8k files/s，38.3 GB/s，SSD）；J 盘 90.4 万文件/70.8GB 13.9s（65k files/s，5.1 GB/s，WD20EZRX 机械盘≈介质极限）。**结论：瓶颈在 walk IO（占比 96–97%），build_tree < 4%（此前已消除二次 read_dir），软件层无明显优化空间**。
+- **新文档 docs/performance-baseline.md**：基线表 + 压测命令 + 回归口径（BEST wall 回退阈值 10%），docs/README.md 索引收录。
+- **验证**：bench 构建零错误、3 组压测完成、cargo fmt/clippy/test 全绿。
+
 ### R510: 官方插件第三批——port-hunter（端口占用审计器），索引仓库发 v1.2.0，CI 绿，线上全量验签通过
 
 - **`plugins/port-hunter/`**（独立 workspace，与前两批同款发布配置）：解析 `netstat -ano` 拿 (协议/本地地址/外端/状态/PID)，`tasklist /FO CSV /NH` 批量映射 PID→进程名；按本地端口排序输出 TopN 占用表 + 摘要（TCP/UDP 计数、LISTENING 数、涉及进程数）；参数 `[TopN] [--proto tcp|udp|all] [--listen]`；GBK 输出 lossy 兜底；3 例解析单元测试绿；exe 134KB（opt-level=z+lto）。

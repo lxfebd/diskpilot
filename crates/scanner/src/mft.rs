@@ -165,6 +165,9 @@ mod tests;
 #[cfg(feature = "bench")]
 pub mod bench {
     use super::*;
+    // R511 修复：bench feature 编译断裂——mft_parse 是 crate 私有模块，
+    // fixup_all/parse_record 需显式引入（此前缺 use 导致 --features bench 构建失败）。
+    use crate::mft_parse::{fixup_all, parse_record};
 
     pub fn run(volume_letter: char) -> anyhow::Result<()> {
         let path = format!(r"\\.\{}:", volume_letter.to_ascii_uppercase());

@@ -11,6 +11,7 @@
 | [plugin-market-index.md](plugin-market-index.md) | 插件作者/维护者 | 社区索引契约：schema 1 信封、签名模型、发布流程、建仓模板 |
 | [publish-plugin-guide.md](publish-plugin-guide.md) | 插件作者 | 三步发布自己的清理插件（导出 zip → 填 index.json → 提 PR） |
 | [security-model.md](security-model.md) | 安全审查者/作者 | 威胁模型 + 各层防线代码定位（含 R505 加固点与已知边界） |
+| [performance-baseline.md](performance-baseline.md) | 开发者 | 扫描性能基线与压测入口（walk 子命令、SSD/HDD 实测吞吐、回归对比口径） |
 | [changelog/README.md](changelog/README.md) | 开发者/维护者 | 逐轮开发记录归档：R1–R380 的 273 条明细按日期分卷存放 |
 
 其他文档入口：
