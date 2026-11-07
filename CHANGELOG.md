@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R522: 发布 v1.0.0 正式版——三平台 CI 构建 21 个产物，release 已 publish
+
+- **版本 bump**：根 `Cargo.toml` / `apps/desktop/package.json` / `tauri.conf.json` 三处 0.2.4 → 1.0.0；README/README_EN 徽章与下载表同步。
+- **CHANGELOG 转版**：`## [未发布]` 空区保留在前（守卫要求），R381–R521 共 30 轮全部归入 `## [1.0.0] - 2026-11-08` 段并加版本摘要；守卫通过（1051 行）。
+- **发布说明**：新增 `docs/releases/v1.0.0.md`（亮点 + 升级提示），GitHub Release body 直接粘贴该文件（相对链接转绝对 URL）。
+- **门禁**：`pre-release-check.mjs` 19 项全绿（fmt/clippy/audit/test/9 插件/前端三件套/守卫/self-test）。
+- **CI 发布**：tag `v1.0.0` → Release run 42424590371 success，产物 21 个（Win exe+msi、mac dmg 双架构+app tar、Linux AppImage/deb/rpm、全部 .sig、latest.json、4 份 SHA256SUMS），draft 构建完成后 publish 为正式 release（id 437910753）。
+
 ## [1.0.0] - 2026-11-08
 
 首个正式版：安全确认链（一次性 nonce 闸 + 写工具门禁）、9 个 Ed25519 签名官方诊断插件与社区索引门禁、扫描报告导出（md/csv/json）、空间趋势回归预测「预计填满日期」、健康管家 P0–P2 全闭环、三平台 CI + --self-test 冒烟 + 发布前 19 项门禁。
