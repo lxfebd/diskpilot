@@ -3,6 +3,7 @@ import type { Scaffold, UndoEntry, CondaEnv, PreflightReport } from '../types';
 import { isTauri } from '../env';
 import * as mocks from '../mocks';
 import { t } from '../i18n';
+import { withConfirmNonce } from './confirm';
 
 /**
  * 清理域：scaffold 管理 / 清理建议 / 执行（scope 与 AI 计划）/ 撤销。
@@ -15,9 +16,14 @@ export const cleanApi = {
     isTauri ? invoke<Scaffold[]>('list_scaffolds') : Promise.resolve(mocks.SCAFFOLDS),
 
   /** 一键安装社区 scaffold：后端校验 toml → 写入用户目录 → 热重载。返回脚本 id。
-   * R505：必须显式传 confirmed=true（按钮点击即确认），后端拒绝未确认调用。 */
+   * R505：必须显式传 confirmed=true（按钮点击即确认），后端拒绝未确认调用。
+   * R508：同时携带一次性确认 nonce（防重放）。 */
   installScaffold: (toml: string, confirmed = false): Promise<string> =>
-    isTauri ? invoke<string>('install_scaffold', { toml, confirmed }) : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'install_scaffold' }))),
+    isTauri
+      ? withConfirmNonce('install_scaffold', (confirmNonce) =>
+          invoke<string>('install_scaffold', { toml, confirmed, confirmNonce }),
+        )
+      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'install_scaffold' }))),
 
   /** 把 AI 权限快照同步到后端（权限中心改动/应用启动时调用）。后端写命令
    * （execute_ai_plan / toolbelt_run / plugin_*）据此做纵深校验。 */
@@ -25,9 +31,14 @@ export const cleanApi = {
     isTauri ? invoke<void>('sync_perms', { enabled }) : Promise.resolve(),
 
   /** 卸载用户安装的 scaffold（内嵌脚本不可卸载，后端拒绝）。
-   * R505：必须显式传 confirmed=true，后端拒绝未确认调用。 */
+   * R505：必须显式传 confirmed=true，后端拒绝未确认调用。
+   * R508：同时携带一次性确认 nonce。 */
   uninstallScaffold: (id: string, confirmed = false): Promise<void> =>
-    isTauri ? invoke<void>('uninstall_scaffold', { id, confirmed }) : Promise.resolve(),
+    isTauri
+      ? withConfirmNonce('uninstall_scaffold', (confirmNonce) =>
+          invoke<void>('uninstall_scaffold', { id, confirmed, confirmNonce }),
+        )
+      : Promise.resolve(),
 
   /** 查询脚本来源：'embedded' | 'user'。 */
   scaffoldSource: (id: string): Promise<string> =>
@@ -109,18 +120,21 @@ export const cleanApi = {
     if (!dryRun && opts.confirmed !== true) {
       return Promise.reject(new Error(t('errors.confirmExecuteScope')));
     }
-    return isTauri
-      ? invoke<UndoEntry[]>('execute_scope', {
-          scaffoldId,
-          scopeId,
-          rootPath,
-          dryRun,
-          olderThanDays: opts.olderThanDays ?? null,
-          wxidFilter: opts.wxidFilter ?? null,
-          envFilter: opts.envFilter ?? null,
-          confirmed: opts.confirmed ?? null,
-        })
-      : mocks.executeScope(scaffoldId, scopeId, rootPath, dryRun, opts);
+    if (!isTauri) return mocks.executeScope(scaffoldId, scopeId, rootPath, dryRun, opts);
+    // R508：真实执行（非 dryRun）先拿一次性 nonce，dryRun 预览是只读不需要。
+    const call = (confirmNonce: string | null) =>
+      invoke<UndoEntry[]>('execute_scope', {
+        scaffoldId,
+        scopeId,
+        rootPath,
+        dryRun,
+        olderThanDays: opts.olderThanDays ?? null,
+        wxidFilter: opts.wxidFilter ?? null,
+        envFilter: opts.envFilter ?? null,
+        confirmed: opts.confirmed ?? null,
+        confirmNonce,
+      });
+    return dryRun ? call(null) : withConfirmNonce('execute_scope', call);
   },
 
   // AI 清理执行入口（仅由确认窗在用户显式确认后调用）。前端第一道闸：
@@ -161,9 +175,12 @@ export const cleanApi = {
   // index 是展示列表位置；source 是与后端对齐的条目路径（防列表在两次
   // 刷新之间变化导致 index 漂移、恢复错条目——后端会双重校验）。
   // R505：还原是写操作，后端强制 confirmed=true（调用方须先弹确认窗）。
+  // R508：同时携带一次性确认 nonce。
   undo: (index: number, source: string, confirmed = false) =>
     isTauri
-      ? invoke<UndoEntry | null>('undo', { index, source, confirmed })
+      ? withConfirmNonce('undo', (confirmNonce) =>
+          invoke<UndoEntry | null>('undo', { index, source, confirmed, confirmNonce }),
+        )
       : mocks.undo(index, source),
 
   /** 打开系统回收站（只开窗口，不代还原）——「回收」类条目的还原出口。 */
@@ -195,9 +212,11 @@ export const cleanApi = {
     if (paths.length === 0) {
       return Promise.resolve([] as UndoEntry[]);
     }
-    return isTauri
-      ? invoke<UndoEntry[]>('recycle_paths', { paths, reason, confirmed })
-      : mocks.recyclePaths(paths, reason);
+    if (!isTauri) return mocks.recyclePaths(paths, reason);
+    // R508：先拿一次性 nonce 再提交（防重放）。
+    return withConfirmNonce('recycle_paths', (confirmNonce) =>
+      invoke<UndoEntry[]>('recycle_paths', { paths, reason, confirmed, confirmNonce }),
+    );
   },
 
   // 重复文件结构化扫描（R2）：只读建议，不删任何东西。返回分组，每组含

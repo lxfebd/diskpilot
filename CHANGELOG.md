@@ -7,6 +7,17 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R508: 写操作确认闸门完整方案——一次性 nonce（防重放）+ 主窗口来源校验 + 频率限制 + 全量审计，覆盖 7 个写命令
+
+- **新模块 `confirm_nonce.rs`**：后端内存签发一次性确认 nonce（getrandom 32 字节、60s 有效期、绑定 op、消费即失效、表上限 256 自动清旧），白名单 op = execute_scope / recycle_paths / undo / install_scaffold / uninstall_scaffold / toolbelt_recycle / toolbelt_run；频率限制 = 同 op 1 秒 ≤1 次、60 秒窗口 ≤10 次；签发写审计日志。
+- **总闸 `write_gate`**：dry_run 永远放行；真实写必须 confirmed==true **且** nonce 消费成功 **且** 频率通过——三者任一失败都拒绝落盘。`consume` 先查后删：op 不匹配/过期不消费 nonce（留给合法调用方）。
+- **来源校验**：7 个写命令全部注入 `window: tauri::Window`，拒绝 label != "main" 的调用（防非主窗口/注入 webview 直接 invoke）。
+- **命令改造**：execute_scope / recycle_paths / undo / install_scaffold / uninstall_scaffold / toolbelt_recycle 全量接入 `confirm_nonce` 参数；toolbelt_run 对 medium+ 风险工具走完整闸门（fail-closed：算不出风险等级按高风险处理），low 风险只需来源校验 + cli.run 权限。
+- **前端**：新增 `api/confirm.ts` `withConfirmNonce(op, run)`——确认动作先申请 nonce 再随命令提交；clean.ts（installScaffold / uninstallScaffold / executeScope 非 dryRun / undo / recyclePaths）与 system-ext.ts（toolbeltRun confirmed 分支 / toolbeltRecycle）全部接入。dry-run 预览不申请 nonce（只读）。
+- **已知边界（诚实声明）**：同源 webview 内的实时 XSS 仍可自行申请 nonce（Tauri IPC 无法区分脚本与真实点击），nonce 防的是**重放**；真正防线 = capability 白名单 + 来源校验 + 频率限制 + 审计追溯。execute_ai_plan（AI 路径）保持原 userConfirmed+权限双门，未纳入 nonce（避免破坏 AI 确认流），列为后续项。
+- **测试**：confirm_nonce 6 例单元测试（签发/一次性消费/重放拒绝/op 不匹配不消费/白名单拒绝/频率限制）+ write_gate 门测试（dry_run 放行、缺 confirmed 拒绝、缺 nonce 拒绝、合法通过）；executor 旧 confirm_gate 测试迁移到 write_gate 口径。
+- **验证**：cargo fmt/clippy -D warnings 干净、cargo audit 仅 2 条已知告警、cargo test --workspace 全绿、前端 tsc + vitest 1305/1305 + eslint 全绿。
+
 ### R507: 官方插件第二批上线——temp-hunter（临时目录扫描器）+ log-hunter（大日志扫描器），索引仓库发 v1.1.0，CI 绿
 
 - **新插件**（源码入主仓库 `plugins/<id>/`，纯 std Rust 小 exe，均只读、risk=low，删除统一走主程序确认链路）：

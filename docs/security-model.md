@@ -33,8 +33,9 @@
 
 ### L3 命令层确认 + 权限门（`apps/desktop/src-tauri`）
 
-- `confirm_gate`：所有真实写操作要求 `confirmed == Some(true)`，前端两步确认窗通过后才带参。
+- `confirm_gate`（R508 前）：所有真实写操作要求 `confirmed == Some(true)`，前端两步确认窗通过后才带参。
 - **R505 新增后端独立门**：`undo`、`install_scaffold`、`uninstall_scaffold` 后端各自校验 confirmed + 权限（`scaffold.manage`）；`execute_scope` / `recycle_paths` 真实执行要求后端权限 `cleanup.execute`（与前端权限中心同步的 `perm_grants` 二次校验，防 webview 注入绕过）。
+- **R508 确认闸门完整方案**：7 个写命令（execute_scope / recycle_paths / undo / install_scaffold / uninstall_scaffold / toolbelt_recycle / toolbelt_run 的 medium+ 分支）统一走 `confirm_nonce::write_gate` = confirmed==true **+ 一次性 nonce 消费（60s 有效、绑定 op、用后即焚，防 invoke 参数重放）** + 频率限制（同 op 1s≤1 次、60s≤10 次）+ 主窗口来源校验（label 必须是 main）+ 签发审计。前端 `withConfirmNonce` 在确认动作时申请 nonce 随命令提交。
 - `sync_perms`：**R505 起权限变更全部写审计日志**（granted/revoked 明细），可追溯"谁在何时打开了哪些高权限"。
 
 ### L4 插件安装与市场（`crates/toolbelt` + `plugin_registry`）
@@ -65,4 +66,6 @@
 
 - 本机同用户进程可篡改本地文件（undo.jsonl / 台账 / 缓存）——防线是"篡改后仍不放行危险动作"（L1/L3/L7 校验），不是防篡改本身。
 - macOS / Linux 构建未在真机验证；签名/公证未做。
-- `sync_perms` 完整 nonce 方案（防 webview 伪造确认）仍在设计中，R505 只做了审计最小加固。
+- R508 的 nonce 防**重放**不防实时 XSS：同源 webview 内被注入的脚本仍可自行申请 nonce（Tauri IPC 区分不了脚本与真实点击）——纵深防线是 capability 白名单 + 来源校验 + 频率限制 + 审计追溯，不是 nonce 本身。
+- `execute_ai_plan`（AI 清理路径）仍走 userConfirmed + 权限双门，未纳入 nonce 闸（避免破坏 AI 确认流），后续版本纳入。
+- `sync_perms` 只做审计加固（R505），权限快照本身仍可被 webview 伪造——缓解手段是写命令同时要求 nonce + 来源校验（R508）。

@@ -21,16 +21,22 @@ pub(crate) fn undo(
     index: usize,
     source: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<Option<UndoEntry>, String> {
+    // R508：来源校验 + 一次性 nonce + 频率限制。
+    crate::confirm_nonce::require_main_window(&window)?;
     // R505：还原是写操作（rename 回原路径 + create_dir_all），必须用户明确确认；
     // 绕过前端确认窗直接 invoke 一律拒绝。restore_quarantined 内部另有
     // destination 落隔离区校验 + source 受保护路径校验（防伪造 undo.jsonl 植入）。
-    if confirmed != Some(true) {
-        return Err(
-            "undo:confirm: 还原会把隔离区文件移回原路径，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "undo",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("undo:confirm: {e}"))?;
     undo_core(&state.undo_log, &state.quarantine_root, index, source)
 }
 

@@ -141,6 +141,7 @@ pub(crate) struct ToolbeltRunReport {
 /// 纵深防御：即使绕过前端直接 invoke，`cli.run` 权限未开启也会被后端拒绝
 /// （前端 execCliTool 同款校验，双保险——权限中心关闭时任何调用路径都执行不了）。
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn toolbelt_run(
     app: AppHandle,
     state: tauri::State<'_, crate::AppState>,
@@ -148,7 +149,31 @@ pub(crate) async fn toolbelt_run(
     args: Vec<String>,
     timeout_secs: Option<u64>,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<ToolbeltRunReport, String> {
+    // R508：medium+ 风险工具走完整闸门（来源 + nonce + 频率）；low 风险只需来源校验。
+    crate::confirm_nonce::require_main_window(&window)?;
+    let needs_gate = {
+        let explicit0 = toolbelt_explicit_root(&app);
+        diskpilot_toolbelt::find_tools_root(explicit0.as_deref())
+            .ok()
+            .and_then(|root| {
+                diskpilot_toolbelt::toolbelt_command_for(&tool, &args, &root, timeout_secs).ok()
+            })
+            .map(|c| c.risk >= diskpilot_toolbelt::Risk::Medium)
+            .unwrap_or(true) // 算不出风险等级时按高风险处理（fail-closed）
+    };
+    if needs_gate {
+        crate::confirm_nonce::write_gate(
+            &state.confirm_guard,
+            "toolbelt_run",
+            false,
+            confirmed,
+            confirm_nonce.as_deref(),
+        )
+        .map_err(|e| format!("toolbelt:confirm: {e}"))?;
+    }
     if !state.perm_grants.lock().unwrap().contains("cli.run") {
         return Err(
             "拒绝执行：未开启「运行工具箱 CLI 工具」权限（cli.run）。请先在权限中心开启。".into(),
@@ -334,13 +359,19 @@ pub(crate) async fn toolbelt_recycle(
     state: tauri::State<'_, crate::AppState>,
     tool: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    if confirmed != Some(true) {
-        return Err(
-            "toolbelt:confirm: 回收工具目录会把整个目录移入回收站，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    // R508：来源校验 + 一次性 nonce + 频率限制。
+    crate::confirm_nonce::require_main_window(&window)?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "toolbelt_recycle",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("toolbelt:confirm: {e}"))?;
     let explicit = toolbelt_explicit_root(&app);
     let root =
         diskpilot_toolbelt::find_tools_root(explicit.as_deref()).map_err(|e| e.to_string())?;

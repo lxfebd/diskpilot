@@ -102,15 +102,21 @@ pub(crate) fn install_scaffold(
     state: State<'_, AppState>,
     toml: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<String, String> {
+    // R508：来源校验 + 一次性 nonce + 频率限制。
+    crate::confirm_nonce::require_main_window(&window)?;
     // R505：安装清理脚本是写操作（写盘 + 热重载为可执行的清理目标来源），
     // 与 scaffold_registry_install 同口径：confirmed + scaffold.manage 双门。
-    if confirmed != Some(true) {
-        return Err(
-            "scaffold:confirm: 安装清理脚本会写入用户脚本目录并使其可用于清理，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "install_scaffold",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("scaffold:confirm: {e}"))?;
     if !state
         .perm_grants
         .lock()
@@ -245,14 +251,20 @@ pub(crate) fn uninstall_scaffold(
     state: State<'_, AppState>,
     id: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<(), String> {
+    // R508：来源校验 + 一次性 nonce + 频率限制。
+    crate::confirm_nonce::require_main_window(&window)?;
     // R505：卸载同样是写操作（删盘），confirmed + scaffold.manage 双门。
-    if confirmed != Some(true) {
-        return Err(
-            "scaffold:confirm: 卸载清理脚本会删除用户脚本目录中的文件，必须由用户明确确认（confirmed=true）。"
-                .into(),
-        );
-    }
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "uninstall_scaffold",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("scaffold:confirm: {e}"))?;
     if !state
         .perm_grants
         .lock()

@@ -20,20 +20,8 @@ pub(crate) mod exec_undo_core;
 
 pub(crate) use exec_glob::scope_glob_roots;
 
-/// 人驱动写操作的确认门：`dry_run` 恒放行（预览只读，可以随便调），一旦落到
-/// 磁盘就必须 `confirmed == Some(true)`。抽成函数是为了让这条铁律有测试兜底
-/// （`execute_scope` / `recycle_paths` 共用；`toolbelt_recycle` 没有预览分支，
-/// 单独写了同样的判断）。
-///
-/// 注意这里**不**校验 `cleanup.execute` 权限：那条 L2 权限是「允许 AI 自己
-/// 执行清理」的钥匙（见 `execute_ai_plan`），而这几条命令是用户在看清清单后
-/// 主动点的按钮。把人驱动的流程绑到默认关闭的 AI 权限上，普通用户就清不了东西。
-pub(crate) fn confirm_gate(dry_run: bool, confirmed: Option<bool>) -> Result<(), &'static str> {
-    if !dry_run && confirmed != Some(true) {
-        return Err("必须由用户明确确认（confirmed=true）后才能真实落盘。");
-    }
-    Ok(())
-}
+// 人驱动写操作的确认门已升级为 R508 的 `confirm_nonce::write_gate`
+// （dry_run 恒放行；真实写 = confirmed==true + 一次性 nonce 消费 + 频率限制）。
 
 #[cfg(test)]
 mod tests {
@@ -53,15 +41,19 @@ mod tests {
     }
 
     #[test]
-    fn confirm_gate_blocks_real_writes_without_confirmation() {
-        // 预览（dry-run）是只读的，永远放行；真实落盘必须 confirmed == Some(true)。
-        // `None` / `Some(false)` 都不算确认——绕过前端确认窗直接 invoke 要被拦下。
-        assert!(confirm_gate(true, None).is_ok());
-        assert!(confirm_gate(true, Some(false)).is_ok());
-        assert!(confirm_gate(true, Some(true)).is_ok());
-        assert!(confirm_gate(false, None).is_err());
-        assert!(confirm_gate(false, Some(false)).is_err());
-        assert!(confirm_gate(false, Some(true)).is_ok());
+    fn write_gate_blocks_real_writes_without_confirmation() {
+        // R508 口径：预览（dry-run）是只读的，永远放行；真实落盘必须
+        // confirmed == Some(true) **且** 一次性 nonce 消费成功。
+        use crate::confirm_nonce::{write_gate, ConfirmGuard};
+        let g = ConfirmGuard::new();
+        assert!(write_gate(&g, "undo", true, None, None).is_ok());
+        assert!(write_gate(&g, "undo", true, Some(false), None).is_ok());
+        assert!(write_gate(&g, "undo", false, None, None).is_err());
+        assert!(write_gate(&g, "undo", false, Some(false), None).is_err());
+        // confirmed=true 但没有 nonce 也拒绝（防伪造 confirmed 参数）
+        assert!(write_gate(&g, "undo", false, Some(true), None).is_err());
+        let n = g.issue("undo").unwrap();
+        assert!(write_gate(&g, "undo", false, Some(true), Some(&n)).is_ok());
     }
 
     #[test]

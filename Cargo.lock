@@ -978,6 +978,7 @@ dependencies = [
  "diskpilot-steam-inspector",
  "diskpilot-toolbelt",
  "encoding_rs",
+ "getrandom 0.2.17",
  "globset",
  "include_dir",
  "reqwest",

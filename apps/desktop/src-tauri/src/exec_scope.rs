@@ -11,7 +11,6 @@ use diskpilot_scanner::{
 };
 use tauri::State;
 
-use super::confirm_gate;
 use super::exec_glob::scope_glob_roots;
 use crate::AppState;
 
@@ -27,9 +26,20 @@ pub(crate) async fn execute_scope(
     wxid_filter: Option<Vec<String>>,
     env_filter: Option<Vec<String>>,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<Vec<UndoEntry>, String> {
+    // R508：来源校验（只认主窗口）+ 一次性 nonce 消费 + 频率限制，三层纵深。
+    crate::confirm_nonce::require_main_window(&window)?;
     // 绕过前端确认窗直接 invoke 也要被拦下（铁律：清理先出清单 + 用户确认）。
-    confirm_gate(dry_run, confirmed).map_err(|e| format!("execute:confirm: {e}"))?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "execute_scope",
+        dry_run,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("execute:confirm: {e}"))?;
     // R505：真实执行（非 dry_run）同时要求后端权限 cleanup.execute——
     // 与 execute_ai_plan 同口径，防止只靠客户端 confirmed 被绕过。
     if !dry_run

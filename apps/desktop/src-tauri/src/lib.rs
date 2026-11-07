@@ -6,6 +6,7 @@ mod auto_list;
 mod cleanup;
 mod cleanup_logic;
 mod conda;
+mod confirm_nonce;
 mod drivers;
 mod drives;
 mod dups;
@@ -109,6 +110,8 @@ struct AppState {
     /// 超时兜底：超过 30s 强制清除（Alive 过 8s 超时 + build 几秒 + 进程起
     /// 需要时间，正常情况下远小于 30s）。
     webview_busy: Mutex<Option<chrono::DateTime<chrono::Utc>>>,
+    /// R508 写操作确认闸门：一次性 nonce 表 + 频率限制窗口。
+    pub(crate) confirm_guard: confirm_nonce::ConfirmGuard,
 }
 
 // ── 硬件检测与受控压测（hw_detect）────────────────────────────────────
@@ -202,6 +205,7 @@ pub fn run() {
                 last_heartbeat: Mutex::new(None),
                 ai_cancels: Mutex::new(std::collections::HashMap::new()),
                 webview_busy: Mutex::new(None),
+                confirm_guard: confirm_nonce::ConfirmGuard::new(),
             });
 
             // 平台支持时建托盘（取不到图标/无 appindicator 则跳过，非致命）。
@@ -233,6 +237,7 @@ pub fn run() {
             #[cfg(windows)]
             scan::scan_path_usn,
             drives::estimate_size,
+            confirm_nonce::issue_confirm_nonce,
             scaffold_cmds::sync_perms,
             scaffold_cmds::list_scaffolds,
             scaffold_cmds::install_scaffold,

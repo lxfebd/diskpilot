@@ -5,6 +5,7 @@ import * as mocks from '../mocks';
 import { t } from '../i18n';
 import { common } from '../i18n/namespaces/common';
 import { isPermEnabled } from '../permissions';
+import { withConfirmNonce } from './confirm';
 
 // 插件写操作的前置权限闸：plugin.manage 未开启时直接拒绝，与后端
 // `plugin:denied` 同口径——用户先在权限中心开权限，而不是点按钮后收到
@@ -143,15 +144,19 @@ export const systemExtApi = {
       ? invoke<ToolbeltUsage>('toolbelt_usage', { tool })
       : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'toolbelt_usage' }))),
 
-  toolbeltRun: (tool: string, args: string[], timeoutSecs?: number, confirmed?: boolean) =>
-    isTauri
-      ? invoke<ToolbeltRunReport>('toolbelt_run', {
-          tool,
-          args,
-          timeoutSecs: timeoutSecs ?? null,
-          confirmed: confirmed ?? null,
-        })
-      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'toolbelt_run' }))),
+  toolbeltRun: (tool: string, args: string[], timeoutSecs?: number, confirmed?: boolean) => {
+    if (!isTauri) return Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'toolbelt_run' })));
+    // R508：confirmed 时先拿一次性 nonce（后端对 medium+ 风险工具消费该 nonce）。
+    const call = (confirmNonce: string | null) =>
+      invoke<ToolbeltRunReport>('toolbelt_run', {
+        tool,
+        args,
+        timeoutSecs: timeoutSecs ?? null,
+        confirmed: confirmed ?? null,
+        confirmNonce,
+      });
+    return confirmed ? withConfirmNonce('toolbelt_run', call) : call(null);
+  },
 
   /** 后端 toolbelt_run 的中/高风险确认门错误判定：以稳定前缀 `toolbelt:confirm:`
    * 区分「需要用户确认」与其他失败，不再依赖错误文案关键词匹配。 */
@@ -182,9 +187,15 @@ export const systemExtApi = {
     if (!confirmed) {
       return Promise.reject(new Error(t('errors.confirmToolbeltRecycle')));
     }
-    return isTauri
-      ? invoke<{ name: string; dir_rel: string; recycled: string[] }>('toolbelt_recycle', { tool, confirmed })
-      : Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'toolbelt_recycle' })));
+    if (!isTauri) return Promise.reject(new Error(t('errors.tauriOnly', { cmd: 'toolbelt_recycle' })));
+    // R508：先拿一次性 nonce 再提交（防重放）。
+    return withConfirmNonce('toolbelt_recycle', (confirmNonce) =>
+      invoke<{ name: string; dir_rel: string; recycled: string[] }>('toolbelt_recycle', {
+        tool,
+        confirmed,
+        confirmNonce,
+      }),
+    );
   },
 
   // 检查更新：查 GitHub Releases 最新版，返回本地/远端版本 + 是否有新版

@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use diskpilot_executor::{execute, Plan, UndoEntry};
 use tauri::State;
 
-use super::confirm_gate;
 use crate::AppState;
 use diskpilot_scaffold::expand_env;
 
@@ -113,9 +112,20 @@ pub(crate) async fn recycle_paths(
     paths: Vec<String>,
     reason: String,
     confirmed: Option<bool>,
+    window: tauri::Window,
+    confirm_nonce: Option<String>,
 ) -> Result<Vec<UndoEntry>, String> {
+    // R508：来源校验 + 一次性 nonce + 频率限制。
+    crate::confirm_nonce::require_main_window(&window)?;
     // 这个命令没有预览分支，永远真实落盘 → dry_run 传 false。
-    confirm_gate(false, confirmed).map_err(|e| format!("recycle:confirm: {e}"))?;
+    crate::confirm_nonce::write_gate(
+        &state.confirm_guard,
+        "recycle_paths",
+        false,
+        confirmed,
+        confirm_nonce.as_deref(),
+    )
+    .map_err(|e| format!("recycle:confirm: {e}"))?;
     // R505：真实回收同样要求后端权限 cleanup.execute（与 execute_scope 同口径）。
     if !state
         .perm_grants
