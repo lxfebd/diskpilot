@@ -7,6 +7,16 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R507: 官方插件第二批上线——temp-hunter（临时目录扫描器）+ log-hunter（大日志扫描器），索引仓库发 v1.1.0，CI 绿
+
+- **新插件**（源码入主仓库 `plugins/<id>/`，纯 std Rust 小 exe，均只读、risk=low，删除统一走主程序确认链路）：
+  - `temp-hunter` 临时目录扫描器：扫描 `%TEMP%` + `%SystemRoot%\Temp`，按年龄分桶（>30天/7-30天/<7天）统计 + TopN 最大文件；内置深度 8 层 / 20 万文件上限，超大 Temp 提前收尾并标注"报告为下界"（实测本机 20 万文件 32s 扫完、34GB 合计）。
+  - `log-hunter` 大日志扫描器：扫描 `.log/.dmp/.wer/.hdmp/.mdmp/.trace/.etl` 及轮转压缩形态（`app.log.3`、`app.20261101.log.gz`），阈值 + TopN 报告；含 3 例单元测试（常见扩展名 / 轮转形态 / 非日志拒绝）。
+- **发布链路（与 R504 同口径）**：`sign_plugin_dir`（Ed25519，私钥 `~/.diskpilot/release-signing/secret.hex` 不入库）→ `export_plugin_zip` → 上传索引仓库 Releases `v1.1.0` → `index.json` 追加两条（signer 锚定官方公钥）→ 信封重签（payload = `serde_json::to_string(&plugins)`）→ push；索引仓库 CI `validate-index` 绿。
+- **端到端验证（线上真实数据）**：拉取线上 index.json 信封验签通过（signer=官方公钥 `4eac4122…af00a5`）；5 个线上 zip 的 sha256 与索引逐字节一致；每个包内 Ed25519 有效且包内 signer 锚定索引声明；本地 `install_plugin_zip`（verify=ed25519 强制验签）安装两个新包成功且 entry 存在；两个 exe 实际运行输出正常报告。
+- 文档：README 中英文 + `docs/plugin-market-index.md` §4 更新为 5 个官方插件与 v1.1.0 说明。
+- 验证：新插件 `cargo test` 3/3 绿、主仓库门禁不受影响（插件独立 workspace）、check-changelog/check-docs-links 通过、前端 vitest 1305/tsc/eslint 全绿。
+
 ### R506: 文档轮——README_EN 全量同步到 v0.2.4 最新结构 + 新增 docs/security-model.md 威胁模型文档
 
 - `README_EN.md` 重写对齐中文主 README：Release v0.2.4 徽章、下载表（Win/mac/Linux + .sig + 自动更新）、v0.2.4–v0.2.2 更新日志、三张 Demo 截图、7 大功能块（含 76 个 MCP 工具、硬件中心、插件市场官方索引已上线）、6 层安全模型（含 R505 纵深复验）、隐私、架构、路线图、开发/贡献（此前仍停留在"尚未发布安装包"的旧口径）。
