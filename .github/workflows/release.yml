@@ -81,6 +81,51 @@ jobs:
             fi
           done
 
+      # R544 踩坑：tauri bundler 打包时要从 github 下载 NSIS/WiX/AppRun 二进制，
+      # 上游 release-assets 偶发 504 会让整个 release 挂掉（mac .app 不受影响）。
+      # 这里先用 curl 重试下载，放进 bundler 的工具缓存目录（cache_dir/tauri），
+      # bundler 发现必需文件已存在（含 sha1 校验）就跳过下载。
+      - name: Pre-download tauri bundler tools (NSIS/WiX/AppRun) with retry
+        shell: bash
+        run: |
+          set -e
+          dl() { # url out
+            local url="$1" out="$2" i
+            for i in 1 2 3 4 5 6 7 8; do
+              if curl -fL --retry 5 --retry-all-errors --connect-timeout 20 -o "$out" "$url"; then return 0; fi
+              echo "download retry $i: $url" >&2; sleep $((i * 10))
+            done
+            echo "FAILED to download $url" >&2; return 1
+          }
+          if [[ "${{ matrix.os }}" == windows-* ]]; then
+            tools="$LOCALAPPDATA/tauri"
+            mkdir -p "$tools"
+            # NSIS 3.13：zip 内含 nsis-3.13/ 目录，整体挪到 NSIS
+            if [ ! -f "$tools/NSIS/makensis.exe" ]; then
+              dl "https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.13/nsis-3.13.zip" "$RUNNER_TEMP/nsis.zip"
+              unzip -q "$RUNNER_TEMP/nsis.zip" -d "$RUNNER_TEMP/nsisx"
+              mv "$RUNNER_TEMP/nsisx/nsis-3.13" "$tools/NSIS"
+            fi
+            # tauri 自带的 nsis 插件 dll（bundler 校验其 sha1，版本必须对）
+            mkdir -p "$tools/NSIS/Plugins/x86-unicode/additional"
+            dl "https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll" \
+              "$tools/NSIS/Plugins/x86-unicode/additional/nsis_tauri_utils.dll"
+            # WiX 3.14（MSI 用）
+            if [ ! -f "$tools/WixTools314/candle.exe" ]; then
+              dl "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip" "$RUNNER_TEMP/wix.zip"
+              unzip -q "$RUNNER_TEMP/wix.zip" -d "$tools/WixTools314"
+            fi
+          elif [[ "${{ matrix.os }}" == ubuntu-* ]]; then
+            tools="$HOME/.cache/tauri"
+            mkdir -p "$tools"
+            # AppImage 的 AppRun（bundler 下载后要求可执行位）
+            if [ ! -f "$tools/AppRun-x86_64" ]; then
+              dl "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64" "$tools/AppRun-x86_64"
+              chmod +x "$tools/AppRun-x86_64"
+            fi
+          fi
+          echo "bundler tools ready under cache dir"
+
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
