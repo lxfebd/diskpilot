@@ -238,13 +238,19 @@ export function HwReportCard({ info, health, loading, tempWarnC }: { info: HwInf
                       : 'hw.healthUnknown',
               );
               return (
-                <li key={i} className="hw-row">
+                // R540：异常盘整行淡底色（bad 红 / caution 黄），不只靠图标颜色
+                <li key={i} className={'hw-row' + (grade === 'bad' ? ' hw-row-bad' : grade === 'caution' ? ' hw-row-caution' : '')}>
                   <Icon size={13} style={color ? { color } : undefined} />
                   <span className="hw-name" title={hwName}>{hwName}</span>
                   <span className="hw-meta">
                     <span title={healthRaw}>{healthLabel}</span> · {ph > 0 ? t('hw.powerOnHours', { hours: ph }) : ''}{' '}
                     {wear >= 0 ? t('hw.lifeSuffix', { pct: Math.max(0, 100 - wear) }) : ''}{' '}
-                    {tempC > 0 ? `· ${tempC.toFixed(0)}℃` : ''}
+                    {tempC > 0 ? (
+                      // R540：盘温度也参与超温标红（与 R539 主卡同阈值）
+                      <span className={hwTempOver(tempC, tempWarnC) ? 'hw-temp-over' : undefined} title={hwTempOver(tempC, tempWarnC) ? t('hw.tempOverWarn', { c: Math.round(tempWarnC ?? 0) }) : undefined}>
+                        · {tempC.toFixed(0)}℃
+                      </span>
+                    ) : ''}
                   </span>
                 </li>
               );

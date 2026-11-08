@@ -189,6 +189,9 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 .hw-trend-warnlabel { color: var(--risk-warn, #d6a145); }
 /* R539 主卡温度超阈值标红 */
 .hw-temp-over { color: var(--risk-danger, #d64545); font-weight: 700; }
+/* R540 SMART 异常盘整行淡底色 */
+.hw-row-bad { background: color-mix(in srgb, var(--risk-danger, #d64545) 12%, transparent); border-radius: 6px; }
+.hw-row-caution { background: color-mix(in srgb, var(--risk-warn, #d6a145) 12%, transparent); border-radius: 6px; }
 /* R146：单条趋势线的有效读数个数——点少（2–4）时用警示色，趋势仅供参考 */
 .hw-trend-points {
   font-size: 10px; white-space: nowrap; font-family: var(--font-mono, ui-monospace, monospace);

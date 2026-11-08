@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R540: SMART 异常盘整行标色 + 盘温参与超温红标——bad 淡红底 / caution 淡黄底，温度超阈值染红
+
+- 硬件报告卡的磁盘列表：按已有 `gradeDiskHealth` 分级给 `hw-row` 加 `hw-row-bad` / `hw-row-caution` 背景（图标颜色已有，现在整行醒目）；盘温度复用 R539 的 `hwTempOver` + `tempWarnC`，超阈值红字 + tooltip。
+- CSS `color-mix` 半透明底色，不依赖新变量。门禁 21/21 绿。
+
 ### R539: 硬件主卡温度超阈值标红——与 R538 趋势图同一阈值语义（thermal_sustained_c）
 
 - 纯函数 `hwTempOver(tempC, warnC)`（1 组单测）；`HwReportCard` 新 prop `tempWarnC`，温度格当前值（GPU 实时优先，否则传感器最大值）≥ 阈值时 `.hw-temp-over` 标红 + tooltip 说明；ChatPanel 启动时读 `api.getReminderConfig()` 传入。
