@@ -159,6 +159,14 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   // R528 硬件趋势：历史页挂载时读一次 hw_snapshot_series（只读）；读失败给 err 不伪装空
   const [hwSeries, setHwSeries] = useState<HwSeriesPoint[]>([]);
   const [hwSeriesErr, setHwSeriesErr] = useState<string | null>(null);
+  // R538：超温阈值（来自提醒配置 thermal_sustained_c），传给趋势图画阈值线
+  const [tempWarnC, setTempWarnC] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isTauri) return;
+    api.getReminderConfig()
+      .then((c) => { if (typeof c?.thermal_sustained_c === 'number') setTempWarnC(c.thermal_sustained_c); })
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     if (!isTauri) return;
     let cancelled = false;
@@ -172,8 +180,8 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
       <div className="hp-shell">
         <WeeklyHealthCard onOpenCleanup={onOpenCleanup} />
         <NoticesBlock />
-        {isTauri && hwSeries.length > 0 && <HwTrendChart series={hwSeries} err={hwSeriesErr} />}
-        {isTauri && hwSeries.length === 0 && hwSeriesErr && <HwTrendChart series={[]} err={hwSeriesErr} />}
+        {isTauri && hwSeries.length > 0 && <HwTrendChart series={hwSeries} err={hwSeriesErr} tempWarnC={tempWarnC} />}
+        {isTauri && hwSeries.length === 0 && hwSeriesErr && <HwTrendChart series={[]} err={hwSeriesErr} tempWarnC={tempWarnC} />}
         <div className="hp-head">
         <span className="hp-title"><History size={15} /> {t('history.title')}</span>
         {loadErr ? (

@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R538: 硬件趋势图超温阈值标注——温度线画阈值虚线 + 超温点红圈（阈值取自提醒配置 thermal_sustained_c）
+
+- **纯函数**：`hwTempWarnY` / `hwTempOverXY`（与 `hwSeriesPath` 同一归一化，3 单测）；`HwTrendChart` 新可选 prop `tempWarnC`，阈值在数据范围内才画线，超温点标红圈、最高温旁标「超 N°C 阈值」。
+- **数据源**：历史页 `api.getReminderConfig()` 读 `thermal_sustained_c` 传入（与 R529 周报超温判定同源，一个配置两处用）。
+- i18n `hw.trendWarn` zh+en，CSS `.hw-trend-warn/.hw-trend-over/.hw-trend-warnlabel`。门禁 21/21 绿。
+
 ### R537: 持久化通知中心——周报/空间预警/扫描提醒/自动导出都入列，历史页顶部可回看可清空
 
 - **纯前端**：新模块 `notices.ts`（localStorage `diskpilot:notices-v1`，cap 50 最新在前，`pushNotice` 纯函数 3 单测）；App.tsx 的 `health-weekly` / `space-full-reminder` / `scan-stale` / `report-exported` 四个事件监听在 toast 之余统一 `addNotice` 入列。

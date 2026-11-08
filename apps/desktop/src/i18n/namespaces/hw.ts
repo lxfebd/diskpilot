@@ -92,6 +92,8 @@ export const hw = {
     // R96 硬件趋势：多快照折线（温度 / 通电时长），字段缺失跳过不画。
     'hw.trendTitle': '趋势',
     'hw.trendTemp': '最高温（°C）',
+    // R538 超温阈值标注
+    'hw.trendWarn': '超 {c}°C 阈值',
     'hw.trendPower': '通电时长（小时）',
     'hw.trendTempNone': '还没有带温度的快照，生成几次硬件报告后这里会画温度曲线。',
     'hw.trendPowerNone': '还没有带通电时长数据的快照，趋势图暂空。',
@@ -190,6 +192,8 @@ export const hw = {
     // R96 hardware trend: multi-snapshot lines (temp / power-on hours), missing values skipped.
     'hw.trendTitle': 'Trend',
     'hw.trendTemp': 'Max temp (°C)',
+    // R538 over-temp threshold marker
+    'hw.trendWarn': 'over {c}°C threshold',
     'hw.trendPower': 'Power-on hours',
     'hw.trendTempNone': 'No snapshots with a temperature reading yet — generate a few hardware reports and the temp line will appear here.',
     'hw.trendPowerNone': 'No snapshots with power-on-hour data yet, the trend stays empty.',

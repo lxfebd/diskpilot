@@ -610,6 +610,32 @@ export function hwSeriesQuality(vals: readonly number[]): 'rich' | 'sparse' | 'n
   return n >= 5 ? 'rich' : 'sparse';
 }
 
+/** R538：阈值线的 y 坐标（与 hwSeriesPath 同一归一化），超出数据范围返回 null（不画线）。 */
+export function hwTempWarnY(vals: readonly number[], warnC: number, _w = 240, h = 40): number | null {
+  if (vals.length < 2 || !Number.isFinite(warnC)) return null;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  if (warnC < min || warnC > max) return null;
+  const span = Math.max(1, max - min);
+  return h - 3 - ((warnC - min) / span) * (h - 6);
+}
+
+/** R538：超温点的 [x, y] 列表（≥ warnC 视为超温），用于红点标注。 */
+export function hwTempOverXY(vals: readonly number[], warnC: number, w = 240, h = 40): [number, number][] {
+  if (vals.length < 2 || !Number.isFinite(warnC)) return [];
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const span = Math.max(1, max - min);
+  return vals
+    .map((v, i) => {
+      const x = (i / (vals.length - 1)) * w;
+      const y = h - 3 - ((v - min) / span) * (h - 6);
+      return [x, y, v] as [number, number, number];
+    })
+    .filter(([, , v]) => v >= warnC)
+    .map(([x, y]) => [x, y] as [number, number]);
+}
+
 /// R96 硬件趋势折线：把有序数值点归一化画 SVG path（值平=水平线）。
 /// 只有 ≥2 个有值点才返回；W×H 尺寸与 overview 的 sparkline 一致。
 export function hwSeriesPath(vals: number[], w = 240, h = 40): string {
@@ -628,7 +654,7 @@ export function hwSeriesPath(vals: number[], w = 240, h = 40): string {
 
 /// R96 硬件趋势图：温度 / 通电时长两条折线（各有值的点才画，缺失跳过）。
 /// R110：读失败经 err prop 优先展示——失败 ≠ 两种数据都没有。
-export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: string | null }) {
+export function HwTrendChart({ series, err, tempWarnC }: { series: HwSeriesPoint[]; err?: string | null; tempWarnC?: number | null }) {
   const t = useT();
   const temps = series.filter((p) => p.temp_max != null).map((p) => p.temp_max!);
   const powers = series.filter((p) => p.power_on_hours != null).map((p) => p.power_on_hours!);
@@ -649,8 +675,27 @@ export function HwTrendChart({ series, err }: { series: HwSeriesPoint[]; err?: s
           <span className="hw-trend-label">{t('hw.trendTemp')}</span>
           <svg viewBox={`0 0 240 40`} className="hw-trend-svg" role="img" aria-label={t('hw.trendTemp')}>
             <path d={hwSeriesPath(temps)} className="hw-trend-line temp" fill="none" />
+            {/* R538：超温阈值虚线 + 超温点红圈（阈值来自提醒配置 thermal_sustained_c） */}
+            {tempWarnC != null && hwTempWarnY(temps, tempWarnC) != null && (
+              <line
+                x1={0}
+                x2={240}
+                y1={hwTempWarnY(temps, tempWarnC)!}
+                y2={hwTempWarnY(temps, tempWarnC)!}
+                className="hw-trend-warn"
+              />
+            )}
+            {tempWarnC != null &&
+              hwTempOverXY(temps, tempWarnC).map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r={2.4} className="hw-trend-over" />
+              ))}
           </svg>
-          <span className="hw-trend-max muted small">{Math.round(Math.max(...temps))}°C</span>
+          <span className="hw-trend-max muted small">
+            {Math.round(Math.max(...temps))}°C
+            {tempWarnC != null && Math.max(...temps) >= tempWarnC && (
+              <span className="hw-trend-warnlabel"> · {t('hw.trendWarn', { c: Math.round(tempWarnC) })}</span>
+            )}
+          </span>
           {/* R146：这条线自己的读数个数——总快照数不等于本列有效值数 */}
           <span
             className={'hw-trend-points muted small' + (hwSeriesQuality(temps) === 'sparse' ? ' sparse' : '')}

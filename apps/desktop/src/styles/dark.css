@@ -183,6 +183,10 @@ html[data-mode="dark"] .ao-quick-btn svg { color: var(--accent); }
 .hw-trend-line.temp { stroke: var(--risk-danger, #d64545); }
 .hw-trend-line.power { stroke: var(--accent, #4a8af4); }
 .hw-trend-max { font-size: 11px; white-space: nowrap; }
+/* R538 超温阈值虚线 + 超温点 */
+.hw-trend-warn { stroke: var(--risk-warn, #d6a145); stroke-width: 1; stroke-dasharray: 3 3; }
+.hw-trend-over { fill: var(--risk-warn, #d6a145); stroke: var(--bg, #1c1f26); stroke-width: 0.8; }
+.hw-trend-warnlabel { color: var(--risk-warn, #d6a145); }
 /* R146：单条趋势线的有效读数个数——点少（2–4）时用警示色，趋势仅供参考 */
 .hw-trend-points {
   font-size: 10px; white-space: nowrap; font-family: var(--font-mono, ui-monospace, monospace);

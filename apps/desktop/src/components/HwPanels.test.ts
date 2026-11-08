@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath, hwSeriesQuality } from './HwPanels';
+import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath, hwSeriesQuality, hwTempWarnY, hwTempOverXY } from './HwPanels';
 import { setLang } from '../i18n';
 
 // fmtHwTime：把归档 Unix 秒转成本地可读时间；非法/空输入返回空串（展示层兜底）。
@@ -73,6 +73,34 @@ describe('vramStr（AdapterRAM 溢出区判定）', () => {
 });
 
 // R96 硬件趋势折线 path：≥2 个有值点才画；归一化到自身 min/max（值平=水平线）。
+describe('hwTempWarnY / hwTempOverXY（R538 超温阈值标注）', () => {
+  it('阈值在数据范围内 → 返回 y 坐标；范围外 → null 不画线', () => {
+    expect(hwTempWarnY([50, 80], 65)).not.toBeNull();
+    expect(hwTempWarnY([50, 80], 90)).toBeNull();
+    expect(hwTempWarnY([50, 80], 40)).toBeNull();
+    expect(hwTempWarnY([50], 65)).toBeNull();
+    expect(hwTempWarnY([50, 80], NaN)).toBeNull();
+  });
+  it('阈值 y 与 hwSeriesPath 同归一化：warnC=max 时 y 应等于最高点 y', () => {
+    const vals = [50, 60, 80];
+    const y = hwTempWarnY(vals, 80);
+    const p = hwSeriesPath(vals);
+    const lastY = Number(p.split(' ').pop()!.slice(1).split(',')[1]);
+    expect(y).toBeCloseTo(lastY, 5);
+  });
+  it('超温点只收 ≥ 阈值的点，坐标与 path 一致', () => {
+    const vals = [50, 85, 60, 90];
+    const over = hwTempOverXY(vals, 80);
+    expect(over).toHaveLength(2);
+    const p = hwSeriesPath(vals).split(' ');
+    const y1 = Number(p[1].slice(1).split(',')[1]);
+    // path 的 y 保留 1 位小数，比较放宽到 0.06
+    expect(over[0][1]).toBeCloseTo(y1, 1);
+    expect(hwTempOverXY(vals, 95)).toEqual([]);
+    expect(hwTempOverXY(vals, NaN)).toEqual([]);
+  });
+});
+
 describe('hwSeriesPath', () => {
   it('少于 2 点返回空串', () => {
     expect(hwSeriesPath([])).toBe('');
