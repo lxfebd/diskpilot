@@ -344,6 +344,8 @@
 }
 .wh-diag-list li.err { color: var(--risk-danger, #e5534b); }
 
+/* R541 异常盘行标红字 */
+.wh-disk-alert { color: var(--risk-danger, #d64545); }
 .wh-delta-list {
   list-style: none;
   margin: 0;

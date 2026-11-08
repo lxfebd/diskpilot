@@ -74,6 +74,8 @@ export const history = {
     'history.weekly.scanTrend': '扫描趋势',
     'history.weekly.scanTrendNone': '还没有足够的扫描历史来对比趋势（同一扫描根至少需要两次扫描）。',
     'history.weekly.obsAlerts': '观测异常',
+    // R541 异常盘清单
+    'history.weekly.diskAlerts': '异常磁盘',
     'history.weekly.obsNone': '观测数据完好：没有损坏行，也没有读取失败。',
   },
   en: {
@@ -145,6 +147,8 @@ export const history = {
     'history.weekly.scanTrend': 'Scan trends',
     'history.weekly.scanTrendNone': 'Not enough scan history to compare yet (the same scan root needs at least two scans).',
     'history.weekly.obsAlerts': 'Observation anomalies',
+    // R541 abnormal disk list
+    'history.weekly.diskAlerts': 'Abnormal disks',
     'history.weekly.obsNone': 'Observation data intact: no corrupt lines, no read failures.',
   },
 };

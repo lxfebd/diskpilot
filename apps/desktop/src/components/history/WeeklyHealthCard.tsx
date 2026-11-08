@@ -377,6 +377,18 @@ export function WeeklyHealthCard({
               )}
             </div>
           )}
+
+          {/* R541：异常盘清单（grade=caution/bad），与硬件卡 R540 同源；空 = 真健康，不显示"一切正常"伪文案 */}
+          {report.disk_alerts !== undefined && report.disk_alerts.length > 0 && (
+            <div className="wh-delta">
+              <div className="wh-delta-title">{t('history.weekly.diskAlerts')}</div>
+              <ul className="wh-delta-list">
+                {report.disk_alerts.map((line) => (
+                  <li key={line} className="wh-disk-alert">{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </section>

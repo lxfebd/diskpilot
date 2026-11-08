@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R541: 周报新增「异常磁盘」清单（disk_alerts）——与 R540 硬件卡同源的 grade 分级，caution/bad 入列红字显示
+
+- **后端**：`WeeklyReport.disk_alerts`（`#[serde(default)]`，旧归档兼容）+ 纯函数 `disk_alert_lines`（good/unknown 不算异常，不拿「没读到」报警）+ 单测 + 序列化往返补字段；`cargo fmt` 一次。
+- **前端**：type 加可选字段，WeeklyHealthCard 在 obs_alerts 块后渲染红字清单（空 = 真健康，不伪造「一切正常」），i18n `history.weekly.diskAlerts` zh+en。
+- 门禁 21/21 绿（clippy 重复 #[test] 已修）。
+
 ### R540: SMART 异常盘整行标色 + 盘温参与超温红标——bad 淡红底 / caution 淡黄底，温度超阈值染红
 
 - 硬件报告卡的磁盘列表：按已有 `gradeDiskHealth` 分级给 `hw-row` 加 `hw-row-bad` / `hw-row-caution` 背景（图标颜色已有，现在整行醒目）；盘温度复用 R539 的 `hwTempOver` + `tempWarnC`，超阈值红字 + tooltip。

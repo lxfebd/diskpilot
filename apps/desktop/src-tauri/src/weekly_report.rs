@@ -75,6 +75,11 @@ pub(crate) struct WeeklyReport {
     /// 旧归档没有此字段 → 前端整块不显示。
     #[serde(default)]
     pub obs_alerts: Vec<String>,
+    /// R541：异常盘清单行（grade 为 caution / bad 的盘）。全部健康则空——
+    /// 空 = 真没异常，与 disks 为空（读失败）靠 disks_note 区分，不混淆。
+    /// 旧归档没有此字段 → 前端整块不显示。
+    #[serde(default)]
+    pub disk_alerts: Vec<String>,
 }
 
 /// 周报里的单块盘健康摘要。`health` 是后端原值（Healthy / Warning / …），
@@ -273,6 +278,9 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
     let rcfg = crate::reminder::config_at(app);
     let temp_alert = temp_alert_note(temp_max_c, &rcfg);
 
+    // R541：异常盘清单（与 R540 硬件卡同一 grade 语义）
+    let disk_alerts = disk_alert_lines(&disks);
+
     Ok(WeeklyReport {
         ts: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -288,7 +296,25 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         disks_note,
         scan_trends,
         obs_alerts,
+        disk_alerts,
     })
+}
+
+/// R541：从盘健康摘要里挑出异常盘（caution / bad）格式化为周报行。
+/// 纯函数：grade 为 good / unknown / 空都不算异常（unknown 是「没读到」，不报警）。
+pub(crate) fn disk_alert_lines(disks: &[DiskHealthBrief]) -> Vec<String> {
+    disks
+        .iter()
+        .filter(|d| d.grade == "caution" || d.grade == "bad")
+        .map(|d| {
+            let loc = if d.letters.trim().is_empty() {
+                d.friendly.clone()
+            } else {
+                format!("{}: {}", d.letters, d.friendly)
+            };
+            format!("{loc} — {}（{}）", d.health, d.grade)
+        })
+        .collect()
 }
 
 /// 带符号的体量文案：+1.2 GB / -300.0 MB（R486 趋势行用）。
@@ -472,6 +498,7 @@ mod tests {
             temp_alert: None,
             scan_trends: vec!["C:\\ 文件 +12，体量 +1.0 GB（距上次 7 天)".into()],
             obs_alerts: vec!["undo 有 2 行损坏（已跳过，文件未丢弃）".into()],
+            disk_alerts: vec!["F,G: Old HDD — Warning（caution）".into()],
         };
         let text = serde_json::to_string_pretty(&r).unwrap();
         let back: WeeklyReport = serde_json::from_str(&text).unwrap();
@@ -484,6 +511,26 @@ mod tests {
         assert_eq!(back.disks[1].grade, "caution");
         assert_eq!(back.scan_trends.len(), 1);
         assert_eq!(back.obs_alerts.len(), 1);
+    }
+
+    #[test]
+    fn disk_alert_lines_r541() {
+        let mk = |grade: &str, letters: &str| DiskHealthBrief {
+            friendly: "Samsung 980".into(),
+            letters: letters.into(),
+            health: "Warning".into(),
+            grade: grade.into(),
+        };
+        // good / unknown 不算异常（unknown 是没读到，不报警）
+        assert!(disk_alert_lines(&[mk("good", "C"), mk("unknown", "D")]).is_empty());
+        // caution / bad 入列，带盘符与原始 health 文案
+        let alerts = disk_alert_lines(&[mk("bad", "C"), mk("caution", "")]);
+        assert_eq!(alerts.len(), 2);
+        assert!(
+            alerts[0].contains("C:") && alerts[0].contains("bad") && alerts[0].contains("Warning")
+        );
+        // 无盘符时退化为型号名
+        assert!(alerts[1].starts_with("Samsung 980 —"));
     }
 
     #[test]
@@ -535,6 +582,7 @@ mod tests {
             temp_alert: None,
             scan_trends: Vec::new(),
             obs_alerts: Vec::new(),
+            disk_alerts: Vec::new(),
         };
         let text = serde_json::to_string(&r).unwrap();
         let back: WeeklyReport = serde_json::from_str(&text).unwrap();
