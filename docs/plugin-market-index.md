@@ -103,7 +103,7 @@ diskpilot-plugin-index/
   - `browser-cache-hunter` 浏览器缓存审计器（综合检测，R517：枚举 Chrome/Edge/Brave/Opera/Vivaldi/Firefox 全部 profile，只读统计 Cache/Code Cache/GPUCache/CacheStorage 等子目录体积 + Top N，深度/条目上限防卡死，不删文件不杀进程）
   - `schtask-hunter` 计划任务审计器（综合检测，R521：`schtasks /Query /V` 只读全景，自动适配中英文列头与分页重复标题，可疑 Top N——上次失败、启用+登录/开机触发+命令在临时或非系统目录，不禁用任务不改配置）
   - `reg-hunter` 注册表审计器（综合检测，R523：`reg query /s` 卸载项 + Run/RunOnce 启动项，失效残留 Top N，外置盘/系统裸命令免误报，只读不删键；**v1.1.0**（R530，release `v1.8.0`）：新增 `--json` 机读输出，主应用体检后自动把失效项入「待人工确认清单」，仍不删键）
-  - `svc-hunter` 服务审计器（综合检测，R527：`sc query` + `sc qc` 只读枚举全部服务与二进制路径，binpath 在临时/用户目录且运行中标可疑，系统目录服务免判，不停服务不改配置）
+  - `svc-hunter` 服务审计器（综合检测，R527：`sc query` + `sc qc` 只读枚举全部服务与二进制路径，binpath 在临时/用户目录且运行中标可疑，系统目录服务免判，不停服务不改配置；**v1.1.0**（R531，release `v1.9.0`）：新增 `--json` 机读输出，可疑服务入主应用「待人工确认清单」，仍不停服务）
 - 官方发布签名密钥：Ed25519 私钥只在本机保管（`~/.diskpilot/release-signing/secret.hex`，权限收紧，绝不入库），公钥写入信封 `signer` 与每个条目的 `signer`；客户端 R502 起强制锚定（包内 signer 必须等于索引声明）。
 
 **建议 CI 门禁**（照 .github/workflows/ci.yml 风格）：

@@ -1,6 +1,6 @@
 [package]
 name = "svc-hunter"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "DiskPilot 官方插件：Windows 服务只读审计器，高亮二进制在临时/用户目录的可疑服务"
 license = "MIT"

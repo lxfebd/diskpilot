@@ -1192,20 +1192,20 @@ function HealthCheckupCard({
     for (const p of diagPlugins) {
       try {
         // 官方诊断插件只读，但 toolbelt_run 仍是写命令——确认 + nonce 闸照走不误。
-        // R530：reg-hunter 带 --json，产出机读失效清单供入队待人工确认（仍只读诊断，不删键）。
-        const args = p.id === 'reg-hunter' ? ['--json'] : [];
+        // R530/R531：reg-hunter / svc-hunter 带 --json，产出机读失效清单供入队待人工确认（仍只读诊断，不删键/不停服务）。
+        const args = p.id === 'reg-hunter' || p.id === 'svc-hunter' ? ['--json'] : [];
         const rep = await api.toolbeltRun(p.id, args, 120, true);
         const out = (rep.outcome.stdout || rep.outcome.stderr || '').trim().split('\n');
         const ok = rep.outcome.exit_code === 0 && !rep.outcome.timed_out;
         results.push({ id: p.id, ok, tail: (out[out.length - 1] || '').slice(0, 80) });
         // R524：摘要行 = stdout 首个非空行（插件约定首行就是摘要）
         summaryItems.push({ id: p.id, ok, line: diagSummaryLine(rep.outcome.stdout || rep.outcome.stderr || '') });
-        // R530：reg-hunter 失效项入待人工确认清单（只入队，绝不自动删除）
-        if (p.id === 'reg-hunter' && ok) {
+        // R530/R531：reg-hunter 失效残留 / svc-hunter 可疑服务入待人工确认清单（只入队，绝不自动删除/停服务）
+        if ((p.id === 'reg-hunter' || p.id === 'svc-hunter') && ok) {
           for (const it of parseRegHunterJson(rep.outcome.stdout || '')) {
             try {
               await api.confirmQueueAdd({
-                source: 'reg-hunter',
+                source: p.id,
                 kind: it.kind,
                 key: it.key,
                 name: it.name,
@@ -1473,7 +1473,7 @@ function HealthCheckupCard({
           {confirmQueue.slice(0, 5).map((q) => (
             <div key={q.id} className="ao-cq-row">
               <span className="ao-cq-name" title={q.key}>
-                [{q.kind === 'run' ? t('overview.checkup.kindRun') : q.kind === 'uninstall' ? t('overview.checkup.kindUninstall') : q.kind}] {q.name}
+                [{q.kind === 'run' ? t('overview.checkup.kindRun') : q.kind === 'uninstall' ? t('overview.checkup.kindUninstall') : q.kind === 'service' ? t('overview.checkup.kindService') : q.kind}] {q.name}
               </span>
               <button
                 type="button"

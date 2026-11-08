@@ -73,6 +73,7 @@ export const overview = {
     'overview.checkup.queueRemove': '移出清单',
     'overview.checkup.kindRun': '启动项残留',
     'overview.checkup.kindUninstall': '卸载残留',
+    'overview.checkup.kindService': '可疑服务',
 
     // 快速操作
     'overview.quick.title': '快速操作',
@@ -335,6 +336,7 @@ export const overview = {
     'overview.checkup.queueRemove': 'Remove from queue',
     'overview.checkup.kindRun': 'startup leftover',
     'overview.checkup.kindUninstall': 'uninstall leftover',
+    'overview.checkup.kindService': 'suspicious service',
 
     // Quick actions
     'overview.quick.title': 'Quick actions',

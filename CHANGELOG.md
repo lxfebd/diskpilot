@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R531: svc-hunter v1.1.0 --json，可疑服务也进「待人工确认清单」——审计三件套（任务/注册表/服务）齐
+
+- **插件**：`svc-hunter` 升级 **v1.1.0**（release `v1.9.0`，index commit `e0aa01b`，validate-index run 42444079684 success，zip sha256 `429120d9c8bb0f9fd5a1d32d31113bf7d764e9204f8ccda8ea938186ce61130f` 130100 B）：`--json` 机读（kind=service，含 binpath/state/reasons）；本机冒烟可疑 0 → `[]` 正确。verify_online 全部通过（历史版本 zip 按 versions[0] 口径下载校验）。
+- **前端**：体检格跑 svc-hunter 也带 `--json`，复用 `parseRegHunterJson` 入队（source=svc-hunter）；清单区块新增 kindService 标签；i18n zh+en。
+- **红线**：仍只读不停服务；可疑服务只入队待人工确认，停服务仍走人工确认链路。
+- **门禁**：pre-release-check 21/21 绿。
+
 ### R530: reg-hunter 失效残留联动「待人工确认清单」——诊断发现只入队，删除仍走确认窗独占
 
 - **插件**：`reg-hunter` 升级 **v1.1.0**（release `v1.8.0`，index commit `b787748`，validate-index run 42443604708 success，zip sha256 `5df4871a41a1791ebbe679e9c2d0d133e36a94bb5b6268c14370149352b7e3b1` 135237 B）：新增 `--json` 机读输出（首行仍是摘要行，第二行 JSON 数组，零依赖手写转义）；索引条目原地更新（保留 1.0.0 versions 历史），verify_online 全部通过。
