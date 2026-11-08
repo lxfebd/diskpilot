@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R524: 体检「插件体检」格持久化「上次诊断摘要」——不点运行也能看到上次结果
+
+- **摘要行**：`diagSummaryLine(stdout)` 纯函数取插件 stdout 首个非空行（60 字截断），单测锁定；插件约定首行即摘要（schtask-hunter / reg-hunter 均如此）。
+- **持久化**：运行完成后 `{at, items:[{id,ok,line}]}` 写入 localStorage（`diskpilot:diag-summary-v1`，本机保存不上传，隐私模式失败静默降级）；挂载时 `loadDiagSummary` 读回，损坏返回 null 不抛错。
+- **展示**：体检格下方新增摘要区——「上次诊断 M/D H:mm」+ 最多 3 条 `✓/✗ id: 摘要行`，失败行染红；CSS 新增 `.ao-checkup-diag` 系。
+- **验证**：vitest 1312/1312 绿（新增 3 例），tsc/eslint/i18n 覆盖全过。
+
 ### R523: 官方插件第七批——reg-hunter（注册表只读审计器），索引仓库发 v1.6.0，线上 10 个插件全量验签通过
 
 - **`plugins/reg-hunter/`**（独立 workspace）：`reg query /s` 只读枚举 HKLM/HKCU 的 Uninstall（含 Wow6432Node）与 Run/RunOnce 共 7 键；纯函数解析 reg 输出（值名可含空格、数据保留内部空格）、聚合卸载项、判定失效——InstallLocation/DisplayIcon 路径不存在；3 例单测。

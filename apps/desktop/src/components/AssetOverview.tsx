@@ -431,6 +431,36 @@ export function isOfficialPlugin(source: string): boolean {
   return source.includes('diskpilot-plugin-index');
 }
 
+/** R524：从插件 stdout 取「摘要行」——首个非空行，截断到 60 字（可单测）。 */
+export function diagSummaryLine(stdout: string): string {
+  const line = stdout.split('\n').map((l) => l.trim()).find((l) => l.length > 0) ?? '';
+  return line.length > 60 ? line.slice(0, 59) + '…' : line;
+}
+
+/** R524：体检格「上次诊断摘要」的 localStorage 键与结构。 */
+export const DIAG_SUMMARY_KEY = 'diskpilot:diag-summary-v1';
+export interface DiagSummary {
+  at: number;
+  items: { id: string; ok: boolean; line: string }[];
+}
+export function loadDiagSummary(): DiagSummary | null {
+  try {
+    const raw = localStorage.getItem(DIAG_SUMMARY_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as DiagSummary;
+    return d && Array.isArray(d.items) ? d : null;
+  } catch {
+    return null;
+  }
+}
+export function saveDiagSummary(d: DiagSummary): void {
+  try {
+    localStorage.setItem(DIAG_SUMMARY_KEY, JSON.stringify(d));
+  } catch {
+    /* 隐私模式下 localStorage 可能抛错，摘要持久化失败不影响运行 */
+  }
+}
+
 /** 温度档位判定：是否达到「偏高」阈值（健康管家口径，可单测）。 */
 export function isTempHigh(tempC: number | null | undefined, warnC = TEMP_WARN_C): boolean {
   return tempC != null && tempC >= warnC;
@@ -1112,23 +1142,35 @@ function HealthCheckupCard({
   const [diagPlugins, setDiagPlugins] = useState<InstalledPlugin[] | null>(null);
   const [pluginRun, setPluginRun] = useState<'idle' | 'ask' | 'running' | 'done'>('idle');
   const [pluginResults, setPluginResults] = useState<{ id: string; ok: boolean; tail: string }[] | null>(null);
+  // R524：上次诊断摘要（localStorage 持久化），挂载时读一次
+  const [diagSummary, setDiagSummary] = useState<DiagSummary | null>(null);
+  useEffect(() => { setDiagSummary(loadDiagSummary()); }, []);
   const runDiagPlugins = useCallback(async () => {
     if (!diagPlugins || diagPlugins.length === 0) return;
     setPluginRun('running');
     setPluginResults(null);
     const results: { id: string; ok: boolean; tail: string }[] = [];
+    const summaryItems: DiagSummary['items'] = [];
     for (const p of diagPlugins) {
       try {
         // 官方诊断插件只读，但 toolbelt_run 仍是写命令——确认 + nonce 闸照走不误。
         const rep = await api.toolbeltRun(p.id, [], 120, true);
         const out = (rep.outcome.stdout || rep.outcome.stderr || '').trim().split('\n');
-        results.push({ id: p.id, ok: rep.outcome.exit_code === 0 && !rep.outcome.timed_out, tail: (out[out.length - 1] || '').slice(0, 80) });
+        const ok = rep.outcome.exit_code === 0 && !rep.outcome.timed_out;
+        results.push({ id: p.id, ok, tail: (out[out.length - 1] || '').slice(0, 80) });
+        // R524：摘要行 = stdout 首个非空行（插件约定首行就是摘要）
+        summaryItems.push({ id: p.id, ok, line: diagSummaryLine(rep.outcome.stdout || rep.outcome.stderr || '') });
       } catch (e) {
         results.push({ id: p.id, ok: false, tail: String(e instanceof Error ? e.message : e).slice(0, 80) });
+        summaryItems.push({ id: p.id, ok: false, line: String(e instanceof Error ? e.message : e).slice(0, 60) });
       }
     }
     setPluginResults(results);
     setPluginRun('done');
+    // R524：摘要持久化到 localStorage，体检格常显「上次诊断」
+    const summary: DiagSummary = { at: Date.now(), items: summaryItems };
+    setDiagSummary(summary);
+    saveDiagSummary(summary);
     const okN = results.filter((r) => r.ok).length;
     useStore.getState().toast(
       t('overview.checkup.pluginRunDone', { ok: okN, total: results.length }),
@@ -1348,6 +1390,24 @@ function HealthCheckupCard({
           </button>
         )}
       </div>
+      {/* R524：上次诊断摘要（localStorage 持久化）——不点运行也能看到上次结果 */}
+      {diagSummary && diagSummary.items.length > 0 && (
+        <div className="ao-checkup-diag" title={t('overview.checkup.lastRunTitle')}>
+          <span className="muted small">
+            {(() => {
+              const d = new Date(diagSummary.at);
+              return t('overview.checkup.lastRun', {
+                time: `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`,
+              });
+            })()}
+          </span>
+          {diagSummary.items.slice(0, 3).map((it) => (
+            <span key={it.id} className={'ao-checkup-diag-line' + (it.ok ? '' : ' err')}>
+              {it.ok ? '✓' : '✗'} {it.id}: {it.line}
+            </span>
+          ))}
+        </div>
+      )}
       {pluginRun === 'ask' && (
         <ConfirmDialog
           title={t('overview.checkup.pluginAskTitle')}

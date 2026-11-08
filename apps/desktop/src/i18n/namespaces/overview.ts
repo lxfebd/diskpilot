@@ -65,6 +65,8 @@ export const overview = {
     'overview.checkup.pluginAskTitle': '运行官方诊断插件？',
     'overview.checkup.pluginAskBody': '将依次运行已安装的 {n} 个官方诊断插件（全部只读不删文件），每个都走确认 + 一次性口令。完整输出可在工具墙查看。',
     'overview.checkup.pluginAskConfirm': '运行诊断',
+    'overview.checkup.lastRun': '上次诊断 {time}',
+    'overview.checkup.lastRunTitle': '上次运行官方诊断插件的摘要（本机保存，不上传）',
 
     // 快速操作
     'overview.quick.title': '快速操作',
@@ -319,6 +321,8 @@ export const overview = {
     'overview.checkup.pluginAskTitle': 'Run official diagnostic plugins?',
     'overview.checkup.pluginAskBody': 'This runs the {n} installed official diagnostic plugins one by one (all read-only, delete nothing); each goes through confirmation + one-time nonce. Full output is on the Tools wall.',
     'overview.checkup.pluginAskConfirm': 'Run diagnostics',
+    'overview.checkup.lastRun': 'Last run {time}',
+    'overview.checkup.lastRunTitle': 'Summary of the last official diagnostic plugin run (stored locally, never uploaded)',
 
     // Quick actions
     'overview.quick.title': 'Quick actions',

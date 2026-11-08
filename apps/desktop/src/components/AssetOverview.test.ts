@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -142,6 +142,20 @@ describe('isOfficialPlugin（R520 插件体检）', () => {
     expect(isOfficialPlugin('https://evil.example/plugin.zip')).toBe(false);
     expect(isOfficialPlugin('local')).toBe(false);
     expect(isOfficialPlugin('')).toBe(false);
+  });
+});
+
+// R524 诊断摘要行：取 stdout 首个非空行并截断
+describe('diagSummaryLine / loadDiagSummary（R524 上次诊断摘要）', () => {
+  it('首个非空行作为摘要，超 60 字截断带省略号', () => {
+    expect(diagSummaryLine('\n  计划任务审计（只读）: 共 283 项  \n第二行')).toBe('计划任务审计（只读）: 共 283 项');
+    const long = 'x'.repeat(100);
+    expect(diagSummaryLine(long)).toHaveLength(60);
+    expect(diagSummaryLine(long).endsWith('…')).toBe(true);
+    expect(diagSummaryLine('')).toBe('');
+  });
+  it('无 localStorage 或内容损坏时 loadDiagSummary 返回 null 不抛错', () => {
+    expect(loadDiagSummary()).toBeNull();
   });
 });
 
