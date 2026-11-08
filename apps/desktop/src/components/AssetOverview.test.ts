@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, parseRegHunterJson, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, parseRegHunterJson, buildQueueMd, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -176,6 +176,46 @@ describe('parseRegHunterJson（R530 待人工确认入队解析）', () => {
   it('缺 key/kind 的条目被过滤', () => {
     const out = '摘要\\n[{"name":"no key"},{"kind":"uninstall","key":"K","name":"ok"}]';
     expect(parseRegHunterJson(out)).toHaveLength(1);
+  });
+});
+
+describe('buildQueueMd（R533 清单导出报告）', () => {
+  const L = {
+    title: 'DiskPilot 待人工确认清单',
+    ts: '生成时间：',
+    total: '共 {n} 条。',
+    note: '**未做任何删除或处置**',
+    colSource: '来源',
+    colKind: '类型',
+    colName: '名称',
+    colKey: '定位键',
+    detailHead: '详情',
+    sourceLine: '来源：{source}（{kind}）',
+    keyLine: '键：',
+    diagLine: '诊断详情：',
+  };
+  it('生成表头 + 条目表 + 详情块，管道符转义', () => {
+    const md = buildQueueMd(
+      [
+        { id: 'q1', at: 0, source: 'reg-hunter', kind: 'uninstall', key: 'HKLM\\X|Y', name: '某|软件', detail: '{"reasons":["路径不存在"]}' },
+        { id: 'q2', at: 0, source: 'svc-hunter', kind: 'service', key: 'svc1', name: '可疑服务', detail: '{}' },
+      ],
+      new Date('2026-11-08T12:00:00+08:00').getTime(),
+      L,
+    );
+    expect(md).toContain('# DiskPilot 待人工确认清单');
+    expect(md).toContain('共 2 条。');
+    expect(md).toContain('| reg-hunter | uninstall | 某\\|软件 | `HKLM\\X\\|Y` |');
+    expect(md).toContain('| svc-hunter | service | 可疑服务 | `svc1` |');
+    expect(md).toContain('### 某\\|软件');
+    expect(md).toContain('路径不存在');
+    // 明确声明未处置
+    expect(md).toContain('未做任何删除或处置');
+  });
+  it('空清单也能生成合法报告', () => {
+    const md = buildQueueMd([], Date.now(), L);
+    expect(md).toContain('共 0 条。');
+    expect(md).not.toContain('## 详情');
   });
 });
 

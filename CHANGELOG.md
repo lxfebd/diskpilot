@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R533: 待人工确认清单「导出报告」——一键导出 Markdown（含来源/类型/定位键/诊断详情，明确声明未处置）
+
+- **前端**：纯函数 `buildQueueMd(items, now, L)` 渲染 md（表格管道符转义、详情 JSON 原样入代码块），文案全部走 i18n（coverage 测试红线）；清单区块头加「导出报告」按钮，走 `save` 对话框 + `writeTextFile`（与扫描报告导出同款路径，用户主动选位置不走 nonce 闸）；2 单测（转义/空清单）。
+- **门禁**：pre-release-check 21/21 绿（cargo audit 偶发联网超时重跑即过），vitest 绿。
+
 ### R532: schtask-hunter v1.1.0 --json，可疑计划任务入队——审计三件套（注册表/服务/计划任务）全部接入待人工确认清单
 
 - **插件**：`schtask-hunter` 升级 **v1.1.0**（release `v1.10.0`，index commit `e18143e`，validate-index run 42445067553 success，zip sha256 `a764e64add860a6e28df6cd024620965824178cc2e2170569dd26856fc0c8ed6` 123474 B）：`--json` 机读（kind=schtask，含 cmd_path/state/reasons）；本机冒烟正确标出 FanControl 失败任务。verify_online 全部通过。

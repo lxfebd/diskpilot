@@ -75,6 +75,23 @@ export const overview = {
     'overview.checkup.kindUninstall': '卸载残留',
     'overview.checkup.kindService': '可疑服务',
     'overview.checkup.kindSchtask': '可疑任务',
+    // R533 清单导出报告
+    'overview.checkup.queueExport': '导出报告',
+    'overview.checkup.queueExportOk': '清单报告已导出',
+    'overview.checkup.queueExportFail': '导出失败：{err}',
+    // R533 报告文案（md）
+    'overview.checkup.mdTitle': 'DiskPilot 待人工确认清单',
+    'overview.checkup.mdTs': '生成时间：',
+    'overview.checkup.mdTotal': '共 {n} 条。',
+    'overview.checkup.mdNote': '本清单只记录诊断插件发现的失效/可疑项，**未做任何删除或处置**——处置需人工确认后走清理确认窗。',
+    'overview.checkup.mdColSource': '来源',
+    'overview.checkup.mdColKind': '类型',
+    'overview.checkup.mdColName': '名称',
+    'overview.checkup.mdColKey': '定位键',
+    'overview.checkup.mdDetail': '详情',
+    'overview.checkup.mdSourceLine': '来源：{source}（{kind}）',
+    'overview.checkup.mdKeyLine': '键：',
+    'overview.checkup.mdDiagLine': '诊断详情：',
 
     // 快速操作
     'overview.quick.title': '快速操作',
@@ -339,6 +356,23 @@ export const overview = {
     'overview.checkup.kindUninstall': 'uninstall leftover',
     'overview.checkup.kindService': 'suspicious service',
     'overview.checkup.kindSchtask': 'suspicious task',
+    // R533 queue report export
+    'overview.checkup.queueExport': 'Export report',
+    'overview.checkup.queueExportOk': 'Queue report exported',
+    'overview.checkup.queueExportFail': 'Export failed: {err}',
+    // R533 report strings (md)
+    'overview.checkup.mdTitle': 'DiskPilot pending-confirmation queue',
+    'overview.checkup.mdTs': 'Generated at: ',
+    'overview.checkup.mdTotal': '{n:item|items} total. ',
+    'overview.checkup.mdNote': 'This queue only records stale/suspicious items found by diagnostic plugins — **nothing has been deleted or acted on**; any action requires manual confirmation through the cleanup confirmation dialog.',
+    'overview.checkup.mdColSource': 'Source',
+    'overview.checkup.mdColKind': 'Kind',
+    'overview.checkup.mdColName': 'Name',
+    'overview.checkup.mdColKey': 'Key',
+    'overview.checkup.mdDetail': 'Details',
+    'overview.checkup.mdSourceLine': 'Source: {source} ({kind})',
+    'overview.checkup.mdKeyLine': 'Key: ',
+    'overview.checkup.mdDiagLine': 'Diagnostic detail:',
 
     // Quick actions
     'overview.quick.title': 'Quick actions',

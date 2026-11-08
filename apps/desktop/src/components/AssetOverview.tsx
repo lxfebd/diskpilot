@@ -10,6 +10,9 @@ import { isPermEnabled } from '../permissions';
 import { ConfirmDialog } from './ConfirmDialog';
 import type { InstalledPlugin } from '../api/system-ext';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, type DriveEntry } from '../drives';
+// R533：清单导出报告走 save 对话框 + 写文本（与扫描报告导出同款路径）
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { TEMP_WARN_C, SCAN_STALE_WARN_DAYS } from '../thresholds';
 import { scrollBehavior } from '../motion';
 
@@ -435,6 +438,52 @@ export function isOfficialPlugin(source: string): boolean {
 export function diagSummaryLine(stdout: string): string {
   const line = stdout.split('\n').map((l) => l.trim()).find((l) => l.length > 0) ?? '';
   return line.length > 60 ? line.slice(0, 59) + '…' : line;
+}
+
+/** R533 清单报告文案（i18n，coverage 测试禁止硬编码中文）。 */
+export interface QueueMdL10n {
+  title: string;
+  ts: string;
+  total: string; // {n}
+  note: string;
+  colSource: string;
+  colKind: string;
+  colName: string;
+  colKey: string;
+  detailHead: string;
+  sourceLine: string; // {source} {kind}
+  keyLine: string;
+  diagLine: string;
+}
+
+/** R533：把待人工确认清单渲染成 Markdown 报告（纯函数，可单测）。
+ *  含生成时间、来源、条目表；detail 是 JSON 字符串，原样收进代码块防转义问题。 */
+export function buildQueueMd(items: readonly ConfirmQueueItem[], now: number, L: QueueMdL10n): string {
+  const d = new Date(now);
+  const ts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const lines: string[] = [
+    `# ${L.title}`,
+    '',
+    `${L.ts} ${ts}`,
+    '',
+    L.total.replace('{n}', String(items.length)) + ' ' + L.note,
+    '',
+    `| ${L.colSource} | ${L.colKind} | ${L.colName} | ${L.colKey} |`,
+    '| --- | --- | --- | --- |',
+  ];
+  for (const q of items) {
+    const name = q.name.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+    const key = q.key.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+    lines.push(`| ${q.source} | ${q.kind} | ${name} | \`${key}\` |`);
+  }
+  if (items.length > 0) {
+    lines.push('', `## ${L.detailHead}`, '');
+    for (const q of items) {
+      const name = q.name.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      lines.push(`### ${name}`, '', `- ${L.sourceLine.replace('{source}', q.source).replace('{kind}', q.kind)}`, `- ${L.keyLine} \`${q.key}\``, `- ${L.diagLine}`, '```json', q.detail, '```', '');
+    }
+  }
+  return lines.join('\n');
 }
 
 /** R530：解析 reg-hunter --json 输出（首行摘要，第二行 JSON 数组）。
@@ -1181,6 +1230,36 @@ function HealthCheckupCard({
       .then((l) => setConfirmQueue(l))
       .catch(() => setConfirmQueue([]));
   }, []);
+  // R533：导出清单为 Markdown 报告（用户主动选保存位置，与浏览器下载同级，不走 nonce 闸）
+  const exportQueueReport = useCallback(async () => {
+    if (!confirmQueue || confirmQueue.length === 0) return;
+    const picked = await save({
+      defaultPath: `diskpilot-confirm-queue-${formatDateKey(new Date())}.md`,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    });
+    if (!picked) return;
+    try {
+      const L: QueueMdL10n = {
+        title: t('overview.checkup.mdTitle'),
+        ts: t('overview.checkup.mdTs'),
+        total: t('overview.checkup.mdTotal'),
+        note: t('overview.checkup.mdNote'),
+        colSource: t('overview.checkup.mdColSource'),
+        colKind: t('overview.checkup.mdColKind'),
+        colName: t('overview.checkup.mdColName'),
+        colKey: t('overview.checkup.mdColKey'),
+        detailHead: t('overview.checkup.mdDetail'),
+        sourceLine: t('overview.checkup.mdSourceLine'),
+        keyLine: t('overview.checkup.mdKeyLine'),
+        diagLine: t('overview.checkup.mdDiagLine'),
+      };
+      await writeTextFile(picked, buildQueueMd(confirmQueue, Date.now(), L));
+      useStore.getState().toast(t('overview.checkup.queueExportOk'), 'ok');
+    } catch (e) {
+      useStore.getState().toast(t('overview.checkup.queueExportFail', { err: String(e) }), 'err');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmQueue, t]);
   useEffect(() => { loadConfirmQueue(); }, [loadConfirmQueue]);
   useEffect(() => { setDiagSummary(loadDiagSummary()); }, []);
   const runDiagPlugins = useCallback(async () => {
@@ -1469,6 +1548,9 @@ function HealthCheckupCard({
           <div className="ao-cq-head">
             <span>{t('overview.checkup.queueTitle', { n: confirmQueue.length })}</span>
             <span className="muted small">{t('overview.checkup.queueHint')}</span>
+            <button type="button" className="ghost small" onClick={() => void exportQueueReport()}>
+              {t('overview.checkup.queueExport')}
+            </button>
           </div>
           {confirmQueue.slice(0, 5).map((q) => (
             <div key={q.id} className="ao-cq-row">
