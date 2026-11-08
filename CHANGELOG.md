@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R536: GitHub Actions 升级——checkout/setup-node v4→v7（4 个 workflow 共 9 处）+ tauri-action v0→v1，PR 队列清空
+
+- 风险评估后全量升级：checkout v7 为 fork-PR 安全加固（本仓无 pull_request_target，低风险）、setup-node v7 为 ESM 迁移（兼容）、tauri-action v1 的 breaking（macOS 包命名/latest.json URL）只影响打 tag 时的 release workflow。
+- 关闭 dependabot PR #1/#2/#5（内容已在 main 落地）。至此 9 个 open PR 全部处理完毕（5 个过时关闭 + 3 个升级合入 + R535 前置清理）。
+- CI 验证（run 42453702145 @ 8a4ebd4）：CodeQL/Pages 全绿；CI 中 audit-rust、frontend、scaffold-lint、三平台 lint-rust、三平台 self-test、windows test-rust 全部 success；ubuntu/macos test-rust 因公开 runner 全量编译 tauri/webkit 依赖超过 50 分钟未完成（历史 2–5 分钟，疑似 runner 资源/缓存未命中，与本次 actions 变更无关——windows 同步骤 11 分钟内通过）。本地 pre-release-check 21/21 绿为准。
+
 ### R535: 清理过时 dependabot PR（#3/#6/#7/#8/#9）——当前依赖已全部超越其目标版本
 
 - 审计 9 个 open PR：tauri 锁定 2.12.5（>2.11.6）、plugin-dialog ^2.8.4（>2.7.3）、eslint-plugin ^8.72.1（>8.70.0）、react-virtual ^3.14.25（>3.14.13）、trash 5.2.9（=目标）。五个库类 PR 均已过时，逐条评论说明并关闭；**actions/checkout、setup-node、tauri-action 的大版本升级（#1/#2/#5）暂不合**，留待单独评估 CI 行为变更。无代码变更。
