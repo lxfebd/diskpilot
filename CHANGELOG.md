@@ -7,6 +7,10 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R535: 清理过时 dependabot PR（#3/#6/#7/#8/#9）——当前依赖已全部超越其目标版本
+
+- 审计 9 个 open PR：tauri 锁定 2.12.5（>2.11.6）、plugin-dialog ^2.8.4（>2.7.3）、eslint-plugin ^8.72.1（>8.70.0）、react-virtual ^3.14.25（>3.14.13）、trash 5.2.9（=目标）。五个库类 PR 均已过时，逐条评论说明并关闭；**actions/checkout、setup-node、tauri-action 的大版本升级（#1/#2/#5）暂不合**，留待单独评估 CI 行为变更。无代码变更。
+
 ### R534: 官方插件下载排行榜（docs/plugin-downloads.md）——运营视角，bigfile-finder 领跑 16 次，总计 125 次
 
 - 只读采集 `diskpilot-plugin-index` 各 release zip 的 `download_count`（GitHub API，2026-11-08），按插件聚合「最新版 + 累计」两列，写入 `docs/plugin-downloads.md`；无代码变更，无门禁影响（check-docs-links 83 条仍全部命中）。
