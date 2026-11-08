@@ -11,6 +11,7 @@ import { formatBytes, formatDateKey } from '../../format';
 import { TEMP_WARN_C } from '../../thresholds';
 import { useStore } from '../../store';
 import { useT } from '../../i18n';
+import { loadDiagSummary, type DiagSummary } from '../AssetOverview';
 
 const DAY_SECS = 86400;
 
@@ -78,6 +79,8 @@ export function WeeklyHealthCard({
   const [loaded, setLoaded] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // R525：诊断插件摘要（来自总览体检格的 localStorage，本机只读）
+  const [diagSum, setDiagSum] = useState<DiagSummary | null>(null);
 
   // R95: 两份都存在才算 delta；任一缺失 → null（不显示对比区）。
   const delta = useMemo(() => weeklyDelta(report, prevReport), [report, prevReport]);
@@ -97,6 +100,7 @@ export function WeeklyHealthCard({
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { setDiagSum(loadDiagSummary()); }, []);
 
   const generate = async () => {
     setBusy(true);
@@ -222,6 +226,30 @@ export function WeeklyHealthCard({
             <button type="button" className="ghost small" onClick={onOpenCleanup}>
               <Eraser size={11} /> {t('history.weekly.goCleanup')}
             </button>
+          )}
+
+          {/* R525：诊断插件摘要进周报——总览体检格跑过官方诊断插件后，
+              这里直接看到上次摘要（本机 localStorage，不进报告文件、不上传）。 */}
+          {diagSum && diagSum.items.length > 0 && (
+            <div className="wh-diag">
+              <div className="wh-delta-title">
+                {t('history.weekly.diagHead')}
+                <span className="muted small">
+                  {' · '}
+                  {(() => {
+                    const d = new Date(diagSum.at);
+                    return t('history.weekly.diagAt', { time: `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` });
+                  })()}
+                </span>
+              </div>
+              <ul className="wh-diag-list">
+                {diagSum.items.map((it) => (
+                  <li key={it.id} className={it.ok ? '' : 'err'}>
+                    {it.ok ? '✓' : '✗'} {it.id}: {it.line}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {report.drives.length > 0 && (

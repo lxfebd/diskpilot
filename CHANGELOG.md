@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R525: 健康周报接入「诊断插件摘要」——体检格跑过的插件结果直接出现在周报卡
+
+- **数据流**：复用 R524 的 `loadDiagSummary()`（localStorage `diskpilot:diag-summary-v1`），周报卡 `WeeklyHealthCard` 挂载时读一次，有数据才渲染区块（不编造、不上传、不进报告文件）。
+- **展示**：区块标题「诊断插件摘要 · 上次 M/D H:mm」，每条 `✓/✗ 插件id: 摘要行`，失败染红；CSS 新增 `.wh-diag` 系；i18n 新增 `history.weekly.diagHead/diagAt`（中英）。
+- **红线守住**：周报依旧只读展示，真实清理仍走清理页确认窗；插件摘要只是本机缓存回显。
+- **验证**：vitest 1312/1312 绿，tsc/eslint/i18n 覆盖全过。
+
 ### R524: 体检「插件体检」格持久化「上次诊断摘要」——不点运行也能看到上次结果
 
 - **摘要行**：`diagSummaryLine(stdout)` 纯函数取插件 stdout 首个非空行（60 字截断），单测锁定；插件约定首行即摘要（schtask-hunter / reg-hunter 均如此）。
