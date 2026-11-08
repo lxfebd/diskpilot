@@ -149,6 +149,12 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 /* R524 体检格「上次诊断」摘要区：标题一行 + 每条插件一行，失败行染红 */
 .ao-checkup-diag { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 8px; border-top: 1px dashed var(--border, #3a3f4a); }
 .ao-checkup-diag-line { font-size: 12px; color: var(--text-dim, #9aa0ae); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* R530 待人工确认清单 */
+.ao-confirm-queue { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px 8px; border-top: 1px dashed var(--border, #3a3f4a); }
+.ao-cq-head { display: flex; flex-direction: column; font-size: 12px; font-weight: 600; }
+.ao-cq-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.ao-cq-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim, #9aa0ae); }
 .ao-checkup-diag-line.err { color: var(--risk-danger, #e5534b); }
 /* R299 温度采样历史卡：曲线与元数据一行，峰值可以单独告警而不染色整卡 */
 .ao-thermal-body { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

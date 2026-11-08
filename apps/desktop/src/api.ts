@@ -73,6 +73,7 @@ export type {
   RegistryInstallOut,
   InstalledPlugin,
   LedgerEntry,
+  ConfirmQueueItem,
 } from './api/system-ext';
 export type { ChatScanContext, WebSearchHit } from './api/ai';
 export type { DupFile, DupGroup, ExecuteScopeOpts, ReminderConfig, DriveCleanup, ReminderPayload, SpaceFullWarn, SpaceForecast, SpacePoint, ThermalPoint, RegistryScaffold, ScaffoldRegistryOut, WeeklyReport, SuggestionDiff, SuggestionScopeDiff, Winapp2PreviewItem, ThermalSustained, StartupChanged, ScanStaleWarn, ScanStaleness, AutoListRule, AutoListRuleView, AutoListConfig, AutoListConfigView, ReportExported } from './api/clean';

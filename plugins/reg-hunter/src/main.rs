@@ -159,6 +159,61 @@ fn run_reg(key: &str) -> Option<String> {
     Some(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
+/// JSON 字符串转义（手写，保持零依赖）。
+fn jesc(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// R530 --json 机读报告：第二行起输出一个 JSON 对象（kind 区分卸载残留/启动项残留）。
+fn print_json_report(stale: &[(&UninstallEntry, Vec<String>)], dead_runs: &[&RunEntry]) {
+    let mut items = String::from("[");
+    let mut first = true;
+    for (e, reasons) in stale {
+        if !first {
+            items.push(',');
+        }
+        first = false;
+        let rs = reasons
+            .iter()
+            .map(|r| format!("\"{}\"", jesc(r)))
+            .collect::<Vec<_>>()
+            .join(",");
+        items.push_str(&format!(
+            "{{\"kind\":\"uninstall\",\"key\":\"{}\",\"name\":\"{}\",\"reasons\":[{}]}}",
+            jesc(&e.key),
+            jesc(&e.display_name),
+            rs
+        ));
+    }
+    for r in dead_runs {
+        if !first {
+            items.push(',');
+        }
+        first = false;
+        let p = run_cmd_path(&r.data);
+        items.push_str(&format!(
+            "{{\"kind\":\"run\",\"key\":\"{}\",\"name\":\"{}\",\"cmd_path\":\"{}\",\"reasons\":[\"命令路径不存在\"]}}",
+            jesc(&r.key),
+            jesc(&r.name),
+            jesc(&p)
+        ));
+    }
+    items.push(']');
+    println!("{}", items);
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
@@ -173,6 +228,8 @@ fn main() {
         .and_then(|i| args.get(i + 1))
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(10);
+    // R530：--json 机读输出（供主应用入「待人工确认清单」），人类可读输出不变
+    let as_json = args.iter().any(|a| a == "--json");
 
     let t0 = Instant::now();
     let keys = [
@@ -226,6 +283,19 @@ fn main() {
         .collect();
     dead_runs.sort_by(|a, b| a.key.cmp(&b.key).then_with(|| a.name.cmp(&b.name)));
 
+    if as_json {
+        // 机读：首行仍是摘要（R524 契约），第二行起为 JSON 数组
+        println!(
+            "注册表审计（只读）: 卸载项 {} 条，Run/RunOnce 启动项 {} 条，失效卸载 {} 条，失效启动项 {} 条，耗时 {:.2?}",
+            uninstalls.len(),
+            runs.len(),
+            stale.len(),
+            dead_runs.len(),
+            t0.elapsed()
+        );
+        print_json_report(&stale, &dead_runs);
+        return;
+    }
     println!(
         "注册表审计（只读）: 卸载项 {} 条，Run/RunOnce 启动项 {} 条，失效卸载 {} 条，失效启动项 {} 条，耗时 {:.2?}",
         uninstalls.len(),

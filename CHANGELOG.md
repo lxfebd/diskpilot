@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R530: reg-hunter 失效残留联动「待人工确认清单」——诊断发现只入队，删除仍走确认窗独占
+
+- **插件**：`reg-hunter` 升级 **v1.1.0**（release `v1.8.0`，index commit `b787748`，validate-index run 42443604708 success，zip sha256 `5df4871a41a1791ebbe679e9c2d0d133e36a94bb5b6268c14370149352b7e3b1` 135237 B）：新增 `--json` 机读输出（首行仍是摘要行，第二行 JSON 数组，零依赖手写转义）；索引条目原地更新（保留 1.0.0 versions 历史），verify_online 全部通过。
+- **后端**：新模块 `confirm_queue.rs`（`confirm-queue.jsonl`，上限 500、同源同 key 去重），三个命令 `confirm_queue_add/list/remove`（L1 配置类写，不进 nonce 闸——真正删键永远不从这里走）；1 单测。
+- **前端**：`api.confirmQueue*`；体检格跑 reg-hunter 时带 `--json`，纯函数 `parseRegHunterJson` 解析（坏数据 → 空数组不打断体检，3 单测），逐条入队；体检格新增清单区块（Top 5 + 移出按钮），i18n `overview.checkup.queue*`/`kind*` zh+en，CSS `.ao-confirm-queue*`。
+- **红线守住**：插件仍只读；入队只是写本机清单文件；删除文件/删键仍只走清理确认窗（user_confirmed 硬校验）。
+- **门禁**：pre-release-check 21/21 绿（中间 cargo audit 联网抖动一次，重跑全绿），vitest 1315 绿。
+
 ### R529: 周报卡超温提示线——本周最高温达持续偏高阈值时，周报里给一条诚实告警（与 R528 趋势图成闭环）
 
 - **后端**：`WeeklyReport` 新增 `temp_alert: Option<String>`（serde default，旧归档照常读）；纯函数 `temp_alert_note(temp_max_c, cfg)` 判定——≥ 阈值才提示，未开持续采样时文案建议去设置里打开（周报只读，不自行改配置）；`reminder::config_at` 提升为 pub(crate)；1 例单测（低温/无温/超温+开关两种/边界 85.0 触发 84.9 不触发）。

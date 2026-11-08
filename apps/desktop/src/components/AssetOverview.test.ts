@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, parseRegHunterJson, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -156,6 +156,26 @@ describe('diagSummaryLine / loadDiagSummary（R524 上次诊断摘要）', () =>
   });
   it('无 localStorage 或内容损坏时 loadDiagSummary 返回 null 不抛错', () => {
     expect(loadDiagSummary()).toBeNull();
+  });
+});
+
+describe('parseRegHunterJson（R530 待人工确认入队解析）', () => {
+  it('首行摘要 + 第二行 JSON 数组解析出失效项', () => {
+    const out = '注册表审计（只读）: 失效卸载 2 条\\n[{"kind":"uninstall","key":"HKLM\\\\X","name":"某软件","reasons":["路径不存在"]},{"kind":"run","key":"HKCU\\\\Run","name":"foo","cmd_path":"C:\\\\gone\\\\a.exe"}]';
+    const items = parseRegHunterJson(out);
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ kind: 'uninstall', name: '某软件' });
+    expect(items[1].cmd_path).toBe('C:\\gone\\a.exe');
+  });
+  it('没有 JSON 行 / JSON 损坏 / 非数组 → 空数组不抛错', () => {
+    expect(parseRegHunterJson('纯文本没有数组')).toEqual([]);
+    expect(parseRegHunterJson('摘要\\n[{\\"bad')).toEqual([]);
+    expect(parseRegHunterJson('摘要\\n{"not":"array"}')).toEqual([]);
+    expect(parseRegHunterJson('')).toEqual([]);
+  });
+  it('缺 key/kind 的条目被过滤', () => {
+    const out = '摘要\\n[{"name":"no key"},{"kind":"uninstall","key":"K","name":"ok"}]';
+    expect(parseRegHunterJson(out)).toHaveLength(1);
   });
 });
 

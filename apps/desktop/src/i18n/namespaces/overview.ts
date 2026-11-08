@@ -67,6 +67,12 @@ export const overview = {
     'overview.checkup.pluginAskConfirm': '运行诊断',
     'overview.checkup.lastRun': '上次诊断 {time}',
     'overview.checkup.lastRunTitle': '上次运行官方诊断插件的摘要（本机保存，不上传）',
+    // R530 待人工确认清单
+    'overview.checkup.queueTitle': '待人工确认 {n} 条',
+    'overview.checkup.queueHint': '诊断发现的失效残留，只入队不自动删除；删除仍走清理确认窗',
+    'overview.checkup.queueRemove': '移出清单',
+    'overview.checkup.kindRun': '启动项残留',
+    'overview.checkup.kindUninstall': '卸载残留',
 
     // 快速操作
     'overview.quick.title': '快速操作',
@@ -323,6 +329,12 @@ export const overview = {
     'overview.checkup.pluginAskConfirm': 'Run diagnostics',
     'overview.checkup.lastRun': 'Last run {time}',
     'overview.checkup.lastRunTitle': 'Summary of the last official diagnostic plugin run (stored locally, never uploaded)',
+    // R530 pending-confirmation queue
+    'overview.checkup.queueTitle': '{n:item|items} pending confirmation',
+    'overview.checkup.queueHint': 'Stale leftovers found by diagnostics — queued only, never auto-deleted; deletion still goes through the cleanup confirmation dialog',
+    'overview.checkup.queueRemove': 'Remove from queue',
+    'overview.checkup.kindRun': 'startup leftover',
+    'overview.checkup.kindUninstall': 'uninstall leftover',
 
     // Quick actions
     'overview.quick.title': 'Quick actions',

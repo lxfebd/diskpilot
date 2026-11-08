@@ -506,7 +506,34 @@ export const systemExtApi = {
     isTauri
       ? invoke<void>('tray_sync', { showLabel, quitLabel, tooltip })
       : Promise.resolve(),
+
+  // R530 待人工确认清单（诊断插件失效残留入队，绝不自动删除）
+  confirmQueueList: () =>
+    isTauri ? invoke<ConfirmQueueItem[]>('confirm_queue_list_cmd') : Promise.resolve([]),
+  confirmQueueAdd: (item: Omit<ConfirmQueueItem, 'id' | 'at'>) =>
+    isTauri
+      ? invoke<string>('confirm_queue_add', {
+          source: item.source,
+          kind: item.kind,
+          key: item.key,
+          name: item.name,
+          detail: item.detail,
+        })
+      : Promise.resolve(''),
+  confirmQueueRemove: (id: string) =>
+    isTauri ? invoke<number>('confirm_queue_remove_cmd', { id }) : Promise.resolve(0),
 };
+
+/** R530 待人工确认清单条目（后端 confirm_queue.rs 返回形状）。 */
+export interface ConfirmQueueItem {
+  id: string;
+  at: number;
+  source: string;
+  kind: string;
+  key: string;
+  name: string;
+  detail: string;
+}
 
 // ── 工具墙类型 ──
 export type ToolbeltRisk = 'low' | 'medium' | 'high';

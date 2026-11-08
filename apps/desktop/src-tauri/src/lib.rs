@@ -7,6 +7,7 @@ mod cleanup;
 mod cleanup_logic;
 mod conda;
 mod confirm_nonce;
+pub(crate) mod confirm_queue;
 mod drivers;
 mod drives;
 mod dups;
@@ -245,6 +246,9 @@ pub fn run() {
             scan::scan_path_usn,
             drives::estimate_size,
             confirm_nonce::issue_confirm_nonce,
+            confirm_queue::confirm_queue_add,
+            confirm_queue::confirm_queue_list_cmd,
+            confirm_queue::confirm_queue_remove_cmd,
             scaffold_cmds::sync_perms,
             scaffold_cmds::list_scaffolds,
             scaffold_cmds::install_scaffold,

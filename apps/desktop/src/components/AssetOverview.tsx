@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HardDrive, Zap, Sparkles, FileSearch, Files, Trash2, Check, Info, RefreshCw, FolderOpen, BarChart3, Package, AlertTriangle, Thermometer, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, History, ChevronDown, ChevronUp, File, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff, type ThermalPoint } from '../api';
+import { api, type SpacePoint, type StartupItem, type HwDiskHealth, type SuggestionDiff, type ThermalPoint, type ConfirmQueueItem } from '../api';
 import { CAT_COLORS } from '../colors';
 import { formatBytes, formatBytesTriple, normKey, driveLetter, formatDateKey } from '../format';
 import { ensureHwDiskQuick } from '../hwCache';
@@ -435,6 +435,36 @@ export function isOfficialPlugin(source: string): boolean {
 export function diagSummaryLine(stdout: string): string {
   const line = stdout.split('\n').map((l) => l.trim()).find((l) => l.length > 0) ?? '';
   return line.length > 60 ? line.slice(0, 59) + '…' : line;
+}
+
+/** R530：解析 reg-hunter --json 输出（首行摘要，第二行 JSON 数组）。
+ *  解析失败/形状不对 → 空数组（不入队垃圾），绝不抛出打断体检。 */
+export interface RegHunterStaleItem {
+  kind: string;
+  key: string;
+  name: string;
+  cmd_path?: string;
+  reasons?: string[];
+}
+export function parseRegHunterJson(stdout: string): RegHunterStaleItem[] {
+  const lines = stdout.split('\\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  const jsonLine = lines.find((l) => l.startsWith('['));
+  if (!jsonLine) return [];
+  try {
+    const arr = JSON.parse(jsonLine);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((x) => x && typeof x === 'object' && typeof x.key === 'string' && typeof x.kind === 'string')
+      .map((x) => ({
+        kind: String(x.kind),
+        key: String(x.key),
+        name: String(x.name ?? x.key),
+        cmd_path: typeof x.cmd_path === 'string' ? x.cmd_path : undefined,
+        reasons: Array.isArray(x.reasons) ? x.reasons.map(String) : undefined,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 /** R524：体检格「上次诊断摘要」的 localStorage 键与结构。 */
@@ -1144,6 +1174,14 @@ function HealthCheckupCard({
   const [pluginResults, setPluginResults] = useState<{ id: string; ok: boolean; tail: string }[] | null>(null);
   // R524：上次诊断摘要（localStorage 持久化），挂载时读一次
   const [diagSummary, setDiagSummary] = useState<DiagSummary | null>(null);
+  // R530 待人工确认清单（诊断插件失效残留入队，只读展示 + 移出，绝不自动删除）
+  const [confirmQueue, setConfirmQueue] = useState<ConfirmQueueItem[] | null>(null);
+  const loadConfirmQueue = useCallback(() => {
+    api.confirmQueueList()
+      .then((l) => setConfirmQueue(l))
+      .catch(() => setConfirmQueue([]));
+  }, []);
+  useEffect(() => { loadConfirmQueue(); }, [loadConfirmQueue]);
   useEffect(() => { setDiagSummary(loadDiagSummary()); }, []);
   const runDiagPlugins = useCallback(async () => {
     if (!diagPlugins || diagPlugins.length === 0) return;
@@ -1154,12 +1192,29 @@ function HealthCheckupCard({
     for (const p of diagPlugins) {
       try {
         // 官方诊断插件只读，但 toolbelt_run 仍是写命令——确认 + nonce 闸照走不误。
-        const rep = await api.toolbeltRun(p.id, [], 120, true);
+        // R530：reg-hunter 带 --json，产出机读失效清单供入队待人工确认（仍只读诊断，不删键）。
+        const args = p.id === 'reg-hunter' ? ['--json'] : [];
+        const rep = await api.toolbeltRun(p.id, args, 120, true);
         const out = (rep.outcome.stdout || rep.outcome.stderr || '').trim().split('\n');
         const ok = rep.outcome.exit_code === 0 && !rep.outcome.timed_out;
         results.push({ id: p.id, ok, tail: (out[out.length - 1] || '').slice(0, 80) });
         // R524：摘要行 = stdout 首个非空行（插件约定首行就是摘要）
         summaryItems.push({ id: p.id, ok, line: diagSummaryLine(rep.outcome.stdout || rep.outcome.stderr || '') });
+        // R530：reg-hunter 失效项入待人工确认清单（只入队，绝不自动删除）
+        if (p.id === 'reg-hunter' && ok) {
+          for (const it of parseRegHunterJson(rep.outcome.stdout || '')) {
+            try {
+              await api.confirmQueueAdd({
+                source: 'reg-hunter',
+                kind: it.kind,
+                key: it.key,
+                name: it.name,
+                detail: JSON.stringify(it),
+              });
+            } catch { /* 单条入队失败不影响整体体检结果 */ }
+          }
+          void loadConfirmQueue();
+        }
       } catch (e) {
         results.push({ id: p.id, ok: false, tail: String(e instanceof Error ? e.message : e).slice(0, 80) });
         summaryItems.push({ id: p.id, ok: false, line: String(e instanceof Error ? e.message : e).slice(0, 60) });
@@ -1405,6 +1460,31 @@ function HealthCheckupCard({
             <span key={it.id} className={'ao-checkup-diag-line' + (it.ok ? '' : ' err')}>
               {it.ok ? '✓' : '✗'} {it.id}: {it.line}
             </span>
+          ))}
+        </div>
+      )}
+      {/* R530 待人工确认清单：诊断插件发现的失效残留只入队展示，绝不自动删除；删除仍走清理确认窗 */}
+      {confirmQueue && confirmQueue.length > 0 && (
+        <div className="ao-confirm-queue">
+          <div className="ao-cq-head">
+            <span>{t('overview.checkup.queueTitle', { n: confirmQueue.length })}</span>
+            <span className="muted small">{t('overview.checkup.queueHint')}</span>
+          </div>
+          {confirmQueue.slice(0, 5).map((q) => (
+            <div key={q.id} className="ao-cq-row">
+              <span className="ao-cq-name" title={q.key}>
+                [{q.kind === 'run' ? t('overview.checkup.kindRun') : q.kind === 'uninstall' ? t('overview.checkup.kindUninstall') : q.kind}] {q.name}
+              </span>
+              <button
+                type="button"
+                className="ghost small"
+                onClick={() => {
+                  api.confirmQueueRemove(q.id).then(() => loadConfirmQueue()).catch(() => {});
+                }}
+              >
+                {t('overview.checkup.queueRemove')}
+              </button>
+            </div>
           ))}
         </div>
       )}
