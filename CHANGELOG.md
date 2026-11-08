@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R544: 发布 v1.0.1——四平台 release 全绿并转正（release id 438134538，21 个资产含 .sig + latest.json）
+
+- 版本号三处 bump（根 Cargo.toml / package.json / tauri.conf.json → 1.0.1），CHANGELOG 转正 `[1.0.1] - 2026-11-08` + R504–R543 摘要，README 中英文同步更新日志与下载表。
+- **release 链路踩坑与修复**：tauri-action v1 升级后打包阶段要从 github 下载 NSIS 3.13 / WiX 3.14 / AppRun / linuxdeploy / gtk-plugin，上游 release-assets 连续多次 504 导致 windows+ubuntu job 失败（mac .app 无外部下载不受影响）。修复：release.yml 新增「预下载 bundler 工具到缓存目录（%LOCALAPPDATA%\\tauri / ~/.cache/tauri）+ curl 8 次重试」步骤，bundler 发现必需文件已存在即跳过下载——第 5 次 run 四平台全部 success。
+- 验证：latest.json `version: 1.0.1` + 各平台 signature 上传成功；Windows 安装包 `DiskPilot_1.0.1_x64-setup.exe`（101MB）下载完整。release 已 publish（published_at 2026-11-08T12:48:06Z）。
+- 门禁 21/21 绿。
+
 ## [1.0.1] - 2026-11-08
 
 > R504–R543 共 40 轮：11 个官方诊断插件（审计三件套 1.1.0）、插件体检格 + 待人工确认清单 + 导出报告、持久化通知中心 + 未读角标、周报异常磁盘清单、硬件超温阈值标注（主卡/趋势图/SMART 行三处一致红标）、GitHub Actions 全量升级 v7、依赖与 PR 队列清理、README 徽章区、插件下载排行榜。
