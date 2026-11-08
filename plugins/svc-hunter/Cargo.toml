@@ -1,0 +1,15 @@
+[package]
+name = "svc-hunter"
+version = "1.0.0"
+edition = "2021"
+description = "DiskPilot 官方插件：Windows 服务只读审计器，高亮二进制在临时/用户目录的可疑服务"
+license = "MIT"
+
+# 独立 workspace（与主仓库隔离，发布时用独立 target dir）
+[workspace]
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1

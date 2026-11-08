@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R527: svc-hunter —— 第八个官方签名插件（v1.7.0）：Windows 服务审计器，只读不停服务
+
+- **插件** `plugins/svc-hunter`：`sc query type= service state= all` + 逐服务 `sc qc` 拿 BINARY_PATH_NAME（统一 `cmd /c chcp 65001` 切 UTF-8 防中文系统 GBK 毁解析；服务名单独加引号防空格）；可疑判定纯函数——binpath 非空且不在 Windows/System32/Program Files 等系统目录即标（临时/用户目录额外强调），系统服务与空 binpath 免判；`--top N` / `--all`。3 例单测。
+- **冒烟**：本机 340 服务 / 129 运行中 / 可疑 0（干净机合理），9s。
+- **发布**：pub527 打包 → 索引 v1.7.0（release 437984682，index commit `f60cdd1`），validate-index CI run 42438577636 success；zip sha256 `2e35915b1c646d90aef5d188656b7fe7ef6bc7592a4fa8843612ca217268537d`（128517 B）；verify_online 11 插件全部「sha256 一致 + 包内 ed25519 有效 + signer 锚定官方公钥」。
+- **文档**：README/README_EN 11 插件清单 + 服务审计；plugin-market-index 加 reg-hunter/svc-hunter 行并修掉重复的 v1.6.0 字样。
+- 与 schtask-hunter / reg-hunter 成「审计三件套」（计划任务 + 注册表 + 服务）。
+
 ### R526: 定时自动导出扫描报告——设置页新增开关/目录/间隔/格式，后台线程按期把已有扫描缓存导出为文件
 
 - **后端** `report_export.rs`：`run_report_export` 只渲染**已有扫描缓存**的路径（零额外全盘扫描铁律）、文件名 `diskpilot-report-<路径>-<yyyymmdd>.<md|csv|json>`、同一天同名已存在跳过；完成发 `report-exported` 通知 + 审计日志落盘。纯函数 `sanitize_root_tag` / `report_export_dir_valid` + 2 例单测（盘符根、绝对路径校验）。
