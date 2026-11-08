@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R545: 待人工确认清单支持 CSV 导出（Excel/台账直接打开）
+
+- `buildQueueCsv` 纯函数（AssetOverview.tsx）：RFC4180 转义（逗号/引号/换行字段双引号包裹、引号翻倍）、BOM 头 + CRLF 行尾，5 列 = 来源/类型/名称/定位键/诊断详情 JSON；3 个单测。
+- 清单头部新增「导出 CSV」按钮（用户自选保存路径，无需确认 nonce），i18n `overview.checkup.queueExportCsv` / `csvColDetail` 中英双份。
+
 ### R544: 发布 v1.0.1——四平台 release 全绿并转正（release id 438134538，21 个资产含 .sig + latest.json）
 
 - 版本号三处 bump（根 Cargo.toml / package.json / tauri.conf.json → 1.0.1），CHANGELOG 转正 `[1.0.1] - 2026-11-08` + R504–R543 摘要，README 中英文同步更新日志与下载表。

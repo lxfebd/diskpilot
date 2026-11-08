@@ -79,6 +79,9 @@ export const overview = {
     'overview.checkup.queueExport': '导出报告',
     'overview.checkup.queueExportOk': '清单报告已导出',
     'overview.checkup.queueExportFail': '导出失败：{err}',
+    // R545 CSV 导出
+    'overview.checkup.queueExportCsv': '导出 CSV',
+    'overview.checkup.csvColDetail': '诊断详情',
     // R533 报告文案（md）
     'overview.checkup.mdTitle': 'DiskPilot 待人工确认清单',
     'overview.checkup.mdTs': '生成时间：',
@@ -360,6 +363,9 @@ export const overview = {
     'overview.checkup.queueExport': 'Export report',
     'overview.checkup.queueExportOk': 'Queue report exported',
     'overview.checkup.queueExportFail': 'Export failed: {err}',
+    // R545 CSV export
+    'overview.checkup.queueExportCsv': 'Export CSV',
+    'overview.checkup.csvColDetail': 'Diagnostics',
     // R533 report strings (md)
     'overview.checkup.mdTitle': 'DiskPilot pending-confirmation queue',
     'overview.checkup.mdTs': 'Generated at: ',

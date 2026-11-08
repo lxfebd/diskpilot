@@ -486,6 +486,33 @@ export function buildQueueMd(items: readonly ConfirmQueueItem[], now: number, L:
   return lines.join('\n');
 }
 
+export interface QueueCsvL10n {
+  colSource: string;
+  colKind: string;
+  colName: string;
+  colKey: string;
+  colDetail: string;
+}
+
+/** R545：清单渲染成 RFC4180 CSV（纯函数，可单测）。
+ * 带 BOM（\ufeff）让 Excel 直接按 UTF-8 打开；字段含逗号/引号/换行时双引号包裹且引号翻倍。 */
+export function buildQueueCsv(items: readonly ConfirmQueueItem[], L: QueueCsvL10n): string {
+  const esc = (v: string): string => {
+    const s = String(v ?? '');
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const rows: string[] = [
+    [L.colSource, L.colKind, L.colName, L.colKey, L.colDetail].map(esc).join(','),
+  ];
+  for (const q of items) {
+    rows.push([q.source, q.kind, q.name, q.key, q.detail].map(esc).join(','));
+  }
+  // 行首 \uFEFF 是 BOM，让 Excel 直接按 UTF-8 打开中文列头
+  return '\uFEFF' + rows.join('\r\n') + '\r\n';
+
+
+}
+
 /** R530：解析 reg-hunter --json 输出（首行摘要，第二行 JSON 数组）。
  *  解析失败/形状不对 → 空数组（不入队垃圾），绝不抛出打断体检。 */
 export interface RegHunterStaleItem {
@@ -1258,7 +1285,28 @@ function HealthCheckupCard({
     } catch (e) {
       useStore.getState().toast(t('overview.checkup.queueExportFail', { err: String(e) }), 'err');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmQueue, t]);
+  // R545：CSV 导出（Excel/台账直接打开；用户自选保存路径，无需确认 nonce）
+  const exportQueueCsv = useCallback(async () => {
+    if (!confirmQueue || confirmQueue.length === 0) return;
+    const picked = await save({
+      defaultPath: `diskpilot-confirm-queue-${formatDateKey(new Date())}.csv`,
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+    });
+    if (!picked) return;
+    try {
+      const L: QueueCsvL10n = {
+        colSource: t('overview.checkup.mdColSource'),
+        colKind: t('overview.checkup.mdColKind'),
+        colName: t('overview.checkup.mdColName'),
+        colKey: t('overview.checkup.mdColKey'),
+        colDetail: t('overview.checkup.csvColDetail'),
+      };
+      await writeTextFile(picked, buildQueueCsv(confirmQueue, L));
+      useStore.getState().toast(t('overview.checkup.queueExportOk'), 'ok');
+    } catch (e) {
+      useStore.getState().toast(t('overview.checkup.queueExportFail', { err: String(e) }), 'err');
+    }
   }, [confirmQueue, t]);
   useEffect(() => { loadConfirmQueue(); }, [loadConfirmQueue]);
   useEffect(() => { setDiagSummary(loadDiagSummary()); }, []);
@@ -1550,6 +1598,10 @@ function HealthCheckupCard({
             <span className="muted small">{t('overview.checkup.queueHint')}</span>
             <button type="button" className="ghost small" onClick={() => void exportQueueReport()}>
               {t('overview.checkup.queueExport')}
+            </button>
+            {/* R545：CSV 版本给 Excel/台账用 */}
+            <button type="button" className="ghost small" onClick={() => void exportQueueCsv()}>
+              {t('overview.checkup.queueExportCsv')}
             </button>
           </div>
           {confirmQueue.slice(0, 5).map((q) => (

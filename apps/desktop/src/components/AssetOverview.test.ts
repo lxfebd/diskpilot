@@ -3,7 +3,7 @@ import type { SpacePoint } from '../api';
 import type { Node } from '../types';
 import { setLang } from '../i18n';
 import { DRIVE_WARN_PCT } from '../drives';
-import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, parseRegHunterJson, buildQueueMd, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
+import { buildSpaceSeries, spaceWeekDelta, spaceSparkPath, driveUsagePct, isDriveCritical, pickWorstRedDrive, aggregateByScaffold, reclaimByScaffoldIds, isTempHigh, disabledStartupCount, hasCheckedWechat, startupCheckState, scaffoldMainPaths, forecastFullDays, forecastFullInfo, linearFit, forecastConfidence, isOfficialPlugin, diagSummaryLine, loadDiagSummary, parseRegHunterJson, buildQueueMd, buildQueueCsv, spaceRisk, spaceTrendSamples, truncatePaths, previewSummary, previewTotalBytes, previewState, sortCleanItemsByBytes, sortPreviewItemsByBytes, pruneStalePreviews, mergeCheckedState, diffTrend, shouldShowDiff, biggestChange, diffGapDate, dupRunningCount } from './AssetOverview';
 
 // spaceWeekDelta 的返回值是 t() 产物，断言按中文原文写，必须先钉死语言。
 beforeAll(() => setLang('zh'));
@@ -216,6 +216,28 @@ describe('buildQueueMd（R533 清单导出报告）', () => {
     const md = buildQueueMd([], Date.now(), L);
     expect(md).toContain('共 0 条。');
     expect(md).not.toContain('## 详情');
+  });
+});
+
+describe('buildQueueCsv（R545 清单 CSV 导出）', () => {
+  const L = { colSource: '来源', colKind: '类型', colName: '名称', colKey: '定位键', colDetail: '诊断详情' };
+  it('BOM + 表头 + CRLF 行尾', () => {
+    const csv = buildQueueCsv([], L);
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(csv).toContain('来源,类型,名称,定位键,诊断详情\r\n');
+    expect(csv.endsWith('\r\n')).toBe(true);
+  });
+  it('含逗号/引号/换行的字段双引号包裹且引号翻倍', () => {
+    const csv = buildQueueCsv(
+      [{ id: 'q1', at: 0, source: 'reg-hunter', kind: 'uninstall', key: 'HKLM\\X', name: '某,软件 "A"', detail: '{"a":1}\nline2' }],
+      L,
+    );
+    const lines = csv.slice(1).split('\r\n');
+    expect(lines[1]).toBe('reg-hunter,uninstall,"某,软件 ""A""",HKLM\\X,"{""a"":1}\nline2"');
+  });
+  it('普通字段不加引号', () => {
+    const csv = buildQueueCsv([{ id: 'q2', at: 0, source: 'svc-hunter', kind: 'service', key: 'svc1', name: '可疑服务', detail: '{}' }], L);
+    expect(csv).toContain('\r\nsvc-hunter,service,可疑服务,svc1,{}\r\n');
   });
 });
 
