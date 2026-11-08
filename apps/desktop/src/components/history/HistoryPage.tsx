@@ -10,6 +10,10 @@ import { formatBytes, formatTime } from '../../format';
 import type { UndoEntry } from '../../types';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { WeeklyHealthCard } from './WeeklyHealthCard';
+// R528：历史页也放硬件趋势图（温度/通电折线），数据与硬件页同源 hw_snapshot_series
+import { HwTrendChart } from '../HwPanels';
+import type { HwSeriesPoint } from '../../api';
+import { isTauri } from '../../env';
 import { clearSearchOnClick, clearSearchOnEscape } from '../../a11y';
 import {
   dayGroupLabel,
@@ -151,9 +155,23 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   // 恢复时用 entries.indexOf 反查真实位置。
   const backendIndex = (e: UndoEntry): number => (entries ?? []).indexOf(e);
 
+  // R528 硬件趋势：历史页挂载时读一次 hw_snapshot_series（只读）；读失败给 err 不伪装空
+  const [hwSeries, setHwSeries] = useState<HwSeriesPoint[]>([]);
+  const [hwSeriesErr, setHwSeriesErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isTauri) return;
+    let cancelled = false;
+    api.hwSnapshotSeries()
+      .then((s) => { if (!cancelled) { setHwSeries(s); setHwSeriesErr(null); } })
+      .catch((e) => { if (!cancelled) setHwSeriesErr(String(e instanceof Error ? e.message : e)); });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
       <div className="hp-shell">
         <WeeklyHealthCard onOpenCleanup={onOpenCleanup} />
+        {isTauri && hwSeries.length > 0 && <HwTrendChart series={hwSeries} err={hwSeriesErr} />}
+        {isTauri && hwSeries.length === 0 && hwSeriesErr && <HwTrendChart series={[]} err={hwSeriesErr} />}
         <div className="hp-head">
         <span className="hp-title"><History size={15} /> {t('history.title')}</span>
         {loadErr ? (

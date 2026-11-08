@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R528: 历史页挂载硬件趋势图——温度 / 通电时长折线从硬件页下沉到用户常看的历史页
+
+- **复用 R96 数据层**：历史页挂载时调一次 `hw_snapshot_series`（只读），渲染既有 `HwTrendChart`（纯 SVG 折线，零新依赖）；读失败走 err 分支诚实提示，不伪装空图。
+- **展示**：周报卡下方直接看到 temp_max 与 power_on_hours 两条趋势线 + 有效点数（sparse 标黄），与硬件页同口径；浏览器演示态不渲染（无数据源）。
+- **红线守住**：只读归档，不触发采样、不写盘。
+- **验证**：vitest 1312/1312 绿，tsc/eslint 全过。
+
 ### R527: svc-hunter —— 第八个官方签名插件（v1.7.0）：Windows 服务审计器，只读不停服务
 
 - **插件** `plugins/svc-hunter`：`sc query type= service state= all` + 逐服务 `sc qc` 拿 BINARY_PATH_NAME（统一 `cmd /c chcp 65001` 切 UTF-8 防中文系统 GBK 毁解析；服务名单独加引号防空格）；可疑判定纯函数——binpath 非空且不在 Windows/System32/Program Files 等系统目录即标（临时/用户目录额外强调），系统服务与空 binpath 免判；`--top N` / `--all`。3 例单测。
