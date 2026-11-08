@@ -10,6 +10,7 @@ import { formatBytes, formatTime } from '../../format';
 import type { UndoEntry } from '../../types';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { WeeklyHealthCard } from './WeeklyHealthCard';
+import { NoticesBlock } from './NoticesBlock';
 // R528：历史页也放硬件趋势图（温度/通电折线），数据与硬件页同源 hw_snapshot_series
 import { HwTrendChart } from '../HwPanels';
 import type { HwSeriesPoint } from '../../api';
@@ -170,6 +171,7 @@ export function HistoryPage({ onOpenCleanup }: { onOpenCleanup?: () => void } = 
   return (
       <div className="hp-shell">
         <WeeklyHealthCard onOpenCleanup={onOpenCleanup} />
+        <NoticesBlock />
         {isTauri && hwSeries.length > 0 && <HwTrendChart series={hwSeries} err={hwSeriesErr} />}
         {isTauri && hwSeries.length === 0 && hwSeriesErr && <HwTrendChart series={[]} err={hwSeriesErr} />}
         <div className="hp-head">

@@ -10,6 +10,7 @@ import { focusMainIfFocusLost } from './a11y';
 import { LeftPanel } from './components/LeftPanel';
 import { useCleanupStore } from './useCleanupStore';
 import { scanTargets } from './drives';
+import { addNotice } from './notices';
 import { ScanGate } from './scanGate';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
@@ -382,8 +383,11 @@ export default function App() {
     if (!isTauri) return;
     const unlisten = listen<import('./api').WeeklyReport>('health-weekly', (e) => {
       const p = e.payload;
+      const body = t('shell.toast.healthWeekly', { size: formatBytes(p.total_bytes) });
+      // R537：持久化通知中心入列（历史页可回看）
+      addNotice({ kind: 'weekly', title: t('shell.notices.weeklyTitle'), body });
       useStore.getState().toast(
-        t('shell.toast.healthWeekly', { size: formatBytes(p.total_bytes) }),
+        body,
         'ok',
         // R103：点击直达操作历史页看周报全文。
         { label: t('shell.toast.actionHistory'), run: () => setView('history') },
@@ -400,12 +404,15 @@ export default function App() {
       const warns = e.payload;
       if (!Array.isArray(warns) || warns.length === 0) return;
       const first = warns[0];
+      const body = t('shell.toast.spaceFull', {
+        path: first.path,
+        days: first.days === 0 ? t('shell.toast.spaceFullNow') : String(first.days),
+        extra: warns.length > 1 ? t('shell.toast.spaceFullMore', { n: warns.length - 1 }) : '',
+      });
+      // R537：持久化通知中心入列
+      addNotice({ kind: 'space-full', title: t('shell.notices.spaceFullTitle'), body });
       useStore.getState().toast(
-        t('shell.toast.spaceFull', {
-          path: first.path,
-          days: first.days === 0 ? t('shell.toast.spaceFullNow') : String(first.days),
-          extra: warns.length > 1 ? t('shell.toast.spaceFullMore', { n: warns.length - 1 }) : '',
-        }),
+        body,
         'warn',
         // R103：点击直达总览看空间趋势。
         { label: t('shell.toast.actionOverview'), run: () => setView('overview') },
@@ -484,6 +491,8 @@ export default function App() {
             path: first.path,
             days: first.days != null ? String(first.days) : '?',
           });
+      // R537：持久化通知中心入列
+      addNotice({ kind: 'scan-stale', title: t('shell.notices.scanStaleTitle'), body });
       useStore.getState().toast(
         body
           + (warns.length > 1
@@ -501,8 +510,11 @@ export default function App() {
     if (!isTauri) return;
     const unlisten = listen<import('./api').ReportExported>('report-exported', (e) => {
       const p = e.payload;
+      const body = t('shell.toast.reportExported', { n: p.written, dir: p.dir });
+      // R537：持久化通知中心入列
+      addNotice({ kind: 'report-exported', title: t('shell.notices.exportTitle'), body });
       useStore.getState().toast(
-        t('shell.toast.reportExported', { n: p.written, dir: p.dir }),
+        body,
         p.written > 0 ? 'ok' : 'warn',
       );
     });

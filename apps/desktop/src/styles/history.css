@@ -18,6 +18,14 @@
   min-height: 0;
 }
 
+/* R537 持久化通知中心 */
+.hp-notices { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; border: 1px solid var(--border, #3a3f4a); border-radius: 8px; margin-bottom: 10px; }
+.hp-notices-head { display: flex; align-items: center; justify-content: space-between; }
+.hp-notices-title { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
+.hp-notice-row { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
+.hp-notice-kind { flex: none; padding: 0 6px; border-radius: 4px; background: var(--bg-soft, #262a33); color: var(--text-dim, #9aa0ae); }
+.hp-notice-body { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .hp-head {
   display: flex;
   align-items: center;

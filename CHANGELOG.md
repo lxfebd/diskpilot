@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R537: 持久化通知中心——周报/空间预警/扫描提醒/自动导出都入列，历史页顶部可回看可清空
+
+- **纯前端**：新模块 `notices.ts`（localStorage `diskpilot:notices-v1`，cap 50 最新在前，`pushNotice` 纯函数 3 单测）；App.tsx 的 `health-weekly` / `space-full-reminder` / `scan-stale` / `report-exported` 四个事件监听在 toast 之余统一 `addNotice` 入列。
+- **UI**：历史页顶部新增 `NoticesBlock`（最新 5 条 + 类型标签 + 时间 + 一键清空，storage 事件跨页刷新），i18n `shell.notices.*` zh+en，CSS `.hp-notices*`。
+- **门禁**：pre-release-check 21/21 绿，vitest 绿。
+
 ### R536: GitHub Actions 升级——checkout/setup-node v4→v7（4 个 workflow 共 9 处）+ tauri-action v0→v1，PR 队列清空
 
 - 风险评估后全量升级：checkout v7 为 fork-PR 安全加固（本仓无 pull_request_target，低风险）、setup-node v7 为 ESM 迁移（兼容）、tauri-action v1 的 breaking（macOS 包命名/latest.json URL）只影响打 tag 时的 release workflow。
