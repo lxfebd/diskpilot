@@ -7,6 +7,10 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R534: 官方插件下载排行榜（docs/plugin-downloads.md）——运营视角，bigfile-finder 领跑 16 次，总计 125 次
+
+- 只读采集 `diskpilot-plugin-index` 各 release zip 的 `download_count`（GitHub API，2026-11-08），按插件聚合「最新版 + 累计」两列，写入 `docs/plugin-downloads.md`；无代码变更，无门禁影响（check-docs-links 83 条仍全部命中）。
+
 ### R533: 待人工确认清单「导出报告」——一键导出 Markdown（含来源/类型/定位键/诊断详情，明确声明未处置）
 
 - **前端**：纯函数 `buildQueueMd(items, now, L)` 渲染 md（表格管道符转义、详情 JSON 原样入代码块），文案全部走 i18n（coverage 测试红线）；清单区块头加「导出报告」按钮，走 `save` 对话框 + `writeTextFile`（与扫描报告导出同款路径，用户主动选位置不走 nonce 闸）；2 单测（转义/空清单）。
