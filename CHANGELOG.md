@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R532: schtask-hunter v1.1.0 --json，可疑计划任务入队——审计三件套（注册表/服务/计划任务）全部接入待人工确认清单
+
+- **插件**：`schtask-hunter` 升级 **v1.1.0**（release `v1.10.0`，index commit `e18143e`，validate-index run 42445067553 success，zip sha256 `a764e64add860a6e28df6cd024620965824178cc2e2170569dd26856fc0c8ed6` 123474 B）：`--json` 机读（kind=schtask，含 cmd_path/state/reasons）；本机冒烟正确标出 FanControl 失败任务。verify_online 全部通过。
+- **前端**：体检跑 schtask-hunter 带 `--json` 入队（source=schtask-hunter）；清单新增「可疑任务」标签；i18n zh+en。
+- **红线**：仍只读不禁用任务；可疑任务只入队待人工确认。
+- **门禁**：pre-release-check 21/21 绿。
+
 ### R531: svc-hunter v1.1.0 --json，可疑服务也进「待人工确认清单」——审计三件套（任务/注册表/服务）齐
 
 - **插件**：`svc-hunter` 升级 **v1.1.0**（release `v1.9.0`，index commit `e0aa01b`，validate-index run 42444079684 success，zip sha256 `429120d9c8bb0f9fd5a1d32d31113bf7d764e9204f8ccda8ea938186ce61130f` 130100 B）：`--json` 机读（kind=service，含 binpath/state/reasons）；本机冒烟可疑 0 → `[]` 正确。verify_online 全部通过（历史版本 zip 按 versions[0] 口径下载校验）。

@@ -1,6 +1,6 @@
 //! schtask-hunter —— DiskPilot 官方插件（只读诊断工具，Windows）。
 //!
-//! 用法: schtask-hunter.exe [--top N]
+//! 用法: schtask-hunter.exe [--top N] [--json]
 //!   默认 TopN=10，列出可疑计划任务 Top N + 摘要。
 //!
 //! 解析 `schtasks /Query /FO CSV /V` 拿到任务全景（状态/上次结果/触发器/命令路径），
@@ -139,12 +139,54 @@ fn run(cmd: &str, args: &[&str]) -> Option<String> {
     Some(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
+/// JSON 字符串转义（手写，保持零依赖，与 reg-hunter/svc-hunter 同款）。
+fn jesc(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// R532 --json 机读输出：首行摘要后第二行 JSON 数组，kind=schtask。
+fn print_json_report(flagged: &[(&Task, Vec<String>)]) {
+    let mut items = String::from("[");
+    for (i, (t, reasons)) in flagged.iter().enumerate() {
+        if i > 0 {
+            items.push(',');
+        }
+        let rs = reasons
+            .iter()
+            .map(|r| format!("\"{}\"", jesc(r)))
+            .collect::<Vec<_>>()
+            .join(",");
+        items.push_str(&format!(
+            "{{\"kind\":\"schtask\",\"key\":\"{}\",\"name\":\"{}\",\"cmd_path\":\"{}\",\"state\":\"{}\",\"reasons\":[{}]}}",
+            jesc(&t.name),
+            jesc(&t.name),
+            jesc(&t.task_to_run),
+            jesc(&t.state),
+            rs
+        ));
+    }
+    items.push(']');
+    println!("{}", items);
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!("schtask-hunter —— 计划任务审计器（只读，不禁用任务不改配置）");
-        println!("用法: schtask-hunter.exe [--top N]");
-        println!("  默认 TopN=10，输出可疑任务 Top N + 摘要。");
+        println!("用法: schtask-hunter.exe [--top N] [--json]");
+        println!("  默认 TopN=10；--json 输出机读清单（供待人工确认清单入队）。");
         return;
     }
     let top_n: usize = args
@@ -170,7 +212,13 @@ fn main() {
         .collect();
     flagged.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then_with(|| a.0.name.cmp(&b.0.name)));
 
+    // R532：--json 机读输出（供主应用入「待人工确认清单」），人类可读输出不变
+    let as_json = args.iter().any(|a| a == "--json");
     println!("计划任务审计（只读）: 共 {} 项，启用 {} 项，上次失败 {} 项，耗时 {:.2?}", total, enabled, failed, t0.elapsed());
+    if as_json {
+        print_json_report(&flagged);
+        return;
+    }
     if flagged.is_empty() {
         println!("未发现可疑任务。");
     } else {
