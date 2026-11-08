@@ -651,6 +651,8 @@ export interface WeeklyReport {
   scan_trends?: string[];
   /** R486：观测层异常告警行（损坏行/读取失败的域）。旧归档无此字段。 */
   obs_alerts?: string[];
+  /** R529：超温提示（后端已按持续偏高阈值判定并格式化好文案）。旧归档无此字段。 */
+  temp_alert?: string | null;
 }
 
 /** 周报里的单块盘健康：health 是后端原值，grade 是统一分级（good/caution/bad/unknown）。 */

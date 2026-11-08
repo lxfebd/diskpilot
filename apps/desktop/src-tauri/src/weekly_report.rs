@@ -18,6 +18,29 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::AppState;
 
+/// R529 超温提示（纯函数，可单测）：本周最高温超过持续偏高阈值 → 给提示；
+/// 未开持续采样预警时，提示里建议去设置里打开（周报只读，不自行改配置）。
+pub(crate) fn temp_alert_note(
+    temp_max_c: Option<f32>,
+    cfg: &crate::reminder::ReminderConfig,
+) -> Option<String> {
+    let t = temp_max_c?;
+    if t < cfg.thermal_sustained_c {
+        return None;
+    }
+    Some(if cfg.thermal_sample_enabled {
+        format!(
+            "本周最高温 {:.0}℃ 已达持续偏高阈值 {:.0}℃，持续采样预警已开启，留意通知。",
+            t, cfg.thermal_sustained_c
+        )
+    } else {
+        format!(
+            "本周最高温 {:.0}℃ 超过 {:.0}℃ 阈值，但未开启持续采样预警——建议在设置里打开。",
+            t, cfg.thermal_sustained_c
+        )
+    })
+}
+
 /// 单份周报（归档到 weekly-report/*.json）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct WeeklyReport {
@@ -40,6 +63,10 @@ pub(crate) struct WeeklyReport {
     /// 旧归档没有此字段 → 前端按「旧格式无数据」处理（不显示失败提示）。
     #[serde(default)]
     pub disks_note: Option<String>,
+    /// R529 超温提示：本周最高温超过提醒配置里的持续偏高阈值时给一句诚实提示
+    /// （不编造预警、不自行开采样开关）。旧归档无此字段 → None。
+    #[serde(default)]
+    pub temp_alert: Option<String>,
     /// 各扫描根最近两次扫描的环比趋势行（R486，后端已格式化）。
     /// 旧归档没有此字段 → 前端整块不显示（不猜）。
     #[serde(default)]
@@ -242,6 +269,10 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         .map(|d| obs_alert_lines(&crate::observations::build_overview(&d)))
         .unwrap_or_default();
 
+    // R529：超温提示（纯函数判定，阈值取 reminder 配置，未开持续采样时提示去打开）
+    let rcfg = crate::reminder::config_at(app);
+    let temp_alert = temp_alert_note(temp_max_c, &rcfg);
+
     Ok(WeeklyReport {
         ts: SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -250,6 +281,7 @@ pub(crate) fn generate_weekly_report(app: &AppHandle) -> Result<WeeklyReport, St
         drives,
         total_bytes: total,
         temp_max_c,
+        temp_alert,
         hw_snapshots,
         hw_delta,
         disks,
@@ -437,6 +469,7 @@ mod tests {
                 },
             ],
             disks_note: None,
+            temp_alert: None,
             scan_trends: vec!["C:\\ 文件 +12，体量 +1.0 GB（距上次 7 天)".into()],
             obs_alerts: vec!["undo 有 2 行损坏（已跳过，文件未丢弃）".into()],
         };
@@ -451,6 +484,25 @@ mod tests {
         assert_eq!(back.disks[1].grade, "caution");
         assert_eq!(back.scan_trends.len(), 1);
         assert_eq!(back.obs_alerts.len(), 1);
+    }
+
+    #[test]
+    fn temp_alert_note_thresholds() {
+        let mut cfg = crate::reminder::ReminderConfig::default(); // thermal_sustained_c = 85
+                                                                  // 低于阈值 → 无提示
+        assert!(temp_alert_note(Some(70.0), &cfg).is_none());
+        assert!(temp_alert_note(None, &cfg).is_none());
+        // 超阈值 + 未开采样 → 提示建议打开
+        cfg.thermal_sample_enabled = false;
+        let a = temp_alert_note(Some(90.0), &cfg).unwrap();
+        assert!(a.contains("90") && a.contains("85") && a.contains("未开启"));
+        // 超阈值 + 已开采样 → 提示留意通知
+        cfg.thermal_sample_enabled = true;
+        let b = temp_alert_note(Some(90.0), &cfg).unwrap();
+        assert!(b.contains("已开启"));
+        // 恰等于阈值也算达标（>= 触发）；差一点不达标
+        assert!(temp_alert_note(Some(85.0), &cfg).is_some());
+        assert!(temp_alert_note(Some(84.9), &cfg).is_none());
     }
 
     #[test]
@@ -480,6 +532,7 @@ mod tests {
             hw_delta: Vec::new(),
             disks: Vec::new(),
             disks_note: Some("硬盘健康读取失败：timeout".into()),
+            temp_alert: None,
             scan_trends: Vec::new(),
             obs_alerts: Vec::new(),
         };

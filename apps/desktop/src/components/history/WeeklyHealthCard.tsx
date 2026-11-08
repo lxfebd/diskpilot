@@ -4,7 +4,7 @@
 // 后端同样是只读聚合（扫描建议 + 温度 + 硬件对比），绝不执行清理；真实清理
 // 仍只走总览页确认窗（user_confirmed 硬校验）。
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Eraser, Flame, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles, Thermometer } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Eraser, Flame, Loader2, ShieldAlert, ShieldCheck, ShieldQuestion, Sparkles, Thermometer } from 'lucide-react';
 import { api } from '../../api';
 import type { WeeklyReport } from '../../api';
 import { formatBytes, formatDateKey } from '../../format';
@@ -177,6 +177,14 @@ export function WeeklyHealthCard({
               </span>
             </div>
           </div>
+
+          {/* R529 超温提示：后端已按持续偏高阈值判定并给出文案，这里只原样展示（只读，不自行改配置） */}
+          {report.temp_alert && (
+            <div className="wh-temp-alert" role="alert">
+              <AlertTriangle size={13} />
+              <span>{report.temp_alert}</span>
+            </div>
+          )}
 
           {/* R95 环比对比：两份都有才显示；只有一份 → 提示再生成一份；缺字段不编造。 */}
           {delta ? (

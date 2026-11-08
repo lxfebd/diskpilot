@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R529: 周报卡超温提示线——本周最高温达持续偏高阈值时，周报里给一条诚实告警（与 R528 趋势图成闭环）
+
+- **后端**：`WeeklyReport` 新增 `temp_alert: Option<String>`（serde default，旧归档照常读）；纯函数 `temp_alert_note(temp_max_c, cfg)` 判定——≥ 阈值才提示，未开持续采样时文案建议去设置里打开（周报只读，不自行改配置）；`reminder::config_at` 提升为 pub(crate)；1 例单测（低温/无温/超温+开关两种/边界 85.0 触发 84.9 不触发）。
+- **前端**：周报卡统计行下渲染 `.wh-temp-alert` 警示条（AlertTriangle + 后端文案），CSS 警示底色；`WeeklyReport` 类型补 `temp_alert?`；无新 i18n 键（文案由后端格式化，中英一致口径）。
+- **门禁**：pre-release-check **21/21 绿**，vitest 1312 绿，tsc/eslint 过。
+
 ### R528: 历史页挂载硬件趋势图——温度 / 通电时长折线从硬件页下沉到用户常看的历史页
 
 - **复用 R96 数据层**：历史页挂载时调一次 `hw_snapshot_series`（只读），渲染既有 `HwTrendChart`（纯 SVG 折线，零新依赖）；读失败走 err 分支诚实提示，不伪装空图。

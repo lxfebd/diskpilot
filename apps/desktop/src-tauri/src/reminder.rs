@@ -133,7 +133,7 @@ fn config_path(app: &AppHandle) -> Option<PathBuf> {
         .map(|d| d.join("reminder.json"))
 }
 
-fn config_at(app: &AppHandle) -> ReminderConfig {
+pub(crate) fn config_at(app: &AppHandle) -> ReminderConfig {
     let Some(p) = config_path(app) else {
         return ReminderConfig::default();
     };
