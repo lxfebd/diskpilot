@@ -94,6 +94,8 @@ export const hw = {
     'hw.trendTemp': '最高温（°C）',
     // R538 超温阈值标注
     'hw.trendWarn': '超 {c}°C 阈值',
+    // R539 主卡当前温度超阈值
+    'hw.tempOverWarn': '当前温度已达 {c}°C 预警阈值',
     'hw.trendPower': '通电时长（小时）',
     'hw.trendTempNone': '还没有带温度的快照，生成几次硬件报告后这里会画温度曲线。',
     'hw.trendPowerNone': '还没有带通电时长数据的快照，趋势图暂空。',
@@ -194,6 +196,8 @@ export const hw = {
     'hw.trendTemp': 'Max temp (°C)',
     // R538 over-temp threshold marker
     'hw.trendWarn': 'over {c}°C threshold',
+    // R539 current temp over threshold on the main card
+    'hw.tempOverWarn': 'Current temperature has reached the {c}°C warning threshold',
     'hw.trendPower': 'Power-on hours',
     'hw.trendTempNone': 'No snapshots with a temperature reading yet — generate a few hardware reports and the temp line will appear here.',
     'hw.trendPowerNone': 'No snapshots with power-on-hour data yet, the trend stays empty.',

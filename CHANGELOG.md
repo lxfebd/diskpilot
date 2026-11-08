@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R539: 硬件主卡温度超阈值标红——与 R538 趋势图同一阈值语义（thermal_sustained_c）
+
+- 纯函数 `hwTempOver(tempC, warnC)`（1 组单测）；`HwReportCard` 新 prop `tempWarnC`，温度格当前值（GPU 实时优先，否则传感器最大值）≥ 阈值时 `.hw-temp-over` 标红 + tooltip 说明；ChatPanel 启动时读 `api.getReminderConfig()` 传入。
+- i18n `hw.tempOverWarn` zh+en。门禁 21/21 绿。
+
 ### R538: 硬件趋势图超温阈值标注——温度线画阈值虚线 + 超温点红圈（阈值取自提醒配置 thermal_sustained_c）
 
 - **纯函数**：`hwTempWarnY` / `hwTempOverXY`（与 `hwSeriesPath` 同一归一化，3 单测）；`HwTrendChart` 新可选 prop `tempWarnC`，阈值在数据范围内才画线，超温点标红圈、最高温旁标「超 N°C 阈值」。

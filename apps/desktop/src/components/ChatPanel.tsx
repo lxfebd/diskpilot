@@ -158,6 +158,14 @@ const composingRef = useRef(false);
 
   // AI 调用 get_hardware_info / analyze_disk_health 时的结构化数据，渲染为卡片。
   const [hwCard, setHwCard] = useState<{ info: HwInfo | null; health: import('../api').HwDiskHealth | null } | null>(null);
+  // R539：超温阈值（提醒配置 thermal_sustained_c），硬件主卡温度超阈值标红
+  const [tempWarnC, setTempWarnC] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isTauri) return;
+    api.getReminderConfig()
+      .then((c) => { if (typeof c?.thermal_sustained_c === 'number') setTempWarnC(c.thermal_sustained_c); })
+      .catch(() => {});
+  }, []);
   // 当前进行中 AI 请求的取消控制器（beginReq 创建、endReq 清空）：停止按钮
   // abort 它 → agentChat 的 o.signal 触发 → 浏览器分支掐 fetch / Tauri 分支
   // 调 ai_cancel 掐后端。
@@ -788,7 +796,7 @@ const composingRef = useRef(false);
             <p>{t('chat.overview.generating')}</p>
           </div>
         )}
-        {hwCard && <HwReportCard info={hwCard.info} health={hwCard.health} />}
+        {hwCard && <HwReportCard info={hwCard.info} health={hwCard.health} tempWarnC={tempWarnC} />}
         {turns.map((turn) => (
           <TurnRow
             key={turn.id}

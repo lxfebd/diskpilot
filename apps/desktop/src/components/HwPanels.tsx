@@ -71,7 +71,7 @@ export function vramStr(v: unknown): string {
   return formatBytes(n);
 }
 
-export function HwReportCard({ info, health, loading }: { info: HwInfo | null; health?: HwDiskHealth | null; loading?: boolean }) {
+export function HwReportCard({ info, health, loading, tempWarnC }: { info: HwInfo | null; health?: HwDiskHealth | null; loading?: boolean; /** R539：超温阈值（°C），来自提醒配置；当前温度 ≥ 阈值时主卡标红 */ tempWarnC?: number | null }) {
   const t = useT();
   const cpu = arr(info?.cpu)[0] as Record<string, unknown> | undefined;
   const gpu = arr(info?.gpu) as Record<string, unknown>[];
@@ -164,7 +164,13 @@ export function HwReportCard({ info, health, loading }: { info: HwInfo | null; h
 
         <div className="hw-cell">
           <div className="hw-cell-label">{t('hw.cellTemp')}</div>
-          <div className="hw-cell-main">{liveTemp > 0 ? t('hw.tempGpu', { temp: liveTemp }) : tempStr}</div>
+          {/* R539：当前温度（GPU 实时优先，否则传感器最大值）≥ 阈值 → 标红警示 */}
+          <div
+            className={'hw-cell-main' + (hwTempOver(liveTemp > 0 ? liveTemp : maxTemp, tempWarnC) ? ' hw-temp-over' : '')}
+            title={hwTempOver(liveTemp > 0 ? liveTemp : maxTemp, tempWarnC) ? t('hw.tempOverWarn', { c: Math.round(tempWarnC ?? 0) }) : undefined}
+          >
+            {liveTemp > 0 ? t('hw.tempGpu', { temp: liveTemp }) : tempStr}
+          </div>
           <div className="hw-cell-sub">{liveTemp > 0 ? liveSrc || t('hw.liveSourceGpu') : t('hw.sensorCount', { count: thermal.length })}</div>
         </div>
       </div>
@@ -608,6 +614,11 @@ export function hwSeriesQuality(vals: readonly number[]): 'rich' | 'sparse' | 'n
   const n = vals.filter((v) => Number.isFinite(v)).length;
   if (n < 2) return 'none';
   return n >= 5 ? 'rich' : 'sparse';
+}
+
+/** R539：当前温度是否达到/超过阈值（阈值空或温度无效 → false）。 */
+export function hwTempOver(tempC: number, warnC: number | null | undefined): boolean {
+  return warnC != null && Number.isFinite(tempC) && Number.isFinite(warnC) && tempC >= warnC;
 }
 
 /** R538：阈值线的 y 坐标（与 hwSeriesPath 同一归一化），超出数据范围返回 null（不画线）。 */

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from 'vitest';
-import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath, hwSeriesQuality, hwTempWarnY, hwTempOverXY } from './HwPanels';
+import { fmtHwTime, gpuLiveSource, vramStr, hwSeriesPath, hwSeriesQuality, hwTempWarnY, hwTempOverXY, hwTempOver } from './HwPanels';
 import { setLang } from '../i18n';
 
 // fmtHwTime：把归档 Unix 秒转成本地可读时间；非法/空输入返回空串（展示层兜底）。
@@ -73,6 +73,18 @@ describe('vramStr（AdapterRAM 溢出区判定）', () => {
 });
 
 // R96 硬件趋势折线 path：≥2 个有值点才画；归一化到自身 min/max（值平=水平线）。
+describe('hwTempOver（R539 主卡温度超阈值）', () => {
+  it('≥ 阈值才算超温，阈值空/无效温度都不算', () => {
+    expect(hwTempOver(85, 80)).toBe(true);
+    expect(hwTempOver(80, 80)).toBe(true);
+    expect(hwTempOver(79.9, 80)).toBe(false);
+    expect(hwTempOver(85, null)).toBe(false);
+    expect(hwTempOver(85, undefined)).toBe(false);
+    expect(hwTempOver(NaN, 80)).toBe(false);
+    expect(hwTempOver(Infinity, 80)).toBe(false);
+  });
+});
+
 describe('hwTempWarnY / hwTempOverXY（R538 超温阈值标注）', () => {
   it('阈值在数据范围内 → 返回 y 坐标；范围外 → null 不画线', () => {
     expect(hwTempWarnY([50, 80], 65)).not.toBeNull();
