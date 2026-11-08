@@ -7,6 +7,10 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+## [1.0.1] - 2026-11-08
+
+> R504–R543 共 40 轮：11 个官方诊断插件（审计三件套 1.1.0）、插件体检格 + 待人工确认清单 + 导出报告、持久化通知中心 + 未读角标、周报异常磁盘清单、硬件超温阈值标注（主卡/趋势图/SMART 行三处一致红标）、GitHub Actions 全量升级 v7、依赖与 PR 队列清理、README 徽章区、插件下载排行榜。
+
 ### R543: README 徽章区整理——新增 CI / CodeQL / Stars / 插件下载数徽章（中英文双份），文档区加下载排行入口
 
 - CI/CodeQL 徽章直接挂 workflow badge（随每次 run 变绿/红）；插件下载数用 `github/downloads/.../total` 动态徽章并链到 `docs/plugin-downloads.md`（R534 排行）；Stars 徽章挂 repo。

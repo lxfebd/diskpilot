@@ -10,7 +10,7 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/Release-v1.0.1-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.1)
 [![CI](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml)
 [![Stars](https://img.shields.io/github/stars/lxfebd/diskpilot?style=flat)](https://github.com/lxfebd/diskpilot/stargazers)
@@ -28,11 +28,11 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 
 ## Download
 
-Current version **v1.0.0**, download directly from [GitHub Releases](https://github.com/lxfebd/diskpilot/releases):
+Current version **v1.0.1**, download directly from [GitHub Releases](https://github.com/lxfebd/diskpilot/releases):
 
 | Platform | Installer | Notes |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_1.0.0_x64-setup.exe` | NTFS MFT direct read needs admin; the app auto-elevates via UAC |
+| Windows 10/11 x64 | `DiskPilot_1.0.1_x64-setup.exe` | NTFS MFT direct read needs admin; the app auto-elevates via UAC |
 | macOS (Apple Silicon / Intel) | `DiskPilot_1.0.0_aarch64.dmg` / `_x64.dmg` | **Unsigned / not notarized** — first open: right-click → Open; not yet validated on real hardware |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI artifacts, **not yet validated on real Linux machines** — feedback welcome |
 
@@ -40,6 +40,13 @@ Every installer ships with a `.sig` signature; built-in auto-updater (tauri-plug
 
 ## Changelog
 
+- **v1.0.1 (2026-11-08)**
+  - **11 official diagnostic plugins**: big-file / duplicate / temp / log / port / drive-health / browser-cache hunters + startup / registry / service / scheduled-task audit trio (v1.1.0 with `--json`), all wired into the daily checkup card
+  - **Pending-confirmation queue**: stale/suspicious items found by checkups, Markdown export, actions still gated by the confirmation dialog
+  - **Persistent notification center**: weekly report / space warnings / scan reminders / auto-export, unread badge on the sidebar, reviewable on the history page
+  - **Consistent red flags in 3 places**: main-card temperature, trend-chart threshold line, SMART abnormal-disk rows + weekly-report abnormal disk list
+  - **Engineering**: GitHub Actions upgraded to v7, dependabot PR queue cleared, plugin download leaderboard, README badge row
+  - See [CHANGELOG.md](CHANGELOG.md) R504–R543
 - **v1.0.0 (2026-11-02)**
   - **Community cleanup-scaffold loop**: one-click refresh of the official community index + install, end-to-end Ed25519 signature + sha256 + red-line validation; author side `scaffold-lint sign` to publish signed
   - **Keyboard accessibility专项**: game inventory / tool wall / treemap fully keyboard-operable; `?` opens the global shortcut panel
