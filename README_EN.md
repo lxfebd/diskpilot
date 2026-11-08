@@ -11,6 +11,10 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
 [![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.0)
+[![CI](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml)
+[![Stars](https://img.shields.io/github/stars/lxfebd/diskpilot?style=flat)](https://github.com/lxfebd/diskpilot/stargazers)
+[![Plugin downloads](https://img.shields.io/github/downloads/lxfebd/diskpilot-plugin-index/total?label=plugin%20downloads)](docs/plugin-downloads.md)
 
 [Download](#download) · [Demo](#demo) · [Features](#features) · [Security model](#security-model) · [Privacy](#privacy) · [Architecture](#architecture) · [Docs](#docs) · [Roadmap](#roadmap) · [Development](#development) · [Contributing](#contributing)
 
@@ -212,6 +216,7 @@ The principle in one sentence: **rather mis-release 1000 GB than mis-delete a si
 - [docs/](docs/README.md) — architecture deep-dive, user guide, scaffold authoring guide
 - [docs/mcp-tools.md](docs/mcp-tools.md) — reference for the 76 built-in MCP tools (params & security tiers)
 - [docs/plugin-market-index.md](docs/plugin-market-index.md) — plugin market community index contract (for standing up the official index repo)
+- [docs/plugin-downloads.md](docs/plugin-downloads.md) — download leaderboard of the 11 official plugins (live from index repo releases)
 - [docs/publish-plugin-guide.md](docs/publish-plugin-guide.md) — publishing a plugin to the community market (author quickstart)
 - [docs/security-model.md](docs/security-model.md) — threat model + per-layer defense code map (incl. R505 hardening)
 - [website/index.html](website/index.html) — project promo page (open directly in a local browser)

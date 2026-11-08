@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R543: README 徽章区整理——新增 CI / CodeQL / Stars / 插件下载数徽章（中英文双份），文档区加下载排行入口
+
+- CI/CodeQL 徽章直接挂 workflow badge（随每次 run 变绿/红）；插件下载数用 `github/downloads/.../total` 动态徽章并链到 `docs/plugin-downloads.md`（R534 排行）；Stars 徽章挂 repo。
+- README.md + README_EN.md 同步；check-docs-links 83 条仍全绿（新增的是相对文档链接，已命中真实文件）。
+
 ### R542: 通知中心未读角标——侧栏「历史」右上角红点数字（>99 显示 99+），进历史页即标已读
 
 - `notices.ts` 加已读水位（`diskpilot:notices-read-at`）+ 纯函数 `unreadCount`（单测）；App.tsx 封装 `notify()`（入列同时刷新角标），`navigate('history')` 时 `markNoticesRead()` 清零；Sidebar 新 prop `historyBadge` 渲染 `.side-item-badge` 红色数字角标（复用 side-item 定位模式）。

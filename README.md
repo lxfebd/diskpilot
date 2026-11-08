@@ -11,6 +11,10 @@
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
 [![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.0)
+[![CI](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml)
+[![Stars](https://img.shields.io/github/stars/lxfebd/diskpilot?style=flat)](https://github.com/lxfebd/diskpilot/stargazers)
+[![Plugin downloads](https://img.shields.io/github/downloads/lxfebd/diskpilot-plugin-index/total?label=plugin%20downloads)](docs/plugin-downloads.md)
 
 [下载](#下载) · [看效果](#看效果) · [功能一览](#功能一览) · [安全模型](#安全模型) · [隐私](#隐私) · [架构](#架构) · [文档](#文档) · [路线图](#路线图) · [开发](#开发) · [贡献](#贡献)
 
@@ -212,6 +216,7 @@ CPU / 内存 / 显卡 / 磁盘 / 屏幕 / 外设 / 烤机 / 游戏等 12 个分�
 - [docs/](docs/README.md) — 架构详解、使用说明书、清理脚本编写指南
 - [docs/mcp-tools.md](docs/mcp-tools.md) — 内置 76 个 MCP 工具参考（参数与安全分级）
 - [docs/plugin-market-index.md](docs/plugin-market-index.md) — 插件市场社区索引契约（建官方索引仓库时照此执行）
+- [docs/plugin-downloads.md](docs/plugin-downloads.md) — 11 个官方插件下载排行（实时采集自索引仓库 releases）
 - [docs/publish-plugin-guide.md](docs/publish-plugin-guide.md) — 发布插件到社区市场（作者快速上手）
 - [docs/security-model.md](docs/security-model.md) — 威胁模型与各层防线代码定位（含 R505 加固点）
 - [website/index.html](website/index.html) — 项目宣传站（本地浏览器直接打开即可预览）
