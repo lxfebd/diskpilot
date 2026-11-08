@@ -118,10 +118,18 @@ jobs:
           elif [[ "${{ matrix.os }}" == ubuntu-* ]]; then
             tools="$HOME/.cache/tauri"
             mkdir -p "$tools"
-            # AppImage 的 AppRun（bundler 下载后要求可执行位）
+            # AppImage 三件套（bundler 下载后要求可执行位；文件已存在即跳过）
             if [ ! -f "$tools/AppRun-x86_64" ]; then
               dl "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64" "$tools/AppRun-x86_64"
               chmod +x "$tools/AppRun-x86_64"
+            fi
+            if [ ! -f "$tools/linuxdeploy-x86_64.AppImage" ]; then
+              dl "https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy-07333c6/linuxdeploy-x86_64.AppImage" "$tools/linuxdeploy-x86_64.AppImage"
+              chmod +x "$tools/linuxdeploy-x86_64.AppImage"
+            fi
+            if [ ! -f "$tools/linuxdeploy-plugin-gtk.sh" ]; then
+              dl "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" "$tools/linuxdeploy-plugin-gtk.sh"
+              chmod +x "$tools/linuxdeploy-plugin-gtk.sh"
             fi
           fi
           echo "bundler tools ready under cache dir"
