@@ -26,6 +26,7 @@ mod plugin_registry;
 mod plugin_registry_types;
 mod plugin_remote;
 mod reminder;
+pub(crate) mod report_export;
 mod scaffold_cmds;
 mod scaffold_registry;
 mod scan;

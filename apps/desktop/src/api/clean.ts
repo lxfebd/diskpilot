@@ -273,6 +273,14 @@ export const cleanApi = {
     startup_watch_enabled?: boolean;
     /** 启动项快照间隔分钟（后端钳 1..=1440）。 */
     startup_watch_minutes?: number;
+    /** R526 定时自动导出扫描报告开关。 */
+    report_export_enabled?: boolean;
+    /** R526 导出间隔天（后端钳 1..=90）。 */
+    report_export_interval_days?: number;
+    /** R526 导出目录（绝对路径；空串 = 未设置）。 */
+    report_export_dir?: string;
+    /** R526 报告格式 md/csv/json（后端白名单，其余回退 md）。 */
+    report_export_format?: string;
   }) =>
     isTauri
       ? invoke<ReminderConfig>('set_reminder_config', {
@@ -290,6 +298,11 @@ export const cleanApi = {
           thermalSustainedSamples: patch.thermal_sustained_samples ?? null,
           startupWatchEnabled: patch.startup_watch_enabled ?? null,
           startupWatchMinutes: patch.startup_watch_minutes ?? null,
+          // R526 自动导出报告
+          reportExportEnabled: patch.report_export_enabled ?? null,
+          reportExportIntervalDays: patch.report_export_interval_days ?? null,
+          reportExportDir: patch.report_export_dir ?? null,
+          reportExportFormat: patch.report_export_format ?? null,
         })
       : mocks.setReminderConfig(patch),
 
@@ -438,6 +451,22 @@ export interface ReminderConfig {
   startup_watch_enabled: boolean;
   /** 启动项快照间隔分钟（默认 60，后端钳 1..=1440）。 */
   startup_watch_minutes: number;
+  /** R526 定时自动导出扫描报告开关（默认关；只导已有扫描缓存的路径）。 */
+  report_export_enabled: boolean;
+  /** R526 导出间隔天（默认 7，后端钳 1..=90）。 */
+  report_export_interval_days: number;
+  /** R526 导出目录（绝对路径；空 = 未设置，不跑）。 */
+  report_export_dir: string;
+  /** R526 报告格式 md/csv/json（默认 md）。 */
+  report_export_format: string;
+}
+
+/** R526 定时自动导出报告完成事件负载（report-exported）。 */
+export interface ReportExported {
+  written: number;
+  skipped_existing: number;
+  dir: string;
+  format: string;
 }
 
 /** 单盘可清字节（只读统计） */

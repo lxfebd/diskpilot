@@ -188,6 +188,15 @@ export const system = {
     'system.reminder.scanStaleDescB': '只读时间戳，绝不自动扫描',
     'system.reminder.scanStaleHint': '「从未扫过」的盘也会提醒；0 = 关闭该提醒。',
 
+    // ── R526 定时自动导出扫描报告 ──
+    'system.reminder.exportTitle': '定时导出扫描报告',
+    'system.reminder.exportDesc': '按间隔把已扫描路径的报告写到指定目录（只读缓存渲染，不为未扫描的盘触发全盘扫描）。',
+    'system.reminder.exportDirLabel': '导出目录（绝对路径）',
+    'system.reminder.exportDirPh': '例如 C:\\Reports\\DiskPilot',
+    'system.reminder.exportBrowse': '浏览…',
+    'system.reminder.exportDays': '每 {n} 天',
+    'system.reminder.exportHint': '只导出已有扫描缓存的路径；同一天同名文件已存在则跳过。文件名 diskpilot-report-<路径>-<日期>.<格式>。',
+
     // ── R100 空间趋势逐盘检查 ──
     'system.reminder.forecastTitle': '各盘空间趋势',
     'system.reminder.forecastCheck': '检查趋势',
@@ -397,6 +406,15 @@ export const system = {
     'system.reminder.scanStaleDescA': 'Drives not scanned within the threshold get a background "how long since last scan" reminder. The same threshold also drives the scan-age tile on the daily health checkup.',
     'system.reminder.scanStaleDescB': 'Read-only timestamps — never auto-scans',
     'system.reminder.scanStaleHint': 'Never-scanned drives are also reminded; 0 turns this reminder off.',
+
+    // ── R526 scheduled scan report export ──
+    'system.reminder.exportTitle': 'Auto-export scan reports',
+    'system.reminder.exportDesc': 'Write reports of already-scanned paths to a chosen folder on a schedule (renders from the read-only cache; never triggers a full scan for unscanned paths).',
+    'system.reminder.exportDirLabel': 'Export folder (absolute path)',
+    'system.reminder.exportDirPh': 'e.g. C:\\Reports\\DiskPilot',
+    'system.reminder.exportBrowse': 'Browse…',
+    'system.reminder.exportDays': 'every {n}d',
+    'system.reminder.exportHint': 'Only paths with an existing scan cache are exported; same-day same-name files are skipped. Filename: diskpilot-report-<path>-<date>.<format>.',
 
     // ── R100 per-drive space trend check ──
     'system.reminder.forecastTitle': 'Space trend per drive',

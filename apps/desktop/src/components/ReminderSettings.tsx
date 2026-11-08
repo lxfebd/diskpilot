@@ -7,6 +7,9 @@ import { SCAN_STALE_WARN_DAYS, DEFAULT_THERMAL_SUSTAINED_C } from '../thresholds
 import { useStore } from '../store';
 import { useT } from '../i18n';
 import { createSaveQueue } from '../saveQueue';
+import { isTauri } from '../env';
+// R526：导出目录「浏览」按钮（tauri dialog；浏览器演示态退化为手动输入）
+import { open } from '@tauri-apps/plugin-dialog';
 
 /** R300：启动项对比结果的组织（纯函数，可单测）。
  *  后端 check_startup_delta_cmd 区分两种「没得比」：Err("no_history") = 真空
@@ -95,6 +98,11 @@ export function normalizeReminderCfg(raw: Partial<ReminderConfig> | null | undef
     thermal_sustained_samples: raw.thermal_sustained_samples ?? 5,
     startup_watch_enabled: raw.startup_watch_enabled ?? false,
     startup_watch_minutes: raw.startup_watch_minutes ?? 60,
+    // R526 自动导出报告：旧后端没有这 4 个字段，补默认（关、7 天、空目录、md）
+    report_export_enabled: raw.report_export_enabled ?? false,
+    report_export_interval_days: raw.report_export_interval_days ?? 7,
+    report_export_dir: raw.report_export_dir ?? '',
+    report_export_format: raw.report_export_format ?? 'md',
   };
 }
 /**
@@ -402,6 +410,82 @@ export function ReminderSettings() {
       <div className="muted small" style={{ marginTop: 6 }}>
         {t('system.reminder.scanStaleHint')}
       </div>
+
+      {/* R526 定时自动导出扫描报告：只导已有扫描缓存的路径（零额外扫描），写到用户指定目录 */}
+      <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.exportTitle')}</div>
+      <div className="switch-row">
+        <div>
+          <div className="switch-label">{t('system.reminder.exportTitle')}</div>
+          <div className="switch-desc">{t('system.reminder.exportDesc')}</div>
+        </div>
+        <input
+          type="checkbox"
+          className="switch"
+          aria-label={t('system.reminder.exportTitle')}
+          checked={cfg.report_export_enabled}
+          onChange={(e) => save({ report_export_enabled: e.target.checked })}
+        />
+      </div>
+      {cfg.report_export_enabled && (
+        <>
+          <div className="muted small" style={{ marginTop: 6 }}>
+            {t('system.reminder.exportDirLabel')}
+          </div>
+          <div className="field" style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+            <input
+              type="text"
+              style={{ flex: 1 }}
+              aria-label={t('system.reminder.exportDirLabel')}
+              placeholder={t('system.reminder.exportDirPh')}
+              value={cfg.report_export_dir}
+              onChange={(e) => setCfg({ ...cfg, report_export_dir: e.target.value })}
+              onBlur={() => save({ report_export_dir: cfg.report_export_dir })}
+            />
+            {isTauri && (
+              <button
+                type="button"
+                className="ghost small"
+                onClick={async () => {
+                  const picked = await open({ directory: true, multiple: false });
+                  if (typeof picked === 'string' && picked) {
+                    setCfg({ ...cfg, report_export_dir: picked });
+                    save({ report_export_dir: picked });
+                  }
+                }}
+              >
+                {t('system.reminder.exportBrowse')}
+              </button>
+            )}
+          </div>
+          <div className="seg seg-3 auto" style={{ marginTop: 8 }}>
+            {[7, 14, 30].map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`seg-opt${cfg.report_export_interval_days === d ? ' active' : ''}`} aria-pressed={cfg.report_export_interval_days === d}
+                onClick={() => save({ report_export_interval_days: d })}
+              >
+                {t('system.reminder.exportDays', { n: d })}
+              </button>
+            ))}
+          </div>
+          <div className="seg seg-3 auto" style={{ marginTop: 8 }}>
+            {(['md', 'csv', 'json'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`seg-opt${cfg.report_export_format === f ? ' active' : ''}`} aria-pressed={cfg.report_export_format === f}
+                onClick={() => save({ report_export_format: f })}
+              >
+                {f.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <div className="muted small" style={{ marginTop: 6 }}>
+            {t('system.reminder.exportHint')}
+          </div>
+        </>
+      )}
 
       <div className="settings-group-title" style={{ marginTop: 18 }}>{t('system.reminder.thermalTitle')}</div>
       <div className="switch-row">

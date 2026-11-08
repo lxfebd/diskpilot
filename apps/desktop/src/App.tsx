@@ -496,6 +496,19 @@ export default function App() {
     return () => { unlisten.then((u) => u()); };
   }, [t]);
 
+  // R526 定时自动导出报告完成通知：只告知写了几份、落在哪，不含任何清理语义。
+  useEffect(() => {
+    if (!isTauri) return;
+    const unlisten = listen<import('./api').ReportExported>('report-exported', (e) => {
+      const p = e.payload;
+      useStore.getState().toast(
+        t('shell.toast.reportExported', { n: p.written, dir: p.dir }),
+        p.written > 0 ? 'ok' : 'warn',
+      );
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [t]);
+
   const pickDirectory = async () => {
     if (!isTauri) {
       // 提示语走文案表；默认值 'C:\\' 是数据，保持原样。

@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R526: 定时自动导出扫描报告——设置页新增开关/目录/间隔/格式，后台线程按期把已有扫描缓存导出为文件
+
+- **后端** `report_export.rs`：`run_report_export` 只渲染**已有扫描缓存**的路径（零额外全盘扫描铁律）、文件名 `diskpilot-report-<路径>-<yyyymmdd>.<md|csv|json>`、同一天同名已存在跳过；完成发 `report-exported` 通知 + 审计日志落盘。纯函数 `sanitize_root_tag` / `report_export_dir_valid` + 2 例单测（盘符根、绝对路径校验）。
+- **调度**：`ReminderConfig` 新增 `report_export_enabled`（默认关）/ `report_export_interval_days`（7，钳 1..=90）/ `report_export_dir`（空=不跑，只接受绝对路径）/ `report_export_format`（md/csv/json 白名单）；后台 tick 独立计时，与周报同款粒度。
+- **前端**：设置页新增「定时导出扫描报告」区块（开关 + 目录输入 + 浏览按钮 + 间隔 7/14/30 天 + 格式段选），`normalizeReminderCfg` 补缺 4 字段（旧配置不被覆盖），mock 同步；`report-exported` 事件 → toast `shell.toast.reportExported`；i18n 中英 7 键。
+- **红线守住**：导出是只读渲染 + 写一份报告文件到用户指定目录，不进 nonce 闸、不触发扫描、不碰清理路径。
+- **门禁**：pre-release-check **20/20 绿**（fmt/clippy/audit/test/10 插件/前端三件套/守卫/self-test），vitest 1312 绿。
+
 ### R525: 健康周报接入「诊断插件摘要」——体检格跑过的插件结果直接出现在周报卡
 
 - **数据流**：复用 R524 的 `loadDiagSummary()`（localStorage `diskpilot:diag-summary-v1`），周报卡 `WeeklyHealthCard` 挂载时读一次，有数据才渲染区块（不编造、不上传、不进报告文件）。

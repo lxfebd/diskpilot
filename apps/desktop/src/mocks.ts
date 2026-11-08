@@ -1535,6 +1535,14 @@ export interface MockReminderConfig {
   startup_watch_enabled: boolean;
   /** R298：启动项快照间隔分钟（默认 60）。 */
   startup_watch_minutes: number;
+  /** R526：定时自动导出扫描报告开关（默认关）。 */
+  report_export_enabled: boolean;
+  /** R526：导出间隔天（默认 7）。 */
+  report_export_interval_days: number;
+  /** R526：导出目录（空 = 未设置）。 */
+  report_export_dir: string;
+  /** R526：报告格式 md/csv/json（默认 md）。 */
+  report_export_format: string;
 }
 
 let reminderCfg: MockReminderConfig = {
@@ -1550,6 +1558,10 @@ let reminderCfg: MockReminderConfig = {
   thermal_sustained_samples: 5,
   startup_watch_enabled: false,
   startup_watch_minutes: 60,
+  report_export_enabled: false,
+  report_export_interval_days: 7,
+  report_export_dir: '',
+  report_export_format: 'md',
 };
 
 export async function getReminderConfig(): Promise<MockReminderConfig> {

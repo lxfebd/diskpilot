@@ -52,6 +52,11 @@ describe('normalizeReminderCfg（配置归一化）', () => {
       thermal_sustained_samples: 10,
       startup_watch_enabled: true,
       startup_watch_minutes: 240,
+      // R526 新增 4 字段：raw 没给 → 补默认（关、7 天、空目录、md）
+      report_export_enabled: false,
+      report_export_interval_days: 7,
+      report_export_dir: '',
+      report_export_format: 'md',
     });
   });
 

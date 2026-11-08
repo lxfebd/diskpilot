@@ -69,6 +69,26 @@ pub(crate) struct ReminderConfig {
     /// 0 = 关闭。用「从未扫过」也触发（那正是最该提醒的情形）。
     #[serde(default)]
     pub scan_stale_days: u64,
+    /// R526 定时自动导出扫描报告开关。独立于 enabled：只开导出也可以。
+    #[serde(default)]
+    pub report_export_enabled: bool,
+    /// R526 导出间隔天（1..=90，默认 7）。
+    #[serde(default = "default_report_export_days")]
+    pub report_export_interval_days: u64,
+    /// R526 导出目录（绝对路径）。空串 = 未设置，后台线程不跑导出。
+    #[serde(default)]
+    pub report_export_dir: String,
+    /// R526 报告格式：md / csv / json（默认 md）。
+    #[serde(default = "default_report_export_format")]
+    pub report_export_format: String,
+}
+
+fn default_report_export_days() -> u64 {
+    7
+}
+
+fn default_report_export_format() -> String {
+    "md".to_string()
 }
 
 fn default_startup_watch_minutes() -> u64 {
@@ -98,6 +118,10 @@ impl Default for ReminderConfig {
             startup_watch_enabled: false,
             startup_watch_minutes: 60,
             scan_stale_days: 21,
+            report_export_enabled: false,
+            report_export_interval_days: 7,
+            report_export_dir: String::new(),
+            report_export_format: "md".to_string(),
         }
     }
 }
@@ -163,6 +187,10 @@ pub(crate) fn set_reminder_config(
     startup_watch_enabled: Option<bool>,
     startup_watch_minutes: Option<u64>,
     scan_stale_days: Option<u64>,
+    report_export_enabled: Option<bool>,
+    report_export_interval_days: Option<u64>,
+    report_export_dir: Option<String>,
+    report_export_format: Option<String>,
 ) -> Result<ReminderConfig, String> {
     let Some(p) = config_path(&app) else {
         return Err("无法定位数据目录".into());
@@ -212,6 +240,27 @@ pub(crate) fn set_reminder_config(
     if let Some(v) = scan_stale_days {
         // 钳 1..=3650（10 年）：超过 36.5 天的预警意义有限，锁死避免配置污染。
         cfg.scan_stale_days = v.min(3650);
+    }
+    if let Some(v) = report_export_enabled {
+        cfg.report_export_enabled = v;
+    }
+    if let Some(v) = report_export_interval_days {
+        cfg.report_export_interval_days = v.clamp(1, 90);
+    }
+    if let Some(v) = report_export_dir {
+        // 只接受绝对路径；相对路径拒绝，避免写到工作目录这种意外位置。
+        let t = v.trim().to_string();
+        if t.is_empty() || crate::report_export::report_export_dir_valid(&t) {
+            cfg.report_export_dir = t;
+        }
+    }
+    if let Some(v) = report_export_format {
+        // 白名单三种格式，其余回退 md，避免渲染器收到未知枚举。
+        cfg.report_export_format = match v.to_ascii_lowercase().as_str() {
+            "csv" => "csv".to_string(),
+            "json" => "json".to_string(),
+            _ => "md".to_string(),
+        };
     }
     let text = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
@@ -613,6 +662,8 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
         // R293 扫描久未提醒：6h 一次，与其它通知解耦（它只读一个小 jsonl）。
         let mut last_scan_stale = std::time::Instant::now();
         let mut scan_stale_warned = false;
+        // R526 定时自动导出报告：独立计时，只导已有扫描缓存的路径（零额外扫描）。
+        let mut last_report_export = std::time::Instant::now();
         loop {
             std::thread::sleep(Duration::from_secs(60)); // tick 粒度 60s
             let cfg = config_at(&app);
@@ -703,6 +754,18 @@ pub(crate) fn spawn_cleanup_reminder(app: AppHandle) {
                 } else if stale.is_empty() && scan_stale_warned {
                     // 有盘被扫过 → 复位防抖（否则同一个陈旧状态会反复响）。
                     scan_stale_warned = false;
+                }
+            }
+            // R526 定时自动导出：report_export_enabled + 目录非空才跑。
+            if cfg.report_export_enabled && !cfg.report_export_dir.trim().is_empty() {
+                let interval = Duration::from_secs(
+                    cfg.report_export_interval_days
+                        .clamp(1, 90)
+                        .saturating_mul(86400),
+                );
+                if last_report_export.elapsed() >= interval {
+                    last_report_export = std::time::Instant::now();
+                    crate::report_export::run_report_export(&app, &cfg);
                 }
             }
             // 空间耗尽预警（R99）：full_warn_days > 0 才检查；6h 一次。

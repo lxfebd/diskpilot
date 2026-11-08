@@ -116,6 +116,8 @@ export const shell = {
     'shell.toast.scanStale': '{path} 已经 {days} 天没扫描了——扫一次更新数据',
     'shell.toast.scanStaleNever': '{path} 还没扫描过——扫一次才能看清占用',
     'shell.toast.scanStaleMore': '，另有 {n} 块盘也久未扫描',
+    // R526 定时自动导出报告完成 toast
+    'shell.toast.reportExported': '已自动导出 {n} 份扫描报告到 {dir}',
     // R103 通知 toast 操作按钮（点击直达对应页面）
     'shell.toast.actionOverview': '去总览',
     'shell.toast.actionHistory': '查看周报',
@@ -333,6 +335,8 @@ export const shell = {
     'shell.toast.scanStale': '{path} has not been scanned for {days:day|days} — scan to refresh',
     'shell.toast.scanStaleNever': '{path} has never been scanned — scan once to see usage',
     'shell.toast.scanStaleMore': ', {n:more drive|more drives} also stale',
+    // R526 scheduled report export toast
+    'shell.toast.reportExported': 'Auto-exported {n:report|reports} to {dir}',
     // R103 notification toast action buttons (jump straight to the relevant page)
     'shell.toast.actionOverview': 'Go to Overview',
     'shell.toast.actionHistory': 'View report',
