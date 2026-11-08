@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R523: 官方插件第七批——reg-hunter（注册表只读审计器），索引仓库发 v1.6.0，线上 10 个插件全量验签通过
+
+- **`plugins/reg-hunter/`**（独立 workspace）：`reg query /s` 只读枚举 HKLM/HKCU 的 Uninstall（含 Wow6432Node）与 Run/RunOnce 共 7 键；纯函数解析 reg 输出（值名可含空格、数据保留内部空格）、聚合卸载项、判定失效——InstallLocation/DisplayIcon 路径不存在；3 例单测。
+- **实机误报治理**：① 外置盘（H:/D:/G:）未挂载造成的"路径不存在"单独标注「可能是外置盘未挂载」，与系统盘真失效区分；② `cmd.exe`/`rundll32.exe` 等无路径系统命令免检（此前被误报为失效启动项）。冒烟：961 卸载项 / 21 启动项 / 40 失效残留 / 9 失效启动项，Top 列表均为真实项。
+- **发布**：pub523 打包 sha256=`8460fdf9…`（132863 B）→ release **v1.6.0**（id 437954163）→ index 第 10 条（commit `995e8fa5`）→ 本地验签安装通过 → **线上 verify_online 10 插件全部通过**（gh6 重跑补下 reg-hunter zip）→ CI run 42432961492 success。
+- **文档**：README/README_EN 9→10 插件，plugin-market-index.md 增 reg-hunter 条目 + v1.6.0。
+
 ### R522: 发布 v1.0.0 正式版——三平台 CI 构建 21 个产物，release 已 publish
 
 - **版本 bump**：根 `Cargo.toml` / `apps/desktop/package.json` / `tauri.conf.json` 三处 0.2.4 → 1.0.0；README/README_EN 徽章与下载表同步。

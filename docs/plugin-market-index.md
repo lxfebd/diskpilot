@@ -91,7 +91,7 @@ diskpilot-plugin-index/
 └── .github/workflows/validate-index.yml  # CI 门禁（schema/https/sha256/id kebab）
 ```
 
-- 插件 zip 上传到该仓库的 **Releases**（`v1.0.0` 首批 3 个，`v1.1.0` 第二批 2 个，`v1.2.0` 第三批 1 个，`v1.3.0` 第四批 1 个，`v1.4.0` 第五批 1 个，`v1.5.0` 第六批 1 个），直链填入 `plugins[].url`。
+- 插件 zip 上传到该仓库的 **Releases**（`v1.0.0` 首批 3 个，`v1.1.0` 第二批 2 个，`v1.2.0` 第三批 1 个，`v1.3.0` 第四批 1 个，`v1.4.0` 第五批 1 个，`v1.5.0` 第六批 1 个，`v1.6.0` 第七批 1 个，`v1.6.0` 第七批 1 个），直链填入 `plugins[].url`。
 - 官方插件（源码在主仓库 `plugins/`，均为只读诊断工具，risk=low）：
   - `bigfile-finder` 大文件扫描器（硬盘工具）
   - `dup-finder` 重复文件查找（硬盘工具，输出标注「疑似」）
