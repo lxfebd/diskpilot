@@ -1,4 +1,4 @@
-import { forwardRef, lazy, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Folder, ScanLine, ListTree, MessageSquare, X, Trash2 as TrashIcon, FileDown } from 'lucide-react';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
@@ -10,7 +10,7 @@ import { focusMainIfFocusLost } from './a11y';
 import { LeftPanel } from './components/LeftPanel';
 import { useCleanupStore } from './useCleanupStore';
 import { scanTargets } from './drives';
-import { addNotice } from './notices';
+import { addNotice, loadNotices, loadReadAt, markNoticesRead, unreadCount } from './notices';
 import { ScanGate } from './scanGate';
 import { DriveStrip } from './components/DriveStrip';
 import { Splitter } from './components/Splitter';
@@ -229,8 +229,19 @@ export default function App() {
   // 侧栏导航：设置走模态入口，其余切页。
   const navigate = (id: PageId) => {
     if (id === PAGE_IDS.settings) { setShowSettings(true); return; }
+    // R542：进入历史页 = 通知已读
+    if (id === PAGE_IDS.history) {
+      markNoticesRead();
+      setNoticeUnread(0);
+    }
     setView(id);
   };
+  // R542：历史项未读通知角标
+  const [noticeUnread, setNoticeUnread] = useState(() => unreadCount(loadNotices(), loadReadAt()));
+  const notify = useCallback((n: Parameters<typeof addNotice>[0]) => {
+    const list = addNotice(n);
+    setNoticeUnread(unreadCount(list, loadReadAt()));
+  }, []);
   // 总览/Studio 跳清理页：可选传 scaffoldId 预选脚本，不传则进页自动挑第一个命中。
   const openCleanup = (scaffoldId?: string) => {
     useCleanupStore.getState().select(scaffoldId);
@@ -385,7 +396,7 @@ export default function App() {
       const p = e.payload;
       const body = t('shell.toast.healthWeekly', { size: formatBytes(p.total_bytes) });
       // R537：持久化通知中心入列（历史页可回看）
-      addNotice({ kind: 'weekly', title: t('shell.notices.weeklyTitle'), body });
+      notify({ kind: 'weekly', title: t('shell.notices.weeklyTitle'), body });
       useStore.getState().toast(
         body,
         'ok',
@@ -410,7 +421,7 @@ export default function App() {
         extra: warns.length > 1 ? t('shell.toast.spaceFullMore', { n: warns.length - 1 }) : '',
       });
       // R537：持久化通知中心入列
-      addNotice({ kind: 'space-full', title: t('shell.notices.spaceFullTitle'), body });
+      notify({ kind: 'space-full', title: t('shell.notices.spaceFullTitle'), body });
       useStore.getState().toast(
         body,
         'warn',
@@ -492,7 +503,7 @@ export default function App() {
             days: first.days != null ? String(first.days) : '?',
           });
       // R537：持久化通知中心入列
-      addNotice({ kind: 'scan-stale', title: t('shell.notices.scanStaleTitle'), body });
+      notify({ kind: 'scan-stale', title: t('shell.notices.scanStaleTitle'), body });
       useStore.getState().toast(
         body
           + (warns.length > 1
@@ -512,7 +523,7 @@ export default function App() {
       const p = e.payload;
       const body = t('shell.toast.reportExported', { n: p.written, dir: p.dir });
       // R537：持久化通知中心入列
-      addNotice({ kind: 'report-exported', title: t('shell.notices.exportTitle'), body });
+      notify({ kind: 'report-exported', title: t('shell.notices.exportTitle'), body });
       useStore.getState().toast(
         body,
         p.written > 0 ? 'ok' : 'warn',
@@ -710,6 +721,7 @@ export default function App() {
         onToggle={toggleSidebar}
         busy={scanning ? PAGE_IDS.workspace : null}
         settingsDot={!!advisorTag}
+        historyBadge={noticeUnread}
         settingsHint={advisorTag ? t('shell.nav.settingsBound', { provider: advisorTag.provider }) : t('shell.nav.settingsUnbound')}
       />
       {/* 全局 AI 侧栏：贯穿所有页面，可折叠/可拖宽 */}

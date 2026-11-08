@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R542: 通知中心未读角标——侧栏「历史」右上角红点数字（>99 显示 99+），进历史页即标已读
+
+- `notices.ts` 加已读水位（`diskpilot:notices-read-at`）+ 纯函数 `unreadCount`（单测）；App.tsx 封装 `notify()`（入列同时刷新角标），`navigate('history')` 时 `markNoticesRead()` 清零；Sidebar 新 prop `historyBadge` 渲染 `.side-item-badge` 红色数字角标（复用 side-item 定位模式）。
+- 门禁 21/21 绿，vitest 绿。
+
 ### R541: 周报新增「异常磁盘」清单（disk_alerts）——与 R540 硬件卡同源的 grade 分级，caution/bad 入列红字显示
 
 - **后端**：`WeeklyReport.disk_alerts`（`#[serde(default)]`，旧归档兼容）+ 纯函数 `disk_alert_lines`（good/unknown 不算异常，不拿「没读到」报警）+ 单测 + 序列化往返补字段；`cargo fmt` 一次。

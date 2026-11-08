@@ -25,11 +25,13 @@ interface Props {
   busy?: PageId | null;
   /** 设置项右上角提示点（AI 已配置） */
   settingsDot?: boolean;
+  /** R542：历史项右上角未读通知数（0/undefined 不显示） */
+  historyBadge?: number;
   /** 设置项的悬浮提示（AI 绑定状态）；折叠态被标签 tooltip 覆盖 */
   settingsHint?: string;
 }
 
-export function Sidebar({ current, onNavigate, expanded, onToggle, busy, settingsDot, settingsHint }: Props) {
+export function Sidebar({ current, onNavigate, expanded, onToggle, busy, settingsDot, settingsHint, historyBadge }: Props) {
   const t = useT();
 
   const item = (nav: NavItem) => {
@@ -52,6 +54,9 @@ export function Sidebar({ current, onNavigate, expanded, onToggle, busy, setting
         <span className="side-item-ic">
           {spinning ? <Loader2 size={16} className="spin" /> : <Icon size={16} />}
           {nav.id === 'settings' && settingsDot && <span className="side-item-dot" />}
+          {nav.id === 'history' && (historyBadge ?? 0) > 0 && (
+            <span className="side-item-badge" aria-label={String(historyBadge)}>{historyBadge! > 99 ? '99+' : historyBadge}</span>
+          )}
         </span>
         {expanded && <span className="side-item-label">{label}</span>}
       </button>

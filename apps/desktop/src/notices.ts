@@ -11,6 +11,28 @@ export interface Notice {
 
 export const NOTICES_KEY = 'diskpilot:notices-v1';
 export const NOTICES_CAP = 50;
+/** R542：已读水位（时间戳），at > 水位的都是未读 */
+export const NOTICES_READ_KEY = 'diskpilot:notices-read-at';
+
+/** R542：未读数（纯函数）。 */
+export function unreadCount(list: readonly Notice[], readAt: number): number {
+  return list.filter((n) => n.at > readAt).length;
+}
+
+export function loadReadAt(): number {
+  try {
+    return Number(localStorage.getItem(NOTICES_READ_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** R542：进入历史页时把水位推到现在（标已读）。 */
+export function markNoticesRead(now = Date.now()): void {
+  try {
+    localStorage.setItem(NOTICES_READ_KEY, String(now));
+  } catch { /* ignore */ }
+}
 
 export function loadNotices(): Notice[] {
   try {

@@ -105,6 +105,22 @@
 .side-item-ic { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; }
 /* flex 子项默认 min-width:auto 不会收缩到出省略号，显式置 0 让长标签截断而非溢出 */
 .side-item-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* R542：历史项未读通知数字角标 */
+.side-item-badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--risk-danger, #d64545);
+  color: #fff;
+  font-size: 10px;
+  line-height: 15px;
+  text-align: center;
+  font-weight: 700;
+}
 .side-item-dot {
   position: absolute;
   top: -2px;

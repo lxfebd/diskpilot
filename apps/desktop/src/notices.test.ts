@@ -1,8 +1,22 @@
 // R537 持久化通知中心单测
 import { describe, expect, it } from 'vitest';
-import { pushNotice, NOTICES_CAP, type Notice } from './notices';
+import { pushNotice, unreadCount, NOTICES_CAP, type Notice } from './notices';
 
 const base = { kind: 'weekly' as const, title: '周报', body: '全盘可清理约 1 GB' };
+
+describe('unreadCount（R542 未读角标）', () => {
+  it('at 大于水位才算未读', () => {
+    const list: Notice[] = [
+      { id: 'a', at: 100, kind: 'weekly', title: 't', body: 'b' },
+      { id: 'b', at: 300, kind: 'space-full', title: 't', body: 'b' },
+      { id: 'c', at: 200, kind: 'scan-stale', title: 't', body: 'b' },
+    ];
+    expect(unreadCount(list, 250)).toBe(1);
+    expect(unreadCount(list, 0)).toBe(3);
+    expect(unreadCount(list, 999)).toBe(0);
+    expect(unreadCount([], 0)).toBe(0);
+  });
+});
 
 describe('pushNotice（R537 通知中心）', () => {
   it('新通知插到最前并带 id/at', () => {
