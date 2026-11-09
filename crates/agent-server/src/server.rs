@@ -13,10 +13,23 @@
 use crate::tools::{disk, envx, fmt_bytes, system, AgentServer};
 use rmcp::{
     model::{
-        AnnotateAble, GetPromptRequestMethod, GetPromptResult, ListPromptsResult,
-        ListResourcesResult, Prompt, PromptArgument, PromptMessage, PromptMessageContent,
-        PromptMessageRole, RawResource, ReadResourceRequestParams, ReadResourceResult,
-        ResourceContents, ServerCapabilities, ServerInfo,
+        // R551 rmcp 3.9：AnnotateAble trait 已移除（annotations 默认 None），
+        // PromptMessageContent→ContentBlock、PromptMessageRole→Role、RawResource→Resource
+        ContentBlock,
+        GetPromptRequestMethod,
+        GetPromptResult,
+        ListPromptsResult,
+        ListResourcesResult,
+        Prompt,
+        PromptArgument,
+        PromptMessage,
+        ReadResourceRequestParams,
+        ReadResourceResult,
+        Resource,
+        ResourceContents,
+        Role,
+        ServerCapabilities,
+        ServerConfig,
     },
     ErrorData as McpError,
 };
@@ -73,10 +86,9 @@ fn format_system_summary(s: &system::SystemInfo) -> String {
 /// 三个静态只读资源。
 pub(crate) fn list_resources() -> ListResourcesResult {
     let make = |uri: &str, name: &str, description: &str| {
-        RawResource::new(uri, name)
+        Resource::new(uri, name)
             .with_description(description)
             .with_mime_type("text/plain")
-            .no_annotation()
     };
     ListResourcesResult::with_all_items(vec![
         make(
@@ -140,9 +152,7 @@ pub(crate) async fn get_prompt(
     request: rmcp::model::GetPromptRequestParams,
 ) -> Result<GetPromptResult, McpError> {
     let name = request.name.clone();
-    let message = |text: String| {
-        PromptMessage::new(PromptMessageRole::User, PromptMessageContent::text(text))
-    };
+    let message = |text: String| PromptMessage::new(Role::User, ContentBlock::text(text));
     match name.as_str() {
         "system-report" => {
             let detail = request
@@ -206,4 +216,4 @@ pub(crate) fn instructions() -> &'static str {
 
 // 显式让编译器知道这些 trait 方法由 mod.rs 转发调用，避免重构时漏接。
 #[allow(dead_code)]
-fn _api_guard(_: &AgentServer, _: &ServerInfo) {}
+fn _api_guard(_: &AgentServer, _: &ServerConfig) {}

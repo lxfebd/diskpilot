@@ -403,8 +403,9 @@ async fn agent_call_tool_inner(
     let text = result
         .content
         .into_iter()
-        .filter_map(|c| match &*c {
-            rmcp::model::RawContent::Text(t) => Some(t.text.clone()),
+        .filter_map(|c| match c {
+            // R551 rmcp 3.9：RawContent→ContentBlock
+            rmcp::model::ContentBlock::Text(t) => Some(t.text.clone()),
             _ => None,
         })
         .collect::<Vec<_>>()

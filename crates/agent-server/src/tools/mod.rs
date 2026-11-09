@@ -62,17 +62,18 @@ mod tool_sys_services;
 
 use rmcp::{
     handler::server::ServerHandler,
-    model::{AnnotateAble, CallToolResult, RawContent, ServerInfo},
+    // R551 rmcp 3.9：RawContent→ContentBlock、AnnotateAble 已移除（annotations 默认 None）
+    model::{CallToolResult, ContentBlock, ServerConfig},
     tool_handler,
 };
 use std::sync::Mutex;
 
 fn text_result(s: String) -> CallToolResult {
-    CallToolResult::success(vec![RawContent::text(s).no_annotation()])
+    CallToolResult::success(vec![ContentBlock::text(s)])
 }
 
 fn tool_error(msg: impl Into<String>) -> CallToolResult {
-    CallToolResult::error(vec![RawContent::text(msg.into()).no_annotation()])
+    CallToolResult::error(vec![ContentBlock::text(msg.into())])
 }
 
 /// 统一「阻塞任务」执行壳：spawn_blocking 把同步代码移出 tokio 运行时线程
@@ -328,8 +329,8 @@ mod params;
 
 #[tool_handler]
 impl ServerHandler for AgentServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(crate::server::capabilities())
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(crate::server::capabilities())
             .with_instructions(crate::server::instructions())
     }
 
@@ -347,8 +348,9 @@ impl ServerHandler for AgentServer {
         &self,
         request: rmcp::model::ReadResourceRequestParams,
         _context: rmcp::service::RequestContext<rmcp::RoleServer>,
-    ) -> Result<rmcp::model::ReadResourceResult, rmcp::ErrorData> {
-        crate::server::read_resource(request).await
+    ) -> Result<rmcp::model::ReadResourceResponse, rmcp::ErrorData> {
+        // R551 rmcp 3.9：handler 返回 Response 枚举，Result 有 From impl 直接 into
+        Ok(crate::server::read_resource(request).await?.into())
     }
 
     // prompts：任务引导模板（system-report / cleanup-plan）。
@@ -364,8 +366,8 @@ impl ServerHandler for AgentServer {
         &self,
         request: rmcp::model::GetPromptRequestParams,
         _context: rmcp::service::RequestContext<rmcp::RoleServer>,
-    ) -> Result<rmcp::model::GetPromptResult, rmcp::ErrorData> {
-        crate::server::get_prompt(request).await
+    ) -> Result<rmcp::model::GetPromptResponse, rmcp::ErrorData> {
+        Ok(crate::server::get_prompt(request).await?.into())
     }
 }
 

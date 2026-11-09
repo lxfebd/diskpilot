@@ -31,7 +31,7 @@ fn parse_sc_query(out: &str) -> Vec<(String, String, String)> {
     let mut name = String::new();
     let mut display = String::new();
     let mut state = String::new();
-    let mut flush = |name: &mut String, display: &mut String, state: &mut String, v: &mut Vec<(String, String, String)>| {
+    let flush = |name: &mut String, display: &mut String, state: &mut String, v: &mut Vec<(String, String, String)>| {
         if !name.is_empty() {
             v.push((name.trim().to_string(), display.trim().to_string(), state.trim().to_string()));
         }

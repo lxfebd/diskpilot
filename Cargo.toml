@@ -33,7 +33,7 @@ ntfs               = "0.4"
 windows-sys        = { version = "0.59", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Ioctl", "Win32_System_Memory", "Win32_System_Registry", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_System_Diagnostics_ToolHelp", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock", "Win32_NetworkManagement_Ndis", "Win32_NetworkManagement_WiFi", "Win32_NetworkManagement_WindowsConnectionManager"] }
 globset            = "0.4"
 trash              = "5"
-# 0.13 与 rmcp 1.8 的 transport-streamable-http-client-reqwest 对齐（0.12 不实现 StreamableHttpClient）
+# 与 rmcp 3.x 的 transport-streamable-http-client-reqwest 对齐的 reqwest 主版本
 reqwest            = { version = "0.13", default-features = false, features = ["json", "rustls", "stream", "form"] }
 tokio              = { version = "1", features = ["full"] }
 once_cell          = "1"
@@ -50,8 +50,8 @@ zip                = { version = "9", default-features = false, features = ["def
 # server+schemars+transport-io = agent-server（被 spawn 的一侧）
 # client+transport-child-process = 桌面后端（spawn agent-server 并对话的一侧）
 # transport-streamable-http-client-reqwest = 桌面后端连远程 MCP 服务器（streamable HTTP，reqwest 客户端）
-# 1.4.0 起修复 RUSTSEC-2026-0189（Streamable HTTP DNS rebinding，CVSS 9.3）
-rmcp     = { version = "1.4", features = ["server", "client", "schemars", "transport-io", "transport-child-process", "transport-streamable-http-client-reqwest"] }
+# R551：升级到 3.9+ 修复 RUSTSEC-2026-0462（Streamable HTTP 客户端无界缓冲响应体，DoS 内存耗尽；1.x 全部受影响）
+rmcp     = { version = "3.9", features = ["server", "client", "schemars", "transport-io", "transport-child-process", "transport-streamable-http-client-reqwest"] }
 schemars = "1"
 # PowerShell 输出在中文系统是 GBK，ps_capture 需此兜底解码
 encoding_rs = "0.8"

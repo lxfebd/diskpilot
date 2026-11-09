@@ -147,7 +147,8 @@ mod tests {
     fn meta_roundtrip_progress_token() {
         // 客户端可设置 progressToken 到请求 meta，服务端应原样读出。
         let token = ProgressToken(rmcp::model::NumberOrString::Number(42));
-        let mut meta = rmcp::model::Meta::new();
+        // R551 rmcp 3.9：Meta → RequestMetaObject（progress token 读写方法在此类型上）
+        let mut meta = rmcp::model::RequestMetaObject::new();
         meta.set_progress_token(token.clone());
         assert_eq!(meta.get_progress_token(), Some(token));
     }

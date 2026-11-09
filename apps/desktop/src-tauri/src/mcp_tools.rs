@@ -187,8 +187,8 @@ pub(crate) async fn mcp_call_tool(
     let text = result
         .content
         .into_iter()
-        .filter_map(|c| match &*c {
-            rmcp::model::RawContent::Text(t) => Some(t.text.clone()),
+        .filter_map(|c| match c {
+            rmcp::model::ContentBlock::Text(t) => Some(t.text.clone()),
             _ => None,
         })
         .collect::<Vec<_>>()

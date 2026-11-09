@@ -7,6 +7,14 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R551: 修复 CI 安全审计报错——rmcp 1.8.0 → 3.9.0（RUSTSEC-2026-0462）
+
+- CI run 42617740266 的 audit-rust / Security audit 因 **RUSTSEC-2026-0462** 失败：rmcp 1.x 的 Streamable HTTP 客户端无界缓冲响应体（恶意 MCP 服务器可流式拖垮宿主内存），修复版本 ≥3.9.0；1.x 全部受影响，必须大版本升级。
+- `Cargo.toml`：rmcp `1.4` → `3.9`（保留全部原 feature）；`cargo update -p rmcp` → 3.9.0。
+- API 适配（agent-server + 桌面后端）：`RawContent`→`ContentBlock`、`AnnotateAble` trait 移除（annotations 默认 None，去掉 `.no_annotation()`）、`RawResource`→`Resource`、`PromptMessageRole`→`Role`、`PromptMessageContent`→`ContentBlock`、handler 返回 `ReadResourceResult/GetPromptResult`→`ReadResourceResponse/GetPromptResponse`（`.into()`）、`Meta`→`RequestMetaObject`（测试）、`ServerInfo`→`ServerConfig`（消除 deprecated告警，clippy -D warnings 过）。
+- 顺手修 svc-hunter 一个 `unused mut` 警告。
+- 本地门禁 21/21 全绿（fmt / clippy -D warnings / **cargo audit 0 漏洞** / workspace 测试 / 11 插件 / 前端 tsc+eslint+1334 测试 / self-test）。
+
 ### R550: 项目整理轮——资产清点 + 进度/记忆同步
 
 - **资产清理**：删除仓库根目录 5 个散落临时文件（`_err.txt` / `_msg.txt` / `_sel.txt` / `_ci_ubuntu_live.log` / `_esl.log`，均已被 .gitignore 覆盖、未跟踪）；复扫确认无 `NOTES-*.md` / `TODO.md` / `*_HANDOFF.md` / `_probe*` 等调试产物残留。
