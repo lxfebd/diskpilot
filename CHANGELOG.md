@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R548: 发布 v1.0.2——四平台 release 一次全绿并转正（release id 438646931，21 个资产），updater 链路验证通过
+
+- release.yml 的 bundler 工具预下载（R544 修复）生效，本次 windows/ubuntu/mac 四 job 全部 success，无需重试。
+- latest.json `version: 1.0.2`、11 个平台资产（含 .sig）全部上传；release 已 publish（2026-11-09T01:39:59Z）——v1.0.1 老用户可通过内置 updater 收到 1.0.2 提示。
+- 门禁 21/21 绿。
+
 ## [1.0.2] - 2026-11-09
 
 > R545–R547 三轮：待人工确认清单 CSV 导出、体检格嵌入插件下载排行 Top5、通知中心类型筛选。
