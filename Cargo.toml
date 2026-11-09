@@ -16,7 +16,7 @@ members = [
 edition    = "2021"
 license    = "MIT"
 repository = "https://github.com/lxfebd/diskpilot"
-version    = "1.0.1"
+version    = "1.0.2"
 
 [workspace.dependencies]
 serde              = { version = "1", features = ["derive"] }

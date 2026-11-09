@@ -7,6 +7,10 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+## [1.0.2] - 2026-11-09
+
+> R545–R547 三轮：待人工确认清单 CSV 导出、体检格嵌入插件下载排行 Top5、通知中心类型筛选。
+
 ### R547: 通知中心支持按类型筛选 tab
 
 - `filterNotices` 纯函数（notices.ts，'all' 原样返回、其余按 kind 过滤保持顺序）+ 2 个单测。
