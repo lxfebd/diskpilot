@@ -248,7 +248,8 @@ export default function App() {
     setView(PAGE_IDS.cleanup);
   };
   // Studio「最近清理」→ 操作历史整页（P2c）。
-  const openHistory = () => setView(PAGE_IDS.history);
+  // R549 审查 medium-1：所有到 history 的跳转统一走 navigate，保证 markNoticesRead 一定执行
+  const openHistory = () => navigate(PAGE_IDS.history);
 
   // AI 侧栏拖宽
   const dragAi = (dx: number) => {
@@ -401,7 +402,7 @@ export default function App() {
         body,
         'ok',
         // R103：点击直达操作历史页看周报全文。
-        { label: t('shell.toast.actionHistory'), run: () => setView('history') },
+        { label: t('shell.toast.actionHistory'), run: () => navigate(PAGE_IDS.history) },
       );
     });
     return () => { unlisten.then((u) => u()); };

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { useT } from '../../i18n';
-import { loadNotices, clearNotices, filterNotices, NOTICES_KEY, type Notice, type NoticeFilter } from '../../notices';
+import { loadNotices, clearNotices, filterNotices, NOTICES_KEY, NOTICE_EVENT, type Notice, type NoticeFilter } from '../../notices';
 
 const KIND_KEY: Record<Notice['kind'], string> = {
   weekly: 'shell.notices.kindWeekly',
@@ -18,13 +18,18 @@ export function NoticesBlock() {
   const t = useT();
   const [notices, setNotices] = useState<Notice[]>(() => loadNotices());
   const [filter, setFilter] = useState<NoticeFilter>('all');
-  // 同页其它入口写入后靠 storage 事件刷新（多窗口/同页重复挂载也能看到最新）
+  // R549：storage 事件只发给其他同源文档，同文档内的新通知靠 NOTICE_EVENT 刷新
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === NOTICES_KEY) setNotices(loadNotices());
     };
+    const onNotice = () => setNotices(loadNotices());
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener(NOTICE_EVENT, onNotice);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(NOTICE_EVENT, onNotice);
+    };
   }, []);
   if (notices.length === 0) return null;
   const shown = filterNotices(notices, filter).slice(0, 5);

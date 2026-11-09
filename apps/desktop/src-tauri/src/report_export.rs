@@ -83,9 +83,10 @@ pub(crate) fn run_report_export(app: &AppHandle, cfg: &ReminderConfig) -> (usize
     let tag = today_tag();
     for key in keys {
         // key 是 norm_path_key 后的形式；还原成显示用路径
-        let tree = match state.scan_tree.lock().unwrap().get(&key).cloned() {
-            Some(t) => t,
-            None => continue,
+        // R549 M4：render 只接收 &Node，持锁期间直接渲染引用，避免整棵树深拷贝的内存/CPU 峰值
+        let guard = state.scan_tree.lock().unwrap();
+        let Some(tree) = guard.get(&key) else {
+            continue;
         };
         let display = tree.path.clone();
         let fname = format!(
@@ -100,8 +101,14 @@ pub(crate) fn run_report_export(app: &AppHandle, cfg: &ReminderConfig) -> (usize
             continue;
         }
         let stats = stats_map.get(&key).cloned();
-        let content = diskpilot_scanner::render(&tree, stats.as_ref(), fmt, 50);
-        if std::fs::write(&dest, content).is_ok() {
+        let content = diskpilot_scanner::render(tree, stats.as_ref(), fmt, 50);
+        drop(guard);
+        // R549 L1：tmp + rename 原子写，写失败不留半截文件（否则下次因 exists 被永久跳过）
+        let tmp = dest.with_extension("part");
+        if std::fs::write(&tmp, content)
+            .and_then(|_| std::fs::rename(&tmp, &dest))
+            .is_ok()
+        {
             written += 1;
         }
     }

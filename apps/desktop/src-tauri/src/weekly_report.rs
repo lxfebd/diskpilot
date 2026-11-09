@@ -99,14 +99,17 @@ pub(crate) struct DriveCleanupBrief {
     pub bytes: u64,
 }
 
-fn reports_dir(app: &AppHandle) -> PathBuf {
+/// R549 L4：app_data_dir 失败时**不再**回退到相对路径（那样会写进进程 CWD），
+/// 而是返回 None 由调用方报错/跳过。
+fn reports_dir(app: &AppHandle) -> Option<PathBuf> {
     app.path()
         .app_data_dir()
+        .ok()
         .map(|d| d.join("weekly-report"))
-        .unwrap_or_else(|_| PathBuf::from("weekly-report"))
 }
 
-fn next_report_path(app: &AppHandle) -> PathBuf {
+fn next_report_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = reports_dir(app).ok_or_else(|| "无法定位数据目录".to_string())?;
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
@@ -126,7 +129,7 @@ fn next_report_path(app: &AppHandle) -> PathBuf {
             secs % 60
         )
     };
-    reports_dir(app).join(format!("weekly-{stamp}.json"))
+    Ok(dir.join(format!("weekly-{stamp}.json")))
 }
 
 /// 天数 → 年月日（无 chrono 依赖的简单儒略日转换，测试覆盖）。
@@ -394,10 +397,11 @@ pub(crate) fn archive_weekly_report(
     report: &WeeklyReport,
 ) -> Result<PathBuf, String> {
     const MAX_REPORTS: usize = 12;
-    let dir = reports_dir(app);
+    // R549：数据目录不可定位时直接报错，绝不落到工作目录
+    let dir = reports_dir(app).ok_or_else(|| "无法定位数据目录".to_string())?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let text = serde_json::to_string_pretty(report).map_err(|e| e.to_string())?;
-    let p = next_report_path(app);
+    let p = next_report_path(app)?;
     std::fs::write(&p, text).map_err(|e| e.to_string())?;
     // 裁剪旧份：按文件名排序保留最近 MAX_REPORTS。
     let mut files: Vec<PathBuf> = std::fs::read_dir(&dir)
@@ -435,7 +439,11 @@ pub(crate) fn generate_weekly_report_cmd(app: AppHandle) -> Result<WeeklyReport,
 #[tauri::command]
 pub(crate) fn get_weekly_reports(app: AppHandle, limit: Option<usize>) -> Vec<WeeklyReport> {
     let limit = limit.unwrap_or(5).min(30);
-    let mut files: Vec<PathBuf> = std::fs::read_dir(reports_dir(&app))
+    // R549：数据目录不可定位时返回空列表（只读展示路径，诚实降级而非读 CWD）
+    let Some(dir) = reports_dir(&app) else {
+        return Vec::new();
+    };
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
         .ok()
         .into_iter()
         .flatten()

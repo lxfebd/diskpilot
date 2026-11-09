@@ -10,6 +10,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# R549 审查 M3：默认只给 read token；仅 audit-rust 需要 checks: write（下方单独声明）。
+permissions:
+  contents: read
+
 # DiskPilot ships Windows-first, but the workspace is portable: every
 # Windows-only helper (registry reads, NTFS MFT, system proxy parsing,
 # $Recycle.Bin pruning) is cfg-gated with a non-Windows fallback, so the

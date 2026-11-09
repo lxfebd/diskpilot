@@ -84,51 +84,75 @@ jobs:
       # R544 踩坑：tauri bundler 打包时要从 github 下载 NSIS/WiX/AppRun 二进制，
       # 上游 release-assets 偶发 504 会让整个 release 挂掉（mac .app 不受影响）。
       # 这里先用 curl 重试下载，放进 bundler 的工具缓存目录（cache_dir/tauri），
-      # bundler 发现必需文件已存在（含 sha1 校验）就跳过下载。
-      - name: Pre-download tauri bundler tools (NSIS/WiX/AppRun) with retry
+      # bundler 发现必需文件已存在（NSIS 侧还会再验 sha1）就跳过下载。
+      # R549 审查 H1/M1：所有下载物 pin sha256（上游对 linux 三件套只查存在性、
+      # 不验哈希，且会被 bundler 执行——可变引用一旦被重指将无校验流入已签名产物）；
+      # 下载走 .part + 原子 mv，中断不会在缓存路径留下半截文件被存在性检查误用；
+      # gtk 插件脚本改用不可变 commit SHA（原 master 分支是可变引用）。
+      - name: Pre-download tauri bundler tools (NSIS/WiX/AppRun/linuxdeploy) with retry + sha256
+        if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'ubuntu')
         shell: bash
         run: |
           set -e
-          dl() { # url out
-            local url="$1" out="$2" i
+          dl() { # url out sha256
+            local url="$1" out="$2" want="$3" i got
             for i in 1 2 3 4 5 6 7 8; do
-              if curl -fL --retry 5 --retry-all-errors --connect-timeout 20 -o "$out" "$url"; then return 0; fi
+              rm -f "$out.part"
+              if curl -fL --retry 5 --retry-all-errors --connect-timeout 20 --max-time 600 \
+                   --proto '=https' --proto-redir '=https' -o "$out.part" "$url"; then
+                got="$(sha256sum "$out.part" | cut -d' ' -f1)"
+                if [ "$got" != "$want" ]; then
+                  echo "sha256 mismatch for $url: got $got want $want" >&2
+                  rm -f "$out.part"; return 1
+                fi
+                mv "$out.part" "$out"
+                return 0
+              fi
               echo "download retry $i: $url" >&2; sleep $((i * 10))
             done
-            echo "FAILED to download $url" >&2; return 1
+            echo "FAILED to download $url" >&2; rm -f "$out.part"; return 1
           }
           if [[ "${{ matrix.os }}" == windows-* ]]; then
             tools="$LOCALAPPDATA/tauri"
             mkdir -p "$tools"
-            # NSIS 3.13：zip 内含 nsis-3.13/ 目录，整体挪到 NSIS
+            # NSIS 3.13：zip 内含 nsis-3.13/ 目录，整体挪到 NSIS（先清残留防嵌套）
             if [ ! -f "$tools/NSIS/makensis.exe" ]; then
-              dl "https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.13/nsis-3.13.zip" "$RUNNER_TEMP/nsis.zip"
+              dl "https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.13/nsis-3.13.zip" \
+                 "$RUNNER_TEMP/nsis.zip" "ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8"
+              rm -rf "$tools/NSIS"
               unzip -q "$RUNNER_TEMP/nsis.zip" -d "$RUNNER_TEMP/nsisx"
               mv "$RUNNER_TEMP/nsisx/nsis-3.13" "$tools/NSIS"
             fi
             # tauri 自带的 nsis 插件 dll（bundler 校验其 sha1，版本必须对）
             mkdir -p "$tools/NSIS/Plugins/x86-unicode/additional"
             dl "https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll" \
-              "$tools/NSIS/Plugins/x86-unicode/additional/nsis_tauri_utils.dll"
+               "$tools/NSIS/Plugins/x86-unicode/additional/nsis_tauri_utils.dll" \
+               "5ba143b5db4a87d32d6e7802e033330aae56cbceabe0d1e3ba41948385ad4709"
             # WiX 3.14（MSI 用）
             if [ ! -f "$tools/WixTools314/candle.exe" ]; then
-              dl "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip" "$RUNNER_TEMP/wix.zip"
+              dl "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip" \
+                 "$RUNNER_TEMP/wix.zip" "6ac824e1642d6f7277d0ed7ea09411a508f6116ba6fae0aa5f2c7daa2ff43d31"
               unzip -q "$RUNNER_TEMP/wix.zip" -d "$tools/WixTools314"
             fi
           elif [[ "${{ matrix.os }}" == ubuntu-* ]]; then
             tools="$HOME/.cache/tauri"
             mkdir -p "$tools"
-            # AppImage 三件套（bundler 下载后要求可执行位；文件已存在即跳过）
+            # AppImage 三件套（bundler 下载后要求可执行位；文件已存在即跳过）。
+            # R549：AppRun 走 AppImageKit continuous 移动 tag，只能靠 pin 的 sha256 防重指
             if [ ! -f "$tools/AppRun-x86_64" ]; then
-              dl "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64" "$tools/AppRun-x86_64"
+              dl "https://github.com/AppImage/AppImageKit/releases/download/continuous/AppRun-x86_64" \
+                 "$tools/AppRun-x86_64" "f30140a43a0a59e46db21bdefdf749b9e9f2c6946e92afabbacf98b8ae73fb4f"
               chmod +x "$tools/AppRun-x86_64"
             fi
             if [ ! -f "$tools/linuxdeploy-x86_64.AppImage" ]; then
-              dl "https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy-07333c6/linuxdeploy-x86_64.AppImage" "$tools/linuxdeploy-x86_64.AppImage"
+              dl "https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy-07333c6/linuxdeploy-x86_64.AppImage" \
+                 "$tools/linuxdeploy-x86_64.AppImage" "36a2d7e274d12e1050d0e9ecfe11d339ed54720b2bec464c286d53f8b07f5c62"
               chmod +x "$tools/linuxdeploy-x86_64.AppImage"
             fi
+            # R549：gtk 插件脚本固定到 commit dda522b（原 master 可变）
             if [ ! -f "$tools/linuxdeploy-plugin-gtk.sh" ]; then
-              dl "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" "$tools/linuxdeploy-plugin-gtk.sh"
+              dl "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/dda522bce37387f1b853d9095713bfaa924c8423/linuxdeploy-plugin-gtk.sh" \
+                 "$tools/linuxdeploy-plugin-gtk.sh" "7804c9eef13e59bf2783aad9882ef9db8f3f3f9e8d631874b1d348d550a3693f"
               chmod +x "$tools/linuxdeploy-plugin-gtk.sh"
             fi
           fi

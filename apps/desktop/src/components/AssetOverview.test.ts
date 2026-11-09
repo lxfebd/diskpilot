@@ -205,7 +205,8 @@ describe('buildQueueMd（R533 清单导出报告）', () => {
     );
     expect(md).toContain('# DiskPilot 待人工确认清单');
     expect(md).toContain('共 2 条。');
-    expect(md).toContain('| reg-hunter | uninstall | 某\\|软件 | `HKLM\\X\\|Y` |');
+    // R549：cell 统一转义反斜杠与管道符（key 渲染为 HKLM\X\|Y）
+    expect(md).toContain('| reg-hunter | uninstall | 某\\|软件 | `HKLM\\\\X\\|Y` |');
     expect(md).toContain('| svc-hunter | service | 可疑服务 | `svc1` |');
     expect(md).toContain('### 某\\|软件');
     expect(md).toContain('路径不存在');

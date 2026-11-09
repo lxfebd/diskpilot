@@ -107,8 +107,14 @@ fn suspicious_reasons(svc: &Service) -> Vec<String> {
         return r;
     }
     if !is_systemish(&svc.binpath) {
-        // 拆出 exe 路径（可能带参数）
-        let p = svc.binpath.trim_matches('"').split(' ').next().unwrap_or("");
+        // R549 L6：引号感知剥离 exe 路径（与 parse_sc_qc_binpath 同款），
+        // 修复原先 trim_matches('"') + split(' ') 对带空格引号路径的误截断
+        let bp = svc.binpath.trim();
+        let p = if let Some(stripped) = bp.strip_prefix('"') {
+            stripped.split('"').next().unwrap_or("")
+        } else {
+            bp.split_whitespace().next().unwrap_or("")
+        };
         let low = p.to_ascii_lowercase();
         if low.contains("\\temp\\") || low.contains("\\tmp\\") || low.contains("\\appdata\\") || low.contains("\\users\\") {
             r.push(format!("二进制在临时/用户目录: {}", p));
@@ -164,8 +170,14 @@ fn print_json_report(suspicious: &[(&Service, Vec<String>)]) {
     println!("{}", items);
 }
 
+/// R549 审查 M3：服务名来自 sc query 输出，理论上可含 " 突破 cmd 引号造成注入。
+/// 防御：拒绝含危险元字符的服务名（跳过该服务的 qc 查询，不拼进命令行）。
+fn name_is_safe(n: &str) -> bool {
+    !n.is_empty() && !n.chars().any(|c| matches!(c, '"' | '&' | '|' | '<' | '>' | '^' | '%' | '\n' | '\r'))
+}
+
 /// 统一走 cmd /c chcp 65001 切 UTF-8，避免中文系统 GBK 输出毁解析。
-/// args 原样拼接（调用方需要引号的自己带，如服务名）。
+/// args 原样拼接（调用方需要引号的自己带，且必须先过 name_is_safe）。
 fn run_utf8(prog: &str, args: &[&str]) -> Option<String> {
     let mut inner = String::from(prog);
     for a in args {
@@ -207,7 +219,13 @@ fn main() {
     let mut services: Vec<Service> = Vec::new();
     for (name, display, state) in &list {
         // 服务名可能含空格，单独加引号
-        let qc = run_utf8("sc", &["qc", &format!("\"{}\"", name)]).unwrap_or_default();
+        // R549：服务名先过安全校验，含 "&|<>^% 等元字符的直接跳过（防 cmd 注入）
+        let qc = if name_is_safe(&name) {
+            run_utf8("sc", &["qc", &format!("\"{}\"", name)]).unwrap_or_default()
+        } else {
+            eprintln!("跳过可疑服务名: {}", name);
+            String::new()
+        };
         let binpath = parse_sc_qc_binpath(&qc);
         services.push(Service {
             name: name.clone(),
@@ -306,5 +324,24 @@ mod tests {
         // 空 binpath 不标
         let empty = Service { binpath: String::new(), ..s };
         assert!(suspicious_reasons(&empty).is_empty());
+    }
+
+    #[test]
+    fn r549_name_is_safe_and_quoted_binpath() {
+        // 注入字符一律拒绝
+        for bad in ["a\" & calc", "x|y", "p%PATH%", "n<m", "c>d", "e^f", "g\nh"] {
+            assert!(!name_is_safe(bad), "should reject: {bad}");
+        }
+        assert!(name_is_safe("svc-hunter"));
+        // R549 L6：带空格的引号路径不再被 split(' ') 截断
+        let s = Service {
+            name: "x".into(),
+            display: "x".into(),
+            state: "STOPPED".into(),
+            binpath: "\"D:\\My Temp\\svc.exe\" -k".into(),
+        };
+        let r = suspicious_reasons(&s);
+        assert!(r.iter().any(|x| x.contains("D:\\My Temp\\svc.exe")), "full quoted path kept: {r:?}");
+        assert!(!r.iter().any(|x| x.contains("\" -k")));
     }
 }

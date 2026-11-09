@@ -23,7 +23,7 @@ import { openExternal } from '../../external';
 import { invalidateToolbeltCache } from '../../advisor/tools';
 import { getHwCache, subscribeHwCache, ensureHwLoaded } from '../../hwCache';
 import type { SettingsTab } from '../Settings';
-import { HwReportCard, HwHistorySection } from '../HwPanels';
+import { HwReportCard, HwHistorySection, useTempWarnC } from '../HwPanels';
 import { splitArgs } from './services';
 import { agentDescQuality, similarAgentTools } from './similar';
 import {
@@ -282,6 +282,8 @@ function HwAggregatePanel() {
   const t = useT();
   const toast = useStore((s) => s.toast);
   const [cache, setCache] = useState(getHwCache());
+  // R549 审查 medium-2：主硬件页的 HwReportCard 也带超温阈值红标
+  const tempWarnC = useTempWarnC();
 
   useEffect(() => {
     const unsub = subscribeHwCache(() => setCache(getHwCache()));
@@ -306,7 +308,7 @@ function HwAggregatePanel() {
         </button>
       </div>
       {cache.error && <p className="hw-error">{cache.error}</p>}
-      <HwReportCard info={cache.info} health={cache.health} loading={cache.loading} />
+      <HwReportCard info={cache.info} health={cache.health} loading={cache.loading} tempWarnC={tempWarnC} />
       <HwHistorySection />
     </div>
   );

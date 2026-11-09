@@ -472,16 +472,17 @@ export function buildQueueMd(items: readonly ConfirmQueueItem[], now: number, L:
     `| ${L.colSource} | ${L.colKind} | ${L.colName} | ${L.colKey} |`,
     '| --- | --- | --- | --- |',
   ];
+  // R549 审查 low-5：所有单元格统一转义（此前 source/kind 未转义，\r 未处理）
+  const cell = (v: string): string => v.split('\\').join('\\\\').replace(/\|/g, '\\|').replace(/[\n\r]/g, ' ');
   for (const q of items) {
-    const name = q.name.replace(/\|/g, '\\|').replace(/\n/g, ' ');
-    const key = q.key.replace(/\|/g, '\\|').replace(/\n/g, ' ');
-    lines.push(`| ${q.source} | ${q.kind} | ${name} | \`${key}\` |`);
+    lines.push(`| ${cell(q.source)} | ${cell(q.kind)} | ${cell(q.name)} | \`${cell(q.key)}\` |`);
   }
   if (items.length > 0) {
     lines.push('', `## ${L.detailHead}`, '');
     for (const q of items) {
-      const name = q.name.replace(/\|/g, '\\|').replace(/\n/g, ' ');
-      lines.push(`### ${name}`, '', `- ${L.sourceLine.replace('{source}', q.source).replace('{kind}', q.kind)}`, `- ${L.keyLine} \`${q.key}\``, `- ${L.diagLine}`, '```json', q.detail, '```', '');
+      // R549：detail 含 ``` 会击穿代码围栏，替换成全角反引号再入块
+      const detail = q.detail.replace(/```/g, '\u2032\u2032\u2032');
+      lines.push(`### ${cell(q.name)}`, '', `- ${L.sourceLine.replace('{source}', cell(q.source)).replace('{kind}', cell(q.kind))}`, `- ${L.keyLine} \`${cell(q.key)}\``, `- ${L.diagLine}`, '```json', detail, '```', '');
     }
   }
   return lines.join('\n');
@@ -499,7 +500,10 @@ export interface QueueCsvL10n {
  * 带 BOM（\ufeff）让 Excel 直接按 UTF-8 打开；字段含逗号/引号/换行时双引号包裹且引号翻倍。 */
 export function buildQueueCsv(items: readonly ConfirmQueueItem[], L: QueueCsvL10n): string {
   const esc = (v: string): string => {
-    const s = String(v ?? '');
+    let s = String(v ?? '');
+    // R549 审查 low-4：CSV 公式注入——OWASP 建议对 = + - @ 开头的字段加 ' 前缀，
+    // 防止 Excel/LibreOffice 打开时把第三方插件产出的字段当公式执行
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
   const rows: string[] = [
@@ -555,7 +559,13 @@ export function loadDiagSummary(): DiagSummary | null {
     const raw = localStorage.getItem(DIAG_SUMMARY_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw) as DiagSummary;
-    return d && Array.isArray(d.items) ? d : null;
+    // R549 审查 low-3：字段级校验——at 有限数字、items 每条 id/ok/line 合法
+    if (!d || !Number.isFinite(d.at) || !Array.isArray(d.items)) return null;
+    const items = d.items.filter(
+      (it): it is DiagSummary['items'][number] =>
+        !!it && typeof it.id === 'string' && typeof it.ok === 'boolean' && typeof it.line === 'string',
+    );
+    return { at: d.at, items };
   } catch {
     return null;
   }

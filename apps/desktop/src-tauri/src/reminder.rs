@@ -248,10 +248,13 @@ pub(crate) fn set_reminder_config(
         cfg.report_export_interval_days = v.clamp(1, 90);
     }
     if let Some(v) = report_export_dir {
-        // 只接受绝对路径；相对路径拒绝，避免写到工作目录这种意外位置。
+        // 只接受绝对路径；R549 L3：非法（相对）路径显式报错而不是静默忽略，
+        // 否则前端会把旧值误当成已保存。空串 = 清空，合法。
         let t = v.trim().to_string();
         if t.is_empty() || crate::report_export::report_export_dir_valid(&t) {
             cfg.report_export_dir = t;
+        } else {
+            return Err(format!("report_export_dir 必须是绝对路径: {t}"));
         }
     }
     if let Some(v) = report_export_format {

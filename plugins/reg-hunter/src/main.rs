@@ -138,6 +138,8 @@ fn run_cmd_path(data: &str) -> String {
         if let Some(end) = d[1..].find('"') {
             return d[1..1 + end].to_string();
         }
+        // R549 L5：未闭合引号——取到结尾并去掉前导引号，避免带引号路径恒不存在的误报
+        return d[1..].to_string();
     }
     // 无引号：取到第一个空格（含参数）或整段
     d.split_whitespace().next().unwrap_or("").to_string()
@@ -359,5 +361,7 @@ mod tests {
         assert_eq!(run_cmd_path("\"C:\\A B\\c.exe\" /x"), "C:\\A B\\c.exe");
         assert_eq!(run_cmd_path("C:\\A\\c.exe /x"), "C:\\A\\c.exe");
         assert_eq!(run_cmd_path("rundll32.exe shell32.dll,Control_RunDLL"), "rundll32.exe");
+        // R549 L5：未闭合引号——取到结尾并去前导引号，避免带引号路径恒不存在的误报
+        assert_eq!(run_cmd_path("\"C:\\A B\\c.exe /x"), "C:\\A B\\c.exe /x");
     }
 }

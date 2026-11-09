@@ -7,6 +7,15 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R549: 深度代码审查 R504–R548 + 修复（三份只读审查报告，后端/前端/CI 各一）
+
+- **后端 HIGH**：`confirm_queue.rs` 读取错误曾被当作「空清单」且会整体重写 jsonl（一次瞬时读错=清空队列）→ 仅 NotFound 视为空、其余报错；写侧 tmp+rename 原子替换；模块级 Mutex 防并发丢条；id 追加随机后缀防同秒等长 key 碰撞；字段上限 64KB。
+- **后端 MEDIUM**：svc-hunter 服务名经 `name_is_safe` 拒绝 `"&|<>^%` 等元字符后才拼进 `cmd /c`（防注入汇）；suspicious_reasons 改引号感知剥离（修复带空格路径误截断）；reg-hunter 未闭合引号取到结尾去引号（修复误报失效）；report_export 持锁直接 render 引用（去掉整树深拷贝）+ 报告写 tmp+rename；weekly_report 数据目录不可定位时不再回退相对路径；reminder 非法 report_export_dir 显式报错。
+- **前端 MEDIUM**：所有到历史页的跳转统一走 navigate（修复 toast/Studio 入口绕过 markNoticesRead 导致角标不消）；抽出 `useTempWarnC` hook，主硬件页 HwReportCard/HwTrendChart 也带超温阈值红标/虚线。
+- **前端 LOW**：buildQueueCsv 对 `=+-@` 开头字段加 `'` 前缀（防 CSV 公式注入）；buildQueueMd 全单元格统一转义且 detail 内 ``` 替换防击穿围栏；loadNotices/loadDiagSummary 字段级校验（at 有限数字、kind 联合类型枚举）；addNotice 派发同文档自定义事件（storage 事件本不同文档不触发）。
+- **CI HIGH**：release.yml 预下载步骤全部 6 个产物 pin sha256 校验（AppRun 走 continuous 移动 tag 只能靠哈希防重指；gtk 插件脚本改 commit SHA 不可变 URL）；下载走 `.part`+原子 mv；加 `--max-time`/`--proto =https`；macOS leg 跳过该步骤；ci.yml 顶层 `permissions: contents: read`。
+- 门禁：后端 275 测试 + 插件单测 + 前端 1334 测试 / tsc / eslint 0 errors 全绿；4 个 workflow YAML 解析通过。
+
 ### R548: 发布 v1.0.2——四平台 release 一次全绿并转正（release id 438646931，21 个资产），updater 链路验证通过
 
 - release.yml 的 bundler 工具预下载（R544 修复）生效，本次 windows/ubuntu/mac 四 job 全部 success，无需重试。

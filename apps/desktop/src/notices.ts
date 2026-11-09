@@ -34,12 +34,27 @@ export function markNoticesRead(now = Date.now()): void {
   } catch { /* ignore */ }
 }
 
+const NOTICE_KINDS: readonly Notice['kind'][] = ['weekly', 'space-full', 'scan-stale', 'report-exported'];
+
 export function loadNotices(): Notice[] {
   try {
     const raw = localStorage.getItem(NOTICES_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as Notice[]).filter((n) => n && typeof n.id === 'string' && typeof n.title === 'string') : [];
+    if (!Array.isArray(arr)) return [];
+    // R549 审查 low-3：字段级校验——at 必须是有限数字、kind 必须在联合类型内、body 为 string，
+    // 防止人为篡改 localStorage 产生 Invalid Date / KIND_KEY[undefined] / 隐式比较
+    return arr.filter(
+      (n): n is Notice =>
+        !!n &&
+        typeof n.id === 'string' &&
+        typeof n.at === 'number' &&
+        Number.isFinite(n.at) &&
+        typeof n.kind === 'string' &&
+        (NOTICE_KINDS as readonly string[]).includes(n.kind) &&
+        typeof n.title === 'string' &&
+        typeof n.body === 'string',
+    );
   } catch {
     return [];
   }
@@ -57,9 +72,16 @@ export function pushNotice(list: readonly Notice[], n: Omit<Notice, 'id' | 'at'>
   return [item, ...list].slice(0, NOTICES_CAP);
 }
 
+/** R549 审查 low-6：同文档内通知事件——storage 事件只发给其他同源文档，
+ *  历史页已挂载时收不到新通知；addNotice 额外派发该自定义事件，同文档监听即可即时刷新。 */
+export const NOTICE_EVENT = 'diskpilot:notice-added';
+
 export function addNotice(n: Omit<Notice, 'id' | 'at'>): Notice[] {
   const next = pushNotice(loadNotices(), n, Date.now());
   saveNotices(next);
+  try {
+    window.dispatchEvent(new CustomEvent(NOTICE_EVENT, { detail: next }));
+  } catch { /* ignore */ }
   return next;
 }
 

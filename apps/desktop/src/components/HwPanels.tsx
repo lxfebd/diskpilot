@@ -453,8 +453,23 @@ export function useHwTestMonitor(onStop: () => void) {
 // 每次 hw_report 生成成功都会自动归档到 app_data_dir/hw-history/hw-*.json。
 // 这里只读展示归档列表 + 两次归档并排对比温度 / SMART 磨损 / 通电时长。
 // 只读查询，绝不触发硬件采集；对比走后端已有归档，不重跑 PowerShell。
+/** R549 审查 medium-2：超温阈值统一取一次（与提醒配置同源），供主硬件页/HwReportCard/HwTrendChart 使用。 */
+export function useTempWarnC(): number | null {
+  const [warnC, setWarnC] = useState<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    api.getReminderConfig()
+      .then((c) => { if (live) setWarnC(c.thermal_sustained_c ?? null); })
+      .catch(() => { if (live) setWarnC(null); });
+    return () => { live = false; };
+  }, []);
+  return warnC;
+}
+
 export function HwHistorySection() {
   const t = useT();
+  // R549：主硬件页也带阈值虚线/红点（此前只接进了历史页和聊天卡）
+  const tempWarnC = useTempWarnC();
   const [metas, setMetas] = useState<HwSnapshotMeta[] | null>(null);
   const [series, setSeries] = useState<HwSeriesPoint[]>([]);
   // R110：趋势序列读失败单独记——失败 ≠ 「没有带温度/通电时长的快照」，
@@ -556,8 +571,8 @@ export function HwHistorySection() {
         </button>
       </div>
 
-      {/* R96 硬件趋势：多快照温度/通电折线（只读）。 */}
-      <HwTrendChart series={series} err={seriesErr} />
+      {/* R96 硬件趋势：多快照温度/通电折线（只读）。R549：带超温阈值线 */}
+      <HwTrendChart series={series} err={seriesErr} tempWarnC={tempWarnC} />
 
       <div className="hw-hist-pick">
         <label className="hw-hist-pick-col">
