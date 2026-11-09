@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R547: 通知中心支持按类型筛选 tab
+
+- `filterNotices` 纯函数（notices.ts，'all' 原样返回、其余按 kind 过滤保持顺序）+ 2 个单测。
+- 历史页通知区块新增筛选 tab 行（全部 + 周报/空间预警/扫描提醒/自动导出），`aria-pressed` 表当前筛选，空类型显示占位文案；i18n `shell.notices.filterAll` / `filterEmpty` 中英双份；样式 `.hp-notices-tabs` / `.hp-notices-tab(.on)`（classParity 已覆盖）。
+
 ### R546: 今日体检格嵌入官方插件下载排行 Top5
 
 - 新增静态快照 `src/data/pluginLeaderboard.ts`（2026-11-08 采集，合计 125 次，11 个插件，与 docs/plugin-downloads.md 同源）+ 纯函数 `leaderboardTop`（totalDl 降序，并列按 latestDl、再按 id 稳定），4 个单测。

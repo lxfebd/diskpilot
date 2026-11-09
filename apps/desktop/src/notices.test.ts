@@ -1,6 +1,6 @@
 // R537 持久化通知中心单测
 import { describe, expect, it } from 'vitest';
-import { pushNotice, unreadCount, NOTICES_CAP, type Notice } from './notices';
+import { pushNotice, unreadCount, filterNotices, NOTICES_CAP, type Notice } from './notices';
 
 const base = { kind: 'weekly' as const, title: '周报', body: '全盘可清理约 1 GB' };
 
@@ -38,5 +38,22 @@ describe('pushNotice（R537 通知中心）', () => {
     const next = pushNotice(orig, base, 5);
     expect(orig).toHaveLength(0);
     expect(next).toHaveLength(1);
+  });
+});
+
+describe('filterNotices（R547 通知类型筛选）', () => {
+  const list: Notice[] = [
+    { id: 'n1', at: 3, kind: 'weekly', title: 't', body: 'b' },
+    { id: 'n2', at: 2, kind: 'space-full', title: 't', body: 'b' },
+    { id: 'n3', at: 1, kind: 'weekly', title: 't', body: 'b' },
+  ];
+  it("'all' 返回全部且保持顺序、不改原数组", () => {
+    const r = filterNotices(list, 'all');
+    expect(r.map((n) => n.id)).toEqual(['n1', 'n2', 'n3']);
+    expect(r).not.toBe(list);
+  });
+  it('按 kind 过滤', () => {
+    expect(filterNotices(list, 'weekly').map((n) => n.id)).toEqual(['n1', 'n3']);
+    expect(filterNotices(list, 'scan-stale')).toEqual([]);
   });
 });

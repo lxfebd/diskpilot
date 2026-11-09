@@ -114,6 +114,9 @@ export const shell = {
     'shell.notices.kindSpaceFull': '空间预警',
     'shell.notices.kindScanStale': '扫描提醒',
     'shell.notices.kindReportExported': '自动导出',
+    // R547 通知类型筛选 tab
+    'shell.notices.filterAll': '全部',
+    'shell.notices.filterEmpty': '该类型下暂无通知',
     // R99 空间耗尽预警（只通知，清理仍走确认窗）
     'shell.toast.spaceFull': '{path} 预计 {days} 后空间用满——可以清理了',
     'shell.toast.spaceFullNow': '今天',
@@ -345,6 +348,9 @@ export const shell = {
     'shell.notices.kindSpaceFull': 'Space warning',
     'shell.notices.kindScanStale': 'Scan reminder',
     'shell.notices.kindReportExported': 'Auto-export',
+    // R547 notification type filter tabs
+    'shell.notices.filterAll': 'All',
+    'shell.notices.filterEmpty': 'No notifications of this type',
     // R99 days-to-full warning (notification only; cleanup still goes through the confirm dialog)
     'shell.toast.spaceFull': '{path} may be full in {days} — time to clean up',
     'shell.toast.spaceFullNow': '0 days',

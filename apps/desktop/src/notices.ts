@@ -68,3 +68,10 @@ export function clearNotices(): void {
     localStorage.removeItem(NOTICES_KEY);
   } catch { /* ignore */ }
 }
+
+/** R547：通知类型筛选（纯函数）。'all' 原样返回；其余按 kind 过滤，保持原顺序。 */
+export type NoticeFilter = 'all' | Notice['kind'];
+export function filterNotices(list: readonly Notice[], f: NoticeFilter): Notice[] {
+  if (f === 'all') return [...list];
+  return list.filter((n) => n.kind === f);
+}
