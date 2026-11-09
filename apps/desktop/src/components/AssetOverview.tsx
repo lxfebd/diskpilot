@@ -10,6 +10,7 @@ import { isPermEnabled } from '../permissions';
 import { ConfirmDialog } from './ConfirmDialog';
 import type { InstalledPlugin } from '../api/system-ext';
 import { physicalDrives, physicalUsedBytes, volumeLetterOf, driveUsagePct, DRIVE_WARN_PCT, DRIVE_CAUTION_PCT, type DriveEntry } from '../drives';
+import { PLUGIN_DL_SNAPSHOT, leaderboardTop } from '../data/pluginLeaderboard';
 // R533：清单导出报告走 save 对话框 + 写文本（与扫描报告导出同款路径）
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
@@ -1590,6 +1591,17 @@ function HealthCheckupCard({
           ))}
         </div>
       )}
+      {/* R546：官方插件下载排行 Top5（静态快照，标注采集日期；完整榜见 docs/plugin-downloads.md） */}
+      <div className="ao-checkup-lb" title={t('overview.checkup.lbTitle')}>
+        <span className="muted small">
+          {t('overview.checkup.lbTitle')} · {PLUGIN_DL_SNAPSHOT.collectedAt}
+        </span>
+        {leaderboardTop(PLUGIN_DL_SNAPSHOT, 5).map((s, i) => (
+          <span key={s.id} className="ao-checkup-lb-line">
+            {i + 1}. {s.id} <b>{s.totalDl}</b>
+          </span>
+        ))}
+      </div>
       {/* R530 待人工确认清单：诊断插件发现的失效残留只入队展示，绝不自动删除；删除仍走清理确认窗 */}
       {confirmQueue && confirmQueue.length > 0 && (
         <div className="ao-confirm-queue">

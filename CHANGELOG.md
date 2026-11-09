@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R546: 今日体检格嵌入官方插件下载排行 Top5
+
+- 新增静态快照 `src/data/pluginLeaderboard.ts`（2026-11-08 采集，合计 125 次，11 个插件，与 docs/plugin-downloads.md 同源）+ 纯函数 `leaderboardTop`（totalDl 降序，并列按 latestDl、再按 id 稳定），4 个单测。
+- 体检格诊断摘要下方新增排行条（采集日期标注 + Top5 `名次. id 下载数`），i18n `overview.checkup.lbTitle` 中英双份，样式 `.ao-checkup-lb*`（classParity 已覆盖）。
+
 ### R545: 待人工确认清单支持 CSV 导出（Excel/台账直接打开）
 
 - `buildQueueCsv` 纯函数（AssetOverview.tsx）：RFC4180 转义（逗号/引号/换行字段双引号包裹、引号翻倍）、BOM 头 + CRLF 行尾，5 列 = 来源/类型/名称/定位键/诊断详情 JSON；3 个单测。

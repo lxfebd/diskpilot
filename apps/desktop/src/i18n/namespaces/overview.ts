@@ -82,6 +82,8 @@ export const overview = {
     // R545 CSV 导出
     'overview.checkup.queueExportCsv': '导出 CSV',
     'overview.checkup.csvColDetail': '诊断详情',
+    // R546 插件下载排行（体检格内 Top5，数据为 2026-11-08 快照）
+    'overview.checkup.lbTitle': '官方插件下载排行',
     // R533 报告文案（md）
     'overview.checkup.mdTitle': 'DiskPilot 待人工确认清单',
     'overview.checkup.mdTs': '生成时间：',
@@ -366,6 +368,8 @@ export const overview = {
     // R545 CSV export
     'overview.checkup.queueExportCsv': 'Export CSV',
     'overview.checkup.csvColDetail': 'Diagnostics',
+    // R546 plugin download leaderboard (Top5 in checkup card, 2026-11-08 snapshot)
+    'overview.checkup.lbTitle': 'Plugin download leaderboard',
     // R533 report strings (md)
     'overview.checkup.mdTitle': 'DiskPilot pending-confirmation queue',
     'overview.checkup.mdTs': 'Generated at: ',

@@ -150,6 +150,11 @@ button.ao-checkup-item:disabled { opacity: .6; cursor: not-allowed; }
 .ao-checkup-diag { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 8px; border-top: 1px dashed var(--border, #3a3f4a); }
 .ao-checkup-diag-line { font-size: 12px; color: var(--text-dim, #9aa0ae); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* R546 体检格「插件下载排行」Top5：与诊断摘要同款分隔条 */
+.ao-checkup-lb { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 8px; border-top: 1px dashed var(--border, #3a3f4a); }
+.ao-checkup-lb-line { font-size: 12px; color: var(--text-dim, #9aa0ae); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ao-checkup-lb-line b { color: var(--text, #e8eaf0); font-weight: 600; }
+
 /* R530 待人工确认清单 */
 .ao-confirm-queue { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px 8px; border-top: 1px dashed var(--border, #3a3f4a); }
 .ao-cq-head { display: flex; flex-direction: column; font-size: 12px; font-weight: 600; }
