@@ -7,6 +7,13 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R550: 项目整理轮——资产清点 + 进度/记忆同步
+
+- **资产清理**：删除仓库根目录 5 个散落临时文件（`_err.txt` / `_msg.txt` / `_sel.txt` / `_ci_ubuntu_live.log` / `_esl.log`，均已被 .gitignore 覆盖、未跟踪）；复扫确认无 `NOTES-*.md` / `TODO.md` / `*_HANDOFF.md` / `_probe*` 等调试产物残留。
+- **发布资产补全**：新增 `docs/releases/v1.0.1.md`、`docs/releases/v1.0.2.md`（此前只有 v0.2.4/v1.0.0）；README.md / README_EN.md 更新日志段改链对应发布说明。
+- **进度同步**：当前 HEAD = R549 修复提交，已发布 v1.0.0 / v1.0.1 / v1.0.2（release ids 437910753 / 438134538 / 438646931，均 21 资产已 publish，latest.json=1.0.2）；11 个官方插件在线；门禁 21/21。
+- **记忆库**：检索确认本地记忆核心尚无 DiskPilot 项目卡片，本轮结束后由自动沉淀入卡（写卡须经审核中心批准，未手工写卡）。
+
 ### R549: 深度代码审查 R504–R548 + 修复（三份只读审查报告，后端/前端/CI 各一）
 
 - **后端 HIGH**：`confirm_queue.rs` 读取错误曾被当作「空清单」且会整体重写 jsonl（一次瞬时读错=清空队列）→ 仅 NotFound 视为空、其余报错；写侧 tmp+rename 原子替换；模块级 Mutex 防并发丢条；id 追加随机后缀防同秒等长 key 碰撞；字段上限 64KB。

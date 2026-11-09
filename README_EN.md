@@ -44,14 +44,14 @@ Every installer ships with a `.sig` signature; built-in auto-updater (tauri-plug
   - Pending-confirmation queue now exports **CSV** (RFC4180 + BOM, opens in Excel directly)
   - Daily checkup card embeds the **official plugin download leaderboard Top5** (2026-11-08 snapshot, 125 downloads total)
   - Notification center gained **type filter tabs** (all / weekly / space warning / scan reminder / auto-export)
-  - See [CHANGELOG.md](CHANGELOG.md) R545–R547
+  - See [v1.0.2 release notes](docs/releases/v1.0.2.md), [CHANGELOG.md](CHANGELOG.md) R545–R548
 - **v1.0.1 (2026-11-08)**
   - **11 official diagnostic plugins**: big-file / duplicate / temp / log / port / drive-health / browser-cache hunters + startup / registry / service / scheduled-task audit trio (v1.1.0 with `--json`), all wired into the daily checkup card
   - **Pending-confirmation queue**: stale/suspicious items found by checkups, Markdown export, actions still gated by the confirmation dialog
   - **Persistent notification center**: weekly report / space warnings / scan reminders / auto-export, unread badge on the sidebar, reviewable on the history page
   - **Consistent red flags in 3 places**: main-card temperature, trend-chart threshold line, SMART abnormal-disk rows + weekly-report abnormal disk list
   - **Engineering**: GitHub Actions upgraded to v7, dependabot PR queue cleared, plugin download leaderboard, README badge row
-  - See [CHANGELOG.md](CHANGELOG.md) R504–R543
+  - See [v1.0.1 release notes](docs/releases/v1.0.1.md), [CHANGELOG.md](CHANGELOG.md) R504–R543
 - **v1.0.0 (2026-11-02)**
   - **Community cleanup-scaffold loop**: one-click refresh of the official community index + install, end-to-end Ed25519 signature + sha256 + red-line validation; author side `scaffold-lint sign` to publish signed
   - **Keyboard accessibility专项**: game inventory / tool wall / treemap fully keyboard-operable; `?` opens the global shortcut panel
