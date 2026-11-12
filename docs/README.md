@@ -15,6 +15,7 @@
 | `scripts/pre-release-check.mjs`（`pnpm check:release` / `--quick`） | 发布者 | 发布前完整验收清单：fmt+clippy+audit+test+7 插件构建+前端三件套+docs 守卫+--self-test，一键汇总 exit 码 |
 | [changelog/README.md](changelog/README.md) | 开发者/维护者 | 逐轮开发记录归档：R1–R380 的 273 条明细按日期分卷存放 |
 | [project-review-2026-11.md](project-review-2026-11.md) | 全员 | 项目回顾：734 commit / R1–R551 全景、阶段划分、安全主线、质量体系、遗留项与教训 |
+| [release-audit-v1.0.2.md](release-audit-v1.0.2.md) | 发布者/安全审查者 | v1.0.2 发布级审核：改动范围、三功能细审、影响面、覆盖性证据与放行结论 |
 
 其他文档入口：
 
