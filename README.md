@@ -10,7 +10,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v1.0.2-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.2)
+[![Release](https://img.shields.io/badge/Release-v1.0.3-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.3)
 [![CI](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml)
 [![Stars](https://img.shields.io/github/stars/lxfebd/diskpilot?style=flat)](https://github.com/lxfebd/diskpilot/stargazers)
@@ -27,11 +27,11 @@
 
 ## 下载
 
-当前版本 **v1.0.2**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
+当前版本 **v1.0.3**，在 [GitHub Releases](https://github.com/lxfebd/diskpilot/releases) 直接下载：
 
 | 平台 | 安装包 | 说明 |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_1.0.2_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
+| Windows 10/11 x64 | `DiskPilot_1.0.3_x64-setup.exe` | NTFS MFT 直读需要管理员权限，程序会自动请求提权 |
 | macOS (Apple Silicon / Intel) | `DiskPilot_1.0.0_aarch64.dmg` / `_x64.dmg` | **未做签名公证**，首次打开需右键 → 打开；尚未在真机验证 |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI 产物，**未在真实 Linux 机器上验证过**，欢迎反馈 |
 
@@ -39,6 +39,11 @@
 
 ## 更新日志
 
+- **v1.0.3（2026-11-12）**
+  - **安全修复**：修复待确认清单 CSV 导出的公式注入（=+-@ 前缀加 `'`，R549）；rmcp 升级 3.9.0 修复 RUSTSEC-2026-0462（Streamable HTTP 无界缓冲 DoS，R551）
+  - **审查修复**：确认队列原子写+互斥锁+字段截断；svc-hunter cmd 注入防御；MD 导出围栏防击穿；localStorage 字段级校验；release.yml 预下载全部 sha256 pin；ci.yml 权限收紧
+  - **文档**：项目回顾报告 + v1.0.2 发布级审核报告
+  - 详见 [CHANGELOG.md](CHANGELOG.md) R549–R553
 - **v1.0.2（2026-11-09）**
   - 待人工确认清单支持 **CSV 导出**（RFC4180 + BOM，Excel 直接打开）
   - 今日体检格嵌入 **官方插件下载排行 Top5**（2026-11-08 快照，合计 125 次下载）

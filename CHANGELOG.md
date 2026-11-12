@@ -7,6 +7,10 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+## [1.0.3] - 2026-11-12
+
+> R549–R553：深度审查修复 + 安全依赖升级 + 审核/回顾文档。详见 docs/release-audit-v1.0.2.md 与 docs/project-review-2026-11.md。
+
 ### R553: v1.0.2 发布级审核——落文档 docs/release-audit-v1.0.2.md
 
 - 范围 v1.0.1..v1.0.2（R545–R548）：18 文件 +292/−23，**全部前端+文档+版本号，零后端命令/零写操作/零 nonce 涉及**。

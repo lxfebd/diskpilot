@@ -10,7 +10,7 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 
 [![License](https://img.shields.io/badge/License-MIT-ff69b4.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app)
-[![Release](https://img.shields.io/badge/Release-v1.0.2-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.2)
+[![Release](https://img.shields.io/badge/Release-v1.0.3-blue.svg)](https://github.com/lxfebd/diskpilot/releases/tag/v1.0.3)
 [![CI](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml/badge.svg)](https://github.com/lxfebd/diskpilot/actions/workflows/codeql.yml)
 [![Stars](https://img.shields.io/github/stars/lxfebd/diskpilot?style=flat)](https://github.com/lxfebd/diskpilot/stargazers)
@@ -28,11 +28,11 @@ Open-source disk analyzer and system inspector, built with Tauri 2 + Rust. Scan 
 
 ## Download
 
-Current version **v1.0.2**, download directly from [GitHub Releases](https://github.com/lxfebd/diskpilot/releases):
+Current version **v1.0.3**, download directly from [GitHub Releases](https://github.com/lxfebd/diskpilot/releases):
 
 | Platform | Installer | Notes |
 |---|---|---|
-| Windows 10/11 x64 | `DiskPilot_1.0.2_x64-setup.exe` | NTFS MFT direct read needs admin; the app auto-elevates via UAC |
+| Windows 10/11 x64 | `DiskPilot_1.0.3_x64-setup.exe` | NTFS MFT direct read needs admin; the app auto-elevates via UAC |
 | macOS (Apple Silicon / Intel) | `DiskPilot_1.0.0_aarch64.dmg` / `_x64.dmg` | **Unsigned / not notarized** — first open: right-click → Open; not yet validated on real hardware |
 | Linux | `.deb` / `.rpm` / `.AppImage` | CI artifacts, **not yet validated on real Linux machines** — feedback welcome |
 
@@ -40,6 +40,11 @@ Every installer ships with a `.sig` signature; built-in auto-updater (tauri-plug
 
 ## Changelog
 
+- **v1.0.3 (2026-11-12)**
+  - **Security fixes**: CSV formula injection in the pending-confirmation export fixed (`'` prefix for `=+-@`, R549); rmcp upgraded to 3.9.0 fixing RUSTSEC-2026-0462 (unbounded Streamable HTTP response buffering, DoS, R551)
+  - **Review fixes**: confirm-queue atomic write + mutex + field caps; svc-hunter cmd-injection guard; MD export fence hardening; localStorage field validation; release.yml pre-downloads all sha256-pinned; ci.yml permissions tightened
+  - **Docs**: project retrospective + v1.0.2 release audit report
+  - See [CHANGELOG.md](CHANGELOG.md) R549–R553
 - **v1.0.2 (2026-11-09)**
   - Pending-confirmation queue now exports **CSV** (RFC4180 + BOM, opens in Excel directly)
   - Daily checkup card embeds the **official plugin download leaderboard Top5** (2026-11-08 snapshot, 125 downloads total)
