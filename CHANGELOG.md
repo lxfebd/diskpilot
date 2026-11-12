@@ -7,6 +7,11 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R554 收尾：v1.0.3 已发布——四平台全绿并转正（run 43193119661，release 442696931，21 资产），latest.json=1.0.3（11 平台）验证通过
+
+- 发布过程踩坑两次（windows leg）：MSYS git-bash 的 `sha256sum | cut` 管道输出不可靠，两次误判 sha256 mismatch 卡住预下载 → R554b 改 head -c 64 → R554c windows leg 改用 PowerShell `Get-FileHash` 彻底解决。
+- 本地 pre-release-check 20/21：`defender_status_non_windows_degrade` 因本机并发 spawn powershell 超 30s 超时（限并发 `--test-threads=2` 后 99/99 绿；CI windows leg 绿），属本地环境抖动非代码问题。
+
 ## [1.0.3] - 2026-11-12
 
 > R549–R553：深度审查修复 + 安全依赖升级 + 审核/回顾文档。详见 docs/release-audit-v1.0.2.md 与 docs/project-review-2026-11.md。
