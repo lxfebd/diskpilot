@@ -14,6 +14,7 @@
 | [performance-baseline.md](performance-baseline.md) | 开发者 | 扫描性能基线与压测入口（walk 子命令、SSD/HDD 实测吞吐、回归对比口径） |
 | `scripts/pre-release-check.mjs`（`pnpm check:release` / `--quick`） | 发布者 | 发布前完整验收清单：fmt+clippy+audit+test+7 插件构建+前端三件套+docs 守卫+--self-test，一键汇总 exit 码 |
 | [changelog/README.md](changelog/README.md) | 开发者/维护者 | 逐轮开发记录归档：R1–R380 的 273 条明细按日期分卷存放 |
+| [project-review-2026-11.md](project-review-2026-11.md) | 全员 | 项目回顾：734 commit / R1–R551 全景、阶段划分、安全主线、质量体系、遗留项与教训 |
 
 其他文档入口：
 

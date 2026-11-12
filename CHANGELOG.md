@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R552: 项目回顾——全量 git 历史复盘并落文档 docs/project-review-2026-11.md
+
+- 统计：734 commit / 386 个 R 轮次（R1–R551）；v0.2.4..HEAD 146 文件 +8523/−556；8 个 tag，v1.0.0–v1.0.2 已 publish（各 21 资产）；11 插件线上验签；前端 1334 测试 / 后端 275+99；门禁 21/21。
+- 报告内容：五阶段划分（早期建设 / a11y 大专项 52+ 轮 / 工程化治理 / v1.0.0 冲刺 / 成熟期）、安全主线六条（nonce 确认链 100% 覆盖、插件 Ed25519 供应链、路径红线、SSRF、依赖审计、R549 审查加固）、质量体系（守卫测试矩阵）、遗留项（action 锁 SHA、weekly 同秒覆盖、4 个 eslint warnings、v1.0.3 待发）、五条教训。
+- docs/README.md 索引补入回顾报告。
+
 ### R551: 修复 CI 安全审计报错——rmcp 1.8.0 → 3.9.0（RUSTSEC-2026-0462）
 
 - CI run 42617740266 的 audit-rust / Security audit 因 **RUSTSEC-2026-0462** 失败：rmcp 1.x 的 Streamable HTTP 客户端无界缓冲响应体（恶意 MCP 服务器可流式拖垮宿主内存），修复版本 ≥3.9.0；1.x 全部受影响，必须大版本升级。
