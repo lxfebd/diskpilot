@@ -100,9 +100,13 @@ jobs:
               rm -f "$out.part"
               if curl -fL --retry 5 --retry-all-errors --connect-timeout 20 --max-time 600 \
                    --proto '=https' --proto-redir '=https' -o "$out.part" "$url"; then
-                # R554：sha256 固定 64 位 hex，直接取前 64 字符——
-                # 不能用 cut -d' ' -f1（git-bash 下分隔符/路径形态不可靠，曾混入控制字符导致误判 mismatch）
-                got="$(sha256sum "$out.part" | head -c 64 | tr -d '[:space:]')"
+                # R554b：哈希提取按平台分流——windows leg 走 PowerShell Get-FileHash
+                # （MSYS git-bash 的 sha256sum 输出在管道里形态不可靠，两次实测误判 mismatch）
+                if [[ "${{ matrix.os }}" == windows-* ]]; then
+                  got="$(PS_OUT="$out.part" powershell -NoProfile -Command '[Console]::Out.Write((Get-FileHash $env:PS_OUT -Algorithm SHA256).Hash.ToLower())')"
+                else
+                  got="$(sha256sum "$out.part" | head -c 64 | tr -d '[:space:]')"
+                fi
                 if [ "$got" != "$want" ]; then
                   echo "sha256 mismatch for $url: got $got want $want" >&2
                   rm -f "$out.part"; return 1
