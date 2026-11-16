@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R556: 工程收尾三项——action 全部锁 commit SHA、weekly 同秒防覆盖、4 个 eslint warnings 清零
+
+- **action 锁 SHA**：4 个 workflow 共 30 处 `uses:` 全部换成 `<40位SHA>  # 原tag`（checkout/setup-node v7、tauri-action v1、audit-check v2.0.0、rust-toolchain stable 分支头、rust-cache v2、pnpm-setup v4、codeql-action v3、configure/upload/deploy-pages），YAML 解析全部通过；dependabot 仍可维护 `# vX` 注释。消除 R549 审查 M2（release job 持 contents:write+签名私钥，tag 劫持即 RCE）。
+- **weekly_report**：文件名加毫秒后缀（`weekly-yyyyMMdd-HHmmss-mmm.json`），同秒两次生成不再互相覆盖；stamp 抽成纯函数 `weekly_stamp` + 单测。
+- **eslint**：App.tsx 4 个 useEffect 的 `notify` 正式加入依赖数组（notify 为稳定 useCallback），eslint 0 warnings；vitest 1334 绿；后端 weekly 测试 10 绿；cargo fmt 干净。
+
 ### R555: 项目整理 + 下一步方向规划——落文档 docs/roadmap-2026-11.md
 
 - 巡检：工作区干净、HEAD=origin/main；最新 CodeQL 绿、v1.0.3 release run 绿；PR 队列清零（dependabot toml #4 因目标版本被 1.1.8 超越已关闭）。

@@ -108,27 +108,29 @@ fn reports_dir(app: &AppHandle) -> Option<PathBuf> {
         .map(|d| d.join("weekly-report"))
 }
 
+/// R556：周报文件名时间戳（纯函数，可单测）。同秒两次生成靠毫秒后缀区分，防互相覆盖。
+fn weekly_stamp(ts_secs: u64, millis: u32) -> String {
+    let secs = ts_secs % 86400;
+    let days = ts_secs / 86400;
+    let (y, m, d) = civil_from_days(days as i64);
+    format!(
+        "{:04}{:02}{:02}-{:02}{:02}{:02}-{millis:03}",
+        y,
+        m,
+        d,
+        secs / 3600,
+        (secs % 3600) / 60,
+        secs % 60
+    )
+}
+
 fn next_report_path(app: &AppHandle) -> Result<PathBuf, String> {
     let dir = reports_dir(app).ok_or_else(|| "无法定位数据目录".to_string())?;
-    let ts = SystemTime::now()
+    let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    // yyyyMMdd-HHmmss，与 hw-history 命名风格一致。
-    let stamp = {
-        let secs = ts % 86400;
-        let days = ts / 86400;
-        let (y, m, d) = civil_from_days(days as i64);
-        format!(
-            "{:04}{:02}{:02}-{:02}{:02}{:02}",
-            y,
-            m,
-            d,
-            secs / 3600,
-            (secs % 3600) / 60,
-            secs % 60
-        )
-    };
+        .unwrap_or_default();
+    // yyyyMMdd-HHmmss-mmm，与 hw-history 命名风格一致，毫秒位防同秒覆盖
+    let stamp = weekly_stamp(now.as_secs(), now.subsec_millis());
     Ok(dir.join(format!("weekly-{stamp}.json")))
 }
 
@@ -519,6 +521,17 @@ mod tests {
         assert_eq!(back.disks[1].grade, "caution");
         assert_eq!(back.scan_trends.len(), 1);
         assert_eq!(back.obs_alerts.len(), 1);
+    }
+
+    #[test]
+    #[test]
+    fn weekly_stamp_r556_millis_disambiguates_same_second() {
+        // R556：同秒不同毫秒 → 不同文件名，防覆盖
+        let a = weekly_stamp(1_760_000_000, 123);
+        let b = weekly_stamp(1_760_000_000, 124);
+        assert_ne!(a, b);
+        assert!(a.ends_with("-123") && b.ends_with("-124"));
+        assert_eq!(weekly_stamp(1_760_000_000, 123), a);
     }
 
     #[test]

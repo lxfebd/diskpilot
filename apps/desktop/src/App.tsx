@@ -406,7 +406,7 @@ export default function App() {
       );
     });
     return () => { unlisten.then((u) => u()); };
-  }, [t]);
+  }, [t, notify]);
 
   // 空间耗尽预警（R99）：后端按空间趋势外推，发现 ≤N 天会满的盘 emit。
   // 只通知「哪块盘快满了 + 预计天数」，清理仍走确认窗，绝不自动删。
@@ -422,7 +422,7 @@ export default function App() {
         extra: warns.length > 1 ? t('shell.toast.spaceFullMore', { n: warns.length - 1 }) : '',
       });
       // R537：持久化通知中心入列
-      notify({ kind: 'space-full', title: t('shell.notices.spaceFullTitle'), body });
+      notify({ kind: 'space-full', title: t('shell.notices.spaceFullTitle'), body }); // eslint 需要 notify 入依赖
       useStore.getState().toast(
         body,
         'warn',
@@ -431,7 +431,7 @@ export default function App() {
       );
     });
     return () => { unlisten.then((u) => u()); };
-  }, [t]);
+  }, [t, notify]);
 
   // R291 温度持续偏高 → 提示去应用散热曲线（health-butler P2-2）。
   // **只导航，不代写**：写入调速通道仍走 fan_control 的 confirmed + 权限中心
@@ -515,7 +515,7 @@ export default function App() {
       );
     });
     return () => { unlisten.then((u) => u()); };
-  }, [t]);
+  }, [t, notify]);
 
   // R526 定时自动导出报告完成通知：只告知写了几份、落在哪，不含任何清理语义。
   useEffect(() => {
@@ -531,7 +531,7 @@ export default function App() {
       );
     });
     return () => { unlisten.then((u) => u()); };
-  }, [t]);
+  }, [t, notify]);
 
   const pickDirectory = async () => {
     if (!isTauri) {
