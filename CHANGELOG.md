@@ -7,6 +7,12 @@ DiskPilot 变更日志。格式遵循 [Keep a Changelog](https://keepachangelog.
 
 ## [未发布]
 
+### R555: 项目整理 + 下一步方向规划——落文档 docs/roadmap-2026-11.md
+
+- 巡检：工作区干净、HEAD=origin/main；最新 CodeQL 绿、v1.0.3 release run 绿；PR 队列清零（dependabot toml #4 因目标版本被 1.1.8 超越已关闭）。
+- 实时数据（2026-11-16）：插件下载合计 126（bigfile 16 / temp 15 / dup 15 / startup 15 领跑，硬盘工具类占前 5 四席）；app 累计下载 v1.0.1=32、v1.0.2=22、v1.0.3=22（发布 4 天）。
+- 方向文档：§1 工程收尾（action 锁 commit SHA、weekly 同秒覆盖、4 个 eslint warnings、体检排行实时拉取）；§2 新插件优先级 P0 icon-cache-hunter / recycle-audit，P1 downloads-organizer / system-files-audit，P2 game-cache / browser-profile；§3 产品增强；§4 不建议做的；§5 建议节奏（先工程收尾 → P0 插件 → v1.0.4，发版仍走发布前确认）。
+
 ### R554 收尾：v1.0.3 已发布——四平台全绿并转正（run 43193119661，release 442696931，21 资产），latest.json=1.0.3（11 平台）验证通过
 
 - 发布过程踩坑两次（windows leg）：MSYS git-bash 的 `sha256sum | cut` 管道输出不可靠，两次误判 sha256 mismatch 卡住预下载 → R554b 改 head -c 64 → R554c windows leg 改用 PowerShell `Get-FileHash` 彻底解决。

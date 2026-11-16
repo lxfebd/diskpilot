@@ -16,6 +16,7 @@
 | [changelog/README.md](changelog/README.md) | 开发者/维护者 | 逐轮开发记录归档：R1–R380 的 273 条明细按日期分卷存放 |
 | [project-review-2026-11.md](project-review-2026-11.md) | 全员 | 项目回顾：734 commit / R1–R551 全景、阶段划分、安全主线、质量体系、遗留项与教训 |
 | [release-audit-v1.0.2.md](release-audit-v1.0.2.md) | 发布者/安全审查者 | v1.0.2 发布级审核：改动范围、三功能细审、影响面、覆盖性证据与放行结论 |
+| [roadmap-2026-11.md](roadmap-2026-11.md) | 全员 | 下一步开发方向：工程收尾清单 + 新插件优先级（按下载热度）+ 产品增强建议 |
 
 其他文档入口：
 
